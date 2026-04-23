@@ -354,3 +354,13 @@ samp {
 .stack-breathe {
   animation: stack-breathe 3.5s ease-in-out infinite;
 }
+
+/* ---------- PSA scanner effects ---------- */
+@keyframes scan-line {
+  0% { top: 0; }
+  100% { top: 100%; }
+}
+@keyframes beam-pulse {
+  0%, 100% { opacity: 0; transform: rotate(var(--rotation, 0deg)) scaleX(0.2); }
+  50% { opacity: 1; transform: rotate(var(--rotation, 0deg)) scaleX(1); }
+}

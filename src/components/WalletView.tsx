@@ -2,30 +2,42 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import clsx from "clsx";
 import {
   RARITY_ORDER,
   RARITY_STYLE,
   compareRarity,
 } from "@/lib/rarity";
-import type { Card, Rarity, SetCode } from "@/lib/types";
-import { SETS, SET_ORDER } from "@/lib/sets";
+import type { Card, PsaGrading, Rarity, SetCode } from "@/lib/types";
+import { SETS, SET_ORDER, getCard } from "@/lib/sets";
 import { useAuth } from "@/lib/auth";
-import { fetchWallet, type WalletSnapshot } from "@/lib/db";
+import {
+  fetchPsaGradings,
+  fetchWallet,
+  type WalletSnapshot,
+} from "@/lib/db";
 import PokeCard from "./PokeCard";
 import CardDetailModal from "./CardDetailModal";
+import PsaSlab from "./PsaSlab";
 import { motion } from "framer-motion";
 
+type Mode = "cards" | "psa";
 type RarityFilter = "ALL" | Rarity;
 type SetFilter = "ALL" | SetCode;
 
 export default function WalletView() {
   const { user } = useAuth();
+  const params = useSearchParams();
+  const initialMode: Mode = params.get("tab") === "psa" ? "psa" : "cards";
+  const [mode, setMode] = useState<Mode>(initialMode);
+
   const [snap, setSnap] = useState<WalletSnapshot>({
     items: [],
     packsOpenedBySet: { m2a: 0, m2: 0, sv8: 0 },
     totalCards: 0,
   });
+  const [psa, setPsa] = useState<PsaGrading[]>([]);
   const [loading, setLoading] = useState(true);
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>("ALL");
   const [setFilter, setSetFilter] = useState<SetFilter>("ALL");
@@ -33,8 +45,12 @@ export default function WalletView() {
 
   const refresh = useCallback(async () => {
     if (!user) return;
-    const s = await fetchWallet(user.id);
-    setSnap(s);
+    const [w, g] = await Promise.all([
+      fetchWallet(user.id),
+      fetchPsaGradings(user.id),
+    ]);
+    setSnap(w);
+    setPsa(g);
     setLoading(false);
   }, [user]);
 
@@ -56,6 +72,19 @@ export default function WalletView() {
         return a.card.number.localeCompare(b.card.number);
       });
   }, [snap.items, rarityFilter, setFilter]);
+
+  const psaItems = useMemo(() => {
+    return psa
+      .map((g) => {
+        const card = getCard(g.card_id);
+        if (!card) return null;
+        return { grading: g, card };
+      })
+      .filter(
+        (v): v is { grading: PsaGrading; card: Card } => v !== null
+      )
+      .sort((a, b) => b.grading.grade - a.grading.grade);
+  }, [psa]);
 
   const rarityCounts = useMemo(() => {
     const counts = new Map<Rarity, number>();
@@ -89,11 +118,76 @@ export default function WalletView() {
           <Kpi label="보유 카드" value={`${snap.items.length}종`} />
           <Kpi label="총 장수" value={`${snap.totalCards}장`} />
           <Kpi label="총 개봉" value={`${totalPacks}팩`} />
+          <Kpi label="PSA 감별" value={`${psa.length}장`} highlight />
         </div>
       </div>
 
+      {/* Primary mode tabs */}
+      <div className="mt-6 inline-flex items-stretch rounded-xl bg-white/5 border border-white/10 p-1">
+        <ModeTab active={mode === "cards"} onClick={() => setMode("cards")}>
+          보유 카드
+          <span className="ml-1.5 text-[10px] opacity-70">
+            {snap.items.length}
+          </span>
+        </ModeTab>
+        <ModeTab active={mode === "psa"} onClick={() => setMode("psa")}>
+          PSA 감별
+          <span className="ml-1.5 text-[10px] opacity-70">{psa.length}</span>
+        </ModeTab>
+      </div>
+
+      {loading ? (
+        <div className="mt-16 flex justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+        </div>
+      ) : mode === "cards" ? (
+        <CardsMode
+          items={items}
+          rarityCounts={rarityCounts}
+          rarityFilter={rarityFilter}
+          setRarityFilter={setRarityFilter}
+          setFilter={setFilter}
+          setSetFilter={setSetFilter}
+          packsOpenedBySet={snap.packsOpenedBySet}
+          onSelect={(card, count) => setSelected({ card, count })}
+        />
+      ) : (
+        <PsaMode items={psaItems} />
+      )}
+
+      <CardDetailModal
+        card={selected?.card ?? null}
+        count={selected?.count ?? 0}
+        onClose={() => setSelected(null)}
+        onAfterGift={refresh}
+      />
+    </div>
+  );
+}
+
+function CardsMode({
+  items,
+  rarityCounts,
+  rarityFilter,
+  setRarityFilter,
+  setFilter,
+  setSetFilter,
+  packsOpenedBySet,
+  onSelect,
+}: {
+  items: { card: Card; count: number }[];
+  rarityCounts: Map<Rarity, number>;
+  rarityFilter: RarityFilter;
+  setRarityFilter: (r: RarityFilter) => void;
+  setFilter: SetFilter;
+  setSetFilter: (s: SetFilter) => void;
+  packsOpenedBySet: Record<SetCode, number>;
+  onSelect: (card: Card, count: number) => void;
+}) {
+  return (
+    <>
       {/* Set tabs */}
-      <div className="mt-6 flex flex-wrap gap-2">
+      <div className="mt-5 flex flex-wrap gap-2">
         <FilterPill
           active={setFilter === "ALL"}
           onClick={() => setSetFilter("ALL")}
@@ -108,7 +202,7 @@ export default function WalletView() {
           >
             {SETS[code].name}
             <span className="ml-1.5 text-[10px] opacity-70">
-              {snap.packsOpenedBySet[code]}팩
+              {packsOpenedBySet[code]}팩
             </span>
           </FilterPill>
         ))}
@@ -144,12 +238,7 @@ export default function WalletView() {
         })}
       </div>
 
-      {/* Cards grid */}
-      {loading ? (
-        <div className="mt-16 flex justify-center">
-          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-        </div>
-      ) : items.length === 0 ? (
+      {items.length === 0 ? (
         <EmptyState />
       ) : (
         <div
@@ -164,7 +253,7 @@ export default function WalletView() {
               key={card.id}
               className="relative flex flex-col items-center gap-1.5 cursor-pointer"
               whileTap={{ scale: 0.97 }}
-              onClick={() => setSelected({ card, count })}
+              onClick={() => onSelect(card, count)}
             >
               <PokeCard card={card} revealed size="md" />
               {count > 1 && (
@@ -184,25 +273,112 @@ export default function WalletView() {
           ))}
         </div>
       )}
+    </>
+  );
+}
 
-      <CardDetailModal
-        card={selected?.card ?? null}
-        count={selected?.count ?? 0}
-        onClose={() => setSelected(null)}
-        onAfterGift={refresh}
-      />
+function PsaMode({
+  items,
+}: {
+  items: { grading: PsaGrading; card: Card }[];
+}) {
+  if (items.length === 0) {
+    return (
+      <div className="mt-12 rounded-2xl border border-dashed border-white/10 bg-white/5 py-12 md:py-14 flex flex-col items-center gap-3 text-center px-4">
+        <span className="text-5xl">🧿</span>
+        <p className="text-lg text-white font-semibold">
+          아직 감별한 카드가 없습니다
+        </p>
+        <p className="text-sm text-zinc-400">
+          PSA 감별 페이지에서 카드를 맡기고 등급을 받아보세요.
+        </p>
+        <Link
+          href="/grading"
+          className="mt-2 inline-flex items-center h-11 px-5 rounded-xl bg-gradient-to-r from-fuchsia-500 to-indigo-500 text-white font-bold text-sm hover:scale-[1.03] transition"
+        >
+          감별 받으러 가기
+        </Link>
+      </div>
+    );
+  }
+  return (
+    <div
+      className="mt-6 md:mt-8 grid gap-6 md:gap-8 place-items-center"
+      style={{
+        gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+      }}
+    >
+      {items.map(({ grading, card }) => (
+        <div key={grading.id} className="flex flex-col items-center gap-2">
+          <PsaSlab card={card} grade={grading.grade} size="md" />
+          <div className="w-full text-center px-1">
+            <p className="text-[11px] text-zinc-300 leading-tight line-clamp-2">
+              {card.name}
+            </p>
+            <p className="text-[10px] text-zinc-500 tabular-nums">
+              {SETS[card.setCode].name} · #{card.number} ·{" "}
+              {new Date(grading.graded_at).toLocaleDateString("ko-KR")}
+            </p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
   return (
-    <div className="rounded-lg bg-white/5 border border-white/10 px-3 py-1.5">
+    <div
+      className={clsx(
+        "rounded-lg border px-3 py-1.5",
+        highlight
+          ? "bg-amber-400/10 border-amber-400/40"
+          : "bg-white/5 border-white/10"
+      )}
+    >
       <div className="text-[10px] uppercase tracking-wider text-zinc-400">
         {label}
       </div>
-      <div className="text-sm font-bold text-white">{value}</div>
+      <div
+        className={clsx(
+          "text-sm font-bold",
+          highlight ? "text-amber-200" : "text-white"
+        )}
+      >
+        {value}
+      </div>
     </div>
+  );
+}
+
+function ModeTab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{ touchAction: "manipulation" }}
+      className={clsx(
+        "px-4 py-2 rounded-lg text-sm font-semibold transition-colors",
+        active ? "bg-white text-zinc-900" : "text-zinc-300 hover:text-white"
+      )}
+    >
+      {children}
+    </button>
   );
 }
 

@@ -9,6 +9,7 @@ import {
   GiftIcon,
   HomeIcon,
   LogoutIcon,
+  MagnifyIcon,
   ShopIcon,
   TrophyIcon,
   WalletIcon,
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
   { href: "/", label: "홈", Icon: HomeIcon },
   { href: "/wallet", label: "지갑", Icon: WalletIcon },
   { href: "/merchant", label: "상인", Icon: ShopIcon },
+  { href: "/grading", label: "등급", Icon: MagnifyIcon },
   { href: "/users", label: "랭킹", Icon: TrophyIcon },
   { href: "/gifts", label: "선물함", Icon: GiftIcon },
 ];
@@ -59,7 +61,15 @@ export default function Navbar() {
                       : "text-zinc-300 hover:bg-white/5 hover:text-white"
                   )}
                 >
-                  {label === "지갑" ? "내 카드지갑" : label === "상인" ? "카드 상인" : label === "랭킹" ? "사용자 랭킹" : label}
+                  {label === "지갑"
+                    ? "내 카드지갑"
+                    : label === "상인"
+                    ? "카드 상인"
+                    : label === "등급"
+                    ? "등급 감별"
+                    : label === "랭킹"
+                    ? "사용자 랭킹"
+                    : label}
                 </Link>
               ))}
             </nav>

@@ -5,6 +5,7 @@ import type {
   Card,
   GiftStatus,
   MerchantState,
+  PsaGrading,
   SetCode,
 } from "./types";
 import { getCard } from "./sets";
@@ -199,6 +200,29 @@ export async function declineGift(giftId: string, userId: string) {
 
 export async function expirePendingGifts() {
   await supabase.rpc("expire_pending_gifts");
+}
+
+// ---------- PSA grading ----------
+
+export async function submitPsaGrading(userId: string, cardId: string) {
+  const { data, error } = await supabase.rpc("submit_psa_grading", {
+    p_user_id: userId,
+    p_card_id: cardId,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as { ok: boolean; error?: string; grade?: number };
+}
+
+export async function fetchPsaGradings(
+  userId: string
+): Promise<PsaGrading[]> {
+  const { data, error } = await supabase
+    .from("psa_gradings")
+    .select("id, user_id, card_id, grade, graded_at")
+    .eq("user_id", userId)
+    .order("graded_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as PsaGrading[];
 }
 
 export async function fetchGifts(userId: string): Promise<{

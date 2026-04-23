@@ -50,3 +50,11 @@ export interface MerchantState {
 }
 
 export type GiftStatus = "pending" | "accepted" | "expired" | "declined";
+
+export interface PsaGrading {
+  id: string;
+  user_id: string;
+  card_id: string;
+  grade: number;
+  graded_at: string;
+}

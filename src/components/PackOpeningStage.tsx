@@ -109,14 +109,22 @@ export default function PackOpeningStage({
       exit={{ opacity: 0 }}
     >
       {/* Top bar */}
-      <div className="shrink-0 pt-safe">
-        <div className="flex items-center justify-between px-3 md:px-6 h-12 border-b border-white/10">
-          <div className="text-[11px] md:text-xs text-zinc-300 truncate">
+      <div
+        className="shrink-0 border-b border-white/10 bg-black/95"
+        style={{
+          // `env(safe-area-inset-top)` handles notches; the 16px fallback
+          // gives enough breathing room so URL-bar overlap (mobile Chrome
+          // / Safari) never hides the header text.
+          paddingTop: "max(env(safe-area-inset-top, 0px), 16px)",
+        }}
+      >
+        <div className="flex items-center justify-between gap-2 px-3 md:px-6 h-12">
+          <div className="text-xs md:text-sm text-zinc-200 font-semibold truncate">
             {setName} · 팩 개봉
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {stage !== "tearing" && (
-              <span className="text-xs text-zinc-400 tabular-nums">
+              <span className="text-xs text-zinc-300 tabular-nums">
                 {index + 1} / {total}
               </span>
             )}
@@ -124,13 +132,14 @@ export default function PackOpeningStage({
               onClick={onClose}
               aria-label="닫기"
               className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white"
+              style={{ touchAction: "manipulation" }}
             >
               ✕
             </button>
           </div>
         </div>
         {stage !== "tearing" && (
-          <div className="px-3 md:px-6 pt-2">
+          <div className="px-3 md:px-6 pb-2">
             <ProgressDots total={total} index={index} revealed={revealed} />
           </div>
         )}
@@ -491,31 +500,33 @@ function MiniCard({ card }: { card: Card }) {
   const style = RARITY_STYLE[card.rarity];
   const hot = isHighRarity(card.rarity);
   return (
-    <div className="relative flex flex-col items-center gap-1.5">
-      <div
-        className={clsx(
-          "relative w-full aspect-[5/7] rounded-lg overflow-hidden isolate ring-2 bg-zinc-900",
-          style.frame,
-          style.glow
-        )}
-      >
-        {hot && <div className="rarity-ring" />}
-        {card.imageUrl ? (
-          <img
-            src={card.imageUrl}
-            alt={card.name}
-            loading="lazy"
-            draggable={false}
-            className="w-full h-full object-contain bg-zinc-900 select-none pointer-events-none"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-700 to-amber-600 p-2 text-center text-white text-[10px] select-none">
-            {card.name}
-          </div>
-        )}
-        {hot && <div className="holo-overlay pointer-events-none" />}
+    <div
+      className={clsx(
+        "relative w-full aspect-[5/7] rounded-lg overflow-hidden isolate ring-2 bg-zinc-900",
+        style.frame,
+        style.glow
+      )}
+    >
+      {hot && <div className="rarity-ring" />}
+      {card.imageUrl ? (
+        <img
+          src={card.imageUrl}
+          alt={card.name}
+          loading="lazy"
+          draggable={false}
+          className="w-full h-full object-contain bg-zinc-900 select-none pointer-events-none"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-700 to-amber-600 p-2 text-center text-white text-[10px] select-none">
+          {card.name}
+        </div>
+      )}
+      {hot && <div className="holo-overlay pointer-events-none" />}
+      {/* Rarity badge anchored to the bottom-left of the card image so
+          it sits visually inside the card instead of floating below it. */}
+      <div className="absolute left-1.5 bottom-1.5 pointer-events-none">
+        <RarityBadge rarity={card.rarity} size="xs" />
       </div>
-      <RarityBadge rarity={card.rarity} size="xs" />
     </div>
   );
 }

@@ -101,6 +101,25 @@ export function GiftIcon({ className = "w-6 h-6" }: IconProps) {
   );
 }
 
+export function MagnifyIcon({ className = "w-6 h-6" }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="11" cy="11" r="6" />
+      <path d="M20 20l-4-4" />
+      <path d="M11 8a3 3 0 0 0-3 3" />
+    </svg>
+  );
+}
+
 export function LogoutIcon({ className = "w-5 h-5" }: IconProps) {
   return (
     <svg

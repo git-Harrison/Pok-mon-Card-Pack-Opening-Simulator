@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import type { Card } from "@/lib/types";
@@ -212,6 +212,7 @@ function GiftForm({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const formRef = useRef<HTMLDivElement | null>(null);
 
   const submit = async () => {
     if (!user || !recipient.trim() || sending) return;
@@ -228,33 +229,56 @@ function GiftForm({
     setTimeout(onSuccess, 900);
   };
 
-  return (
-    <div className="mt-auto rounded-xl bg-white/5 border border-white/10 p-4">
-      <p className="text-xs text-zinc-300 mb-2">받는 사람 아이디</p>
-      <input
-        value={recipient}
-        onChange={(e) => setRecipient(e.target.value)}
-        autoFocus
-        autoComplete="off"
-        placeholder="예: min"
-        className="w-full h-11 px-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400/60"
-      />
+  // When the mobile keyboard pops up on focus, scroll the form itself
+  // back into the viewport so the submit button never sits hidden behind
+  // the keyboard overlay.
+  const onInputFocus = () => {
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 300);
+  };
 
-      <p className="text-xs text-zinc-300 mt-3 mb-2">
-        받는 사람이 지불할 포인트
-      </p>
-      <div className="flex items-stretch gap-1.5">
+  return (
+    <div
+      ref={formRef}
+      className="mt-auto rounded-xl bg-white/5 border border-white/10 p-4"
+    >
+      <label className="block">
+        <span className="text-xs text-zinc-300 mb-2 block">받는 사람 아이디</span>
         <input
-          value={priceRaw}
-          onChange={(e) => setPriceRaw(e.target.value.replace(/[^0-9]/g, ""))}
-          inputMode="numeric"
-          className="flex-1 h-11 px-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400/60"
-          placeholder="0"
+          value={recipient}
+          onChange={(e) => setRecipient(e.target.value)}
+          onFocus={onInputFocus}
+          autoComplete="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          placeholder="예: min"
+          style={{ fontSize: "16px" }}
+          className="w-full h-12 px-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400/60"
         />
-        <span className="inline-flex items-center gap-1.5 px-3 rounded-lg bg-white/5 border border-white/10 text-xs text-zinc-300">
-          <CoinIcon size="xs" /> 포인트
-        </span>
-      </div>
+      </label>
+
+      <label className="block mt-3">
+        <span className="text-xs text-zinc-300 mb-2 block">받는 사람이 지불할 포인트</span>
+        <div className="flex items-stretch gap-1.5">
+          <input
+            value={priceRaw}
+            onChange={(e) => setPriceRaw(e.target.value.replace(/[^0-9]/g, ""))}
+            onFocus={onInputFocus}
+            inputMode="numeric"
+            style={{ fontSize: "16px" }}
+            className="flex-1 h-12 px-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400/60"
+            placeholder="0"
+          />
+          <span className="inline-flex items-center gap-1.5 px-3 rounded-lg bg-white/5 border border-white/10 text-xs text-zinc-300">
+            <CoinIcon size="xs" /> 포인트
+          </span>
+        </div>
+      </label>
+
       <p className="mt-2 text-[11px] text-zinc-500 leading-snug">
         받는 사람이 24시간 내에 수락해야 해요. 수락 시 카드는 친구에게, 포인트는
         나에게 전달됩니다. 미수락 시 카드는 자동으로 돌아옵니다.
@@ -268,16 +292,20 @@ function GiftForm({
       )}
       <div className="mt-3 flex gap-2">
         <button
+          type="button"
           onClick={submit}
           disabled={sending || success || !recipient.trim()}
-          className="flex-1 h-11 rounded-lg bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-sm disabled:opacity-50"
+          style={{ touchAction: "manipulation" }}
+          className="flex-1 h-12 rounded-lg bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-sm disabled:opacity-50 active:scale-[0.98] transition"
         >
           {sending ? "보내는 중..." : success ? "전송 완료" : "선물 보내기"}
         </button>
         <button
+          type="button"
           onClick={onCancel}
           disabled={sending}
-          className="flex-1 h-11 rounded-lg bg-white/10 hover:bg-white/15 text-white font-semibold text-sm"
+          style={{ touchAction: "manipulation" }}
+          className="flex-1 h-12 rounded-lg bg-white/10 hover:bg-white/15 text-white font-semibold text-sm"
         >
           취소
         </button>
