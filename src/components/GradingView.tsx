@@ -15,6 +15,7 @@ import { PSA_DISTRIBUTION, PSA_LABEL, psaTone } from "@/lib/psa";
 import type { Card } from "@/lib/types";
 import RarityBadge from "./RarityBadge";
 import PsaSlab from "./PsaSlab";
+import ShareButton from "./ShareButton";
 
 type Phase = "idle" | "animating" | "revealed" | "failed";
 
@@ -252,16 +253,47 @@ export default function GradingView() {
             </button>
           )}
           {phase === "failed" && (
-            <button
-              onClick={reset}
-              style={{ touchAction: "manipulation" }}
-              className="col-span-2 h-12 rounded-xl bg-rose-500/10 border border-rose-500/40 text-rose-200 font-semibold text-sm"
-            >
-              다른 카드로 다시 시도
-            </button>
+            <>
+              {user && selected && (
+                <div className="col-span-2">
+                  <ShareButton
+                    body={{
+                      kind: "psa-fail",
+                      username: user.user_id,
+                      cardId: selected.id,
+                    }}
+                    label="디스코드에 슬픔 공유하기"
+                  />
+                </div>
+              )}
+              <button
+                onClick={reset}
+                style={{ touchAction: "manipulation" }}
+                className="col-span-2 h-12 rounded-xl bg-rose-500/10 border border-rose-500/40 text-rose-200 font-semibold text-sm"
+              >
+                다른 카드로 다시 시도
+              </button>
+            </>
           )}
           {phase === "revealed" && (
             <>
+              {user && selected && grade !== null && (
+                <div className="col-span-2">
+                  <ShareButton
+                    body={{
+                      kind: "psa-success",
+                      username: user.user_id,
+                      cardId: selected.id,
+                      grade,
+                    }}
+                    label={
+                      grade === 10
+                        ? "🏆 PSA 10 디스코드에 자랑하기"
+                        : "디스코드에 자랑하기"
+                    }
+                  />
+                </div>
+              )}
               <button
                 onClick={reset}
                 style={{ touchAction: "manipulation" }}

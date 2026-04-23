@@ -218,6 +218,7 @@ export default function SetView({ set }: { set: SetInfo }) {
             pack={packs[activePack]}
             packImage={set.packImage}
             setName={set.name}
+            setCode={set.code}
             onClose={backToGrid}
           />
         )}

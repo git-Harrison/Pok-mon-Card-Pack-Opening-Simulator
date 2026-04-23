@@ -6,7 +6,9 @@ import { AnimatePresence, motion, PanInfo } from "framer-motion";
 import clsx from "clsx";
 import type { Card } from "@/lib/types";
 import { RARITY_STYLE, isHighRarity } from "@/lib/rarity";
+import { useAuth } from "@/lib/auth";
 import RarityBadge from "./RarityBadge";
+import ShareButton from "./ShareButton";
 
 type Stage = "tearing" | "single" | "grid";
 
@@ -14,6 +16,7 @@ interface Props {
   pack: Card[];
   packImage: string;
   setName: string;
+  setCode: string;
   onClose: () => void;
 }
 
@@ -32,8 +35,10 @@ export default function PackOpeningStage({
   pack,
   packImage,
   setName,
+  setCode,
   onClose,
 }: Props) {
+  const { user } = useAuth();
   const [stage, setStage] = useState<Stage>("tearing");
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState<boolean[]>(() =>
@@ -41,6 +46,8 @@ export default function PackOpeningStage({
   );
   const [flashing, setFlashing] = useState(true);
   const total = pack.length;
+
+  const hasHighRarity = pack.some((c) => isHighRarity(c.rarity));
 
   // Kick off tear → single after ~1.2s
   useEffect(() => {
@@ -187,6 +194,17 @@ export default function PackOpeningStage({
                 >
                   한번에 보기
                 </button>
+                {allRevealed && hasHighRarity && user && (
+                  <ShareButton
+                    body={{
+                      kind: "pack-open",
+                      username: user.user_id,
+                      setCode,
+                      cardIds: pack.map((c) => c.id),
+                    }}
+                    label="디스코드 자랑"
+                  />
+                )}
                 {allRevealed && (
                   <button
                     onClick={onClose}
@@ -213,6 +231,17 @@ export default function PackOpeningStage({
                 >
                   한 장씩 보기
                 </button>
+                {hasHighRarity && user && (
+                  <ShareButton
+                    body={{
+                      kind: "pack-open",
+                      username: user.user_id,
+                      setCode,
+                      cardIds: pack.map((c) => c.id),
+                    }}
+                    label="디스코드 자랑"
+                  />
+                )}
                 <button
                   onClick={onClose}
                   className="h-11 px-5 rounded-xl bg-white text-zinc-900 font-bold text-sm"
