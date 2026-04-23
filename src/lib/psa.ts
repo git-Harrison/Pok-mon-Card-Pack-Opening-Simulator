@@ -1,3 +1,18 @@
+import type { Rarity } from "./types";
+
+/** 감별 대상 등급 — 아트/메가/스페셜/울트라 카드만 맡길 수 있음. */
+export const PSA_ELIGIBLE_RARITIES: readonly Rarity[] = [
+  "AR",
+  "MA",
+  "SAR",
+  "MUR",
+  "UR",
+] as const;
+
+export function isPsaEligible(rarity: Rarity): boolean {
+  return (PSA_ELIGIBLE_RARITIES as readonly Rarity[]).includes(rarity);
+}
+
 /**
  * PSA grade → display label mapping.
  * See https://www.psacard.com/resources/gradingstandards for reference.

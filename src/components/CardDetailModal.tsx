@@ -49,32 +49,28 @@ export default function CardDetailModal({
       {card && (
         <motion.div
           key="backdrop"
-          className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md"
+          className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md overflow-y-auto overscroll-contain"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          style={{
-            // Reserve the device safe areas so the modal is always
-            // fully inside the usable viewport, regardless of mobile
-            // browser chrome (URL bars, home indicators, notches).
-            paddingTop:
-              "max(env(safe-area-inset-top, 0px), 12px)",
-            paddingBottom:
-              "max(env(safe-area-inset-bottom, 0px), 12px)",
-            paddingLeft: "12px",
-            paddingRight: "12px",
-          }}
         >
-          <div className="w-full h-full flex items-center justify-center">
+          {/* Scrollable backdrop + min-h-[100dvh] flex-center is the
+              reliable modal pattern across iOS Safari / Chrome / Android.
+              If modal fits → centered. If taller → backdrop scrolls. */}
+          <div
+            className="flex items-center justify-center px-3 md:px-6"
+            style={{
+              minHeight: "100dvh",
+              paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+              paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+            }}
+          >
             <motion.div
               onClick={(e) => e.stopPropagation()}
               className={clsx(
                 "relative w-full md:max-w-3xl bg-zinc-950/95 border border-white/10",
-                "rounded-2xl shadow-2xl",
-                // `max-h: 100%` keeps the modal within the backdrop's
-                // padded area. Internal scroll handles tall content.
-                "flex flex-col overflow-hidden max-h-full"
+                "rounded-2xl shadow-2xl flex flex-col overflow-hidden"
               )}
               initial={{ scale: 0.94, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}

@@ -11,7 +11,13 @@ import {
   type WalletSnapshot,
 } from "@/lib/db";
 import { RARITY_STYLE, compareRarity } from "@/lib/rarity";
-import { PSA_DISTRIBUTION, PSA_LABEL, psaTone } from "@/lib/psa";
+import {
+  PSA_DISTRIBUTION,
+  PSA_ELIGIBLE_RARITIES,
+  PSA_LABEL,
+  isPsaEligible,
+  psaTone,
+} from "@/lib/psa";
 import type { Card } from "@/lib/types";
 import { notifyPsaFail, notifyPsaGrade } from "@/lib/discord";
 import RarityBadge from "./RarityBadge";
@@ -64,6 +70,10 @@ export default function GradingView() {
 
   const submit = useCallback(async () => {
     if (!user || !selected || phase !== "idle") return;
+    if (!isPsaEligible(selected.rarity)) {
+      setError("AR · MA · SAR · MUR · UR 카드만 감별을 받을 수 있어요.");
+      return;
+    }
     setError(null);
     const res = await submitPsaGrading(user.id, selected.id);
     if (!res.ok) {
@@ -106,9 +116,20 @@ export default function GradingView() {
           PSA 등급 감별
         </h1>
         <p className="hidden md:block mt-1 text-xs text-zinc-400">
-          보유 카드를 감별사에게 맡기면 1~10 등급을 받을 수 있어요. 결과는
-          카드지갑의 감별 탭에 봉인됩니다.
+          AR · MA · SAR · MUR · UR 카드만 감별 가능. 결과는 카드지갑의 감별
+          탭에 봉인됩니다.
         </p>
+        <div className="md:hidden mt-1 flex flex-wrap items-center gap-1 text-[10px] text-zinc-400">
+          <span>감별 대상:</span>
+          {PSA_ELIGIBLE_RARITIES.map((r) => (
+            <span
+              key={r}
+              className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 font-bold text-white"
+            >
+              {r}
+            </span>
+          ))}
+        </div>
       </div>
 
       <section className="mt-4 rounded-2xl border border-white/10 bg-gradient-to-br from-fuchsia-500/10 via-indigo-500/5 to-transparent p-3 md:p-5">
@@ -439,9 +460,9 @@ function CardPicker({
   onClose: () => void;
 }) {
   const items = useMemo(() => {
-    return [...wallet.items].sort((a, b) =>
-      compareRarity(a.card.rarity, b.card.rarity)
-    );
+    return wallet.items
+      .filter((it) => isPsaEligible(it.card.rarity))
+      .sort((a, b) => compareRarity(a.card.rarity, b.card.rarity));
   }, [wallet]);
 
   return (
@@ -483,9 +504,12 @@ function CardPicker({
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4">
             {items.length === 0 ? (
-              <p className="py-10 text-center text-sm text-zinc-400">
-                감별할 카드가 없어요. 먼저 팩을 열어보세요.
-              </p>
+              <div className="py-10 text-center text-sm text-zinc-400">
+                <p>감별 대상 카드가 없어요.</p>
+                <p className="mt-1 text-[11px]">
+                  AR · MA · SAR · MUR · UR 카드만 맡길 수 있습니다.
+                </p>
+              </div>
             ) : (
               <div
                 className="grid gap-3 md:gap-4"
