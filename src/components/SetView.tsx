@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import type { Card, SetInfo } from "@/lib/types";
@@ -175,21 +176,27 @@ function SealedBox({ set, onOpen }: { set: SetInfo; onOpen: () => void }) {
       exit={{ opacity: 0, y: -12 }}
     >
       <motion.div
-        className="relative w-full max-w-[320px] md:max-w-[420px] aspect-[4/3]"
+        className="relative w-full max-w-[360px] md:max-w-[520px] aspect-[3/2]"
         whileHover={{ rotate: 1.5, y: -4 }}
         transition={{ type: "spring", stiffness: 150, damping: 16 }}
       >
         <div
-          className="absolute inset-0 blur-3xl rounded-full opacity-60"
+          className="absolute inset-0 blur-3xl rounded-full opacity-60 pointer-events-none"
           style={{
             background: `radial-gradient(closest-side, ${set.primaryColor}88, transparent 70%)`,
           }}
         />
-        <img
-          src={set.boxImage}
-          alt={`${set.name} 박스`}
-          className="relative w-full h-full object-contain drop-shadow-2xl animate-bob"
-        />
+        <div className="relative w-full h-full animate-bob">
+          <Image
+            src={set.boxImage}
+            alt={`${set.name} 박스`}
+            fill
+            sizes="(max-width: 768px) 90vw, 520px"
+            className="object-contain drop-shadow-2xl select-none pointer-events-none"
+            priority
+            draggable={false}
+          />
+        </div>
       </motion.div>
       <button
         onClick={onOpen}
@@ -209,15 +216,22 @@ function BoxOpening({ set }: { set: SetInfo }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
-      <div className="relative w-full max-w-[320px] md:max-w-[420px] aspect-[4/3]">
-        <motion.img
-          src={set.boxImage}
-          alt={set.name}
-          className="absolute inset-0 w-full h-full object-contain"
+      <div className="relative w-full max-w-[360px] md:max-w-[520px] aspect-[3/2]">
+        <motion.div
+          className="absolute inset-0"
           initial={{ scale: 1, rotate: 0 }}
           animate={{ scale: [1, 1.05, 1.12], rotate: [0, -2, 2, 0] }}
           transition={{ duration: 0.9, times: [0, 0.5, 1] }}
-        />
+        >
+          <Image
+            src={set.boxImage}
+            alt={set.name}
+            fill
+            sizes="(max-width: 768px) 90vw, 520px"
+            className="object-contain select-none pointer-events-none"
+            draggable={false}
+          />
+        </motion.div>
         <motion.div
           className="absolute inset-0"
           initial={{ opacity: 0 }}

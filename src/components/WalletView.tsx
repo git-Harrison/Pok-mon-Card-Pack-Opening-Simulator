@@ -153,9 +153,9 @@ export default function WalletView() {
         <EmptyState />
       ) : (
         <div
-          className="mt-6 md:mt-8 grid gap-3 md:gap-5"
+          className="mt-6 md:mt-8 grid gap-6 md:gap-8"
           style={{
-            gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
           }}
         >
           {items.map(({ card, count }) => (

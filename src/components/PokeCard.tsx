@@ -34,14 +34,22 @@ export default function PokeCard({
       : "w-[160px] h-[224px]";
 
   return (
-    <div className={clsx("relative perspective-1200", sizing)}>
+    // Outer clip container keeps the rarity-ring glow strictly inside the card
+    // bounds so it can't bleed into adjacent cards in a grid.
+    <div
+      className={clsx(
+        "relative perspective-1200 rounded-xl overflow-hidden isolate",
+        sizing
+      )}
+    >
       {highRarity && revealed && <div className="rarity-ring" />}
       <motion.button
         type="button"
         onClick={() => !revealed && onReveal?.()}
+        style={{ touchAction: "manipulation" }}
         className={clsx(
           "relative preserve-3d w-full h-full rounded-xl cursor-pointer",
-          "ring-2 ring-offset-0",
+          "ring-2 ring-offset-0 select-none",
           revealed ? style.frame : "ring-white/10",
           revealed && style.glow
         )}
@@ -62,6 +70,7 @@ export default function PokeCard({
             alt=""
             className="w-full h-full object-cover select-none pointer-events-none"
             draggable={false}
+            style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none" }}
           />
         </div>
 
@@ -71,19 +80,18 @@ export default function PokeCard({
             <img
               src={card.imageUrl}
               alt={card.name}
-              // `object-contain` ensures we never crop the art even if the
-              // source image aspect is slightly off 5:7. bg-zinc-900 fills
-              // any letterbox so the card still looks framed.
+              loading="lazy"
               className="w-full h-full object-contain bg-zinc-900 select-none pointer-events-none"
               draggable={false}
+              style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none" }}
               onError={() => setImgError(true)}
             />
           ) : (
             <FallbackFront card={card} />
           )}
-          {highRarity && <div className="holo-overlay" />}
+          {highRarity && <div className="holo-overlay pointer-events-none" />}
           {revealed && (
-            <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent">
+            <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
               <div className="flex items-center justify-between">
                 <RarityBadge rarity={card.rarity} size="xs" />
                 <span className="text-[10px] text-white/80">
@@ -105,7 +113,7 @@ function FallbackFront({ card }: { card: Card }) {
   return (
     <div
       className={clsx(
-        "w-full h-full flex flex-col items-center justify-between p-3 bg-gradient-to-br",
+        "w-full h-full flex flex-col items-center justify-between p-3 bg-gradient-to-br select-none",
         card.rarity === "C" || card.rarity === "U"
           ? "from-zinc-700 to-zinc-900"
           : "from-indigo-700 via-fuchsia-700 to-amber-600"
@@ -139,10 +147,10 @@ function SparkleBurst() {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
-        {Array.from({ length: 12 }).map((_, i) => {
-          const angle = (i / 12) * Math.PI * 2;
-          const dx = Math.cos(angle) * 70;
-          const dy = Math.sin(angle) * 70;
+        {Array.from({ length: 10 }).map((_, i) => {
+          const angle = (i / 10) * Math.PI * 2;
+          const dx = Math.cos(angle) * 50;
+          const dy = Math.sin(angle) * 50;
           return (
             <span
               key={i}

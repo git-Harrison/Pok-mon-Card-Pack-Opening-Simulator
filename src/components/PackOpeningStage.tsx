@@ -137,22 +137,30 @@ export default function PackOpeningStage({
       </div>
 
       {/* Body */}
-      <div className="flex-1 min-h-0 flex items-center justify-center px-4 py-4 overflow-hidden">
+      <div className="flex-1 min-h-0 relative">
         {stage === "tearing" && (
-          <TearStage packImage={packImage} flashing={flashing} />
+          <div className="absolute inset-0 flex items-center justify-center overflow-hidden px-4 py-4">
+            <TearStage packImage={packImage} flashing={flashing} />
+          </div>
         )}
         {stage === "single" && (
-          <SingleCardStage
-            pack={pack}
-            index={index}
-            revealed={revealed}
-            onFlip={() => flip(index)}
-            onDragEnd={onDragEnd}
-            onNext={goNext}
-            onPrev={goPrev}
-          />
+          <div className="absolute inset-0 flex items-center justify-center overflow-hidden px-4 py-4">
+            <SingleCardStage
+              pack={pack}
+              index={index}
+              revealed={revealed}
+              onFlip={() => flip(index)}
+              onDragEnd={onDragEnd}
+              onNext={goNext}
+              onPrev={goPrev}
+            />
+          </div>
         )}
-        {stage === "grid" && <GridStage pack={pack} />}
+        {stage === "grid" && (
+          <div className="absolute inset-0 overflow-y-auto overflow-x-hidden">
+            <GridStage pack={pack} />
+          </div>
+        )}
       </div>
 
       {/* Bottom bar */}
@@ -290,7 +298,7 @@ function SingleCardStage({
         <div
           key={`peek-${index}-${i}`}
           aria-hidden
-          className="absolute rounded-xl overflow-hidden ring-2 ring-white/10 bg-zinc-900"
+          className="absolute rounded-xl overflow-hidden ring-2 ring-white/10 bg-zinc-900 pointer-events-none"
           style={{
             width: "min(66vw, 240px)",
             aspectRatio: "5 / 7",
@@ -304,7 +312,8 @@ function SingleCardStage({
           <img
             src="/images/common/card-back.jpg"
             alt=""
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover select-none pointer-events-none"
+            draggable={false}
           />
         </div>
       ))}
@@ -381,7 +390,7 @@ function StageCard({
   const hot = isHighRarity(card.rarity);
   return (
     <div
-      className="relative"
+      className="relative rounded-2xl overflow-hidden isolate"
       style={{
         width: "min(66vw, 260px)",
         height: "calc(min(66vw, 260px) * 1.4)",
@@ -392,8 +401,9 @@ function StageCard({
       <button
         type="button"
         onClick={onFlip}
+        style={{ touchAction: "manipulation" }}
         className={clsx(
-          "relative w-full h-full perspective-1200 cursor-pointer",
+          "relative w-full h-full perspective-1200 cursor-pointer select-none",
           !revealed && "stack-breathe"
         )}
       >
@@ -412,8 +422,9 @@ function StageCard({
             <img
               src="/images/common/card-back.jpg"
               alt=""
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover select-none pointer-events-none"
               draggable={false}
+              style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none" }}
             />
           </div>
           {/* Front */}
@@ -422,18 +433,20 @@ function StageCard({
               <img
                 src={card.imageUrl}
                 alt={card.name}
-                className="w-full h-full object-contain bg-zinc-900"
+                loading="eager"
+                className="w-full h-full object-contain bg-zinc-900 select-none pointer-events-none"
                 draggable={false}
+                style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none" }}
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-700 to-amber-600 p-4 text-center">
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-700 to-amber-600 p-4 text-center select-none">
                 <div>
                   <div className="text-xs text-white/60">#{card.number}</div>
                   <div className="mt-2 text-white font-bold">{card.name}</div>
                 </div>
               </div>
             )}
-            {hot && <div className="holo-overlay" />}
+            {hot && <div className="holo-overlay pointer-events-none" />}
           </div>
         </motion.div>
       </button>
@@ -458,12 +471,12 @@ function StageCard({
 
 function GridStage({ pack }: { pack: Card[] }) {
   return (
-    <div className="w-full h-full overflow-auto">
+    <div className="w-full px-4 md:px-6 py-4 md:py-6">
       <div
-        className="grid gap-3 md:gap-4 py-2 mx-auto"
+        className="grid gap-4 md:gap-6 mx-auto"
         style={{
-          gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
-          maxWidth: "720px",
+          gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+          maxWidth: "640px",
         }}
       >
         {pack.map((card, i) => (
@@ -481,23 +494,26 @@ function MiniCard({ card }: { card: Card }) {
     <div className="relative flex flex-col items-center gap-1.5">
       <div
         className={clsx(
-          "relative w-full aspect-[5/7] rounded-lg overflow-hidden ring-2 bg-zinc-900",
+          "relative w-full aspect-[5/7] rounded-lg overflow-hidden isolate ring-2 bg-zinc-900",
           style.frame,
           style.glow
         )}
       >
+        {hot && <div className="rarity-ring" />}
         {card.imageUrl ? (
           <img
             src={card.imageUrl}
             alt={card.name}
-            className="w-full h-full object-contain bg-zinc-900"
+            loading="lazy"
+            draggable={false}
+            className="w-full h-full object-contain bg-zinc-900 select-none pointer-events-none"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-700 to-amber-600 p-2 text-center text-white text-[10px]">
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-700 to-amber-600 p-2 text-center text-white text-[10px] select-none">
             {card.name}
           </div>
         )}
-        {hot && <div className="holo-overlay" />}
+        {hot && <div className="holo-overlay pointer-events-none" />}
       </div>
       <RarityBadge rarity={card.rarity} size="xs" />
     </div>
