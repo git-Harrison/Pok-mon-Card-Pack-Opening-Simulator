@@ -13,6 +13,7 @@ import {
 import { getCard, SETS } from "@/lib/sets";
 import type { GiftStatus } from "@/lib/types";
 import RarityBadge from "./RarityBadge";
+import CoinIcon from "./CoinIcon";
 
 type Tab = "received" | "sent";
 
@@ -233,10 +234,11 @@ export default function GiftsView() {
                           </span>
                         </span>
                         <span>·</span>
-                        <span>
-                          가격:{" "}
-                          <span className="text-amber-300 font-bold">
-                            🪙 {g.price_points.toLocaleString("ko-KR")}p
+                        <span className="inline-flex items-center gap-1">
+                          가격:
+                          <span className="inline-flex items-center gap-1 text-amber-300 font-bold">
+                            <CoinIcon size="xs" />
+                            {g.price_points.toLocaleString("ko-KR")}p
                           </span>
                         </span>
                         {countdown && (
@@ -274,11 +276,16 @@ export default function GiftsView() {
                             : undefined
                         }
                       >
-                        {isBusy
-                          ? "처리 중..."
-                          : g.price_points > 0
-                          ? `🪙 ${g.price_points.toLocaleString("ko-KR")}p 지불하고 받기`
-                          : "무료로 받기"}
+                        {isBusy ? (
+                          "처리 중..."
+                        ) : g.price_points > 0 ? (
+                          <span className="inline-flex items-center gap-1">
+                            <CoinIcon size="xs" />
+                            {g.price_points.toLocaleString("ko-KR")}p 지불하고 받기
+                          </span>
+                        ) : (
+                          "무료로 받기"
+                        )}
                       </button>
                       <button
                         onClick={() => handleDecline(g)}

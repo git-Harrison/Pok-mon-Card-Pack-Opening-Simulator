@@ -9,6 +9,7 @@ import { SETS } from "@/lib/sets";
 import { useAuth } from "@/lib/auth";
 import { createGift } from "@/lib/db";
 import RarityBadge from "./RarityBadge";
+import CoinIcon from "./CoinIcon";
 
 interface Props {
   card: Card | null;
@@ -47,7 +48,7 @@ export default function CardDetailModal({
       {card && (
         <motion.div
           key="backdrop"
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-end md:items-center justify-center overflow-y-auto"
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-end md:items-center justify-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -58,113 +59,118 @@ export default function CardDetailModal({
             onClick={(e) => e.stopPropagation()}
             className={clsx(
               "relative w-full md:max-w-3xl bg-zinc-950/95 border border-white/10",
-              "rounded-t-3xl md:rounded-2xl shadow-2xl overflow-hidden",
-              "pb-safe md:pb-0"
+              "rounded-t-3xl md:rounded-2xl shadow-2xl",
+              // 모바일/PC 공통: 화면보다 커지지 않게 높이 제한 + 내부 스크롤
+              "flex flex-col max-h-[92dvh] md:max-h-[90vh] overflow-hidden"
             )}
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
           >
-            {/* mobile drag handle */}
-            <div className="md:hidden h-1.5 w-12 mx-auto mt-2 rounded-full bg-white/20" />
+            {/* Sticky top bar: drag handle (mobile) + close button (always reachable) */}
+            <div className="relative shrink-0 pt-2 md:pt-0">
+              <div className="md:hidden h-1.5 w-12 mx-auto rounded-full bg-white/20" />
+              <button
+                onClick={onClose}
+                aria-label="닫기"
+                className="absolute top-2 right-2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center z-10"
+              >
+                ✕
+              </button>
+            </div>
 
-            <button
-              onClick={onClose}
-              aria-label="닫기"
-              className="absolute top-2 right-2 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
-            >
-              ✕
-            </button>
-
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-0">
-              <div className="md:col-span-3 relative p-5 md:p-8 flex items-center justify-center bg-gradient-to-br from-zinc-900 to-black min-h-[340px]">
-                {isHighRarity(card.rarity) && (
-                  <div
-                    className="absolute inset-0 opacity-60"
-                    style={{
-                      background: `radial-gradient(closest-side, ${
-                        RARITY_STYLE[card.rarity].tier >= 7
-                          ? "#f59e0b"
-                          : "#818cf8"
-                      }55, transparent 70%)`,
-                    }}
-                  />
-                )}
-                <div
-                  className={clsx(
-                    "relative w-full max-w-[240px] md:max-w-[280px] aspect-[5/7] rounded-xl overflow-hidden ring-2",
-                    RARITY_STYLE[card.rarity].frame,
-                    RARITY_STYLE[card.rarity].glow
-                  )}
-                >
-                  {isHighRarity(card.rarity) && <div className="rarity-ring" />}
-                  {card.imageUrl && !imgError ? (
-                    <img
-                      src={card.imageUrl}
-                      alt={card.name}
-                      className="w-full h-full object-cover"
-                      onError={() => setImgError(true)}
+            {/* Scrollable body */}
+            <div className="flex-1 overflow-y-auto overscroll-contain pb-safe md:pb-0">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-0">
+                <div className="md:col-span-3 relative p-5 md:p-8 flex items-center justify-center bg-gradient-to-br from-zinc-900 to-black">
+                  {isHighRarity(card.rarity) && (
+                    <div
+                      className="absolute inset-0 opacity-60 pointer-events-none"
+                      style={{
+                        background: `radial-gradient(closest-side, ${
+                          RARITY_STYLE[card.rarity].tier >= 7
+                            ? "#f59e0b"
+                            : "#818cf8"
+                        }55, transparent 70%)`,
+                      }}
                     />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-700 to-amber-600 p-4 text-center">
-                      <div>
-                        <div className="text-xs text-white/60">
-                          #{card.number}
-                        </div>
-                        <div className="mt-2 text-white font-bold">
-                          {card.name}
+                  )}
+                  <div
+                    className={clsx(
+                      "relative w-[62vw] max-w-[240px] md:max-w-[280px] aspect-[5/7] rounded-xl overflow-hidden ring-2",
+                      RARITY_STYLE[card.rarity].frame,
+                      RARITY_STYLE[card.rarity].glow
+                    )}
+                  >
+                    {isHighRarity(card.rarity) && <div className="rarity-ring" />}
+                    {card.imageUrl && !imgError ? (
+                      <img
+                        src={card.imageUrl}
+                        alt={card.name}
+                        className="w-full h-full object-cover"
+                        onError={() => setImgError(true)}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-700 to-amber-600 p-4 text-center">
+                        <div>
+                          <div className="text-xs text-white/60">
+                            #{card.number}
+                          </div>
+                          <div className="mt-2 text-white font-bold">
+                            {card.name}
+                          </div>
                         </div>
                       </div>
+                    )}
+                    {isHighRarity(card.rarity) && <div className="holo-overlay" />}
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 p-5 md:p-6 flex flex-col gap-4">
+                  <div>
+                    <RarityBadge rarity={card.rarity} size="md" />
+                    <h2 className="mt-3 text-2xl md:text-3xl font-black text-white leading-tight">
+                      {card.name}
+                    </h2>
+                    <p className="mt-1 text-xs text-zinc-400">
+                      {SETS[card.setCode].name} · 번호 {card.number}
+                    </p>
+                  </div>
+
+                  <dl className="grid grid-cols-2 gap-2 text-sm">
+                    <Info label="등급" value={RARITY_LABEL[card.rarity]} />
+                    <Info label="보유" value={`${count}장`} />
+                  </dl>
+
+                  {giftOpen ? (
+                    <GiftForm
+                      card={card}
+                      onCancel={() => setGiftOpen(false)}
+                      onSuccess={() => {
+                        setGiftOpen(false);
+                        onAfterGift?.();
+                        onClose();
+                      }}
+                    />
+                  ) : (
+                    <div className="mt-auto flex flex-col gap-2">
+                      <button
+                        onClick={() => setGiftOpen(true)}
+                        disabled={count <= 0}
+                        className="h-12 rounded-xl bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        친구에게 선물 보내기
+                      </button>
+                      <button
+                        onClick={onClose}
+                        className="h-11 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold text-sm border border-white/10 transition"
+                      >
+                        닫기
+                      </button>
                     </div>
                   )}
-                  {isHighRarity(card.rarity) && <div className="holo-overlay" />}
                 </div>
-              </div>
-
-              <div className="md:col-span-2 p-5 md:p-6 flex flex-col gap-4">
-                <div>
-                  <RarityBadge rarity={card.rarity} size="md" />
-                  <h2 className="mt-3 text-2xl md:text-3xl font-black text-white leading-tight">
-                    {card.name}
-                  </h2>
-                  <p className="mt-1 text-xs text-zinc-400">
-                    {SETS[card.setCode].name} · 번호 {card.number}
-                  </p>
-                </div>
-
-                <dl className="grid grid-cols-2 gap-2 text-sm">
-                  <Info label="등급" value={RARITY_LABEL[card.rarity]} />
-                  <Info label="보유" value={`${count}장`} />
-                </dl>
-
-                {giftOpen ? (
-                  <GiftForm
-                    card={card}
-                    onCancel={() => setGiftOpen(false)}
-                    onSuccess={() => {
-                      setGiftOpen(false);
-                      onAfterGift?.();
-                      onClose();
-                    }}
-                  />
-                ) : (
-                  <div className="mt-auto flex flex-col gap-2">
-                    <button
-                      onClick={() => setGiftOpen(true)}
-                      disabled={count <= 0}
-                      className="h-12 rounded-xl bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      🎁 친구에게 선물 보내기
-                    </button>
-                    <button
-                      onClick={onClose}
-                      className="h-11 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold text-sm border border-white/10 transition"
-                    >
-                      닫기
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
           </motion.div>
@@ -239,8 +245,8 @@ function GiftForm({
           className="flex-1 h-11 px-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400/60"
           placeholder="0"
         />
-        <span className="inline-flex items-center px-3 rounded-lg bg-white/5 border border-white/10 text-xs text-zinc-300">
-          🪙 포인트
+        <span className="inline-flex items-center gap-1.5 px-3 rounded-lg bg-white/5 border border-white/10 text-xs text-zinc-300">
+          <CoinIcon size="xs" /> 포인트
         </span>
       </div>
       <p className="mt-2 text-[11px] text-zinc-500 leading-snug">
@@ -251,7 +257,7 @@ function GiftForm({
       {error && <p className="mt-2 text-xs text-rose-400">{error}</p>}
       {success && (
         <p className="mt-2 text-xs text-emerald-300">
-          🎉 선물이 전송되었습니다! 친구가 수락할 때까지 기다려 주세요.
+          선물이 전송되었습니다! 친구가 수락할 때까지 기다려 주세요.
         </p>
       )}
       <div className="mt-3 flex gap-2">

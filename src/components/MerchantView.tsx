@@ -23,6 +23,7 @@ import { MERCHANT_PRICE, RARITY_STYLE, isHighRarity } from "@/lib/rarity";
 import type { Card, MerchantState } from "@/lib/types";
 import RarityBadge from "./RarityBadge";
 import PointsChip from "./PointsChip";
+import CoinIcon from "./CoinIcon";
 
 type Phase = "idle" | "refreshing" | "selling" | "sold";
 
@@ -208,7 +209,7 @@ export default function MerchantView() {
                     <span
                       key={i}
                       aria-hidden
-                      className="pointer-events-none absolute left-1/2 top-1/2 text-2xl"
+                      className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
                       style={
                         {
                           animation: `coin-fly 1.1s ease-out ${i * 0.02}s forwards`,
@@ -216,7 +217,7 @@ export default function MerchantView() {
                         } as React.CSSProperties
                       }
                     >
-                      🪙
+                      <CoinIcon size="lg" />
                     </span>
                   );
                 })}
@@ -242,7 +243,7 @@ export default function MerchantView() {
           <div className="speech-bubble relative w-full rounded-2xl bg-zinc-900/95 border border-white/10 p-4 text-sm leading-relaxed">
             {phase === "sold" ? (
               <p className="text-emerald-300 font-semibold">
-                고맙다냥! {lastEarned?.toLocaleString("ko-KR")}포인트 받아라냥 🪙
+                고맙다냥! {lastEarned?.toLocaleString("ko-KR")}포인트 받아라냥
               </p>
             ) : phase === "selling" ? (
               <p className="text-zinc-200">이 카드... 좋다냥! 잠시만 기다려라냥</p>
@@ -252,7 +253,7 @@ export default function MerchantView() {
                 을(를) 찾고 있다냥.
                 {ownedCount > 0 ? (
                   <span className="block mt-1 text-amber-300 font-semibold">
-                    너가 {ownedCount}장 갖고 있다냥! 판매하라냥 🪙
+                    너가 {ownedCount}장 갖고 있다냥! 판매하라냥
                   </span>
                 ) : (
                   <span className="block mt-1 text-zinc-400">
@@ -331,8 +332,9 @@ export default function MerchantView() {
                     {SETS[wantedCard.setCode].name} · #{wantedCard.number}
                   </span>
                 </div>
-                <div className="rounded-full bg-amber-400/10 border border-amber-400/40 text-amber-200 px-3 py-1 text-xs font-bold">
-                  🪙 {state.price.toLocaleString("ko-KR")}p 에 매입
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/10 border border-amber-400/40 text-amber-200 px-3 py-1 text-xs font-bold">
+                  <CoinIcon size="xs" />
+                  <span>{state.price.toLocaleString("ko-KR")}p 에 매입</span>
                 </div>
               </div>
               <h3 className="text-lg font-black text-white leading-tight">
@@ -362,7 +364,7 @@ export default function MerchantView() {
                 ? "판매 중..."
                 : ownedCount <= 0
                 ? "보유 중 아님"
-                : `+${state.price.toLocaleString("ko-KR")}p 에 팔기`}
+                : `+${state.price.toLocaleString("ko-KR")}p 받고 팔기`}
             </button>
             <button
               onClick={onRefresh}

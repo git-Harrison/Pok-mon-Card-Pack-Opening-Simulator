@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import clsx from "clsx";
+import CoinIcon from "./CoinIcon";
 
 /** Animated points counter that tweens when the value changes. */
 export default function PointsChip({
@@ -50,9 +51,7 @@ export default function PointsChip({
         highlight && "shadow-[0_0_18px_rgba(251,191,36,0.55)]"
       )}
     >
-      <span aria-hidden className="-ml-0.5 text-base leading-none">
-        🪙
-      </span>
+      <CoinIcon size={size === "sm" ? "xs" : "sm"} />
       <span className="tabular-nums">{display.toLocaleString("ko-KR")}</span>
       <AnimatePresence>
         {delta !== null && delta !== 0 && (
