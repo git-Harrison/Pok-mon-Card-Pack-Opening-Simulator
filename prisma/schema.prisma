@@ -1,0 +1,145 @@
+// Prisma schema for the Pokémon TCG Sim.
+// Real DB (Postgres on Supabase/Neon/Railway) will be wired up post-launch.
+// The localStorage shape in src/lib/storage.ts mirrors these tables.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------- Catalog -------------
+
+model Set {
+  code          String   @id // "m2a" | "m2" | "sv8"
+  name          String
+  subtitle      String
+  releaseDate   DateTime
+  cardsPerPack  Int
+  packsPerBox   Int
+  totalCards    Int
+  primaryColor  String
+  boxImage      String
+  packImage     String
+
+  cards  Card[]
+  pulls  Pull[]
+  boxes  Box[]
+
+  @@map("sets")
+}
+
+enum Rarity {
+  C
+  U
+  R
+  RR
+  AR
+  SR
+  SAR
+  MA
+  MUR
+  UR
+}
+
+model Card {
+  id        String  @id // "${setCode}-${number}"
+  setCode   String
+  number    String
+  name      String
+  rarity    Rarity
+  imageUrl  String?
+
+  set    Set     @relation(fields: [setCode], references: [code], onDelete: Cascade)
+  pulls  Pull[]
+
+  @@unique([setCode, number])
+  @@index([setCode, rarity])
+  @@map("cards")
+}
+
+// ------------- User & Collection -------------
+
+model User {
+  id            String   @id @default(cuid())
+  email         String?  @unique
+  displayName   String?
+  createdAt     DateTime @default(now())
+
+  boxes         Box[]
+  packOpens     PackOpen[]
+  pulls         Pull[]
+  ownerships    CardOwnership[]
+
+  @@map("users")
+}
+
+// One row per box the user has opened.
+model Box {
+  id        String   @id @default(cuid())
+  userId    String
+  setCode   String
+  openedAt  DateTime @default(now())
+
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  set     Set        @relation(fields: [setCode], references: [code])
+  packs   PackOpen[]
+
+  @@index([userId, setCode])
+  @@map("boxes")
+}
+
+// One row per pack opened.
+model PackOpen {
+  id        String   @id @default(cuid())
+  userId    String
+  setCode   String
+  boxId     String?
+  slotIndex Int      // 0..(packsPerBox-1) if part of a tracked box
+  openedAt  DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  box     Box?    @relation(fields: [boxId], references: [id], onDelete: SetNull)
+  pulls   Pull[]
+
+  @@index([userId, openedAt])
+  @@map("pack_opens")
+}
+
+// Individual card drawn on a specific pack.
+model Pull {
+  id         String   @id @default(cuid())
+  userId     String
+  cardId     String
+  setCode    String
+  packOpenId String
+  pulledAt   DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card      Card     @relation(fields: [cardId], references: [id])
+  set       Set      @relation(fields: [setCode], references: [code])
+  packOpen  PackOpen @relation(fields: [packOpenId], references: [id], onDelete: Cascade)
+
+  @@index([userId, cardId])
+  @@index([userId, pulledAt])
+  @@map("pulls")
+}
+
+// Aggregate of owned count per card (derived, but materialized for read speed).
+model CardOwnership {
+  userId         String
+  cardId         String
+  count          Int       @default(0)
+  firstPulledAt  DateTime
+  lastPulledAt   DateTime
+
+  user  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card  Card @relation(fields: [cardId], references: [id])
+
+  @@id([userId, cardId])
+  @@index([userId])
+  @@map("card_ownership")
+}

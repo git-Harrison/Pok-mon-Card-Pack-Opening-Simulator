@@ -1,0 +1,66 @@
+import type { SetInfo } from "../types";
+
+// Limitless CDN for sv8 — returns 403 intermittently but is the cleanest naming.
+// Pattern: https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpc/SV8/SV8_<NNN>_R_JP_LG.png
+const lim = (n: string) =>
+  `https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpc/SV8/SV8_${n}_R_JP_LG.png`;
+
+export const sv8: SetInfo = {
+  code: "sv8",
+  name: "초전브레이커",
+  subtitle: "확장팩 · SUPER ELECTRIC BREAKER (SV8)",
+  releaseDate: "2024-11-27",
+  cardsPerPack: 5,
+  packsPerBox: 30,
+  totalCards: 138,
+  primaryColor: "#eab308",
+  accentColor: "#fde047",
+  boxImage: "/images/sets/sv8/box.png",
+  packImage: "/images/sets/sv8/pack.png",
+  slots: [
+    { label: "C 1", weights: { C: 100 } },
+    { label: "C 2", weights: { C: 100 } },
+    { label: "C/U", weights: { C: 55, U: 45 } },
+    { label: "U/R", weights: { U: 70, R: 30 } },
+    {
+      label: "Hit",
+      weights: { R: 30, RR: 30, AR: 20, SR: 12, SAR: 6, UR: 2 },
+    },
+  ],
+  cards: [
+    { id: "sv8-010", setCode: "sv8", number: "010", name: "부스터", rarity: "C", imageUrl: lim("010") },
+    { id: "sv8-022", setCode: "sv8", number: "022", name: "애버라스", rarity: "C", imageUrl: lim("022") },
+    { id: "sv8-028", setCode: "sv8", number: "028", name: "피카츄", rarity: "C", imageUrl: lim("028") },
+    { id: "sv8-044", setCode: "sv8", number: "044", name: "미라이돈", rarity: "C", imageUrl: lim("044") },
+    { id: "sv8-055", setCode: "sv8", number: "055", name: "꼬지지", rarity: "C", imageUrl: lim("055") },
+    { id: "sv8-063", setCode: "sv8", number: "063", name: "아르코", rarity: "U", imageUrl: lim("063") },
+    { id: "sv8-078", setCode: "sv8", number: "078", name: "싸리비", rarity: "U", imageUrl: lim("078") },
+    { id: "sv8-092", setCode: "sv8", number: "092", name: "리서치 센터", rarity: "R", imageUrl: lim("092") },
+    { id: "sv8-003", setCode: "sv8", number: "003", name: "두랄루돈 ex", rarity: "RR", imageUrl: lim("003") },
+    { id: "sv8-023", setCode: "sv8", number: "023", name: "스코빌런 ex", rarity: "RR", imageUrl: lim("023") },
+    { id: "sv8-026", setCode: "sv8", number: "026", name: "밀로틱 ex", rarity: "RR", imageUrl: lim("026") },
+    { id: "sv8-033", setCode: "sv8", number: "033", name: "피카츄 ex", rarity: "RR", imageUrl: lim("033") },
+    { id: "sv8-057", setCode: "sv8", number: "057", name: "사다이사 ex", rarity: "RR", imageUrl: lim("057") },
+    { id: "sv8-072", setCode: "sv8", number: "072", name: "삼삼드래 ex", rarity: "RR", imageUrl: lim("072") },
+    { id: "sv8-081", setCode: "sv8", number: "081", name: "싸리용 ex", rarity: "RR", imageUrl: lim("081") },
+    { id: "sv8-084", setCode: "sv8", number: "084", name: "게을킹 ex", rarity: "RR", imageUrl: lim("084") },
+    { id: "sv8-107", setCode: "sv8", number: "107", name: "바랏찌", rarity: "AR", imageUrl: lim("107") },
+    { id: "sv8-110", setCode: "sv8", number: "110", name: "이올브", rarity: "AR", imageUrl: lim("110") },
+    { id: "sv8-113", setCode: "sv8", number: "113", name: "시라노", rarity: "AR", imageUrl: lim("113") },
+    { id: "sv8-116", setCode: "sv8", number: "116", name: "도토리", rarity: "AR", imageUrl: lim("116") },
+    { id: "sv8-120", setCode: "sv8", number: "120", name: "스코빌런 ex", rarity: "SR", imageUrl: lim("120") },
+    { id: "sv8-121", setCode: "sv8", number: "121", name: "밀로틱 ex", rarity: "SR", imageUrl: lim("121") },
+    { id: "sv8-122", setCode: "sv8", number: "122", name: "피카츄 ex", rarity: "SR", imageUrl: lim("122") },
+    { id: "sv8-123", setCode: "sv8", number: "123", name: "사다이사 ex", rarity: "SR", imageUrl: lim("123") },
+    { id: "sv8-124", setCode: "sv8", number: "124", name: "삼삼드래 ex", rarity: "SR", imageUrl: lim("124") },
+    { id: "sv8-127", setCode: "sv8", number: "127", name: "시라노", rarity: "SR", imageUrl: lim("127") },
+    { id: "sv8-128", setCode: "sv8", number: "128", name: "시트론의 기전", rarity: "SR", imageUrl: lim("128") },
+    { id: "sv8-131", setCode: "sv8", number: "131", name: "밀로틱 ex", rarity: "SAR", imageUrl: lim("131") },
+    { id: "sv8-132", setCode: "sv8", number: "132", name: "피카츄 ex", rarity: "SAR", imageUrl: lim("132") },
+    { id: "sv8-133", setCode: "sv8", number: "133", name: "삼삼드래 ex", rarity: "SAR", imageUrl: lim("133") },
+    { id: "sv8-134", setCode: "sv8", number: "134", name: "도토리", rarity: "SAR", imageUrl: lim("134") },
+    { id: "sv8-136", setCode: "sv8", number: "136", name: "피카츄 ex (UR)", rarity: "UR", imageUrl: lim("136") },
+    { id: "sv8-137", setCode: "sv8", number: "137", name: "하이퍼볼 (UR)", rarity: "UR", imageUrl: lim("137") },
+    { id: "sv8-138", setCode: "sv8", number: "138", name: "마스터볼 (UR)", rarity: "UR", imageUrl: lim("138") },
+  ],
+};
