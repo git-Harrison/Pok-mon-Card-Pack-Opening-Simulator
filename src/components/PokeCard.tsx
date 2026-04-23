@@ -33,6 +33,14 @@ export default function PokeCard({
       ? "w-[220px] h-[308px]"
       : "w-[160px] h-[224px]";
 
+  // Only treat the card as an interactive button when it has a flip
+  // handler AND is currently face-down. In wallet / grid views (revealed
+  // with no onReveal), render as a plain div so parent click handlers
+  // (e.g. "open detail modal") receive the event without being swallowed
+  // by an inner <button>.
+  const interactive = !revealed && !!onReveal;
+  const Wrapper = interactive ? motion.button : motion.div;
+
   return (
     // Outer clip container keeps the rarity-ring glow strictly inside the card
     // bounds so it can't bleed into adjacent cards in a grid.
@@ -43,13 +51,18 @@ export default function PokeCard({
       )}
     >
       {highRarity && revealed && <div className="rarity-ring" />}
-      <motion.button
-        type="button"
-        onClick={() => !revealed && onReveal?.()}
-        style={{ touchAction: "manipulation" }}
+      <Wrapper
+        {...(interactive
+          ? {
+              type: "button" as const,
+              onClick: () => onReveal?.(),
+              style: { touchAction: "manipulation" as const },
+            }
+          : {})}
         className={clsx(
-          "relative preserve-3d w-full h-full rounded-xl cursor-pointer",
-          "ring-2 ring-offset-0 select-none",
+          "relative preserve-3d w-full h-full rounded-xl select-none",
+          "ring-2 ring-offset-0",
+          interactive && "cursor-pointer",
           revealed ? style.frame : "ring-white/10",
           revealed && style.glow
         )}
@@ -60,7 +73,13 @@ export default function PokeCard({
           ease: [0.4, 0, 0.2, 1],
           delay: index * 0.02,
         }}
-        whileHover={revealed ? { y: -6, scale: 1.03 } : { scale: 1.02 }}
+        whileHover={
+          interactive
+            ? { scale: 1.02 }
+            : revealed
+            ? { y: -6, scale: 1.03 }
+            : undefined
+        }
         aria-label={revealed ? card.name : "뒤집힌 카드"}
       >
         {/* Back face */}
@@ -101,9 +120,13 @@ export default function PokeCard({
             </div>
           )}
         </div>
-      </motion.button>
+      </Wrapper>
 
-      {highRarity && revealed && <SparkleBurst />}
+      {highRarity && revealed && (
+        <div className="pointer-events-none">
+          <SparkleBurst />
+        </div>
+      )}
     </div>
   );
 }

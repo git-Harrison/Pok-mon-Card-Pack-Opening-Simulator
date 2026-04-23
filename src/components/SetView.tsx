@@ -9,6 +9,7 @@ import type { Card, SetInfo } from "@/lib/types";
 import { drawBox } from "@/lib/pack-draw";
 import { buyBox, recordPackPull } from "@/lib/db";
 import { useAuth } from "@/lib/auth";
+import { notifyPackHits } from "@/lib/discord";
 import { BOX_COST, RARITY_STYLE } from "@/lib/rarity";
 import PackOpeningStage from "./PackOpeningStage";
 import RarityBadge from "./RarityBadge";
@@ -60,11 +61,14 @@ export default function SetView({ set }: { set: SetInfo }) {
       setActivePack(index);
       setPhase("opening-pack");
       if (user) {
+        const pack = packs[index];
         recordPackPull(
           user.id,
           set.code,
-          packs[index].map((c) => c.id)
+          pack.map((c) => c.id)
         ).catch((e) => console.error("recordPackPull failed", e));
+        // Fire-and-forget Discord brag for SAR / MUR / UR hits
+        notifyPackHits(user.user_id, pack, set.code);
       }
       setOpenedMask((prev) => {
         const next = [...prev];
@@ -100,6 +104,8 @@ export default function SetView({ set }: { set: SetInfo }) {
       .sort(
         (a, b) => RARITY_STYLE[b.rarity].tier - RARITY_STYLE[a.rarity].tier
       );
+    // Fire-and-forget Discord brag for any SAR / MUR / UR hits in bulk open
+    notifyPackHits(user.user_id, allCards, set.code);
     setBulkCards(allCards);
     setOpenedMask(new Array(packs.length).fill(true));
     setPhase("bulk-result");
@@ -218,7 +224,6 @@ export default function SetView({ set }: { set: SetInfo }) {
             pack={packs[activePack]}
             packImage={set.packImage}
             setName={set.name}
-            setCode={set.code}
             onClose={backToGrid}
           />
         )}
