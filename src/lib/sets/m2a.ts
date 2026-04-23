@@ -19,7 +19,7 @@ export const m2a: SetInfo = {
   totalCards: 250,
   primaryColor: "#f43f5e",
   accentColor: "#fde68a",
-  boxImage: "/images/sets/m2a/box.png",
+  boxImage: "/images/sets/m2a/box.webp",
   packImage: "/images/sets/m2a/pack.png",
   // High-class pack: 10 cards, richer hit distribution
   slots: [
