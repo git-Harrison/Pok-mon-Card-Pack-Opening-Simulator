@@ -9,9 +9,9 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import { rpcLogin, rpcSignup, type DbUser } from "./db";
+import { fetchMe, rpcLogin, rpcSignup, type DbUser } from "./db";
 
-const SESSION_KEY = "pokemon-tcg-sim:session:v1";
+const SESSION_KEY = "pokemon-tcg-sim:session:v2";
 
 interface AuthContextValue {
   user: DbUser | null;
@@ -23,27 +23,28 @@ interface AuthContextValue {
     age: number
   ) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
+  refreshMe: () => Promise<void>;
+  setPoints: (points: number) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+function loadSession(): DbUser | null {
+  try {
+    const raw = window.localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as DbUser;
+    if (parsed?.id && parsed?.user_id) return parsed;
+  } catch {
+    // ignore
+  }
+  return null;
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<DbUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(SESSION_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as DbUser;
-        if (parsed?.id && parsed?.user_id) setUser(parsed);
-      }
-    } catch {
-      // ignore
-    }
-    setIsLoading(false);
-  }, []);
 
   const persist = useCallback((u: DbUser | null) => {
     setUser(u);
@@ -55,13 +56,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Initial session restore + refetch latest points from DB.
+  useEffect(() => {
+    const stored = loadSession();
+    if (stored) {
+      setUser(stored);
+      fetchMe(stored.id)
+        .then((fresh) => {
+          if (fresh) persist(fresh);
+        })
+        .finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
+    }
+  }, [persist]);
+
+  const refreshMe = useCallback(async () => {
+    if (!user) return;
+    const fresh = await fetchMe(user.id);
+    if (fresh) persist(fresh);
+  }, [user, persist]);
+
+  const setPoints = useCallback(
+    (points: number) => {
+      if (!user) return;
+      persist({ ...user, points });
+    },
+    [user, persist]
+  );
+
   const login = useCallback(
     async (loginId: string, password: string) => {
       const res = await rpcLogin(loginId, password);
       if (!res.ok || !res.user) {
         return { ok: false, error: res.error ?? "로그인 실패" };
       }
-      persist(res.user);
+      const fresh = await fetchMe(res.user.id);
+      persist(fresh ?? { ...res.user, points: 0 });
       return { ok: true };
     },
     [persist]
@@ -73,7 +104,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok || !res.user) {
         return { ok: false, error: res.error ?? "회원가입 실패" };
       }
-      persist(res.user);
+      const fresh = await fetchMe(res.user.id);
+      persist(fresh ?? { ...res.user, points: 0 });
       return { ok: true };
     },
     [persist]
@@ -85,8 +117,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [persist, router]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isLoading, login, signup, logout }),
-    [user, isLoading, login, signup, logout]
+    () => ({ user, isLoading, login, signup, logout, refreshMe, setPoints }),
+    [user, isLoading, login, signup, logout, refreshMe, setPoints]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -98,7 +130,6 @@ export function useAuth(): AuthContextValue {
   return ctx;
 }
 
-/** Client-side guard: redirects to /login when unauthenticated. */
 export function useRequireAuth(): DbUser | null {
   const { user, isLoading } = useAuth();
   const router = useRouter();

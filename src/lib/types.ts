@@ -42,15 +42,11 @@ export interface SetInfo {
   cards: Card[];
 }
 
-export interface OpenedCardRecord {
-  cardId: string;
-  count: number;
-  firstPulledAt: number;
-  lastPulledAt: number;
+export interface MerchantState {
+  card_id: string | null;
+  price: number;
+  refreshes_remaining: number;
+  next_refresh_at: string;
 }
 
-export interface WalletState {
-  version: 1;
-  records: Record<string, OpenedCardRecord>;
-  packsOpened: Record<SetCode, number>;
-}
+export type GiftStatus = "pending" | "accepted" | "expired" | "declined";

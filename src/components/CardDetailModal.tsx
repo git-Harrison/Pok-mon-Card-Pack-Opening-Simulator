@@ -7,7 +7,7 @@ import type { Card } from "@/lib/types";
 import { RARITY_LABEL, RARITY_STYLE, isHighRarity } from "@/lib/rarity";
 import { SETS } from "@/lib/sets";
 import { useAuth } from "@/lib/auth";
-import { giftCard } from "@/lib/db";
+import { createGift } from "@/lib/db";
 import RarityBadge from "./RarityBadge";
 
 interface Props {
@@ -17,7 +17,12 @@ interface Props {
   onAfterGift?: () => void;
 }
 
-export default function CardDetailModal({ card, count, onClose, onAfterGift }: Props) {
+export default function CardDetailModal({
+  card,
+  count,
+  onClose,
+  onAfterGift,
+}: Props) {
   const [giftOpen, setGiftOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
 
@@ -42,7 +47,7 @@ export default function CardDetailModal({ card, count, onClose, onAfterGift }: P
       {card && (
         <motion.div
           key="backdrop"
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-start md:items-center justify-center p-3 md:p-6 overflow-y-auto"
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-end md:items-center justify-center overflow-y-auto"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -51,23 +56,29 @@ export default function CardDetailModal({ card, count, onClose, onAfterGift }: P
           <motion.div
             layoutId={`card-${card.id}`}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-3xl my-auto bg-zinc-950/90 border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
-            initial={{ y: 20, opacity: 0 }}
+            className={clsx(
+              "relative w-full md:max-w-3xl bg-zinc-950/95 border border-white/10",
+              "rounded-t-3xl md:rounded-2xl shadow-2xl overflow-hidden",
+              "pb-safe md:pb-0"
+            )}
+            initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 20, opacity: 0 }}
+            exit={{ y: 80, opacity: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
           >
+            {/* mobile drag handle */}
+            <div className="md:hidden h-1.5 w-12 mx-auto mt-2 rounded-full bg-white/20" />
+
             <button
               onClick={onClose}
               aria-label="닫기"
-              className="absolute top-2 right-2 z-10 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+              className="absolute top-2 right-2 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
             >
               ✕
             </button>
 
             <div className="grid grid-cols-1 md:grid-cols-5 gap-0">
-              {/* Card image */}
-              <div className="md:col-span-3 relative p-5 md:p-8 flex items-center justify-center bg-gradient-to-br from-zinc-900 to-black min-h-[360px]">
+              <div className="md:col-span-3 relative p-5 md:p-8 flex items-center justify-center bg-gradient-to-br from-zinc-900 to-black min-h-[340px]">
                 {isHighRarity(card.rarity) && (
                   <div
                     className="absolute inset-0 opacity-60"
@@ -82,7 +93,7 @@ export default function CardDetailModal({ card, count, onClose, onAfterGift }: P
                 )}
                 <div
                   className={clsx(
-                    "relative w-full max-w-[280px] aspect-[5/7] rounded-xl overflow-hidden ring-2",
+                    "relative w-full max-w-[240px] md:max-w-[280px] aspect-[5/7] rounded-xl overflow-hidden ring-2",
                     RARITY_STYLE[card.rarity].frame,
                     RARITY_STYLE[card.rarity].glow
                   )}
@@ -98,7 +109,9 @@ export default function CardDetailModal({ card, count, onClose, onAfterGift }: P
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-700 to-amber-600 p-4 text-center">
                       <div>
-                        <div className="text-xs text-white/60">#{card.number}</div>
+                        <div className="text-xs text-white/60">
+                          #{card.number}
+                        </div>
                         <div className="mt-2 text-white font-bold">
                           {card.name}
                         </div>
@@ -109,7 +122,6 @@ export default function CardDetailModal({ card, count, onClose, onAfterGift }: P
                 </div>
               </div>
 
-              {/* Meta panel */}
               <div className="md:col-span-2 p-5 md:p-6 flex flex-col gap-4">
                 <div>
                   <RarityBadge rarity={card.rarity} size="md" />
@@ -123,7 +135,7 @@ export default function CardDetailModal({ card, count, onClose, onAfterGift }: P
 
                 <dl className="grid grid-cols-2 gap-2 text-sm">
                   <Info label="등급" value={RARITY_LABEL[card.rarity]} />
-                  <Info label="보유 장수" value={`${count}장`} />
+                  <Info label="보유" value={`${count}장`} />
                 </dl>
 
                 {giftOpen ? (
@@ -141,9 +153,9 @@ export default function CardDetailModal({ card, count, onClose, onAfterGift }: P
                     <button
                       onClick={() => setGiftOpen(true)}
                       disabled={count <= 0}
-                      className="h-11 rounded-xl bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="h-12 rounded-xl bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      🎁 카드 선물하기
+                      🎁 친구에게 선물 보내기
                     </button>
                     <button
                       onClick={onClose}
@@ -184,15 +196,17 @@ function GiftForm({
 }) {
   const { user } = useAuth();
   const [recipient, setRecipient] = useState("");
+  const [priceRaw, setPriceRaw] = useState("0");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const submit = async () => {
     if (!user || !recipient.trim() || sending) return;
+    const price = Math.max(0, Math.floor(Number(priceRaw) || 0));
     setSending(true);
     setError(null);
-    const res = await giftCard(user.id, recipient.trim(), card.id);
+    const res = await createGift(user.id, recipient.trim(), card.id, price);
     setSending(false);
     if (!res.ok) {
       setError(res.error ?? "선물 전송 실패");
@@ -209,29 +223,49 @@ function GiftForm({
         value={recipient}
         onChange={(e) => setRecipient(e.target.value)}
         autoFocus
+        autoComplete="off"
         placeholder="예: min"
         className="w-full h-11 px-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400/60"
       />
-      {error && (
-        <p className="mt-2 text-xs text-rose-400">{error}</p>
-      )}
+
+      <p className="text-xs text-zinc-300 mt-3 mb-2">
+        받는 사람이 지불할 포인트
+      </p>
+      <div className="flex items-stretch gap-1.5">
+        <input
+          value={priceRaw}
+          onChange={(e) => setPriceRaw(e.target.value.replace(/[^0-9]/g, ""))}
+          inputMode="numeric"
+          className="flex-1 h-11 px-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400/60"
+          placeholder="0"
+        />
+        <span className="inline-flex items-center px-3 rounded-lg bg-white/5 border border-white/10 text-xs text-zinc-300">
+          🪙 포인트
+        </span>
+      </div>
+      <p className="mt-2 text-[11px] text-zinc-500 leading-snug">
+        받는 사람이 24시간 내에 수락해야 해요. 수락 시 카드는 친구에게, 포인트는
+        나에게 전달됩니다. 미수락 시 카드는 자동으로 돌아옵니다.
+      </p>
+
+      {error && <p className="mt-2 text-xs text-rose-400">{error}</p>}
       {success && (
         <p className="mt-2 text-xs text-emerald-300">
-          🎉 선물이 전송되었습니다!
+          🎉 선물이 전송되었습니다! 친구가 수락할 때까지 기다려 주세요.
         </p>
       )}
       <div className="mt-3 flex gap-2">
         <button
           onClick={submit}
           disabled={sending || success || !recipient.trim()}
-          className="flex-1 h-10 rounded-lg bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-sm disabled:opacity-50"
+          className="flex-1 h-11 rounded-lg bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-sm disabled:opacity-50"
         >
-          {sending ? "보내는 중..." : success ? "전송 완료" : "보내기"}
+          {sending ? "보내는 중..." : success ? "전송 완료" : "선물 보내기"}
         </button>
         <button
           onClick={onCancel}
           disabled={sending}
-          className="flex-1 h-10 rounded-lg bg-white/10 hover:bg-white/15 text-white font-semibold text-sm"
+          className="flex-1 h-11 rounded-lg bg-white/10 hover:bg-white/15 text-white font-semibold text-sm"
         >
           취소
         </button>

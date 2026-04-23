@@ -5,10 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
+import PointsChip from "./PointsChip";
 
 const AUTH_NAV = [
   { href: "/", label: "홈" },
   { href: "/wallet", label: "내 카드지갑" },
+  { href: "/merchant", label: "카드 상인" },
   { href: "/users", label: "사용자 랭킹" },
   { href: "/gifts", label: "선물함" },
 ];
@@ -24,13 +26,16 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-40 backdrop-blur-md bg-black/40 border-b border-white/10">
       <div className="max-w-6xl mx-auto px-3 md:px-6 h-14 flex items-center justify-between gap-2">
-        <Link href={user ? "/" : "/login"} className="flex items-center gap-2 shrink-0">
+        <Link
+          href={user ? "/" : "/login"}
+          className="flex items-center gap-2 shrink-0"
+        >
           <span className="relative inline-flex w-7 h-7 rounded-full bg-gradient-to-b from-red-500 to-red-700 shadow-lg shadow-red-500/30">
             <span className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-black/80" />
             <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white border-2 border-black/80" />
           </span>
           <span className="text-sm md:text-base font-bold tracking-tight text-white">
-            <span className="hidden sm:inline">포켓몬 </span>카드깡 시뮬레이터
+            <span className="hidden sm:inline">포켓몬 </span>카드깡
           </span>
         </Link>
 
@@ -51,8 +56,9 @@ export default function Navbar() {
           ))}
           {user ? (
             <div className="ml-2 flex items-center gap-2">
+              <PointsChip points={user.points} size="sm" />
               <span className="text-xs text-zinc-400">
-                <span className="text-zinc-200 font-semibold">{user.user_id}</span>님
+                <span className="text-zinc-200 font-semibold">{user.user_id}</span>
               </span>
               <button
                 onClick={logout}
@@ -74,35 +80,36 @@ export default function Navbar() {
           )}
         </nav>
 
-        {/* Mobile menu button */}
         {user ? (
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-label="메뉴"
-            className="md:hidden w-10 h-10 flex items-center justify-center rounded-md hover:bg-white/5"
-          >
-            <span className="sr-only">메뉴</span>
-            <div className="relative w-5 h-3.5">
-              <span
-                className={clsx(
-                  "absolute left-0 right-0 h-0.5 bg-white transition-all",
-                  menuOpen ? "top-1.5 rotate-45" : "top-0"
-                )}
-              />
-              <span
-                className={clsx(
-                  "absolute left-0 right-0 h-0.5 bg-white transition-all top-1.5",
-                  menuOpen && "opacity-0"
-                )}
-              />
-              <span
-                className={clsx(
-                  "absolute left-0 right-0 h-0.5 bg-white transition-all",
-                  menuOpen ? "top-1.5 -rotate-45" : "top-3"
-                )}
-              />
-            </div>
-          </button>
+          <div className="md:hidden flex items-center gap-2">
+            <PointsChip points={user.points} size="sm" />
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label="메뉴"
+              className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-white/5"
+            >
+              <div className="relative w-5 h-3.5">
+                <span
+                  className={clsx(
+                    "absolute left-0 right-0 h-0.5 bg-white transition-all",
+                    menuOpen ? "top-1.5 rotate-45" : "top-0"
+                  )}
+                />
+                <span
+                  className={clsx(
+                    "absolute left-0 right-0 h-0.5 bg-white transition-all top-1.5",
+                    menuOpen && "opacity-0"
+                  )}
+                />
+                <span
+                  className={clsx(
+                    "absolute left-0 right-0 h-0.5 bg-white transition-all",
+                    menuOpen ? "top-1.5 -rotate-45" : "top-3"
+                  )}
+                />
+              </div>
+            </button>
+          </div>
         ) : (
           pathname !== "/login" &&
           pathname !== "/signup" && (
@@ -116,9 +123,8 @@ export default function Navbar() {
         )}
       </div>
 
-      {/* Mobile menu drawer */}
       {user && menuOpen && (
-        <div className="md:hidden border-t border-white/10 bg-black/70 backdrop-blur-md">
+        <div className="md:hidden border-t border-white/10 bg-black/80 backdrop-blur-md">
           <div className="max-w-6xl mx-auto px-3 py-2 flex flex-col">
             {items.map((item) => (
               <Link
@@ -137,7 +143,8 @@ export default function Navbar() {
             ))}
             <div className="mt-1 flex items-center justify-between px-3 py-3 border-t border-white/5">
               <span className="text-xs text-zinc-400">
-                <span className="text-zinc-200 font-semibold">{user.user_id}</span>님
+                <span className="text-zinc-200 font-semibold">{user.user_id}</span>
+                님
               </span>
               <button
                 onClick={() => {

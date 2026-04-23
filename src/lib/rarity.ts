@@ -101,3 +101,17 @@ export function compareRarity(a: Rarity, b: Rarity): number {
 export function isHighRarity(r: Rarity): boolean {
   return RARITY_STYLE[r].tier >= 4;
 }
+
+// Points the merchant pays when buying a card of this rarity.
+export const MERCHANT_PRICE: Record<Rarity, number> = {
+  C: 20,
+  U: 60,
+  R: 150,
+  RR: 400,
+  AR: 800,
+  SR: 1500,
+  MA: 2200,
+  SAR: 3500,
+  MUR: 6000,
+  UR: 6000,
+};

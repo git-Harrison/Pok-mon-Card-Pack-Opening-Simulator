@@ -1,7 +1,12 @@
 "use client";
 
 import { createClient } from "@/utils/supabase/client";
-import type { Card, SetCode } from "./types";
+import type {
+  Card,
+  GiftStatus,
+  MerchantState,
+  SetCode,
+} from "./types";
 import { getCard } from "./sets";
 
 const supabase = createClient();
@@ -10,6 +15,7 @@ export interface DbUser {
   id: string;
   user_id: string;
   age: number;
+  points: number;
 }
 
 export interface WalletItem {
@@ -29,6 +35,11 @@ export interface GiftRow {
   from_user_id: string;
   to_user_id: string;
   card_id: string;
+  status: GiftStatus;
+  price_points: number;
+  expires_at: string;
+  accepted_at: string | null;
+  settled_at: string | null;
   created_at: string;
   from_login?: string;
   to_login?: string;
@@ -42,21 +53,27 @@ export async function rpcLogin(loginId: string, password: string) {
     p_password: password,
   });
   if (error) return { ok: false as const, error: error.message };
-  return data as { ok: boolean; error?: string; user?: DbUser };
+  return data as { ok: boolean; error?: string; user?: { id: string; user_id: string; age: number } };
 }
 
-export async function rpcSignup(
-  loginId: string,
-  password: string,
-  age: number
-) {
+export async function rpcSignup(loginId: string, password: string, age: number) {
   const { data, error } = await supabase.rpc("auth_signup", {
     p_user_id: loginId,
     p_password: password,
     p_age: age,
   });
   if (error) return { ok: false as const, error: error.message };
-  return data as { ok: boolean; error?: string; user?: DbUser };
+  return data as { ok: boolean; error?: string; user?: { id: string; user_id: string; age: number } };
+}
+
+export async function fetchMe(userId: string): Promise<DbUser | null> {
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, user_id, age, points")
+    .eq("id", userId)
+    .single();
+  if (error || !data) return null;
+  return data as DbUser;
 }
 
 // ---------- Wallet ----------
@@ -67,10 +84,7 @@ export async function fetchWallet(userId: string): Promise<WalletSnapshot> {
       .from("card_ownership")
       .select("card_id, count, last_pulled_at")
       .eq("user_id", userId),
-    supabase
-      .from("pack_opens")
-      .select("set_code")
-      .eq("user_id", userId),
+    supabase.from("pack_opens").select("set_code").eq("user_id", userId),
   ]);
 
   if (ownershipRes.error) throw ownershipRes.error;
@@ -80,11 +94,7 @@ export async function fetchWallet(userId: string): Promise<WalletSnapshot> {
   for (const row of ownershipRes.data ?? []) {
     const card = getCard(row.card_id);
     if (!card) continue;
-    items.push({
-      card,
-      count: row.count,
-      lastPulledAt: row.last_pulled_at,
-    });
+    items.push({ card, count: row.count, lastPulledAt: row.last_pulled_at });
   }
 
   const packsOpenedBySet: Record<SetCode, number> = { m2a: 0, m2: 0, sv8: 0 };
@@ -94,7 +104,6 @@ export async function fetchWallet(userId: string): Promise<WalletSnapshot> {
     if (code in packsOpenedBySet) packsOpenedBySet[code] += 1;
   }
   for (const it of items) totalCards += it.count;
-
   return { items, packsOpenedBySet, totalCards };
 }
 
@@ -112,52 +121,124 @@ export async function recordPackPull(
   return data as { ok: boolean; pack_open_id: string };
 }
 
-// ---------- Gift ----------
+// ---------- Merchant ----------
 
-export async function giftCard(
-  fromUserId: string,
-  toLoginId: string,
-  cardId: string
+export async function getMerchantState(userId: string): Promise<MerchantState> {
+  const { data, error } = await supabase.rpc("get_merchant_state", {
+    p_user_id: userId,
+  });
+  if (error) throw error;
+  return data as MerchantState;
+}
+
+export async function refreshMerchantRPC(
+  userId: string,
+  newCardId: string,
+  price: number
 ) {
-  const { data, error } = await supabase.rpc("gift_card", {
-    p_from_id: fromUserId,
-    p_to_user_id: toLoginId,
+  const { data, error } = await supabase.rpc("refresh_merchant", {
+    p_user_id: userId,
+    p_new_card_id: newCardId,
+    p_price: price,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    error?: string;
+    card_id?: string;
+    price?: number;
+    refreshes_remaining?: number;
+    next_refresh_at?: string;
+  };
+}
+
+export async function sellToMerchant(userId: string, cardId: string) {
+  const { data, error } = await supabase.rpc("sell_to_merchant", {
+    p_user_id: userId,
     p_card_id: cardId,
   });
   if (error) return { ok: false as const, error: error.message };
+  return data as { ok: boolean; error?: string; earned?: number; points?: number };
+}
+
+// ---------- Gifts ----------
+
+export async function createGift(
+  fromUserId: string,
+  toLoginId: string,
+  cardId: string,
+  pricePoints: number
+) {
+  const { data, error } = await supabase.rpc("create_gift", {
+    p_from_id: fromUserId,
+    p_to_user_id: toLoginId,
+    p_card_id: cardId,
+    p_price_points: pricePoints,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as { ok: boolean; error?: string; gift_id?: string };
+}
+
+export async function acceptGift(giftId: string, userId: string) {
+  const { data, error } = await supabase.rpc("accept_gift", {
+    p_gift_id: giftId,
+    p_user_id: userId,
+  });
+  if (error) return { ok: false as const, error: error.message };
   return data as { ok: boolean; error?: string };
+}
+
+export async function declineGift(giftId: string, userId: string) {
+  const { data, error } = await supabase.rpc("decline_gift", {
+    p_gift_id: giftId,
+    p_user_id: userId,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as { ok: boolean; error?: string };
+}
+
+export async function expirePendingGifts() {
+  await supabase.rpc("expire_pending_gifts");
 }
 
 export async function fetchGifts(userId: string): Promise<{
   received: GiftRow[];
   sent: GiftRow[];
 }> {
+  // Sweep expired gifts first so stale ones surface with correct status.
+  await expirePendingGifts();
+
+  const select =
+    "id, from_user_id, to_user_id, card_id, status, price_points, expires_at, accepted_at, settled_at, created_at, from:users!from_user_id(user_id), to:users!to_user_id(user_id)";
+
   const [recv, sent] = await Promise.all([
     supabase
       .from("gifts")
-      .select(
-        "id, from_user_id, to_user_id, card_id, created_at, from:users!from_user_id(user_id), to:users!to_user_id(user_id)"
-      )
+      .select(select)
       .eq("to_user_id", userId)
       .order("created_at", { ascending: false })
       .limit(50),
     supabase
       .from("gifts")
-      .select(
-        "id, from_user_id, to_user_id, card_id, created_at, from:users!from_user_id(user_id), to:users!to_user_id(user_id)"
-      )
+      .select(select)
       .eq("from_user_id", userId)
       .order("created_at", { ascending: false })
       .limit(50),
   ]);
   if (recv.error) throw recv.error;
   if (sent.error) throw sent.error;
+
   const shape = (rows: unknown[]): GiftRow[] =>
     (rows as Record<string, unknown>[]).map((r) => ({
       id: r.id as string,
       from_user_id: r.from_user_id as string,
       to_user_id: r.to_user_id as string,
       card_id: r.card_id as string,
+      status: r.status as GiftStatus,
+      price_points: (r.price_points as number) ?? 0,
+      expires_at: r.expires_at as string,
+      accepted_at: (r.accepted_at as string | null) ?? null,
+      settled_at: (r.settled_at as string | null) ?? null,
       created_at: r.created_at as string,
       from_login: (r.from as { user_id?: string } | null)?.user_id,
       to_login: (r.to as { user_id?: string } | null)?.user_id,
