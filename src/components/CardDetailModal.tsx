@@ -49,38 +49,41 @@ export default function CardDetailModal({
       {card && (
         <motion.div
           key="backdrop"
-          className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md overflow-y-auto overscroll-contain"
+          className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center overflow-hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
+          style={{
+            // Breathing room on every side + respect device safe areas
+            paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+            paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+            paddingLeft: "12px",
+            paddingRight: "12px",
+          }}
         >
-          {/* Scrollable backdrop + min-h-[100dvh] flex-center is the
-              reliable modal pattern across iOS Safari / Chrome / Android.
-              If modal fits → centered. If taller → backdrop scrolls. */}
-          <div
-            className="flex items-center justify-center px-3 md:px-6"
+          {/* Modal itself caps at viewport height and scrolls internally.
+              This is the battle-tested pattern used by every major app —
+              backdrop centers via flex, modal respects a fixed max-height
+              so it can never overflow the visible area. */}
+          <motion.div
+            onClick={(e) => e.stopPropagation()}
+            className={clsx(
+              "relative w-full md:max-w-3xl bg-zinc-950/95 border border-white/10",
+              "rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            )}
             style={{
-              minHeight: "100dvh",
-              paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
-              paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+              maxHeight: "calc(100dvh - 24px)",
+            }}
+            initial={{ scale: 0.94, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.94, opacity: 0 }}
+            transition={{
+              type: "tween",
+              ease: [0.2, 0.8, 0.2, 1],
+              duration: 0.22,
             }}
           >
-            <motion.div
-              onClick={(e) => e.stopPropagation()}
-              className={clsx(
-                "relative w-full md:max-w-3xl bg-zinc-950/95 border border-white/10",
-                "rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-              )}
-              initial={{ scale: 0.94, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.94, opacity: 0 }}
-              transition={{
-                type: "tween",
-                ease: [0.2, 0.8, 0.2, 1],
-                duration: 0.22,
-              }}
-            >
               {/* Sticky close */}
               <button
                 onClick={onClose}
@@ -91,8 +94,8 @@ export default function CardDetailModal({
                 ✕
               </button>
 
-              {/* Body — natural height; backdrop handles scroll */}
-              <div className="flex-1">
+              {/* Body — scrolls internally when content exceeds max-h */}
+              <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-0">
                   <div className="md:col-span-3 relative p-5 md:p-8 flex items-center justify-center bg-gradient-to-br from-zinc-900 to-black">
                     {isHighRarity(card.rarity) && (
@@ -195,8 +198,7 @@ export default function CardDetailModal({
                   </div>
                 </div>
               </div>
-            </motion.div>
-          </div>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>

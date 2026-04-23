@@ -467,28 +467,27 @@ function CardPicker({
 
   return (
     <motion.div
-      className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md overflow-y-auto overscroll-contain"
+      className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       onClick={onClose}
+      style={{
+        paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+        paddingLeft: "12px",
+        paddingRight: "12px",
+      }}
     >
-      <div
-        className="flex items-center justify-center px-3 md:px-6"
-        style={{
-          minHeight: "100dvh",
-          paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
-          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
-        }}
+      <motion.div
+        className="relative w-full max-w-2xl bg-zinc-950 border border-white/10 rounded-2xl flex flex-col overflow-hidden"
+        style={{ maxHeight: "calc(100dvh - 24px)" }}
+        initial={{ scale: 0.94, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.94, opacity: 0 }}
+        transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
+        onClick={(e) => e.stopPropagation()}
       >
-        <motion.div
-          className="relative w-full max-w-2xl bg-zinc-950 border border-white/10 rounded-2xl flex flex-col overflow-hidden"
-          initial={{ scale: 0.94, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.94, opacity: 0 }}
-          transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
-          onClick={(e) => e.stopPropagation()}
-        >
           <div className="flex items-center justify-between h-12 px-4 border-b border-white/10 shrink-0">
             <h3 className="text-sm font-bold text-white">
               감별 받을 카드 선택
@@ -556,8 +555,7 @@ function CardPicker({
               </div>
             )}
           </div>
-        </motion.div>
-      </div>
+      </motion.div>
     </motion.div>
   );
 }
