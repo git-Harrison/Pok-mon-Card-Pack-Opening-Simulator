@@ -100,7 +100,14 @@ export async function fetchWallet(userId: string): Promise<WalletSnapshot> {
     items.push({ card, count: row.count, lastPulledAt: row.last_pulled_at });
   }
 
-  const packsOpenedBySet: Record<SetCode, number> = { m2a: 0, m2: 0, sv8: 0 };
+  const packsOpenedBySet: Record<SetCode, number> = {
+    m2a: 0,
+    m2: 0,
+    sv8: 0,
+    sv2a: 0,
+    sv8a: 0,
+    sv5a: 0,
+  };
   let totalCards = 0;
   for (const row of packsRes.data ?? []) {
     const code = row.set_code as SetCode;
@@ -244,7 +251,12 @@ export async function submitPsaGrading(userId: string, cardId: string) {
     p_card_id: cardId,
   });
   if (error) return { ok: false as const, error: error.message };
-  return data as { ok: boolean; error?: string; grade?: number };
+  return data as {
+    ok: boolean;
+    error?: string;
+    grade?: number;
+    failed?: boolean;
+  };
 }
 
 export async function fetchPsaGradings(

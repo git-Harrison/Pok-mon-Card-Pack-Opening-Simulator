@@ -16,7 +16,7 @@ import type { Card } from "@/lib/types";
 import RarityBadge from "./RarityBadge";
 import PsaSlab from "./PsaSlab";
 
-type Phase = "idle" | "animating" | "revealed";
+type Phase = "idle" | "animating" | "revealed" | "failed";
 
 export default function GradingView() {
   const { user } = useAuth();
@@ -39,8 +39,9 @@ export default function GradingView() {
   }, [refreshWallet]);
 
   useEffect(() => {
-    if (phase !== "animating" || grade === null) return;
-    const target = grade * 10;
+    if (phase !== "animating") return;
+    // If no grade (fail path), animate the gauge chaotically and end low.
+    const target = grade !== null ? grade * 10 : 8;
     const steps: Array<{ v: number; t: number }> = [
       { v: 0, t: 0 },
       { v: Math.min(60, target + 20), t: 380 },
@@ -64,8 +65,20 @@ export default function GradingView() {
     if (!user || !selected || phase !== "idle") return;
     setError(null);
     const res = await submitPsaGrading(user.id, selected.id);
-    if (!res.ok || typeof res.grade !== "number") {
+    if (!res.ok) {
       setError(res.error ?? "등급 감별에 실패했어요.");
+      return;
+    }
+    if (res.failed) {
+      // 70% fail path — run a short "scanning" sequence then reveal failure.
+      setGrade(null);
+      setGauge(0);
+      setPhase("animating");
+      setTimeout(() => setPhase("failed"), 2400);
+      return;
+    }
+    if (typeof res.grade !== "number") {
+      setError("감별 결과가 이상해요.");
       return;
     }
     setGrade(res.grade);
@@ -131,6 +144,10 @@ export default function GradingView() {
               <p className={clsx("font-semibold", tone?.text)}>
                 PSA {grade} ({PSA_LABEL[grade]}) 판정!
               </p>
+            ) : phase === "failed" ? (
+              <p className="font-semibold text-rose-300">
+                음... 감별 실패. 카드가 손상돼 등급을 매길 수 없었네.
+              </p>
             ) : selected ? (
               <p className="text-zinc-200">
                 <span className="font-bold text-white">{selected.name}</span>의
@@ -154,6 +171,24 @@ export default function GradingView() {
             >
               <PsaSlab card={selected} grade={grade} size="md" highlight />
             </motion.div>
+          ) : phase === "failed" && selected ? (
+            <motion.div
+              initial={{ scale: 1, rotate: 0, opacity: 1 }}
+              animate={{
+                scale: [1, 1.05, 0.9],
+                rotate: [0, -4, 6, -3, 0],
+                opacity: [1, 1, 0.4],
+              }}
+              transition={{ duration: 0.9 }}
+              className="text-center"
+            >
+              <div className="inline-block grayscale opacity-70">
+                <CardPreview card={selected} scanning={false} />
+              </div>
+              <p className="mt-2 text-xs text-rose-300 font-semibold">
+                감별 실패 — 카드 소실
+              </p>
+            </motion.div>
           ) : selected ? (
             <CardPreview card={selected} scanning={phase === "animating"} />
           ) : (
@@ -163,6 +198,18 @@ export default function GradingView() {
 
         {(phase === "animating" || phase === "revealed") && grade !== null && (
           <Gauge value={gauge} grade={grade} phase={phase} />
+        )}
+        {phase === "failed" && (
+          <div className="mt-3 pt-3 border-t border-white/5">
+            <div className="relative h-2.5 rounded-full bg-white/5 overflow-hidden ring-1 ring-rose-500/30">
+              <div
+                className="absolute inset-y-0 left-0 w-full rounded-full bg-gradient-to-r from-rose-700 to-rose-500 opacity-60"
+              />
+            </div>
+            <p className="mt-1 text-[10px] text-center text-rose-300">
+              감별 실패 · 카드는 폐기됨
+            </p>
+          </div>
         )}
 
         {error && (
@@ -202,6 +249,15 @@ export default function GradingView() {
               className="col-span-2 h-12 rounded-xl bg-white/5 text-zinc-400 text-sm font-semibold"
             >
               감정 중...
+            </button>
+          )}
+          {phase === "failed" && (
+            <button
+              onClick={reset}
+              style={{ touchAction: "manipulation" }}
+              className="col-span-2 h-12 rounded-xl bg-rose-500/10 border border-rose-500/40 text-rose-200 font-semibold text-sm"
+            >
+              다른 카드로 다시 시도
             </button>
           )}
           {phase === "revealed" && (
@@ -351,7 +407,11 @@ function OddsTable() {
       <summary className="cursor-pointer text-zinc-400 hover:text-zinc-200 select-none text-[11px]">
         등급 확률 표 보기
       </summary>
-      <ul className="mt-2 grid grid-cols-3 md:grid-cols-5 gap-x-3 gap-y-1 text-[11px] text-zinc-300 font-mono">
+      <ul className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-1 text-[11px] text-zinc-300 font-mono">
+        <li className="flex items-center justify-between">
+          <span className="font-bold text-rose-300">실패</span>
+          <span className="text-zinc-400">70%</span>
+        </li>
         {PSA_DISTRIBUTION.map((d) => (
           <li key={d.grade} className="flex items-center justify-between">
             <span className={clsx("font-bold", psaTone(d.grade).text)}>

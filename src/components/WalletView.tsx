@@ -33,7 +33,7 @@ export default function WalletView() {
 
   const [snap, setSnap] = useState<WalletSnapshot>({
     items: [],
-    packsOpenedBySet: { m2a: 0, m2: 0, sv8: 0 },
+    packsOpenedBySet: { m2a: 0, m2: 0, sv8: 0, sv2a: 0, sv8a: 0, sv5a: 0 },
     totalCards: 0,
   });
   const [psa, setPsa] = useState<PsaGrading[]>([]);

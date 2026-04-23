@@ -15,17 +15,18 @@ export const PSA_LABEL: Record<number, string> = {
   1: "POOR",
 };
 
+/**
+ * 감별 확률. 실패 70% + 성공 30% (등급 6~10).
+ * 10등급: 1% · 9등급: 3% · 8등급: 8% · 7등급: 10% · 6등급: 8%
+ */
+export const PSA_FAIL_PCT = 70;
+
 export const PSA_DISTRIBUTION = [
-  { grade: 10, pct: 5 },
-  { grade: 9, pct: 12 },
-  { grade: 8, pct: 18 },
-  { grade: 7, pct: 22 },
-  { grade: 6, pct: 18 },
-  { grade: 5, pct: 12 },
-  { grade: 4, pct: 6 },
-  { grade: 3, pct: 4 },
-  { grade: 2, pct: 2 },
-  { grade: 1, pct: 1 },
+  { grade: 10, pct: 1 },
+  { grade: 9, pct: 3 },
+  { grade: 8, pct: 8 },
+  { grade: 7, pct: 10 },
+  { grade: 6, pct: 8 },
 ];
 
 export function psaTone(grade: number): {

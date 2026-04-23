@@ -15,6 +15,12 @@ const targets = [
   { path: "public/images/sets/sv8/box.jpg", width: 1400 },
   { path: "public/images/sets/sv8/pack.png", width: 1000 },
   { path: "public/images/common/card-back.jpg", width: 700 },
+  { path: "public/images/sets/sv2a/box.png", width: 1400 },
+  { path: "public/images/sets/sv2a/pack.png", width: 900 },
+  { path: "public/images/sets/sv5a/box.png", width: 900 },
+  { path: "public/images/sets/sv5a/pack.png", width: 900 },
+  { path: "public/images/sets/sv8a/box.png", width: 900 },
+  { path: "public/images/sets/sv8a/pack.png", width: 900 },
 ];
 
 for (const t of targets) {

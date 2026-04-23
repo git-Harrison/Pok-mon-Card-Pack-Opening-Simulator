@@ -10,7 +10,13 @@ export type Rarity =
   | "MUR"
   | "UR";
 
-export type SetCode = "m2a" | "m2" | "sv8";
+export type SetCode =
+  | "m2a"
+  | "m2"
+  | "sv8"
+  | "sv2a"
+  | "sv8a"
+  | "sv5a";
 
 export interface Card {
   id: string; // `${setCode}-${number}`
