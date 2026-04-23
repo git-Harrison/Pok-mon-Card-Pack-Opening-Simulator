@@ -9,8 +9,8 @@ import {
   RARITY_STYLE,
   compareRarity,
 } from "@/lib/rarity";
-import type { Card, PsaGrading, Rarity, SetCode } from "@/lib/types";
-import { SETS, SET_ORDER, getCard } from "@/lib/sets";
+import type { Card, PsaGrading, Rarity } from "@/lib/types";
+import { SETS, getCard } from "@/lib/sets";
 import { useAuth } from "@/lib/auth";
 import {
   fetchPsaGradings,
@@ -24,7 +24,6 @@ import { motion } from "framer-motion";
 
 type Mode = "cards" | "psa";
 type RarityFilter = "ALL" | Rarity;
-type SetFilter = "ALL" | SetCode;
 
 export default function WalletView() {
   const { user } = useAuth();
@@ -40,7 +39,6 @@ export default function WalletView() {
   const [psa, setPsa] = useState<PsaGrading[]>([]);
   const [loading, setLoading] = useState(true);
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>("ALL");
-  const [setFilter, setSetFilter] = useState<SetFilter>("ALL");
   const [selected, setSelected] = useState<{ card: Card; count: number } | null>(null);
 
   const refresh = useCallback(async () => {
@@ -63,15 +61,12 @@ export default function WalletView() {
       .filter((e) =>
         rarityFilter === "ALL" ? true : e.card.rarity === rarityFilter
       )
-      .filter((e) =>
-        setFilter === "ALL" ? true : e.card.setCode === setFilter
-      )
       .sort((a, b) => {
         const rd = compareRarity(a.card.rarity, b.card.rarity);
         if (rd !== 0) return rd;
         return a.card.number.localeCompare(b.card.number);
       });
-  }, [snap.items, rarityFilter, setFilter]);
+  }, [snap.items, rarityFilter]);
 
   const psaItems = useMemo(() => {
     return psa
@@ -146,9 +141,6 @@ export default function WalletView() {
           rarityCounts={rarityCounts}
           rarityFilter={rarityFilter}
           setRarityFilter={setRarityFilter}
-          setFilter={setFilter}
-          setSetFilter={setSetFilter}
-          packsOpenedBySet={snap.packsOpenedBySet}
           onSelect={(card, count) => setSelected({ card, count })}
         />
       ) : (
@@ -170,46 +162,18 @@ function CardsMode({
   rarityCounts,
   rarityFilter,
   setRarityFilter,
-  setFilter,
-  setSetFilter,
-  packsOpenedBySet,
   onSelect,
 }: {
   items: { card: Card; count: number }[];
   rarityCounts: Map<Rarity, number>;
   rarityFilter: RarityFilter;
   setRarityFilter: (r: RarityFilter) => void;
-  setFilter: SetFilter;
-  setSetFilter: (s: SetFilter) => void;
-  packsOpenedBySet: Record<SetCode, number>;
   onSelect: (card: Card, count: number) => void;
 }) {
   return (
     <>
-      {/* Set tabs */}
-      <div className="mt-5 flex flex-wrap gap-2">
-        <FilterPill
-          active={setFilter === "ALL"}
-          onClick={() => setSetFilter("ALL")}
-        >
-          전체 세트
-        </FilterPill>
-        {SET_ORDER.map((code) => (
-          <FilterPill
-            key={code}
-            active={setFilter === code}
-            onClick={() => setSetFilter(code)}
-          >
-            {SETS[code].name}
-            <span className="ml-1.5 text-[10px] opacity-70">
-              {packsOpenedBySet[code]}팩
-            </span>
-          </FilterPill>
-        ))}
-      </div>
-
       {/* Rarity tabs */}
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-5 flex flex-wrap gap-2">
         <FilterPill
           active={rarityFilter === "ALL"}
           onClick={() => setRarityFilter("ALL")}
@@ -248,20 +212,27 @@ function CardsMode({
           }}
         >
           {items.map(({ card, count }) => (
-            <motion.div
-              layoutId={`card-${card.id}`}
+            <div
               key={card.id}
-              className="relative flex flex-col items-center gap-1.5 cursor-pointer"
-              whileTap={{ scale: 0.97 }}
+              role="button"
+              tabIndex={0}
+              className="relative flex flex-col items-center gap-1.5 cursor-pointer active:scale-[0.97] transition-transform"
+              style={{ touchAction: "manipulation" }}
               onClick={() => onSelect(card, count)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelect(card, count);
+                }
+              }}
             >
               <PokeCard card={card} revealed size="md" />
               {count > 1 && (
-                <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur text-white font-bold text-[10px] ring-1 ring-white/20">
+                <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur text-white font-bold text-[10px] ring-1 ring-white/20 pointer-events-none">
                   ×{count}
                 </span>
               )}
-              <div className="w-full text-center px-1">
+              <div className="w-full text-center px-1 pointer-events-none">
                 <p className="text-[11px] text-zinc-300 leading-tight line-clamp-2">
                   {card.name}
                 </p>
@@ -269,7 +240,7 @@ function CardsMode({
                   {SETS[card.setCode].name} · #{card.number}
                 </p>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
       )}

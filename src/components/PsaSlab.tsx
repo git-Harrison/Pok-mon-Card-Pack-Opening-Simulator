@@ -4,10 +4,19 @@ import clsx from "clsx";
 import { motion } from "framer-motion";
 import type { Card } from "@/lib/types";
 import { PSA_LABEL, psaTone } from "@/lib/psa";
+import { SETS } from "@/lib/sets";
 
 /**
- * Visual PSA slab: plastic-cased card with a red PSA header, grade
- * chip, and condition label. Sized via `size` prop.
+ * Realistic PSA slab visual:
+ *   ┌─────────────────────┐
+ *   │ RED HEADER (PSA..)  │
+ *   │ CARD NAME + GRADE   │
+ *   ├─────────────────────┤
+ *   │   CARD IMAGE        │
+ *   │   inside plastic    │
+ *   ├─────────────────────┤
+ *   │ BARCODE │ SET · #N  │
+ *   └─────────────────────┘
  */
 export default function PsaSlab({
   card,
@@ -25,10 +34,10 @@ export default function PsaSlab({
 
   const width =
     size === "sm"
-      ? "w-[140px]"
+      ? "w-[150px]"
       : size === "lg"
-      ? "w-[240px]"
-      : "w-[180px]";
+      ? "w-[260px]"
+      : "w-[195px]";
 
   return (
     <motion.div
@@ -36,63 +45,122 @@ export default function PsaSlab({
       animate={highlight ? { scale: [1, 1.03, 1] } : { scale: 1 }}
       transition={{ duration: 1.2, times: [0, 0.5, 1] }}
       className={clsx(
-        "relative rounded-xl overflow-hidden isolate bg-gradient-to-br from-zinc-50 to-zinc-200 text-zinc-900 ring-1",
+        "relative rounded-2xl overflow-hidden isolate ring-1 select-none",
+        // Plastic case shell — light gradient + inner ring for depth
+        "bg-gradient-to-b from-zinc-50 via-white to-zinc-200",
         tone.ring,
         tone.glow,
         width
       )}
     >
-      {/* plastic shine */}
+      {/* Inner plastic bevel (creates "case within case" depth) */}
+      <div
+        aria-hidden
+        className="absolute inset-1.5 rounded-[14px] pointer-events-none ring-1 ring-black/10"
+        style={{
+          boxShadow: "inset 0 0 8px rgba(255,255,255,0.6)",
+        }}
+      />
+      {/* Diagonal plastic sheen */}
       <div
         aria-hidden
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "linear-gradient(115deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 35%, rgba(255,255,255,0) 65%, rgba(255,255,255,0.25) 100%)",
+            "linear-gradient(130deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 30%, rgba(255,255,255,0) 70%, rgba(255,255,255,0.28) 100%)",
         }}
       />
 
-      {/* PSA header */}
-      <div className="relative flex items-center justify-between h-8 md:h-9 px-2.5 bg-gradient-to-r from-red-700 to-red-600 text-white">
-        <span className="font-black tracking-wider text-xs md:text-sm">PSA</span>
-        <span className="text-[9px] md:text-[10px] uppercase tracking-[0.15em] font-semibold opacity-80">
-          {card.name.length > 14 ? `${card.name.slice(0, 13)}…` : card.name}
-        </span>
-        <div
-          className={clsx(
-            "rounded px-1.5 py-0.5 font-black leading-none text-xs md:text-sm tabular-nums",
-            tone.banner
-          )}
-        >
-          {grade}
+      {/* ── Red header (PSA brand + card + grade) ── */}
+      <div className="relative m-1.5 rounded-t-[10px] overflow-hidden bg-gradient-to-b from-red-600 to-red-700 text-white shadow-inner">
+        <div className="flex items-stretch">
+          {/* PSA brand mark */}
+          <div className="px-2 py-1.5 flex items-center justify-center bg-red-700/80 border-r border-white/10">
+            <span className="font-black tracking-[0.12em] text-[11px] md:text-xs leading-none">
+              PSA
+            </span>
+          </div>
+          {/* Name + grade line */}
+          <div className="flex-1 px-2 py-1 min-w-0 flex flex-col justify-center">
+            <span className="text-[9px] md:text-[10px] uppercase tracking-wider opacity-85 truncate">
+              {card.name}
+            </span>
+            <span className="text-[8px] md:text-[9px] uppercase tracking-[0.18em] opacity-75 truncate">
+              {label}
+            </span>
+          </div>
+          {/* Grade chip */}
+          <div
+            className={clsx(
+              "px-2.5 flex items-center justify-center font-black text-lg md:text-xl tabular-nums",
+              tone.banner
+            )}
+          >
+            {grade}
+          </div>
         </div>
       </div>
 
-      {/* Card window */}
-      <div className="relative aspect-[5/7] bg-zinc-900">
-        {card.imageUrl ? (
-          <img
-            src={card.imageUrl}
-            alt={card.name}
-            className="w-full h-full object-contain select-none pointer-events-none"
-            draggable={false}
+      {/* ── Card window ── */}
+      <div className="relative mx-1.5 rounded-[4px] overflow-hidden bg-zinc-950 ring-1 ring-black/20">
+        <div className="relative aspect-[5/7]">
+          {card.imageUrl ? (
+            <img
+              src={card.imageUrl}
+              alt={card.name}
+              loading="lazy"
+              draggable={false}
+              className="w-full h-full object-contain bg-zinc-950 select-none pointer-events-none"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-white text-xs p-2 text-center bg-gradient-to-br from-indigo-700 to-amber-600">
+              {card.name}
+            </div>
+          )}
+          {/* subtle reflective sheen on the card window */}
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 45%)",
+            }}
           />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-white text-xs p-2 text-center bg-gradient-to-br from-indigo-700 to-amber-600">
-            {card.name}
-          </div>
-        )}
+        </div>
       </div>
 
-      {/* Bottom banner */}
-      <div
-        className={clsx(
-          "flex items-center justify-center h-6 md:h-7 text-[10px] md:text-xs font-black tracking-wider",
-          tone.banner
-        )}
-      >
-        {label}
+      {/* ── Bottom band: barcode + set info ── */}
+      <div className="relative m-1.5 mt-1.5 flex items-center gap-2 px-1.5 py-1">
+        <Barcode />
+        <div className="flex-1 min-w-0 text-right">
+          <div className="text-[8px] md:text-[9px] uppercase tracking-wider text-zinc-600 truncate">
+            {SETS[card.setCode].name}
+          </div>
+          <div className="text-[8px] md:text-[9px] uppercase tracking-[0.12em] text-zinc-500 tabular-nums">
+            #{card.number}
+          </div>
+        </div>
       </div>
     </motion.div>
+  );
+}
+
+/**
+ * Decorative barcode rendered as a stack of CSS bars of varying widths.
+ * No real data encoded — just visual filler like a real PSA label.
+ */
+function Barcode() {
+  // Pseudo-barcode pattern: widths 1–3px repeating, gaps of 1px.
+  const bars = [1, 2, 1, 3, 1, 2, 2, 1, 3, 2, 1, 2, 1, 3, 1, 2, 3, 1, 2, 1, 3, 2, 1, 2];
+  return (
+    <div className="flex items-end h-6 gap-[1px] shrink-0">
+      {bars.map((w, i) => (
+        <span
+          key={i}
+          className="bg-zinc-900"
+          style={{ width: `${w}px`, height: "100%" }}
+        />
+      ))}
+    </div>
   );
 }

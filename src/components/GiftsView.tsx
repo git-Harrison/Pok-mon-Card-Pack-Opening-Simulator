@@ -257,6 +257,11 @@ export default function GiftsView() {
                           </>
                         )}
                       </div>
+                      {g.message && (
+                        <p className="mt-2 text-xs text-zinc-200 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 leading-snug whitespace-pre-wrap break-words">
+                          “{g.message}”
+                        </p>
+                      )}
                     </div>
                   </div>
 

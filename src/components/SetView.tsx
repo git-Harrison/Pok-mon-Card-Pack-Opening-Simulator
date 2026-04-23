@@ -7,26 +7,52 @@ import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import type { Card, SetInfo } from "@/lib/types";
 import { drawBox } from "@/lib/pack-draw";
-import { recordPackPull } from "@/lib/db";
+import { buyBox, recordPackPull } from "@/lib/db";
 import { useAuth } from "@/lib/auth";
+import { BOX_COST, RARITY_STYLE } from "@/lib/rarity";
 import PackOpeningStage from "./PackOpeningStage";
+import RarityBadge from "./RarityBadge";
+import PointsChip from "./PointsChip";
+import CoinIcon from "./CoinIcon";
 
-type Phase = "sealed" | "opening" | "grid" | "opening-pack";
+type Phase =
+  | "sealed"
+  | "buying"
+  | "opening"
+  | "grid"
+  | "opening-pack"
+  | "bulk"
+  | "bulk-result";
 
 export default function SetView({ set }: { set: SetInfo }) {
-  const { user } = useAuth();
+  const { user, setPoints } = useAuth();
   const [phase, setPhase] = useState<Phase>("sealed");
   const [packs, setPacks] = useState<Card[][]>([]);
   const [openedMask, setOpenedMask] = useState<boolean[]>([]);
   const [activePack, setActivePack] = useState<number | null>(null);
+  const [bulkCards, setBulkCards] = useState<Card[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  const openBox = useCallback(() => {
-    setPhase("opening");
+  const cost = BOX_COST[set.code] ?? 30_000;
+  const canAfford = !!user && user.points >= cost;
+
+  const openBox = useCallback(async () => {
+    if (!user || phase !== "sealed") return;
+    setError(null);
+    setPhase("buying");
+    const res = await buyBox(user.id, set.code);
+    if (!res.ok || typeof res.points !== "number") {
+      setError(res.error ?? "박스 구매 실패");
+      setPhase("sealed");
+      return;
+    }
+    setPoints(res.points);
     const drawn = drawBox(set);
     setPacks(drawn);
     setOpenedMask(new Array(drawn.length).fill(false));
+    setPhase("opening");
     setTimeout(() => setPhase("grid"), 1100);
-  }, [set]);
+  }, [user, phase, set, setPoints]);
 
   const choosePack = useCallback(
     (index: number) => {
@@ -49,8 +75,42 @@ export default function SetView({ set }: { set: SetInfo }) {
     [openedMask, packs, set, user]
   );
 
+  const openAllRemaining = useCallback(async () => {
+    if (!user) return;
+    const remaining = packs
+      .map((pack, i) => ({ pack, i }))
+      .filter(({ i }) => !openedMask[i]);
+    if (remaining.length === 0) return;
+    setPhase("bulk");
+    try {
+      await Promise.all(
+        remaining.map(({ pack }) =>
+          recordPackPull(
+            user.id,
+            set.code,
+            pack.map((c) => c.id)
+          )
+        )
+      );
+    } catch (e) {
+      console.error("bulk recordPackPull failed", e);
+    }
+    const allCards = remaining
+      .flatMap(({ pack }) => pack)
+      .sort(
+        (a, b) => RARITY_STYLE[b.rarity].tier - RARITY_STYLE[a.rarity].tier
+      );
+    setBulkCards(allCards);
+    setOpenedMask(new Array(packs.length).fill(true));
+    setPhase("bulk-result");
+  }, [user, packs, openedMask, set]);
+
   const backToGrid = useCallback(() => {
     setActivePack(null);
+    setPhase("grid");
+  }, []);
+
+  const closeBulk = useCallback(() => {
     setPhase("grid");
   }, []);
 
@@ -59,12 +119,14 @@ export default function SetView({ set }: { set: SetInfo }) {
     setPacks([]);
     setOpenedMask([]);
     setActivePack(null);
+    setBulkCards([]);
   }, []);
 
   const openedCount = useMemo(
     () => openedMask.filter(Boolean).length,
     [openedMask]
   );
+  const remainingCount = packs.length - openedCount;
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-12">
@@ -79,6 +141,7 @@ export default function SetView({ set }: { set: SetInfo }) {
           <p className="text-xs md:text-sm text-zinc-400 mt-1">{set.subtitle}</p>
         </div>
         <div className="flex items-center gap-2 text-xs">
+          {user && <PointsChip points={user.points} size="sm" />}
           <Stat label="박스당" value={`${set.packsPerBox}팩`} />
           <Stat label="팩당" value={`${set.cardsPerPack}장`} />
           <Stat
@@ -90,11 +153,22 @@ export default function SetView({ set }: { set: SetInfo }) {
       </div>
 
       <AnimatePresence mode="wait">
-        {phase === "sealed" && (
-          <SealedBox key="sealed" set={set} onOpen={openBox} />
+        {(phase === "sealed" || phase === "buying") && (
+          <SealedBox
+            key="sealed"
+            set={set}
+            cost={cost}
+            canAfford={canAfford}
+            loading={phase === "buying"}
+            error={error}
+            onOpen={openBox}
+          />
         )}
         {phase === "opening" && <BoxOpening key="opening" set={set} />}
-        {(phase === "grid" || phase === "opening-pack") && (
+        {(phase === "grid" ||
+          phase === "opening-pack" ||
+          phase === "bulk" ||
+          phase === "bulk-result") && (
           <motion.div
             key="grid"
             className="mt-8 md:mt-10"
@@ -110,16 +184,28 @@ export default function SetView({ set }: { set: SetInfo }) {
             />
             <div className="mt-6 md:mt-8 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-zinc-400">
-                팩 하나를 눌러 개봉하세요.
+                {remainingCount > 0
+                  ? "팩 하나를 눌러 개봉하거나, 모든 팩을 한번에 열어보세요."
+                  : "모든 팩을 개봉했어요."}
               </p>
-              {openedCount >= set.packsPerBox && (
-                <button
-                  onClick={resetBox}
-                  className="h-11 px-5 rounded-xl bg-white text-zinc-900 font-semibold text-sm hover:bg-zinc-100 transition"
-                >
-                  새 박스 열기
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {remainingCount > 0 && phase === "grid" && (
+                  <button
+                    onClick={openAllRemaining}
+                    className="h-11 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition"
+                  >
+                    모든 팩 한번에 열기 ({remainingCount})
+                  </button>
+                )}
+                {openedCount >= set.packsPerBox && (
+                  <button
+                    onClick={resetBox}
+                    className="h-11 px-5 rounded-xl bg-white text-zinc-900 font-semibold text-sm hover:bg-zinc-100 transition"
+                  >
+                    새 박스 열기
+                  </button>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
@@ -135,6 +221,15 @@ export default function SetView({ set }: { set: SetInfo }) {
             onClose={backToGrid}
           />
         )}
+        {phase === "bulk-result" && (
+          <BulkResultOverlay
+            key="bulk"
+            cards={bulkCards}
+            setName={set.name}
+            onClose={closeBulk}
+          />
+        )}
+        {phase === "bulk" && <BulkLoading key="bulk-loading" />}
       </AnimatePresence>
     </div>
   );
@@ -166,7 +261,21 @@ function Stat({
   );
 }
 
-function SealedBox({ set, onOpen }: { set: SetInfo; onOpen: () => void }) {
+function SealedBox({
+  set,
+  cost,
+  canAfford,
+  loading,
+  error,
+  onOpen,
+}: {
+  set: SetInfo;
+  cost: number;
+  canAfford: boolean;
+  loading: boolean;
+  error: string | null;
+  onOpen: () => void;
+}) {
   return (
     <motion.div
       key="sealed"
@@ -200,10 +309,37 @@ function SealedBox({ set, onOpen }: { set: SetInfo; onOpen: () => void }) {
       </motion.div>
       <button
         onClick={onOpen}
-        className="h-12 md:h-14 px-6 md:px-8 rounded-xl bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-sm md:text-base shadow-[0_12px_40px_-10px_rgba(251,113,133,0.8)] hover:scale-[1.03] active:scale-[0.98] transition inline-flex items-center gap-2"
+        disabled={!canAfford || loading}
+        style={{ touchAction: "manipulation" }}
+        className={clsx(
+          "h-12 md:h-14 px-6 md:px-8 rounded-xl font-bold text-sm md:text-base inline-flex items-center gap-2 transition",
+          canAfford && !loading
+            ? "bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 shadow-[0_12px_40px_-10px_rgba(251,113,133,0.8)] hover:scale-[1.03] active:scale-[0.98]"
+            : "bg-white/5 text-zinc-400 cursor-not-allowed border border-white/10"
+        )}
       >
-        📦 박스 열기
+        {loading ? (
+          "구매 중..."
+        ) : (
+          <>
+            📦 박스 열기
+            <span className="inline-flex items-center gap-1 font-black">
+              <CoinIcon size="sm" />
+              {cost.toLocaleString("ko-KR")}p
+            </span>
+          </>
+        )}
       </button>
+      {!canAfford && !loading && (
+        <p className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">
+          포인트가 부족해요. 상인에게 카드를 팔거나 선물로 모아보세요.
+        </p>
+      )}
+      {error && (
+        <p className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">
+          {error}
+        </p>
+      )}
     </motion.div>
   );
 }
@@ -248,6 +384,121 @@ function BoxOpening({ set }: { set: SetInfo }) {
   );
 }
 
+function BulkLoading() {
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 rounded-full border-4 border-white/15 border-t-amber-400 animate-spin" />
+        <p className="text-sm text-white">모든 팩을 한번에 여는 중...</p>
+      </div>
+    </motion.div>
+  );
+}
+
+function BulkResultOverlay({
+  cards,
+  setName,
+  onClose,
+}: {
+  cards: Card[];
+  setName: string;
+  onClose: () => void;
+}) {
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 bg-black/95 flex flex-col"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <div
+        className="shrink-0 border-b border-white/10 bg-black/95"
+        style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 16px)" }}
+      >
+        <div className="flex items-center justify-between gap-2 px-3 md:px-6 h-12">
+          <div className="text-xs md:text-sm text-zinc-200 font-semibold truncate">
+            {setName} · 전체 개봉 결과 ({cards.length}장)
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="닫기"
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white"
+            style={{ touchAction: "manipulation" }}
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div
+          className="grid gap-3 md:gap-4 px-4 md:px-6 py-4 md:py-6 mx-auto max-w-5xl"
+          style={{
+            gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+          }}
+        >
+          {cards.map((card, i) => (
+            <BulkMiniCard key={i} card={card} />
+          ))}
+        </div>
+      </div>
+      <div
+        className="shrink-0 border-t border-white/10 bg-black/70 backdrop-blur"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="max-w-3xl mx-auto px-3 md:px-6 py-3 flex items-center justify-center gap-2">
+          <Link
+            href="/wallet"
+            className="h-11 px-5 rounded-xl bg-white/10 text-white font-semibold text-sm hover:bg-white/15 inline-flex items-center"
+          >
+            지갑 보기
+          </Link>
+          <button
+            onClick={onClose}
+            className="h-11 px-5 rounded-xl bg-white text-zinc-900 font-bold text-sm"
+          >
+            확인
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function BulkMiniCard({ card }: { card: Card }) {
+  const style = RARITY_STYLE[card.rarity];
+  return (
+    <div
+      className={clsx(
+        "relative w-full aspect-[5/7] rounded-lg overflow-hidden isolate ring-2 bg-zinc-900",
+        style.frame,
+        style.glow
+      )}
+    >
+      {card.imageUrl ? (
+        <img
+          src={card.imageUrl}
+          alt={card.name}
+          loading="lazy"
+          draggable={false}
+          className="w-full h-full object-contain bg-zinc-900 select-none pointer-events-none"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-700 to-amber-600 p-2 text-center text-white text-[10px] select-none">
+          {card.name}
+        </div>
+      )}
+      <div className="absolute left-1.5 bottom-1.5 pointer-events-none">
+        <RarityBadge rarity={card.rarity} size="xs" />
+      </div>
+    </div>
+  );
+}
+
 function PackGrid({
   set,
   openedMask,
@@ -274,7 +525,7 @@ function PackGrid({
           onClick={() => onChoose(i)}
           initial={{ opacity: 0, y: 20, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ delay: i * 0.03, type: "spring", stiffness: 220 }}
+          transition={{ delay: Math.min(i * 0.02, 0.3), type: "spring", stiffness: 220 }}
           whileHover={!opened && !disabled ? { y: -6, scale: 1.04 } : {}}
           whileTap={!opened && !disabled ? { scale: 0.95 } : {}}
           className={clsx(

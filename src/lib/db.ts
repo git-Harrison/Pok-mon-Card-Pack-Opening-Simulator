@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/client";
 import type {
   Card,
+  GiftQuota,
   GiftStatus,
   MerchantState,
   PsaGrading,
@@ -42,6 +43,7 @@ export interface GiftRow {
   accepted_at: string | null;
   settled_at: string | null;
   created_at: string;
+  message: string | null;
   from_login?: string;
   to_login?: string;
 }
@@ -122,6 +124,22 @@ export async function recordPackPull(
   return data as { ok: boolean; pack_open_id: string };
 }
 
+// ---------- Box purchase ----------
+
+export async function buyBox(userId: string, setCode: SetCode) {
+  const { data, error } = await supabase.rpc("buy_box", {
+    p_user_id: userId,
+    p_set_code: setCode,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    error?: string;
+    price?: number;
+    points?: number;
+  };
+}
+
 // ---------- Merchant ----------
 
 export async function getMerchantState(userId: string): Promise<MerchantState> {
@@ -168,16 +186,32 @@ export async function createGift(
   fromUserId: string,
   toLoginId: string,
   cardId: string,
-  pricePoints: number
+  pricePoints: number,
+  message?: string
 ) {
   const { data, error } = await supabase.rpc("create_gift", {
     p_from_id: fromUserId,
     p_to_user_id: toLoginId,
     p_card_id: cardId,
     p_price_points: pricePoints,
+    p_message: message ?? null,
   });
   if (error) return { ok: false as const, error: error.message };
-  return data as { ok: boolean; error?: string; gift_id?: string };
+  return data as {
+    ok: boolean;
+    error?: string;
+    gift_id?: string;
+    daily_used?: number;
+    daily_limit?: number;
+  };
+}
+
+export async function fetchGiftQuota(userId: string): Promise<GiftQuota> {
+  const { data, error } = await supabase.rpc("gift_quota", {
+    p_user_id: userId,
+  });
+  if (error) return { used: 0, limit: 3, remaining: 3 };
+  return data as GiftQuota;
 }
 
 export async function acceptGift(giftId: string, userId: string) {
@@ -233,7 +267,7 @@ export async function fetchGifts(userId: string): Promise<{
   await expirePendingGifts();
 
   const select =
-    "id, from_user_id, to_user_id, card_id, status, price_points, expires_at, accepted_at, settled_at, created_at, from:users!from_user_id(user_id), to:users!to_user_id(user_id)";
+    "id, from_user_id, to_user_id, card_id, status, price_points, expires_at, accepted_at, settled_at, created_at, message, from:users!from_user_id(user_id), to:users!to_user_id(user_id)";
 
   const [recv, sent] = await Promise.all([
     supabase
@@ -264,6 +298,7 @@ export async function fetchGifts(userId: string): Promise<{
       accepted_at: (r.accepted_at as string | null) ?? null,
       settled_at: (r.settled_at as string | null) ?? null,
       created_at: r.created_at as string,
+      message: (r.message as string | null) ?? null,
       from_login: (r.from as { user_id?: string } | null)?.user_id,
       to_login: (r.to as { user_id?: string } | null)?.user_id,
     }));

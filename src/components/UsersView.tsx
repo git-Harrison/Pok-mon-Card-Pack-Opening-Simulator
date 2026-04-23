@@ -131,12 +131,6 @@ export default function UsersView() {
             펼쳐집니다.
           </p>
         </div>
-        <button
-          onClick={load}
-          className="h-10 px-3 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-zinc-200 border border-white/10"
-        >
-          새로고침
-        </button>
       </div>
 
       {loading ? (
