@@ -8,11 +8,9 @@ import type { Card, SetInfo } from "@/lib/types";
 import { drawBox } from "@/lib/pack-draw";
 import { recordPackPull } from "@/lib/db";
 import { useAuth } from "@/lib/auth";
-import PokeCard from "./PokeCard";
-import RarityBadge from "./RarityBadge";
-import { RARITY_STYLE } from "@/lib/rarity";
+import PackOpeningStage from "./PackOpeningStage";
 
-type Phase = "sealed" | "opening" | "grid" | "tearing" | "cards";
+type Phase = "sealed" | "opening" | "grid" | "opening-pack";
 
 export default function SetView({ set }: { set: SetInfo }) {
   const { user } = useAuth();
@@ -20,7 +18,6 @@ export default function SetView({ set }: { set: SetInfo }) {
   const [packs, setPacks] = useState<Card[][]>([]);
   const [openedMask, setOpenedMask] = useState<boolean[]>([]);
   const [activePack, setActivePack] = useState<number | null>(null);
-  const [revealedSlots, setRevealedSlots] = useState<boolean[]>([]);
 
   const openBox = useCallback(() => {
     setPhase("opening");
@@ -34,34 +31,22 @@ export default function SetView({ set }: { set: SetInfo }) {
     (index: number) => {
       if (openedMask[index]) return;
       setActivePack(index);
-      setPhase("tearing");
-      setTimeout(async () => {
-        setRevealedSlots(new Array(set.cardsPerPack).fill(false));
-        setPhase("cards");
-        if (user) {
-          try {
-            await recordPackPull(
-              user.id,
-              set.code,
-              packs[index].map((c) => c.id)
-            );
-          } catch (e) {
-            console.error("recordPackPull failed", e);
-          }
-        }
-        setOpenedMask((prev) => {
-          const next = [...prev];
-          next[index] = true;
-          return next;
-        });
-      }, 900);
+      setPhase("opening-pack");
+      if (user) {
+        recordPackPull(
+          user.id,
+          set.code,
+          packs[index].map((c) => c.id)
+        ).catch((e) => console.error("recordPackPull failed", e));
+      }
+      setOpenedMask((prev) => {
+        const next = [...prev];
+        next[index] = true;
+        return next;
+      });
     },
     [openedMask, packs, set, user]
   );
-
-  const revealAll = useCallback(() => {
-    setRevealedSlots(new Array(set.cardsPerPack).fill(true));
-  }, [set.cardsPerPack]);
 
   const backToGrid = useCallback(() => {
     setActivePack(null);
@@ -73,7 +58,6 @@ export default function SetView({ set }: { set: SetInfo }) {
     setPacks([]);
     setOpenedMask([]);
     setActivePack(null);
-    setRevealedSlots([]);
   }, []);
 
   const openedCount = useMemo(
@@ -109,7 +93,7 @@ export default function SetView({ set }: { set: SetInfo }) {
           <SealedBox key="sealed" set={set} onOpen={openBox} />
         )}
         {phase === "opening" && <BoxOpening key="opening" set={set} />}
-        {(phase === "grid" || phase === "tearing" || phase === "cards") && (
+        {(phase === "grid" || phase === "opening-pack") && (
           <motion.div
             key="grid"
             className="mt-8 md:mt-10"
@@ -141,21 +125,12 @@ export default function SetView({ set }: { set: SetInfo }) {
       </AnimatePresence>
 
       <AnimatePresence>
-        {(phase === "tearing" || phase === "cards") && activePack !== null && (
-          <PackOverlay
+        {phase === "opening-pack" && activePack !== null && (
+          <PackOpeningStage
             key="overlay"
-            set={set}
             pack={packs[activePack]}
-            phase={phase}
-            revealedSlots={revealedSlots}
-            onRevealOne={(i) =>
-              setRevealedSlots((prev) => {
-                const next = [...prev];
-                next[i] = true;
-                return next;
-              })
-            }
-            onRevealAll={revealAll}
+            packImage={set.packImage}
+            setName={set.name}
             onClose={backToGrid}
           />
         )}
@@ -200,7 +175,7 @@ function SealedBox({ set, onOpen }: { set: SetInfo; onOpen: () => void }) {
       exit={{ opacity: 0, y: -12 }}
     >
       <motion.div
-        className="relative w-full max-w-[300px] md:max-w-[360px] aspect-[4/5]"
+        className="relative w-full max-w-[320px] md:max-w-[420px] aspect-[4/3]"
         whileHover={{ rotate: 1.5, y: -4 }}
         transition={{ type: "spring", stiffness: 150, damping: 16 }}
       >
@@ -212,7 +187,7 @@ function SealedBox({ set, onOpen }: { set: SetInfo; onOpen: () => void }) {
         />
         <img
           src={set.boxImage}
-          alt={set.name}
+          alt={`${set.name} 박스`}
           className="relative w-full h-full object-contain drop-shadow-2xl animate-bob"
         />
       </motion.div>
@@ -220,8 +195,7 @@ function SealedBox({ set, onOpen }: { set: SetInfo; onOpen: () => void }) {
         onClick={onOpen}
         className="h-12 md:h-14 px-6 md:px-8 rounded-xl bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-sm md:text-base shadow-[0_12px_40px_-10px_rgba(251,113,133,0.8)] hover:scale-[1.03] active:scale-[0.98] transition inline-flex items-center gap-2"
       >
-        <span className="text-lg">📦</span>
-        박스 열기
+        📦 박스 열기
       </button>
     </motion.div>
   );
@@ -235,13 +209,13 @@ function BoxOpening({ set }: { set: SetInfo }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
-      <div className="relative w-full max-w-[300px] md:max-w-[360px] aspect-[4/5]">
+      <div className="relative w-full max-w-[320px] md:max-w-[420px] aspect-[4/3]">
         <motion.img
           src={set.boxImage}
           alt={set.name}
           className="absolute inset-0 w-full h-full object-contain"
           initial={{ scale: 1, rotate: 0 }}
-          animate={{ scale: [1, 1.05, 1.1], rotate: [0, -2, 2, 0] }}
+          animate={{ scale: [1, 1.05, 1.12], rotate: [0, -2, 2, 0] }}
           transition={{ duration: 0.9, times: [0, 0.5, 1] }}
         />
         <motion.div
@@ -317,140 +291,5 @@ function PackGrid({
         </motion.button>
       ))}
     </motion.div>
-  );
-}
-
-function PackOverlay({
-  set,
-  pack,
-  phase,
-  revealedSlots,
-  onRevealOne,
-  onRevealAll,
-  onClose,
-}: {
-  set: SetInfo;
-  pack: Card[];
-  phase: Phase;
-  revealedSlots: boolean[];
-  onRevealOne: (i: number) => void;
-  onRevealAll: () => void;
-  onClose: () => void;
-}) {
-  const allRevealed = revealedSlots.every(Boolean);
-  const bestRarity = useMemo(() => {
-    return [...pack].sort(
-      (a, b) => RARITY_STYLE[b.rarity].tier - RARITY_STYLE[a.rarity].tier
-    )[0].rarity;
-  }, [pack]);
-
-  return (
-    <motion.div
-      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex flex-col"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      <div className="flex items-center justify-between px-3 md:px-6 h-14 border-b border-white/10">
-        <div className="text-xs md:text-sm text-zinc-300 truncate">
-          {set.name} · 팩 개봉 중
-        </div>
-        <button
-          onClick={onClose}
-          className="h-9 px-3 rounded bg-white/10 hover:bg-white/20 text-sm text-white"
-        >
-          닫기
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-auto flex items-center justify-center p-3 md:p-10">
-        {phase === "tearing" ? (
-          <TearAnimation packImage={set.packImage} />
-        ) : (
-          <div className="w-full max-w-5xl flex flex-col items-center gap-4 md:gap-6">
-            {allRevealed && (
-              <div className="flex items-center gap-2 animate-pulse">
-                <span className="text-xs text-zinc-400">최고 등급 카드:</span>
-                <RarityBadge rarity={bestRarity} size="md" />
-              </div>
-            )}
-            <div
-              className="grid gap-2.5 md:gap-4 w-full"
-              style={{
-                gridTemplateColumns: `repeat(auto-fit, minmax(110px, 1fr))`,
-                maxWidth: set.cardsPerPack > 5 ? "900px" : "720px",
-              }}
-            >
-              {pack.map((card, i) => (
-                <div key={i} className="flex items-center justify-center">
-                  <PokeCard
-                    card={card}
-                    revealed={revealedSlots[i]}
-                    onReveal={() => onRevealOne(i)}
-                    index={i}
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 pt-2">
-              {!allRevealed ? (
-                <button
-                  onClick={onRevealAll}
-                  className="h-11 px-5 rounded-xl bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-sm hover:scale-[1.03] transition"
-                >
-                  한번에 보기
-                </button>
-              ) : (
-                <button
-                  onClick={onClose}
-                  className="h-11 px-5 rounded-xl bg-white text-zinc-900 font-bold text-sm hover:scale-[1.03] transition"
-                >
-                  다음 팩 열기
-                </button>
-              )}
-              <Link
-                href="/wallet"
-                className="h-11 px-5 rounded-xl bg-white/10 text-white font-semibold text-sm hover:bg-white/20 transition inline-flex items-center"
-              >
-                내 카드지갑 보기
-              </Link>
-            </div>
-          </div>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-function TearAnimation({ packImage }: { packImage: string }) {
-  return (
-    <div className="relative w-[200px] h-[300px] md:w-[220px] md:h-[320px]">
-      <motion.img
-        src={packImage}
-        alt=""
-        className="absolute inset-0 w-full h-full object-contain"
-        initial={{ scale: 1, rotate: 0, y: 0 }}
-        animate={{ scale: [1, 1.05, 0.98], rotate: [0, -6, 4, 0] }}
-        transition={{ duration: 0.9 }}
-      />
-      <motion.div
-        className="absolute inset-x-0 top-1/2 h-[2px] bg-white shadow-[0_0_16px_4px_rgba(255,255,255,0.8)]"
-        initial={{ scaleX: 0 }}
-        animate={{ scaleX: [0, 1, 1] }}
-        transition={{ duration: 0.9 }}
-        style={{ transformOrigin: "center" }}
-      />
-      <motion.div
-        className="absolute inset-0"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 1, 0] }}
-        transition={{ duration: 0.9, times: [0, 0.6, 1] }}
-        style={{
-          background:
-            "radial-gradient(closest-side, rgba(255,255,255,0.9), transparent 60%)",
-        }}
-      />
-    </div>
   );
 }

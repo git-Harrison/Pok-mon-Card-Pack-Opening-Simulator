@@ -13,7 +13,6 @@ import { SETS, SET_ORDER } from "@/lib/sets";
 import { useAuth } from "@/lib/auth";
 import { fetchWallet, type WalletSnapshot } from "@/lib/db";
 import PokeCard from "./PokeCard";
-import RarityBadge from "./RarityBadge";
 import CardDetailModal from "./CardDetailModal";
 import { motion } from "framer-motion";
 
@@ -163,20 +162,17 @@ export default function WalletView() {
             <motion.div
               layoutId={`card-${card.id}`}
               key={card.id}
-              className="relative flex flex-col items-center gap-2 cursor-pointer"
+              className="relative flex flex-col items-center gap-1.5 cursor-pointer"
               whileTap={{ scale: 0.97 }}
               onClick={() => setSelected({ card, count })}
             >
               <PokeCard card={card} revealed size="md" />
-              <div className="w-full flex items-center justify-between gap-1 text-xs px-1">
-                <RarityBadge rarity={card.rarity} size="xs" />
-                {count > 1 && (
-                  <span className="px-1.5 py-0.5 rounded bg-white/10 text-white font-bold">
-                    ×{count}
-                  </span>
-                )}
-              </div>
-              <div className="w-full text-center">
+              {count > 1 && (
+                <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur text-white font-bold text-[10px] ring-1 ring-white/20">
+                  ×{count}
+                </span>
+              )}
+              <div className="w-full text-center px-1">
                 <p className="text-[11px] text-zinc-300 leading-tight line-clamp-2">
                   {card.name}
                 </p>

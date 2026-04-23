@@ -36,14 +36,16 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
       </head>
-      <body className="min-h-full flex flex-col overflow-x-hidden font-sans">
+      <body className="overflow-x-hidden font-sans">
         <AuthProvider>
           <Navbar />
-          <main className="flex-1 w-full">{children}</main>
-          <footer className="text-center text-[11px] text-zinc-500 py-5 px-4">
-            © {new Date().getFullYear()} Pokémon TCG Sim · 카드 이미지 저작권은
-            The Pokémon Company / 포켓몬 코리아에 있습니다.
-          </footer>
+          <main className="w-full pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+            {children}
+            <footer className="mt-10 text-center text-[11px] text-zinc-500 py-5 px-4">
+              © {new Date().getFullYear()} Pokémon TCG Sim · 카드 이미지 저작권은
+              The Pokémon Company / 포켓몬 코리아에 있습니다.
+            </footer>
+          </main>
         </AuthProvider>
       </body>
     </html>

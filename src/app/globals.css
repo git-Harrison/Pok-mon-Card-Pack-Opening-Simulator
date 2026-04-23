@@ -288,3 +288,65 @@ samp {
 .pb-safe {
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
+.pt-safe {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+
+/* ---------- Gacha tear effects ---------- */
+@keyframes gacha-flash {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+.gacha-flash {
+  animation: gacha-flash 0.55s ease-out forwards;
+}
+
+@keyframes gacha-ring {
+  0% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(0);
+    border-width: 8px;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(6);
+    border-width: 1px;
+  }
+}
+.gacha-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 200px;
+  height: 200px;
+  border-radius: 9999px;
+  border-style: solid;
+  border-color: rgba(251, 191, 36, 0.9);
+  animation: gacha-ring 0.9s ease-out forwards;
+  pointer-events: none;
+}
+
+/* Pre-tear anticipation pulse on the pack */
+@keyframes gacha-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.5))
+            drop-shadow(0 0 24px rgba(251, 191, 36, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 24px rgba(251, 191, 36, 0.95))
+            drop-shadow(0 0 48px rgba(236, 72, 153, 0.7))
+            drop-shadow(0 0 72px rgba(56, 189, 248, 0.4));
+  }
+}
+.gacha-pulse {
+  animation: gacha-pulse 0.9s ease-in-out infinite;
+}
+
+/* Stack peek: slight wobble while waiting */
+@keyframes stack-breathe {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(0.3deg); }
+}
+.stack-breathe {
+  animation: stack-breathe 3.5s ease-in-out infinite;
+}

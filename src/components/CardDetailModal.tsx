@@ -48,7 +48,7 @@ export default function CardDetailModal({
       {card && (
         <motion.div
           key="backdrop"
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-end md:items-center justify-center"
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md p-3 md:p-6 flex items-center justify-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -59,29 +59,29 @@ export default function CardDetailModal({
             onClick={(e) => e.stopPropagation()}
             className={clsx(
               "relative w-full md:max-w-3xl bg-zinc-950/95 border border-white/10",
-              "rounded-t-3xl md:rounded-2xl shadow-2xl",
-              // 모바일/PC 공통: 화면보다 커지지 않게 높이 제한 + 내부 스크롤
-              "flex flex-col max-h-[92dvh] md:max-h-[90vh] overflow-hidden"
+              "rounded-2xl shadow-2xl",
+              // `dvh` shrinks when mobile browser URL bar shows, guaranteeing
+              // the modal always fits inside the visible viewport. `p-3` on
+              // the backdrop already reserves ~24px of margin all around.
+              "flex flex-col overflow-hidden",
+              "max-h-[calc(100dvh-1.5rem)] md:max-h-[90vh]"
             )}
-            initial={{ y: 80, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 80, opacity: 0 }}
+            initial={{ scale: 0.92, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.92, opacity: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
           >
-            {/* Sticky top bar: drag handle (mobile) + close button (always reachable) */}
-            <div className="relative shrink-0 pt-2 md:pt-0">
-              <div className="md:hidden h-1.5 w-12 mx-auto rounded-full bg-white/20" />
-              <button
-                onClick={onClose}
-                aria-label="닫기"
-                className="absolute top-2 right-2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center z-10"
-              >
-                ✕
-              </button>
-            </div>
+            {/* Sticky close */}
+            <button
+              onClick={onClose}
+              aria-label="닫기"
+              className="absolute top-2 right-2 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+            >
+              ✕
+            </button>
 
             {/* Scrollable body */}
-            <div className="flex-1 overflow-y-auto overscroll-contain pb-safe md:pb-0">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
               <div className="grid grid-cols-1 md:grid-cols-5 gap-0">
                 <div className="md:col-span-3 relative p-5 md:p-8 flex items-center justify-center bg-gradient-to-br from-zinc-900 to-black">
                   {isHighRarity(card.rarity) && (
@@ -98,17 +98,23 @@ export default function CardDetailModal({
                   )}
                   <div
                     className={clsx(
-                      "relative w-[62vw] max-w-[240px] md:max-w-[280px] aspect-[5/7] rounded-xl overflow-hidden ring-2",
+                      "relative rounded-xl overflow-hidden ring-2 bg-zinc-900",
                       RARITY_STYLE[card.rarity].frame,
                       RARITY_STYLE[card.rarity].glow
                     )}
+                    style={{
+                      // Bounded by both viewport height and column width
+                      width: "min(62vw, 260px)",
+                      maxHeight: "55dvh",
+                      aspectRatio: "5 / 7",
+                    }}
                   >
                     {isHighRarity(card.rarity) && <div className="rarity-ring" />}
                     {card.imageUrl && !imgError ? (
                       <img
                         src={card.imageUrl}
                         alt={card.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain bg-zinc-900"
                         onError={() => setImgError(true)}
                       />
                     ) : (
@@ -130,7 +136,7 @@ export default function CardDetailModal({
                 <div className="md:col-span-2 p-5 md:p-6 flex flex-col gap-4">
                   <div>
                     <RarityBadge rarity={card.rarity} size="md" />
-                    <h2 className="mt-3 text-2xl md:text-3xl font-black text-white leading-tight">
+                    <h2 className="mt-3 text-xl md:text-3xl font-black text-white leading-tight">
                       {card.name}
                     </h2>
                     <p className="mt-1 text-xs text-zinc-400">
@@ -257,7 +263,7 @@ function GiftForm({
       {error && <p className="mt-2 text-xs text-rose-400">{error}</p>}
       {success && (
         <p className="mt-2 text-xs text-emerald-300">
-          선물이 전송되었습니다! 친구가 수락할 때까지 기다려 주세요.
+          선물이 전송되었습니다!
         </p>
       )}
       <div className="mt-3 flex gap-2">

@@ -58,7 +58,7 @@ export default function PokeCard({
         {/* Back face */}
         <div className="absolute inset-0 backface-hidden rounded-xl overflow-hidden">
           <img
-            src="/images/common/card-back.svg"
+            src="/images/common/card-back.jpg"
             alt=""
             className="w-full h-full object-cover select-none pointer-events-none"
             draggable={false}
@@ -71,7 +71,10 @@ export default function PokeCard({
             <img
               src={card.imageUrl}
               alt={card.name}
-              className="w-full h-full object-cover select-none pointer-events-none"
+              // `object-contain` ensures we never crop the art even if the
+              // source image aspect is slightly off 5:7. bg-zinc-900 fills
+              // any letterbox so the card still looks framed.
+              className="w-full h-full object-contain bg-zinc-900 select-none pointer-events-none"
               draggable={false}
               onError={() => setImgError(true)}
             />
