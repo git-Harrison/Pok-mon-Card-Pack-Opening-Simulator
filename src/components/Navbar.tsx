@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 const AUTH_NAV = [
   { href: "/", label: "홈" },
   { href: "/wallet", label: "내 카드지갑" },
+  { href: "/users", label: "사용자 랭킹" },
   { href: "/gifts", label: "선물함" },
 ];
 
