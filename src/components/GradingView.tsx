@@ -446,21 +446,22 @@ function CardPicker({
 
   return (
     <motion.div
-      className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md"
+      className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md overflow-y-auto overscroll-contain"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       onClick={onClose}
-      style={{
-        paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
-        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
-        paddingLeft: "12px",
-        paddingRight: "12px",
-      }}
     >
-      <div className="w-full h-full flex items-center justify-center">
+      <div
+        className="flex items-center justify-center px-3 md:px-6"
+        style={{
+          minHeight: "100dvh",
+          paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+        }}
+      >
         <motion.div
-          className="relative w-full max-w-2xl max-h-full bg-zinc-950 border border-white/10 rounded-2xl flex flex-col overflow-hidden"
+          className="relative w-full max-w-2xl bg-zinc-950 border border-white/10 rounded-2xl flex flex-col overflow-hidden"
           initial={{ scale: 0.94, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.94, opacity: 0 }}

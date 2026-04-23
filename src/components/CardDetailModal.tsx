@@ -95,8 +95,8 @@ export default function CardDetailModal({
                 ✕
               </button>
 
-              {/* Scrollable body */}
-              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+              {/* Body — natural height; backdrop handles scroll */}
+              <div className="flex-1">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-0">
                   <div className="md:col-span-3 relative p-5 md:p-8 flex items-center justify-center bg-gradient-to-br from-zinc-900 to-black">
                     {isHighRarity(card.rarity) && (
