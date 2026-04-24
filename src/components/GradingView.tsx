@@ -128,7 +128,7 @@ export default function GradingView() {
         <div>
           <h1 className="text-xl md:text-3xl font-black tracking-tight">
             <span className="bg-gradient-to-r from-fuchsia-300 via-violet-200 to-indigo-300 bg-clip-text text-transparent">
-              SSS 감정실
+              PCL 감정실
             </span>
           </h1>
           <p className="text-[10px] md:text-xs text-zinc-500 tracking-[0.2em] uppercase">
@@ -253,7 +253,7 @@ export default function GradingView() {
                 <div className="text-[10px] text-zinc-400 truncate">
                   판정 등급:{" "}
                   <span className={clsx("font-bold", tone?.text)}>
-                    SSS {grade} · {PSA_LABEL[grade]}
+                    PCL {grade} · {PSA_LABEL[grade]}
                   </span>
                 </div>
               </div>
@@ -360,7 +360,7 @@ export default function GradingView() {
               className="flex items-center justify-between rounded-md bg-black/30 border border-white/5 px-2 py-1"
             >
               <span className={clsx("font-bold", psaTone(d.grade).text)}>
-                SSS {d.grade}
+                PCL {d.grade}
               </span>
               <span className="text-zinc-300 tabular-nums font-semibold">
                 {d.pct}%
@@ -700,7 +700,7 @@ function Gauge({
             phase === "revealed" ? tone.text : "text-white"
           )}
         >
-          {phase === "revealed" ? `SSS ${grade}` : `${Math.round(value)}%`}
+          {phase === "revealed" ? `PCL ${grade}` : `${Math.round(value)}%`}
         </span>
       </div>
       <div className="relative h-2.5 rounded-full bg-white/5 overflow-hidden ring-1 ring-white/10">
@@ -741,7 +741,7 @@ function generateCaseId() {
   let s = "";
   for (let i = 0; i < 8; i++)
     s += chars[Math.floor(Math.random() * chars.length)];
-  return `SSS-${s}`;
+  return `PCL-${s}`;
 }
 
 function CardPicker({

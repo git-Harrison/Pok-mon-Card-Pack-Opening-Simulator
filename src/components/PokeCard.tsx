@@ -42,12 +42,15 @@ function StaticCard({ card, sizing }: { card: Card; sizing: string }) {
   const style = RARITY_STYLE[card.rarity];
   const hot = isHighRarity(card.rarity);
 
+  // In grid/wallet views we intentionally drop the outer `box-shadow` glow
+  // — body has `overflow-x-hidden` + page padding is tight, so the blur
+  // tail on edge cards was being clipped. The animated gradient-border
+  // `.rarity-ring` below now carries the rarity cue instead.
   return (
     <div
       className={clsx(
         "relative rounded-xl overflow-hidden isolate ring-2 bg-zinc-900",
         style.frame,
-        style.glow,
         sizing
       )}
     >

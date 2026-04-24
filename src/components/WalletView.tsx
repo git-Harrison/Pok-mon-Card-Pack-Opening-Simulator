@@ -111,7 +111,7 @@ export default function WalletView() {
           <Kpi label="보유 카드" value={`${snap.items.length}종`} />
           <Kpi label="총 장수" value={`${snap.totalCards}장`} />
           <Kpi label="총 개봉" value={`${totalPacks}팩`} />
-          <Kpi label="SSS 감별" value={`${psa.length}장`} highlight />
+          <Kpi label="PCL 감별" value={`${psa.length}장`} highlight />
         </div>
       </div>
 
@@ -124,7 +124,7 @@ export default function WalletView() {
           </span>
         </ModeTab>
         <ModeTab active={mode === "psa"} onClick={() => setMode("psa")}>
-          SSS 감별
+          PCL 감별
           <span className="ml-1.5 text-[10px] opacity-70">{psa.length}</span>
         </ModeTab>
       </div>
@@ -214,7 +214,7 @@ function CardsMode({
         <EmptyState />
       ) : (
         <div
-          className="mt-6 md:mt-8 grid gap-6 md:gap-8"
+          className="mt-6 md:mt-8 grid gap-4 md:gap-6"
           style={{
             gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
           }}
@@ -223,7 +223,7 @@ function CardsMode({
             <Link
               key={card.id}
               href={`/card/${encodeURIComponent(card.id)}`}
-              className="relative flex flex-col items-center gap-1.5 rounded-xl active:scale-[0.97] transition-transform"
+              className="relative flex flex-col items-center gap-1.5 rounded-xl p-1.5 active:scale-[0.97] transition-transform"
               style={{ touchAction: "manipulation" }}
             >
               <PokeCard card={card} revealed size="md" />
@@ -261,7 +261,7 @@ function PsaMode({
           아직 감별한 카드가 없습니다
         </p>
         <p className="text-sm text-zinc-400">
-          SSS 감별 페이지에서 카드를 맡기고 등급을 받아보세요.
+          PCL 감별 페이지에서 카드를 맡기고 등급을 받아보세요.
         </p>
         <Link
           href="/grading"

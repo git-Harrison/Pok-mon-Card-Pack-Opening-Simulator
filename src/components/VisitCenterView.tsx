@@ -20,8 +20,6 @@ import CoinIcon from "./CoinIcon";
 import PsaSlab from "./PsaSlab";
 import { CenterBackdrop, CenterGrid, ModalShell } from "./CenterView";
 
-const SABOTAGE_COST = 100_000;
-
 export default function VisitCenterView({ loginId }: { loginId: string }) {
   const { user, setPoints } = useAuth();
   const [data, setData] = useState<VisitCenter | null>(null);
@@ -38,6 +36,7 @@ export default function VisitCenterView({ loginId }: { loginId: string }) {
     success: boolean;
     cardId: string;
     cardsDestroyed: number;
+    loot: number;
   } | null>(null);
   const [sabotaging, setSabotaging] = useState(false);
 
@@ -83,6 +82,7 @@ export default function VisitCenterView({ loginId }: { loginId: string }) {
       success,
       cardId: sabotage.cardId,
       cardsDestroyed: res.cards_destroyed ?? 0,
+      loot: res.loot ?? 0,
     });
     // Fire-and-forget Discord alert
     notifySabotage(
@@ -305,8 +305,8 @@ function SabotageConfirmModal({
   onConfirm: () => void;
 }) {
   const card = getCard(cardId);
-  const afford = points >= SABOTAGE_COST;
   const spec = SHOWCASES[showcaseType];
+  const afford = points >= spec.sabotageCost;
   const effectiveRate = Math.max(0, SABOTAGE_BASE_RATE - spec.defense);
   return (
     <ModalShell
@@ -344,8 +344,12 @@ function SabotageConfirmModal({
         )}
 
         <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 px-3 py-2 text-[11px] text-rose-200 leading-relaxed">
-          성공 시 <b>보관함과 그 안의 카드가 전부 소멸</b>해요. 실패해도 10만p는
-          돌아오지 않습니다. 이 보관함은{" "}
+          성공 시 <b>보관함과 그 안의 카드가 전부 소멸</b>하고, 보관함가의
+          50%인{" "}
+          <b className="text-amber-200">
+            +{Math.floor(spec.price * 0.5).toLocaleString("ko-KR")}p
+          </b>{" "}
+          전리품을 획득해요. 실패해도 비용은 돌아오지 않습니다. 이 보관함은{" "}
           <b className="text-sky-200">{spec.name}</b>이라 방어{" "}
           <b>{spec.defense}%</b>가 적용돼서 성공률이{" "}
           <b className="text-rose-100">{effectiveRate}%</b>예요.
@@ -378,7 +382,7 @@ function SabotageConfirmModal({
             ) : (
               <>
                 <CoinIcon size="xs" />
-                {SABOTAGE_COST.toLocaleString("ko-KR")}p · 부수기
+                {spec.sabotageCost.toLocaleString("ko-KR")}p · 부수기
               </>
             )}
           </button>
@@ -398,7 +402,12 @@ function SabotageResultModal({
   victim,
   onClose,
 }: {
-  result: { success: boolean; cardId: string; cardsDestroyed: number };
+  result: {
+    success: boolean;
+    cardId: string;
+    cardsDestroyed: number;
+    loot: number;
+  };
   victim: string;
   onClose: () => void;
 }) {
@@ -445,6 +454,17 @@ function SabotageResultModal({
             "이번엔 놓쳤어요. 다음엔 꼭…"
           )}
         </p>
+        {result.success && result.loot > 0 && (
+          <div className="rounded-lg border border-amber-400/50 bg-amber-400/10 px-3 py-2 text-center">
+            <p className="text-[11px] uppercase tracking-wider text-amber-300">
+              전리품 획득 (보관함가의 50%)
+            </p>
+            <p className="mt-0.5 text-base font-black text-amber-200 tabular-nums inline-flex items-center gap-1">
+              <CoinIcon size="xs" />+
+              {result.loot.toLocaleString("ko-KR")}p
+            </p>
+          </div>
+        )}
         <button
           type="button"
           onClick={onClose}

@@ -514,12 +514,14 @@ export async function sabotageCard(
     error?: string;
     success?: boolean;
     cost?: number;
+    loot?: number;
     points?: number;
     attacker_name?: string;
     victim_id?: string;
     victim_name?: string;
     victim_login?: string;
     card_id?: string;
+    grade?: number;
     cards_destroyed?: number;
   };
 }

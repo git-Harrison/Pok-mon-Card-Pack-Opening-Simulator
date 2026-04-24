@@ -14,7 +14,7 @@ export function isPsaEligible(rarity: Rarity): boolean {
 }
 
 /** Display brand for our grading system (replaces "PSA"). */
-export const GRADE_BRAND = "SSS";
+export const GRADE_BRAND = "PCL";
 
 /**
  * PSA grade → display label mapping.

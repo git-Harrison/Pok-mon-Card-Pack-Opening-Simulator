@@ -205,11 +205,11 @@ export default function CenterView() {
               내 포켓몬센터
             </h1>
             <p className="text-[11px] md:text-xs text-zinc-300/80 mt-1">
-              SSS 9·10 감별 슬랩만 박제 가능. 전시 중엔 지갑에서 숨겨지고
+              PCL 9·10 감별 슬랩만 박제 가능. 전시 중엔 지갑에서 숨겨지고
               판매·선물·재감별이 막혀요.
               <br className="hidden md:block" />
-              수익: <b className="text-slate-100">SSS 9</b> 시간당 3,000p ·{" "}
-              <b className="text-amber-300">SSS 10</b> 시간당 5,000p · 랭킹
+              수익: <b className="text-slate-100">PCL 9</b> 시간당 3,000p ·{" "}
+              <b className="text-amber-300">PCL 10</b> 시간당 5,000p · 랭킹
               +2,000점/장
             </p>
           </div>
@@ -234,8 +234,9 @@ export default function CenterView() {
             📜 방문 기록
           </button>
           <p className="text-[11px] text-zinc-400">
-            친구가 링크를 누르면 내 센터를 구경하고, 10만p로 카드에{" "}
-            <b className="text-rose-300">부수기(30%)</b>를 시도할 수 있어요.
+            친구가 링크를 누르면 내 센터를 구경하고, 보관함 등급별 비용으로{" "}
+            <b className="text-rose-300">부수기(최대 30%)</b>를 시도할 수
+            있어요.
           </p>
         </div>
 
@@ -497,10 +498,10 @@ function ShopModal({
               <span className="text-2xl shrink-0">{s.icon}</span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-white">{s.name}</p>
-                <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400">
-                  {s.tagline} · {s.capacity}칸 · 방어 {s.defense}%
+                <p className="text-[11px] text-zinc-300/90 mt-0.5">
+                  {s.capacity}칸 · 방어 {s.defense}%
                 </p>
-                <p className="text-[11px] text-zinc-300/80 mt-0.5 truncate">
+                <p className="text-[11px] text-zinc-400 mt-0.5 truncate">
                   {s.blurb}
                 </p>
               </div>
@@ -612,14 +613,14 @@ function GradingPickModal({
   );
   return (
     <ModalShell
-      title="박제할 SSS 슬랩 선택"
-      subtitle="SSS 9·10 슬랩만 전시 가능 · 박제 중엔 지갑에서 숨겨져요"
+      title="박제할 PCL 슬랩 선택"
+      subtitle="PCL 9·10 슬랩만 전시 가능 · 박제 중엔 지갑에서 숨겨져요"
       onClose={onClose}
     >
       <div className="p-3 md:p-4">
         {items.length === 0 ? (
           <p className="py-12 text-center text-sm text-zinc-400">
-            박제할 SSS 9 / 10 슬랩이 없어요.
+            박제할 PCL 9 / 10 슬랩이 없어요.
             <br />
             감별 페이지에서 등급 9 또는 10을 받아보세요.
           </p>
@@ -649,7 +650,7 @@ function GradingPickModal({
                       tone.text
                     )}
                   >
-                    SSS {g.grade} · 시간당{" "}
+                    PCL {g.grade} · 시간당{" "}
                     {g.grade === 10 ? "5,000" : "3,000"}p
                   </span>
                 </button>
@@ -676,7 +677,7 @@ export function ModalShell({
   return (
     <Portal>
       <motion.div
-        className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center overflow-hidden"
+        className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center overflow-hidden"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -689,7 +690,7 @@ export function ModalShell({
         }}
       >
         <motion.div
-          className="relative w-full max-w-md bg-zinc-950 border border-white/10 rounded-2xl flex flex-col overflow-hidden"
+          className="relative w-full max-w-md bg-zinc-900 border border-white/20 rounded-2xl flex flex-col overflow-hidden shadow-2xl"
           style={{ maxHeight: "calc(100dvh - 24px)" }}
           initial={{ scale: 0.94, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -697,23 +698,23 @@ export function ModalShell({
           transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-white/10 shrink-0">
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-white/15 bg-zinc-900/95 shrink-0">
             <div className="min-w-0">
               <h3 className="text-sm font-bold text-white truncate">{title}</h3>
               {subtitle && (
-                <p className="text-[10px] text-zinc-400 truncate">{subtitle}</p>
+                <p className="text-[11px] text-zinc-300 truncate">{subtitle}</p>
               )}
             </div>
             <button
               onClick={onClose}
               aria-label="닫기"
-              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+              className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center"
               style={{ touchAction: "manipulation" }}
             >
               ✕
             </button>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>
+          <div className="flex-1 min-h-0 overflow-y-auto bg-zinc-900">{children}</div>
         </motion.div>
       </motion.div>
     </Portal>
@@ -797,7 +798,7 @@ function SabotageLogModal({
                     </p>
                     <p className="text-[11px] text-zinc-400 truncate">
                       {card
-                        ? `${card.name} · ${card.rarity}${l.grade ? ` · SSS ${l.grade}` : ""}`
+                        ? `${card.name} · ${card.rarity}${l.grade ? ` · PCL ${l.grade}` : ""}`
                         : "알 수 없는 카드"}
                     </p>
                   </div>

@@ -88,7 +88,7 @@ export default function UsersView() {
             사용자 랭킹
           </h1>
           <p className="mt-1 text-sm text-zinc-400">
-            SSS 감별 성공 시 등급별 랭킹 점수를 얻어요. 카드 보유만으로는
+            PCL 감별 성공 시 등급별 랭킹 점수를 얻어요. 카드 보유만으로는
             점수가 오르지 않아요.
           </p>
         </div>
@@ -121,7 +121,7 @@ export default function UsersView() {
               href="/grading"
               className="underline underline-offset-2 text-amber-300 hover:text-amber-200 font-semibold"
             >
-              SSS 감별
+              PCL 감별
             </Link>
             {" "}페이지에서 카드 감정을 맡기세요.
           </li>
@@ -140,7 +140,7 @@ export default function UsersView() {
       {/* Scoring legend */}
       <div className="mt-3 rounded-xl bg-white/5 border border-white/10 p-3">
         <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-2">
-          SSS 등급 → 랭킹 점수 · 지갑 보너스
+          PCL 등급 → 랭킹 점수 · 지갑 보너스
         </p>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
           {[10, 9, 8, 7, 6].map((g) => (
@@ -149,7 +149,7 @@ export default function UsersView() {
               className="rounded-lg bg-black/30 border border-white/5 px-2.5 py-1.5"
             >
               <div className="flex items-center justify-between">
-                <span className={clsx("font-bold", GRADE_COLOR[g])}>SSS {g}</span>
+                <span className={clsx("font-bold", GRADE_COLOR[g])}>PCL {g}</span>
                 <span className="text-zinc-200 tabular-nums font-semibold">
                   +{PSA_TIER_POINTS[g]}점
                 </span>
@@ -269,7 +269,7 @@ export default function UsersView() {
                           )}
                           aria-expanded={active}
                         >
-                          <span>SSS {grade}</span>
+                          <span>PCL {grade}</span>
                           <span className="opacity-80">×{count}</span>
                         </button>
                       );
@@ -290,7 +290,7 @@ export default function UsersView() {
                     >
                       <div className="px-3 md:px-4 py-3">
                         <p className="text-[10px] uppercase tracking-wider text-zinc-400 mb-2">
-                          SSS {openGrade} 카드 ({gradeCounts.find((g) => g.grade === openGrade)?.count ?? 0}장)
+                          PCL {openGrade} 카드 ({gradeCounts.find((g) => g.grade === openGrade)?.count ?? 0}장)
                         </p>
                         <ul className="space-y-1.5">
                           {e.gradings
@@ -326,7 +326,7 @@ export default function UsersView() {
                                       GRADE_COLOR[g.grade]
                                     )}
                                   >
-                                    SSS {g.grade}
+                                    PCL {g.grade}
                                   </span>
                                 </li>
                               );

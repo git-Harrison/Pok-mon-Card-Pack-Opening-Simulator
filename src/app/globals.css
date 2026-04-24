@@ -120,26 +120,52 @@ samp {
   }
 }
 
+/* Animated *border-only* rainbow sweep for high-rarity cards. The
+   gradient lives in a 2px-thick frame around the card's edge — never
+   in the center — via mask-composite: exclude. This keeps the art
+   fully visible while still calling out the hit. */
 .rarity-ring {
   position: absolute;
-  /* Stays inside the card bounds so adjacent cards in grid/wallet views
-     don't get bled into by the rotating glow. Parent should have
-     `overflow-hidden` + `rounded-xl` to clip the blur tail. */
   inset: 0;
   border-radius: inherit;
+  padding: 2px;
   background: conic-gradient(
     from 0deg,
-    #ffe58a,
-    #ff8fd2,
-    #8ae2ff,
-    #a0ffb2,
-    #ffe58a
+    #ffd7a0 0deg,
+    #ff8fd2 90deg,
+    #8ae2ff 180deg,
+    #a0ffb2 270deg,
+    #ffd7a0 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: ring-spin 5s linear infinite;
+  pointer-events: none;
+  opacity: 0.9;
+  z-index: 2;
+}
+
+/* A softer shimmer pulse layered under the border for extra depth. */
+.rarity-ring::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+  background: radial-gradient(
+    closest-side,
+    rgba(255, 220, 140, 0.35),
+    transparent 70%
   );
   filter: blur(4px);
-  opacity: 0.22;
-  animation: ring-spin 6s linear infinite;
-  pointer-events: none;
-  z-index: 0;
+  opacity: 0.6;
+  animation: holo-sweep 4s ease-in-out infinite;
+  z-index: -1;
 }
 
 /* ---------- Pack foil shine ---------- */

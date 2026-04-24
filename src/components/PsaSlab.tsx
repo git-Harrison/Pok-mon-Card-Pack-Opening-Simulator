@@ -7,7 +7,7 @@ import { GRADE_BRAND, PSA_LABEL, psaTone } from "@/lib/psa";
 import { SETS } from "@/lib/sets";
 
 /**
- * SSS slab — dark-glass holographic encapsulation.
+ * PCL slab — dark-glass holographic encapsulation.
  * Layers: outer bezel → inner glass → card window → bottom barcode band.
  * Grade banner uses the rarity-tier-matched `psaTone(grade)` palette so the
  * whole component glows in the right hue without hard-coded color logic.
@@ -171,7 +171,7 @@ export default function PsaSlab({
         </div>
         {/* Cert line — fake hash for flavor */}
         <div className="mt-1.5 text-[8px] font-mono text-white/30 tabular-nums truncate">
-          SSS·{card.setCode.toUpperCase()}·{card.number}·{grade}
+          PCL·{card.setCode.toUpperCase()}·{card.number}·{grade}
         </div>
       </div>
     </motion.div>
