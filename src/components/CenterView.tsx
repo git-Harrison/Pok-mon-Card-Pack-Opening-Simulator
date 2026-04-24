@@ -1091,7 +1091,7 @@ function InfoRankTab() {
     { label: "PCL 8 감별 성공", value: "+150점" },
     { label: "PCL 9 감별 성공", value: "+350점" },
     { label: "PCL 10 감별 성공", value: "+500점", highlight: true },
-    { label: "부수기 성공", value: "+100점" },
+    { label: "부수기 성공", value: "+5,000점", highlight: true },
   ];
   return (
     <>
