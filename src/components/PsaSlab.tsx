@@ -43,16 +43,25 @@ export default function PsaSlab({
       animate={highlight ? { scale: [1, 1.03, 1] } : { scale: 1 }}
       transition={{ duration: 1.2, times: [0, 0.5, 1] }}
       className={clsx(
-        "relative rounded-2xl overflow-hidden isolate ring-1 select-none",
-        "bg-[linear-gradient(168deg,#1a1030_0%,#231847_45%,#0b0620_100%)]",
-        tone.ring,
+        "relative rounded-[22px] p-[3px] isolate select-none",
         tone.glow,
         width
       )}
       style={{
+        // Outer acrylic case — a subtle translucent frame + bevel so the
+        // slab reads as physical plastic rather than a flat tile.
+        background:
+          "linear-gradient(145deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.35) 35%, rgba(255,255,255,0.15) 55%, rgba(255,255,255,0.55) 100%)",
         boxShadow:
-          "0 20px 44px -20px rgba(0,0,0,0.95), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.7)",
+          "0 20px 44px -20px rgba(0,0,0,0.95), inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(0,0,0,0.55)",
       }}
+    >
+    <div
+      className={clsx(
+        "relative rounded-[19px] overflow-hidden ring-1",
+        "bg-[linear-gradient(168deg,#1a1030_0%,#231847_45%,#0b0620_100%)]",
+        tone.ring
+      )}
     >
       {/* Subtle holographic sheen over the whole slab */}
       <div
@@ -167,6 +176,7 @@ export default function PsaSlab({
         </span>
         <Barcode />
       </div>
+    </div>
     </motion.div>
   );
 }
