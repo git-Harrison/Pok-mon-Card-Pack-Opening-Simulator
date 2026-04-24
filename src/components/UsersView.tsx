@@ -16,9 +16,9 @@ import PageHeader from "./PageHeader";
  * PSA-grade cards to climb.
  */
 const PSA_TIER_POINTS: Record<number, number> = {
-  10: 1000,
-  9: 500,
-  8: 200,
+  10: 500,
+  9: 350,
+  8: 150,
   7: 100,
   6: 100,
 };
@@ -30,6 +30,9 @@ const PSA_TIER_BONUS: Record<number, number> = {
   7: 3000,
   6: 3000,
 };
+
+/** Rank points awarded to the attacker per successful sabotage. */
+const SABOTAGE_WIN_POINTS = 100;
 
 const GRADE_COLOR: Record<number, string> = {
   10: "text-amber-300",
@@ -130,15 +133,16 @@ export default function UsersView() {
                 ))}
               </div>
               <p className="mt-2 text-[10px] text-zinc-400 leading-snug">
-                팩 개봉 →{" "}
                 <Link
                   href="/grading"
                   className="underline underline-offset-2 text-amber-300 hover:text-amber-200"
                 >
                   PCL 감별
                 </Link>{" "}
-                → 성공 30% 확률로 등급 획득. 센터 전시 1장당 +2,000점 추가.
-                센터에서 부서지면 전부 차감.
+                성공 시 등급별 점수 획득. 전시는 랭킹 가산 없음. 전시 중에
+                상대에게 부서지면 그 카드로 얻은 점수가 사라지고, 남의 카드를
+                부수면 <b className="text-rose-300">+{SABOTAGE_WIN_POINTS}점</b>
+                {" "}획득.
               </p>
             </div>
           </motion.div>
@@ -214,7 +218,8 @@ export default function UsersView() {
                       </Link>
                     </div>
                     <p className="text-[11px] md:text-xs text-zinc-400 mt-0.5">
-                      감별 {e.psa_count}회 · 전시 {e.showcase_count ?? 0}장
+                      감별 {e.psa_count}회 · 전시 {e.showcase_count ?? 0}장 ·
+                      부수기 {e.sabotage_wins ?? 0}승
                     </p>
                   </div>
                   <div className="text-right shrink-0">

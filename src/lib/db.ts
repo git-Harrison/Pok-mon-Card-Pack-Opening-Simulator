@@ -341,6 +341,8 @@ export interface RankingRow {
   psa_7: number;
   psa_6: number;
   showcase_count: number;
+  /** Successful sabotage attempts by this user (each worth +100 rank). */
+  sabotage_wins: number;
   gradings: RankingPsaGrading[];
 }
 
