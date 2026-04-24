@@ -283,7 +283,16 @@ export default function CenterView() {
         )}
         {pickTarget && (
           <GradingPickModal
-            gradings={availableGradings}
+            // Belt-and-suspenders filter: the RPC already excludes
+            // displayed gradings, but if stale client state slips any
+            // through, drop them here too by cross-referencing the
+            // current showcase snapshot.
+            gradings={availableGradings.filter(
+              (g) =>
+                !showcases.some((s) =>
+                  s.cards.some((c) => c.grading_id === g.id)
+                )
+            )}
             onClose={() => setPickTarget(null)}
             onPick={handlePickGrading}
           />

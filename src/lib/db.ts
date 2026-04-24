@@ -512,6 +512,21 @@ export async function fetchUndisplayedGradings(
   return (data ?? []) as PsaGrading[];
 }
 
+export async function bulkSellGradings(userId: string, gradingIds: string[]) {
+  const { data, error } = await supabase.rpc("bulk_sell_gradings", {
+    p_user_id: userId,
+    p_grading_ids: gradingIds,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    error?: string;
+    sold?: number;
+    earned?: number;
+    points?: number;
+  };
+}
+
 export async function removeShowcase(userId: string, showcaseId: string) {
   const { data, error } = await supabase.rpc("remove_showcase", {
     p_user_id: userId,
