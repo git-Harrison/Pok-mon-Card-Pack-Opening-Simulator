@@ -8,6 +8,32 @@ import clsx from "clsx";
 import type { Card, SetInfo } from "@/lib/types";
 import { drawBox } from "@/lib/pack-draw";
 import { buyBox, recordPackPull, refundBoxPurchase } from "@/lib/db";
+
+/**
+ * recordPackPull with exponential backoff. Network blips or cold
+ * Supabase connections shouldn't cost the user a box — retry a few
+ * times before surfacing the failure.
+ */
+async function persistPackWithRetry(
+  userId: string,
+  setCode: SetInfo["code"],
+  cardIds: string[],
+  tries = 3
+): Promise<void> {
+  let lastErr: unknown;
+  for (let i = 0; i < tries; i++) {
+    try {
+      await recordPackPull(userId, setCode, cardIds);
+      return;
+    } catch (e) {
+      lastErr = e;
+      if (i < tries - 1) {
+        await new Promise((r) => setTimeout(r, 500 * (i + 1)));
+      }
+    }
+  }
+  throw lastErr;
+}
 import { useAuth } from "@/lib/auth";
 import { BOX_COST, RARITY_STYLE } from "@/lib/rarity";
 import PackOpeningStage from "./PackOpeningStage";
@@ -148,7 +174,7 @@ export default function SetView({ set }: { set: SetInfo }) {
         try {
           await Promise.all(
             drawn.map((pack) =>
-              recordPackPull(
+              persistPackWithRetry(
                 user.id,
                 set.code,
                 pack.map((c) => c.id)
@@ -217,23 +243,21 @@ export default function SetView({ set }: { set: SetInfo }) {
     setPacks(drawn);
     setOpenedMask(new Array(drawn.length).fill(false));
     setPhase("opening");
-    // Persist every pack's pulls BEFORE handing off to the grid. The 1.1s
-    // opening animation runs in parallel, so a typical save finishes
-    // before the user sees any cards. If persistence fails we surface
-    // the error — otherwise pulls (MUR 등 고등급 포함) could be shown
-    // in the animation without ever landing in card_ownership.
-    const persistPromise = Promise.all(
-      drawn.map((pack) =>
-        recordPackPull(
-          user.id,
-          set.code,
-          pack.map((c) => c.id)
-        )
-      )
-    );
-    const minAnimation = new Promise<void>((r) => setTimeout(r, 1100));
+    // Persist every pack BEFORE revealing the grid. Keep the user on
+    // the "opening" overlay (which now reads "카드 저장 중…") for the
+    // full duration — no artificial min-animation race, just wait for
+    // the actual saves to finish. Each save has 3 retries with backoff
+    // so transient network blips don't cost the user a box.
     try {
-      await Promise.all([persistPromise, minAnimation]);
+      await Promise.all(
+        drawn.map((pack) =>
+          persistPackWithRetry(
+            user.id,
+            set.code,
+            pack.map((c) => c.id)
+          )
+        )
+      );
       setPhase("grid");
     } catch (e) {
       console.error("box persist failed", e);
@@ -618,7 +642,10 @@ function BoxOpening({ set }: { set: SetInfo }) {
           }}
         />
       </div>
-      <p className="text-sm text-zinc-400">박스를 여는 중...</p>
+      <p className="text-sm text-zinc-200 font-semibold">카드 저장 중…</p>
+      <p className="mt-1 text-[11px] text-zinc-500">
+        박스를 열고 전체 팩을 DB에 기록하고 있어요. 닫지 말고 잠시만요.
+      </p>
     </motion.div>
   );
 }
@@ -819,7 +846,7 @@ function MultiBuyingOverlay({
           박스 {done} / {total}
         </p>
         <p className="mt-1 text-xs text-zinc-400">
-          박스를 열고 팩을 자동으로 개봉하는 중...
+          박스를 열고 카드를 DB에 저장 중… 닫지 말고 잠시만요.
         </p>
         <div className="mt-3 h-1 w-60 mx-auto rounded-full bg-white/10 overflow-hidden">
           <motion.div

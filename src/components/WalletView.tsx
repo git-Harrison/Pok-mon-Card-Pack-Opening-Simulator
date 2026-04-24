@@ -105,7 +105,11 @@ export default function WalletView() {
         stats={
           <>
             <Kpi label="종류" value={`${snap.items.length}`} />
-            <Kpi label="장수" value={`${snap.totalCards}`} />
+            <Kpi
+              label="장수"
+              value={`${snap.totalCards} / 1,000`}
+              highlight={snap.totalCards >= 900}
+            />
             <Kpi label="개봉" value={`${totalPacks}팩`} />
             <Kpi label="PCL" value={`${psa.length}`} highlight />
           </>
