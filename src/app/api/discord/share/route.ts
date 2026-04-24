@@ -32,7 +32,14 @@ interface PsaFailBody {
   username: string;
   cardId: string;
 }
-type Body = CardHitBody | PsaSuccessBody | PsaFailBody;
+interface SabotageBody {
+  kind: "sabotage";
+  username: string;
+  victim: string;
+  cardId: string;
+  success: boolean;
+}
+type Body = CardHitBody | PsaSuccessBody | PsaFailBody | SabotageBody;
 
 const NOTIFY_RARITIES = new Set<Rarity>(["SAR", "UR", "MUR"]);
 
@@ -174,6 +181,29 @@ export async function POST(request: Request) {
         ? { url: absoluteImageUrl(card.imageUrl) }
         : undefined,
       footer: { text: "카드깡 자동 알림" },
+      timestamp: new Date().toISOString(),
+    };
+  } else if (body.kind === "sabotage") {
+    const card = getCard(body.cardId);
+    if (!card) {
+      return NextResponse.json(
+        { ok: false, error: "카드를 찾을 수 없어요." },
+        { status: 400 }
+      );
+    }
+    const victim = (body.victim ?? "익명").slice(0, 24);
+    const title = body.success
+      ? `💥 ${safeUser}님이 ${victim}님의 ${card.rarity} 카드를 부쉈어요!`
+      : `🛡️ ${safeUser}님이 ${victim}님의 ${card.rarity} 카드를 노렸지만 실패했어요`;
+    content = body.success ? "@here" : "";
+    embed = {
+      title,
+      description: `**${card.name}**\n${SETS[card.setCode].name} · #${card.number}\n등급: **${card.rarity}** · 결과: ${body.success ? "✅ 성공" : "❌ 실패"}\n공격자: ${safeUser} · 센터 주인: ${victim}`,
+      color: body.success ? 0xdc2626 : 0x64748b,
+      thumbnail: card.imageUrl
+        ? { url: absoluteImageUrl(card.imageUrl) }
+        : undefined,
+      footer: { text: "포켓몬센터 부수기 알림" },
       timestamp: new Date().toISOString(),
     };
   } else {

@@ -10,6 +10,7 @@ import {
   HomeIcon,
   LogoutIcon,
   MagnifyIcon,
+  MuseumIcon,
   ShopIcon,
   TrophyIcon,
   WalletIcon,
@@ -18,6 +19,7 @@ import {
 const NAV_ITEMS = [
   { href: "/", label: "홈", Icon: HomeIcon },
   { href: "/wallet", label: "지갑", Icon: WalletIcon },
+  { href: "/center", label: "센터", Icon: MuseumIcon },
   { href: "/merchant", label: "상인", Icon: ShopIcon },
   { href: "/grading", label: "등급", Icon: MagnifyIcon },
   { href: "/users", label: "랭킹", Icon: TrophyIcon },
@@ -69,6 +71,8 @@ export default function Navbar() {
                     ? "등급 감별"
                     : label === "랭킹"
                     ? "사용자 랭킹"
+                    : label === "센터"
+                    ? "내 포켓몬센터"
                     : label}
                 </Link>
               ))}

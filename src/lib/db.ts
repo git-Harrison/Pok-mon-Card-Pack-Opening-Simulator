@@ -308,6 +308,7 @@ export interface RankingRow {
   psa_8: number;
   psa_7: number;
   psa_6: number;
+  showcase_count: number;
   gradings: RankingPsaGrading[];
 }
 
@@ -341,13 +342,166 @@ export async function bulkSellCards(userId: string, items: BulkSellItem[]) {
 export async function fetchPsaGradings(
   userId: string
 ): Promise<PsaGrading[]> {
-  const { data, error } = await supabase
-    .from("psa_gradings")
-    .select("id, user_id, card_id, grade, graded_at")
-    .eq("user_id", userId)
-    .order("graded_at", { ascending: false });
-  if (error) throw error;
+  // Uses the v4 helper that excludes slabs currently on display in
+  // the user's museum — those are considered 박제되어 지갑에서 제외.
+  return fetchUndisplayedGradings(userId);
+}
+
+// ---------- Center (museum) ----------
+
+import type { ShowcaseType } from "./center";
+
+export interface CenterShowcaseCard {
+  slot_index: number;
+  grading_id: string;
+  card_id: string;
+  grade: number;
+}
+
+export interface CenterShowcase {
+  id: string;
+  showcase_type: ShowcaseType;
+  slot_x: number;
+  slot_y: number;
+  cards: CenterShowcaseCard[];
+}
+
+export async function fetchUserCenter(
+  userId: string
+): Promise<CenterShowcase[]> {
+  const { data, error } = await supabase.rpc("get_user_center", {
+    p_user_id: userId,
+  });
+  if (error) return [];
+  return (data ?? []) as CenterShowcase[];
+}
+
+export async function buyShowcase(
+  userId: string,
+  type: ShowcaseType,
+  slotX: number,
+  slotY: number
+) {
+  const { data, error } = await supabase.rpc("buy_showcase", {
+    p_user_id: userId,
+    p_type: type,
+    p_slot_x: slotX,
+    p_slot_y: slotY,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    error?: string;
+    showcase_id?: string;
+    price?: number;
+    points?: number;
+  };
+}
+
+export async function displayGrading(
+  userId: string,
+  showcaseId: string,
+  slotIndex: number,
+  gradingId: string
+) {
+  const { data, error } = await supabase.rpc("display_grading", {
+    p_user_id: userId,
+    p_showcase_id: showcaseId,
+    p_slot_index: slotIndex,
+    p_grading_id: gradingId,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as { ok: boolean; error?: string };
+}
+
+export async function undisplayGrading(
+  userId: string,
+  showcaseId: string,
+  slotIndex: number
+) {
+  const { data, error } = await supabase.rpc("undisplay_grading", {
+    p_user_id: userId,
+    p_showcase_id: showcaseId,
+    p_slot_index: slotIndex,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as { ok: boolean; error?: string };
+}
+
+export async function fetchUndisplayedGradings(
+  userId: string
+): Promise<PsaGrading[]> {
+  const { data, error } = await supabase.rpc("get_undisplayed_gradings", {
+    p_user_id: userId,
+  });
+  if (error) return [];
   return (data ?? []) as PsaGrading[];
+}
+
+export async function removeShowcase(userId: string, showcaseId: string) {
+  const { data, error } = await supabase.rpc("remove_showcase", {
+    p_user_id: userId,
+    p_showcase_id: showcaseId,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as { ok: boolean; error?: string };
+}
+
+export interface VisitCenter {
+  ok: boolean;
+  error?: string;
+  owner_id?: string;
+  login_id?: string;
+  display_name?: string;
+  showcases?: CenterShowcase[];
+}
+
+export async function claimShowcaseIncome(userId: string) {
+  const { data, error } = await supabase.rpc("claim_showcase_income", {
+    p_user_id: userId,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    error?: string;
+    earned?: number;
+    card_count?: number;
+    points?: number;
+  };
+}
+
+export async function fetchCenterByLogin(loginId: string): Promise<VisitCenter> {
+  const { data, error } = await supabase.rpc("get_user_center_by_login", {
+    p_login: loginId,
+  });
+  if (error) return { ok: false, error: error.message };
+  return data as VisitCenter;
+}
+
+export async function sabotageCard(
+  attackerId: string,
+  showcaseId: string,
+  slotIndex: number
+) {
+  const { data, error } = await supabase.rpc("sabotage_card", {
+    p_attacker_id: attackerId,
+    p_showcase_id: showcaseId,
+    p_slot_index: slotIndex,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    error?: string;
+    success?: boolean;
+    cost?: number;
+    points?: number;
+    attacker_name?: string;
+    victim_id?: string;
+    victim_name?: string;
+    victim_login?: string;
+    card_id?: string;
+    cards_destroyed?: number;
+  };
 }
 
 export async function fetchGifts(userId: string): Promise<{

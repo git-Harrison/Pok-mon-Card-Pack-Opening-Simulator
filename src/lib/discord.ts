@@ -43,3 +43,13 @@ export function notifyPsaGrade(
 export function notifyPsaFail(username: string, cardId: string): void {
   post({ kind: "psa-fail", username, cardId });
 }
+
+/** Auto-notify on center sabotage attempts (success or fail). */
+export function notifySabotage(
+  attacker: string,
+  victim: string,
+  cardId: string,
+  success: boolean
+): void {
+  post({ kind: "sabotage", username: attacker, victim, cardId, success });
+}

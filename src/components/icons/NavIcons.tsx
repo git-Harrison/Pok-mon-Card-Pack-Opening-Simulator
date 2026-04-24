@@ -120,6 +120,26 @@ export function MagnifyIcon({ className = "w-6 h-6" }: IconProps) {
   );
 }
 
+export function MuseumIcon({ className = "w-6 h-6" }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M3 10 12 4l9 6" />
+      <path d="M5 10v10h14V10" />
+      <path d="M8 20v-6M12 20v-6M16 20v-6" />
+      <path d="M4 20h16" />
+    </svg>
+  );
+}
+
 export function LogoutIcon({ className = "w-5 h-5" }: IconProps) {
   return (
     <svg

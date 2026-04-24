@@ -1,0 +1,724 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
+import { useAuth } from "@/lib/auth";
+import {
+  buyShowcase,
+  claimShowcaseIncome,
+  displayGrading,
+  fetchUndisplayedGradings,
+  fetchUserCenter,
+  removeShowcase,
+  undisplayGrading,
+  type CenterShowcase,
+} from "@/lib/db";
+import type { PsaGrading } from "@/lib/types";
+import {
+  CENTER_GRID_COLS,
+  CENTER_GRID_ROWS,
+  SHOWCASES,
+  SHOWCASE_ORDER,
+  type ShowcaseType,
+} from "@/lib/center";
+import { getCard } from "@/lib/sets";
+import { RARITY_STYLE } from "@/lib/rarity";
+import { psaTone } from "@/lib/psa";
+import PointsChip from "./PointsChip";
+import CoinIcon from "./CoinIcon";
+import RarityBadge from "./RarityBadge";
+import PsaSlab from "./PsaSlab";
+
+export default function CenterView() {
+  const { user, setPoints } = useAuth();
+  const [showcases, setShowcases] = useState<CenterShowcase[]>([]);
+  const [availableGradings, setAvailableGradings] = useState<PsaGrading[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [claimNotice, setClaimNotice] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // open modals
+  const [shopSlot, setShopSlot] = useState<{ x: number; y: number } | null>(
+    null
+  );
+  const [manageId, setManageId] = useState<string | null>(null);
+  const [pickTarget, setPickTarget] = useState<{
+    showcaseId: string;
+    slotIndex: number;
+  } | null>(null);
+
+  const refresh = useCallback(async () => {
+    if (!user) return;
+    const [c, g] = await Promise.all([
+      fetchUserCenter(user.id),
+      fetchUndisplayedGradings(user.id),
+    ]);
+    setShowcases(c);
+    setAvailableGradings(g.filter((x) => x.grade === 9 || x.grade === 10));
+    setLoading(false);
+  }, [user]);
+
+  // Claim any pending passive income on mount.
+  useEffect(() => {
+    (async () => {
+      if (!user) return;
+      const res = await claimShowcaseIncome(user.id);
+      if (res.ok && res.earned && res.earned > 0) {
+        setClaimNotice(
+          `전시 수익 +${res.earned.toLocaleString("ko-KR")}p`
+        );
+        if (typeof res.points === "number") setPoints(res.points);
+        setTimeout(() => setClaimNotice(null), 5000);
+      }
+      await refresh();
+    })();
+  }, [user, refresh, setPoints]);
+
+  const byCell = useMemo(() => {
+    const m = new Map<string, CenterShowcase>();
+    for (const s of showcases) m.set(`${s.slot_x}:${s.slot_y}`, s);
+    return m;
+  }, [showcases]);
+
+  const manageShowcase = manageId
+    ? showcases.find((s) => s.id === manageId) ?? null
+    : null;
+
+  const handleBuy = useCallback(
+    async (type: ShowcaseType) => {
+      if (!user || !shopSlot) return;
+      const spec = SHOWCASES[type];
+      if ((user.points ?? 0) < spec.price) {
+        setError("포인트가 부족해요.");
+        return;
+      }
+      setError(null);
+      const res = await buyShowcase(user.id, type, shopSlot.x, shopSlot.y);
+      if (!res.ok) {
+        setError(res.error ?? "구매 실패");
+        return;
+      }
+      if (typeof res.points === "number") setPoints(res.points);
+      setShopSlot(null);
+      await refresh();
+    },
+    [user, shopSlot, setPoints, refresh]
+  );
+
+  const handleRemoveShowcase = useCallback(async () => {
+    if (!user || !manageId) return;
+    if (
+      !window.confirm(
+        "이 보관함을 치울까요?\n전시 중인 카드는 지갑으로 돌아옵니다. 구매 금액은 환불되지 않아요."
+      )
+    ) {
+      return;
+    }
+    const res = await removeShowcase(user.id, manageId);
+    if (!res.ok) {
+      setError(res.error ?? "치우기 실패");
+      return;
+    }
+    setManageId(null);
+    await refresh();
+  }, [user, manageId, refresh]);
+
+  const handleUndisplay = useCallback(
+    async (showcaseId: string, slotIndex: number) => {
+      if (!user) return;
+      const res = await undisplayGrading(user.id, showcaseId, slotIndex);
+      if (!res.ok) {
+        setError(res.error ?? "꺼내기 실패");
+        return;
+      }
+      await refresh();
+    },
+    [user, refresh]
+  );
+
+  const handlePickGrading = useCallback(
+    async (grading: PsaGrading) => {
+      if (!user || !pickTarget) return;
+      const res = await displayGrading(
+        user.id,
+        pickTarget.showcaseId,
+        pickTarget.slotIndex,
+        grading.id
+      );
+      if (!res.ok) {
+        setError(res.error ?? "전시 실패");
+        return;
+      }
+      setPickTarget(null);
+      await refresh();
+    },
+    [user, pickTarget, refresh]
+  );
+
+  const inviteUrl = useMemo(() => {
+    if (!user || typeof window === "undefined") return "";
+    return `${window.location.origin}/center/${encodeURIComponent(user.user_id)}`;
+  }, [user]);
+
+  const copyInvite = useCallback(async () => {
+    if (!inviteUrl) return;
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // fallback — highlight the text in a prompt
+      window.prompt("초대 링크를 복사하세요", inviteUrl);
+    }
+  }, [inviteUrl]);
+
+  const totalCards = useMemo(
+    () => showcases.reduce((s, sc) => s + sc.cards.length, 0),
+    [showcases]
+  );
+
+  return (
+    <div className="relative min-h-[calc(100dvh-4rem)]">
+      <CenterBackdrop />
+      <div className="relative z-10 max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
+        <header className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+              내 포켓몬센터
+            </h1>
+            <p className="text-[11px] md:text-xs text-zinc-300/80 mt-1">
+              AURA 9·10 감별 슬랩만 박제 가능. 전시 중엔 지갑에서 숨겨지고
+              판매·선물·재감별이 막혀요.
+              <br className="hidden md:block" />
+              수익: <b className="text-slate-100">AURA 9</b> 시간당 3,000p ·{" "}
+              <b className="text-amber-300">AURA 10</b> 시간당 5,000p · 랭킹
+              +2,000점/장
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            {user && <PointsChip points={user.points} size="sm" />}
+            <Kpi label="보관함" value={`${showcases.length}`} />
+            <Kpi label="박제 중" value={`${totalCards}장`} highlight />
+          </div>
+        </header>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            onClick={copyInvite}
+            className="h-9 px-3 rounded-full bg-gradient-to-r from-fuchsia-500 to-indigo-500 text-white font-bold text-xs hover:scale-[1.02] active:scale-[0.98] transition inline-flex items-center gap-1.5"
+          >
+            🔗 {copied ? "복사 완료!" : "초대 링크 복사"}
+          </button>
+          <p className="text-[11px] text-zinc-400">
+            친구가 링크를 누르면 내 센터를 구경하고, 10만p로 카드에{" "}
+            <b className="text-rose-300">부수기(30%)</b>를 시도할 수 있어요.
+          </p>
+        </div>
+
+        {claimNotice && (
+          <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-amber-400/15 border border-amber-400/40 text-amber-200 text-xs font-bold px-3 py-1.5">
+            <CoinIcon size="xs" />
+            {claimNotice}
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-3 text-xs text-rose-200 bg-rose-500/15 border border-rose-500/40 rounded-lg px-3 py-2">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="mt-12 flex justify-center">
+            <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+          </div>
+        ) : (
+          <CenterGrid
+            byCell={byCell}
+            onEmpty={(x, y) => setShopSlot({ x, y })}
+            onFilled={(id) => setManageId(id)}
+            interactable
+          />
+        )}
+      </div>
+
+      <AnimatePresence>
+        {shopSlot && (
+          <ShopModal
+            slot={shopSlot}
+            points={user?.points ?? 0}
+            onClose={() => setShopSlot(null)}
+            onBuy={handleBuy}
+          />
+        )}
+        {manageShowcase && (
+          <ManageModal
+            showcase={manageShowcase}
+            onClose={() => setManageId(null)}
+            onPickSlot={(slotIndex) =>
+              setPickTarget({ showcaseId: manageShowcase.id, slotIndex })
+            }
+            onUndisplay={(slotIndex) =>
+              handleUndisplay(manageShowcase.id, slotIndex)
+            }
+            onRemove={handleRemoveShowcase}
+          />
+        )}
+        {pickTarget && (
+          <GradingPickModal
+            gradings={availableGradings}
+            onClose={() => setPickTarget(null)}
+            onPick={handlePickGrading}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ─────────────── reusable pieces (also used by the visit view) ─────────────── */
+
+export function CenterBackdrop() {
+  return (
+    <>
+      <div
+        aria-hidden
+        className="fixed inset-0 -z-10 bg-cover bg-center"
+        style={{
+          backgroundImage: "url(/images/common/center-bg.jpg)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="fixed inset-0 -z-10"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(10,8,20,0.65) 0%, rgba(8,6,18,0.88) 100%)",
+        }}
+      />
+    </>
+  );
+}
+
+export function CenterGrid({
+  byCell,
+  onEmpty,
+  onFilled,
+  interactable,
+}: {
+  byCell: Map<string, CenterShowcase>;
+  onEmpty?: (x: number, y: number) => void;
+  onFilled?: (id: string) => void;
+  interactable: boolean;
+}) {
+  const cells: { x: number; y: number }[] = [];
+  for (let y = 0; y < CENTER_GRID_ROWS; y++) {
+    for (let x = 0; x < CENTER_GRID_COLS; x++) cells.push({ x, y });
+  }
+  return (
+    <div
+      className="mt-5 grid gap-2.5 md:gap-3"
+      style={{
+        gridTemplateColumns: `repeat(${CENTER_GRID_COLS}, minmax(0,1fr))`,
+      }}
+    >
+      {cells.map(({ x, y }) => {
+        const sc = byCell.get(`${x}:${y}`);
+        if (!sc) {
+          return (
+            <button
+              key={`${x}:${y}`}
+              type="button"
+              disabled={!interactable || !onEmpty}
+              onClick={() => onEmpty?.(x, y)}
+              className={clsx(
+                "aspect-[3/4] rounded-xl border-2 border-dashed border-white/15 bg-white/[0.02] text-zinc-500 flex flex-col items-center justify-center gap-1 transition",
+                interactable && onEmpty && "hover:border-white/30 hover:bg-white/5 active:scale-[0.98]"
+              )}
+              style={{ touchAction: "manipulation" }}
+            >
+              <span className="text-lg opacity-60">＋</span>
+              <span className="text-[9px] font-semibold uppercase tracking-wider">
+                빈 자리
+              </span>
+            </button>
+          );
+        }
+        return (
+          <ShowcaseCell
+            key={sc.id}
+            showcase={sc}
+            onClick={interactable && onFilled ? () => onFilled(sc.id) : undefined}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function ShowcaseCell({
+  showcase,
+  onClick,
+}: {
+  showcase: CenterShowcase;
+  onClick?: () => void;
+}) {
+  const spec = SHOWCASES[showcase.showcase_type];
+  const filled = showcase.cards.length;
+  const isButton = Boolean(onClick);
+  const Root: "button" | "div" = isButton ? "button" : "div";
+  return (
+    <Root
+      {...(isButton ? { type: "button" as const, onClick } : {})}
+      className={clsx(
+        "relative aspect-[3/4] rounded-xl overflow-hidden ring-1 text-left transition",
+        "bg-gradient-to-b",
+        spec.body,
+        spec.accent,
+        isButton && "hover:scale-[1.03] active:scale-[0.98]"
+      )}
+      style={{ touchAction: "manipulation" }}
+    >
+      {/* Case name banner */}
+      <div className="absolute top-0 inset-x-0 px-1.5 py-1 bg-black/50 backdrop-blur-sm flex items-center justify-between gap-1">
+        <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] text-white/90 truncate">
+          {spec.icon} {spec.name}
+        </span>
+        <span className="text-[8px] text-white/70 tabular-nums shrink-0">
+          {filled}/{spec.capacity}
+        </span>
+      </div>
+      {/* Card mini-thumbnails */}
+      <div className="absolute inset-x-1 bottom-1 top-5 flex items-center justify-center gap-[2px]">
+        {Array.from({ length: spec.capacity }).map((_, i) => {
+          const cardRow = showcase.cards.find((c) => c.slot_index === i);
+          const card = cardRow ? getCard(cardRow.card_id) : null;
+          return (
+            <div
+              key={i}
+              className={clsx(
+                "relative flex-1 h-full rounded-sm overflow-hidden",
+                card
+                  ? "bg-zinc-950 ring-1 ring-white/20"
+                  : "bg-black/35 ring-1 ring-white/10"
+              )}
+            >
+              {card?.imageUrl ? (
+                <img
+                  src={card.imageUrl}
+                  alt=""
+                  draggable={false}
+                  loading="lazy"
+                  className="w-full h-full object-contain pointer-events-none"
+                />
+              ) : null}
+              {cardRow && (
+                <span
+                  className={clsx(
+                    "absolute top-0 right-0 px-[3px] text-[8px] font-black tabular-nums leading-tight",
+                    cardRow.grade === 10
+                      ? "bg-amber-400 text-zinc-950"
+                      : "bg-slate-200 text-zinc-900"
+                  )}
+                >
+                  {cardRow.grade}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Root>
+  );
+}
+
+function ShopModal({
+  slot,
+  points,
+  onClose,
+  onBuy,
+}: {
+  slot: { x: number; y: number };
+  points: number;
+  onClose: () => void;
+  onBuy: (type: ShowcaseType) => void;
+}) {
+  return (
+    <ModalShell title="보관함 상점" subtitle={`자리 (${slot.x + 1}, ${slot.y + 1})`} onClose={onClose}>
+      <div className="p-3 md:p-4 space-y-2">
+        {SHOWCASE_ORDER.map((t) => {
+          const s = SHOWCASES[t];
+          const afford = points >= s.price;
+          return (
+            <button
+              key={t}
+              type="button"
+              disabled={!afford}
+              onClick={() => onBuy(t)}
+              style={{ touchAction: "manipulation" }}
+              className={clsx(
+                "w-full flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition",
+                afford
+                  ? "bg-white/5 border-white/15 hover:bg-white/10 active:scale-[0.98]"
+                  : "bg-white/5 border-white/10 opacity-50 cursor-not-allowed"
+              )}
+            >
+              <span className="text-2xl shrink-0">{s.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-white">{s.name}</p>
+                <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400">
+                  {s.tagline} · {s.capacity}칸
+                </p>
+                <p className="text-[11px] text-zinc-300/80 mt-0.5 truncate">
+                  {s.blurb}
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-sm font-black text-amber-300 tabular-nums inline-flex items-center gap-1">
+                  <CoinIcon size="xs" />
+                  {s.price.toLocaleString("ko-KR")}
+                </p>
+                <p className="text-[10px] text-zinc-500">
+                  {afford ? "구매" : "포인트 부족"}
+                </p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </ModalShell>
+  );
+}
+
+function ManageModal({
+  showcase,
+  onClose,
+  onPickSlot,
+  onUndisplay,
+  onRemove,
+}: {
+  showcase: CenterShowcase;
+  onClose: () => void;
+  onPickSlot: (slotIndex: number) => void;
+  onUndisplay: (slotIndex: number) => void;
+  onRemove: () => void;
+}) {
+  const spec = SHOWCASES[showcase.showcase_type];
+  return (
+    <ModalShell
+      title={`${spec.icon} ${spec.name}`}
+      subtitle={`${showcase.cards.length}/${spec.capacity}칸 박제 중`}
+      onClose={onClose}
+    >
+      <div className="p-3 md:p-4 space-y-3">
+        <div
+          className={clsx(
+            "grid gap-2",
+            spec.capacity <= 2
+              ? "grid-cols-2"
+              : spec.capacity <= 4
+              ? "grid-cols-2"
+              : "grid-cols-3"
+          )}
+        >
+          {Array.from({ length: spec.capacity }).map((_, i) => {
+            const row = showcase.cards.find((c) => c.slot_index === i);
+            const card = row ? getCard(row.card_id) : null;
+            return (
+              <div key={i} className="flex flex-col items-center gap-1.5">
+                {card && row ? (
+                  <>
+                    <PsaSlab card={card} grade={row.grade} size="sm" />
+                    <button
+                      type="button"
+                      onClick={() => onUndisplay(i)}
+                      className="w-full h-8 rounded-md bg-white/10 hover:bg-white/15 text-xs text-white font-semibold"
+                    >
+                      꺼내기
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onPickSlot(i)}
+                    className="w-full aspect-[5/7] rounded-lg border-2 border-dashed border-white/20 bg-white/5 text-zinc-400 hover:text-white hover:border-white/40 transition flex flex-col items-center justify-center gap-1"
+                    style={{ touchAction: "manipulation" }}
+                  >
+                    <span className="text-2xl opacity-70">＋</span>
+                    <span className="text-[10px] font-semibold">
+                      슬랩 박제
+                    </span>
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="w-full h-10 rounded-lg bg-rose-500/15 border border-rose-500/40 text-rose-200 text-xs font-semibold hover:bg-rose-500/20"
+        >
+          이 보관함 치우기 (환불 없음)
+        </button>
+      </div>
+    </ModalShell>
+  );
+}
+
+function GradingPickModal({
+  gradings,
+  onClose,
+  onPick,
+}: {
+  gradings: PsaGrading[];
+  onClose: () => void;
+  onPick: (grading: PsaGrading) => void;
+}) {
+  const items = useMemo(
+    () => gradings.slice().sort((a, b) => b.grade - a.grade),
+    [gradings]
+  );
+  return (
+    <ModalShell
+      title="박제할 AURA 슬랩 선택"
+      subtitle="AURA 9·10 슬랩만 전시 가능 · 박제 중엔 지갑에서 숨겨져요"
+      onClose={onClose}
+    >
+      <div className="p-3 md:p-4">
+        {items.length === 0 ? (
+          <p className="py-12 text-center text-sm text-zinc-400">
+            박제할 AURA 9 / 10 슬랩이 없어요.
+            <br />
+            감별 페이지에서 등급 9 또는 10을 받아보세요.
+          </p>
+        ) : (
+          <div
+            className="grid gap-3"
+            style={{
+              gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
+            }}
+          >
+            {items.map((g) => {
+              const card = getCard(g.card_id);
+              if (!card) return null;
+              const tone = psaTone(g.grade);
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => onPick(g)}
+                  className="relative flex flex-col items-center gap-1 p-1 rounded-lg hover:bg-white/5 active:scale-[0.97] transition"
+                  style={{ touchAction: "manipulation" }}
+                >
+                  <PsaSlab card={card} grade={g.grade} size="sm" />
+                  <span
+                    className={clsx(
+                      "text-[10px] font-bold tabular-nums",
+                      tone.text
+                    )}
+                  >
+                    AURA {g.grade} · 시간당{" "}
+                    {g.grade === 10 ? "5,000" : "3,000"}p
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </ModalShell>
+  );
+}
+
+export function ModalShell({
+  title,
+  subtitle,
+  onClose,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <motion.div
+      className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center overflow-hidden"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      style={{
+        paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+        paddingLeft: "12px",
+        paddingRight: "12px",
+      }}
+    >
+      <motion.div
+        className="relative w-full max-w-md bg-zinc-950 border border-white/10 rounded-2xl flex flex-col overflow-hidden"
+        style={{ maxHeight: "calc(100dvh - 24px)" }}
+        initial={{ scale: 0.94, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.94, opacity: 0 }}
+        transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-white/10 shrink-0">
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-white truncate">{title}</h3>
+            {subtitle && (
+              <p className="text-[10px] text-zinc-400 truncate">{subtitle}</p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="닫기"
+            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+            style={{ touchAction: "manipulation" }}
+          >
+            ✕
+          </button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function Kpi({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
+  return (
+    <div
+      className={clsx(
+        "rounded-lg border px-2.5 py-1",
+        highlight
+          ? "bg-amber-400/10 border-amber-400/40"
+          : "bg-white/10 border-white/15 backdrop-blur"
+      )}
+    >
+      <div className="text-[9px] uppercase tracking-wider text-white/70">
+        {label}
+      </div>
+      <div
+        className={clsx(
+          "text-xs font-bold tabular-nums",
+          highlight ? "text-amber-200" : "text-white"
+        )}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}

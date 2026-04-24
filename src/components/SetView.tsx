@@ -121,6 +121,18 @@ export default function SetView({ set }: { set: SetInfo }) {
     setPacks(drawn);
     setOpenedMask(new Array(drawn.length).fill(false));
     setPhase("opening");
+    // Persist every pack's pulls immediately. If the user navigates away
+    // before tapping anything, the cards already live in card_ownership
+    // so nothing is lost. Pack-tap handlers no longer hit the server.
+    Promise.all(
+      drawn.map((pack) =>
+        recordPackPull(
+          user.id,
+          set.code,
+          pack.map((c) => c.id)
+        )
+      )
+    ).catch((e) => console.error("box persist failed", e));
     setTimeout(() => setPhase("grid"), 1100);
   }, [user, phase, set, setPoints]);
 
@@ -129,15 +141,10 @@ export default function SetView({ set }: { set: SetInfo }) {
       if (openedMask[index]) return;
       setActivePack(index);
       setPhase("opening-pack");
+      // Pulls were already saved at box-open time; this is now purely
+      // animation state + Discord brag.
       if (user) {
-        const pack = packs[index];
-        recordPackPull(
-          user.id,
-          set.code,
-          pack.map((c) => c.id)
-        ).catch((e) => console.error("recordPackPull failed", e));
-        // Fire-and-forget Discord brag for SAR / MUR / UR hits
-        notifyPackHits(user.display_name, pack);
+        notifyPackHits(user.display_name, packs[index]);
       }
       setOpenedMask((prev) => {
         const next = [...prev];
@@ -145,7 +152,7 @@ export default function SetView({ set }: { set: SetInfo }) {
         return next;
       });
     },
-    [openedMask, packs, set, user]
+    [openedMask, packs, user]
   );
 
   const openAllRemaining = useCallback(async () => {
@@ -155,30 +162,16 @@ export default function SetView({ set }: { set: SetInfo }) {
       .filter(({ i }) => !openedMask[i]);
     if (remaining.length === 0) return;
     setPhase("bulk");
-    try {
-      await Promise.all(
-        remaining.map(({ pack }) =>
-          recordPackPull(
-            user.id,
-            set.code,
-            pack.map((c) => c.id)
-          )
-        )
-      );
-    } catch (e) {
-      console.error("bulk recordPackPull failed", e);
-    }
     const allCards = remaining
       .flatMap(({ pack }) => pack)
       .sort(
         (a, b) => RARITY_STYLE[b.rarity].tier - RARITY_STYLE[a.rarity].tier
       );
-    // Fire-and-forget Discord brag for any SAR / MUR / UR hits in bulk open
     notifyPackHits(user.display_name, allCards);
     setBulkCards(allCards);
     setOpenedMask(new Array(packs.length).fill(true));
     setPhase("bulk-result");
-  }, [user, packs, openedMask, set]);
+  }, [user, packs, openedMask]);
 
   const backToGrid = useCallback(() => {
     setActivePack(null);
