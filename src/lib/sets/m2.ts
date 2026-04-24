@@ -26,7 +26,7 @@ export const m2: SetInfo = {
     { label: "U/R", weights: { U: 70, R: 30 } },
     {
       label: "Hit",
-      weights: { R: 32, RR: 30, AR: 20, SR: 12, SAR: 5, MUR: 1 },
+      weights: { R: 25, RR: 28, AR: 20, SR: 13, SAR: 10, MUR: 4 },
     },
   ],
   cards: [

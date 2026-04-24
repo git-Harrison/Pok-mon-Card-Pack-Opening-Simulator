@@ -33,11 +33,11 @@ export const m2a: SetInfo = {
     { label: "AR/SR", weights: { AR: 55, SR: 35, MA: 10 } },
     {
       label: "SR+/MA",
-      weights: { SR: 55, MA: 35, SAR: 9, MUR: 1 },
+      weights: { SR: 50, MA: 32, SAR: 13, MUR: 5 },
     },
     {
       label: "Hit",
-      weights: { RR: 30, AR: 25, SR: 20, MA: 14, SAR: 10, MUR: 1 },
+      weights: { RR: 25, AR: 22, SR: 20, MA: 13, SAR: 15, MUR: 5 },
     },
   ],
   cards: [

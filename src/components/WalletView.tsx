@@ -204,6 +204,33 @@ export default function WalletView() {
             setSelectMode(false);
             await refresh();
           }}
+          onSellRarity={async (rarity) => {
+            if (!user) return;
+            const rarityItems = snap.items.filter((it) => it.card.rarity === rarity);
+            if (rarityItems.length === 0) return;
+            const totalCount = rarityItems.reduce((s, it) => s + it.count, 0);
+            const totalPoints = totalCount * MERCHANT_PRICE[rarity];
+            const ok = window.confirm(
+              `${rarity} 등급 카드 ${totalCount}장을 전부 판매할까요?\n+${totalPoints.toLocaleString("ko-KR")}p 지급`
+            );
+            if (!ok) return;
+            const payload = rarityItems.map((it) => ({
+              card_id: it.card.id,
+              count: it.count,
+              price: MERCHANT_PRICE[rarity],
+            }));
+            setSelling(true);
+            setSellError(null);
+            const res = await bulkSellCards(user.id, payload);
+            setSelling(false);
+            if (!res.ok) {
+              setSellError(res.error ?? "판매 실패");
+              return;
+            }
+            if (typeof res.points === "number") setPoints(res.points);
+            setSellSelection({});
+            await refresh();
+          }}
         />
       )}
     </div>
@@ -217,6 +244,7 @@ function BulkSellBar({
   error,
   onCancel,
   onSell,
+  onSellRarity,
 }: {
   items: { card: Card; count: number }[];
   selection: Record<string, number>;
@@ -224,7 +252,20 @@ function BulkSellBar({
   error: string | null;
   onCancel: () => void;
   onSell: () => void;
+  onSellRarity: (rarity: Rarity) => void;
 }) {
+  // Aggregate rarity totals across the wallet
+  const rarityTotals = useMemo(() => {
+    const m = new Map<Rarity, { count: number; price: number }>();
+    for (const it of items) {
+      const cur = m.get(it.card.rarity) ?? { count: 0, price: 0 };
+      cur.count += it.count;
+      cur.price += it.count * MERCHANT_PRICE[it.card.rarity];
+      m.set(it.card.rarity, cur);
+    }
+    return RARITY_ORDER.map((r) => ({ rarity: r, ...(m.get(r) ?? { count: 0, price: 0 }) }))
+      .filter((x) => x.count > 0);
+  }, [items]);
   const { totalCount, totalPoints } = useMemo(() => {
     let c = 0;
     let p = 0;
@@ -250,33 +291,71 @@ function BulkSellBar({
         marginBottom: "calc(4rem + env(safe-area-inset-bottom, 0px))",
       }}
     >
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 flex items-center gap-3 flex-wrap">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs text-zinc-400">
-            선택: <span className="text-white font-bold">{totalCount}장</span>
-          </p>
-          <p className="text-sm font-bold text-amber-300 tabular-nums inline-flex items-center gap-1">
-            <CoinIcon size="xs" />
-            +{totalPoints.toLocaleString("ko-KR")}p
-          </p>
-          {error && <p className="text-[11px] text-rose-300">{error}</p>}
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onCancel}
-            disabled={selling}
-            className="h-10 px-3 rounded-lg bg-white/5 hover:bg-white/10 text-white text-xs font-semibold border border-white/10"
-          >
-            초기화
-          </button>
-          <button
-            onClick={onSell}
-            disabled={selling || !hasAny}
-            style={{ touchAction: "manipulation" }}
-            className="h-10 px-4 rounded-lg bg-gradient-to-r from-emerald-400 to-amber-400 text-zinc-950 font-bold text-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {selling ? "판매 중..." : "선택한 카드 팔기"}
-          </button>
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-3">
+        {/* Per-rarity quick-sell row */}
+        {rarityTotals.length > 0 && (
+          <div className="mb-2">
+            <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
+              등급별 바로 팔기
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {rarityTotals.map(({ rarity, count, price }) => (
+                <button
+                  key={rarity}
+                  type="button"
+                  disabled={selling}
+                  onClick={() => onSellRarity(rarity)}
+                  style={{ touchAction: "manipulation" }}
+                  className={clsx(
+                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition active:scale-[0.97]",
+                    "bg-white/5 border-white/10 text-white hover:bg-white/10 disabled:opacity-50"
+                  )}
+                >
+                  <span
+                    className={clsx(
+                      "inline-block w-2 h-2 rounded-full",
+                      RARITY_STYLE[rarity].badge
+                    )}
+                  />
+                  <span>{rarity}</span>
+                  <span className="text-zinc-400">{count}장</span>
+                  <span className="text-amber-300">
+                    +{price.toLocaleString("ko-KR")}p
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-zinc-400">
+              선택: <span className="text-white font-bold">{totalCount}장</span>
+            </p>
+            <p className="text-sm font-bold text-amber-300 tabular-nums inline-flex items-center gap-1">
+              <CoinIcon size="xs" />
+              +{totalPoints.toLocaleString("ko-KR")}p
+            </p>
+            {error && <p className="text-[11px] text-rose-300">{error}</p>}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onCancel}
+              disabled={selling}
+              className="h-10 px-3 rounded-lg bg-white/5 hover:bg-white/10 text-white text-xs font-semibold border border-white/10"
+            >
+              초기화
+            </button>
+            <button
+              onClick={onSell}
+              disabled={selling || !hasAny}
+              style={{ touchAction: "manipulation" }}
+              className="h-10 px-4 rounded-lg bg-gradient-to-r from-emerald-400 to-amber-400 text-zinc-950 font-bold text-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {selling ? "판매 중..." : "선택한 카드 팔기"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
