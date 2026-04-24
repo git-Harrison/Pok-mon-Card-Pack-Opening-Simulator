@@ -24,8 +24,10 @@ export const sv2a: SetInfo = {
     { label: "U/R", weights: { U: 50, R: 50 } },
     { label: "R/RR", weights: { R: 40, RR: 60 } },
     {
+      // Pack-level odds (ratio AR 10 : SAR 5 : UR 1):
+      //   AR 10% · SR 7% · SAR 5% · UR 1% · RR fills the rest.
       label: "Hit",
-      weights: { RR: 40, AR: 25, SR: 20, SAR: 10, UR: 5 },
+      weights: { RR: 30, AR: 10, SR: 7, SAR: 5, UR: 1 },
     },
   ],
   cards: [

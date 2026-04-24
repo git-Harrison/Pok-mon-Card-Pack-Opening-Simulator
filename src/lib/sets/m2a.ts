@@ -29,12 +29,15 @@ export const m2a: SetInfo = {
     { label: "RR/AR", weights: { RR: 55, AR: 45 } },
     { label: "AR/SR", weights: { AR: 55, SR: 35, MA: 10 } },
     {
+      // High-tier filler — SAR / MUR concentrated in Hit.
       label: "SR+/MA",
-      weights: { SR: 50, MA: 32, SAR: 13, MUR: 5 },
+      weights: { SR: 55, MA: 45 },
     },
     {
+      // Pack-level odds (ratio AR 10 : SAR 5 : MUR 0.5):
+      //   AR 10% · SR/MA 7% each · SAR 5% · MUR 0.5% · RR fills rest.
       label: "Hit",
-      weights: { RR: 25, AR: 22, SR: 20, MA: 13, SAR: 15, MUR: 5 },
+      weights: { RR: 30, AR: 10, SR: 7, MA: 7, SAR: 5, MUR: 0.5 },
     },
   ],
   cards: [

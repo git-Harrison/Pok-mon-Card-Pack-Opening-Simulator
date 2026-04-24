@@ -158,15 +158,30 @@ export default function SetView({ set }: { set: SetInfo }) {
         } catch (e) {
           console.error("multi-box persist failed", e);
           const refund = await refundBoxPurchase(user.id, set.code);
+          const refunded = refund.ok ? refund.refunded ?? cost : 0;
           if (refund.ok && typeof refund.points === "number") {
             setPoints(refund.points);
-            setError(
-              `${i + 1}/${boxCount}번째 박스 저장 실패 — ${(refund.refunded ?? cost).toLocaleString("ko-KR")}p 환불. 지금까지 열린 ${i}박스는 정상이에요.`
-            );
-          } else {
-            setError("카드 저장 및 환불에 실패했어요. 관리자에게 문의해주세요.");
           }
-          setPhase("sealed");
+          const msg = refund.ok
+            ? `${i + 1}/${boxCount}번째 박스 저장 실패 — ${refunded.toLocaleString("ko-KR")}p 환불. ${i}박스까지는 정상이에요.`
+            : "카드 저장 및 환불에 실패했어요. 관리자에게 문의해주세요.";
+          setError(msg);
+          // If some earlier boxes did land successfully, at least show
+          // those cards instead of tossing the user back to sealed with
+          // no receipt.
+          if (allCards.length > 0) {
+            allCards.sort(
+              (a, b) => RARITY_STYLE[b.rarity].tier - RARITY_STYLE[a.rarity].tier
+            );
+            setMultiResult({
+              boxCount: i,
+              totalSpent: spent - refunded,
+              cards: allCards,
+            });
+            setPhase("multi-result");
+          } else {
+            setPhase("sealed");
+          }
           return;
         }
         for (const pack of drawn) for (const c of pack) allCards.push(c);

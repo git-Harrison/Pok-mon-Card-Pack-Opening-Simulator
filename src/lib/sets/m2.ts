@@ -25,8 +25,10 @@ export const m2: SetInfo = {
     { label: "C/U", weights: { C: 60, U: 40 } },
     { label: "U/R", weights: { U: 70, R: 30 } },
     {
+      // Pack-level odds (ratio AR 10 : SAR 5 : MUR 0.5):
+      //   AR 10% · SR 7% · SAR 5% · MUR 0.5% · RR/R fill the rest.
       label: "Hit",
-      weights: { R: 25, RR: 28, AR: 20, SR: 13, SAR: 10, MUR: 4 },
+      weights: { R: 30, RR: 30, AR: 10, SR: 7, SAR: 5, MUR: 0.5 },
     },
   ],
   cards: [

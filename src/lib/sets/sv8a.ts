@@ -25,10 +25,13 @@ export const sv8a: SetInfo = {
     { label: "R/RR", weights: { R: 50, RR: 50 } },
     { label: "RR/AR", weights: { RR: 55, AR: 45 } },
     { label: "AR/SR", weights: { AR: 55, SR: 45 } },
-    { label: "SR/SAR", weights: { SR: 70, SAR: 28, UR: 2 } },
+    // Keep rares concentrated in Hit so pack-level odds stay on-spec.
+    { label: "SR/SAR", weights: { SR: 90, SAR: 10 } },
     {
+      // Pack-level odds (ratio AR 10 : SAR 5 : UR 1):
+      //   AR 10% · SR 7% · SAR 5% · UR 1% · RR fills the rest.
       label: "Hit",
-      weights: { RR: 30, AR: 25, SR: 22, SAR: 18, UR: 5 },
+      weights: { RR: 30, AR: 10, SR: 7, SAR: 5, UR: 1 },
     },
   ],
   cards: [
