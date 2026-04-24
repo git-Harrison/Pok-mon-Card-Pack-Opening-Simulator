@@ -256,6 +256,47 @@ export async function submitPsaGrading(userId: string, cardId: string) {
     error?: string;
     grade?: number;
     failed?: boolean;
+    bonus?: number;
+    points?: number;
+  };
+}
+
+export interface RankingRow {
+  id: string;
+  user_id: string;
+  age: number;
+  points: number;
+  rank_score: number;
+  psa_count: number;
+  psa_10: number;
+  psa_9: number;
+  psa_8: number;
+}
+
+export async function fetchUserRankings(): Promise<RankingRow[]> {
+  const { data, error } = await supabase.rpc("get_user_rankings");
+  if (error) return [];
+  return (data ?? []) as RankingRow[];
+}
+
+export interface BulkSellItem {
+  card_id: string;
+  count: number;
+  price: number;
+}
+
+export async function bulkSellCards(userId: string, items: BulkSellItem[]) {
+  const { data, error } = await supabase.rpc("bulk_sell_cards", {
+    p_user_id: userId,
+    p_items: items,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    error?: string;
+    sold?: number;
+    earned?: number;
+    points?: number;
   };
 }
 

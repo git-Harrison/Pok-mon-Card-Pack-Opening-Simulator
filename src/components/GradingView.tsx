@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
+import CoinIcon from "./CoinIcon";
 import {
   fetchWallet,
   submitPsaGrading,
@@ -26,13 +27,14 @@ import PsaSlab from "./PsaSlab";
 type Phase = "idle" | "animating" | "revealed" | "failed";
 
 export default function GradingView() {
-  const { user } = useAuth();
+  const { user, setPoints } = useAuth();
   const [wallet, setWallet] = useState<WalletSnapshot | null>(null);
   const [picking, setPicking] = useState(false);
   const [selected, setSelected] = useState<Card | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [grade, setGrade] = useState<number | null>(null);
   const [gauge, setGauge] = useState(0);
+  const [bonus, setBonus] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refreshWallet = useCallback(async () => {
@@ -94,15 +96,20 @@ export default function GradingView() {
       return;
     }
     setGrade(res.grade);
+    setBonus(res.bonus ?? 0);
+    if (typeof res.points === "number") {
+      setPoints(res.points);
+    }
     setPhase("animating");
     // Auto-broadcast PSA 9/10 to Discord (fire-and-forget)
     notifyPsaGrade(user.user_id, selected.id, res.grade);
-  }, [user, selected, phase]);
+  }, [user, selected, phase, setPoints]);
 
   const reset = useCallback(async () => {
     setSelected(null);
     setGrade(null);
     setGauge(0);
+    setBonus(null);
     setPhase("idle");
     await refreshWallet();
   }, [refreshWallet]);
@@ -168,6 +175,12 @@ export default function GradingView() {
             ) : phase === "revealed" && grade !== null ? (
               <p className={clsx("font-semibold", tone?.text)}>
                 PSA {grade} ({PSA_LABEL[grade]}) 판정!
+                {bonus && bonus > 0 ? (
+                  <span className="block mt-1 text-amber-300 text-[11px] font-bold inline-flex items-center gap-1">
+                    <CoinIcon size="xs" />
+                    +{bonus.toLocaleString("ko-KR")}p 보너스 지급
+                  </span>
+                ) : null}
               </p>
             ) : phase === "failed" ? (
               <p className="font-semibold text-rose-300">

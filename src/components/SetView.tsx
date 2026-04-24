@@ -68,7 +68,7 @@ export default function SetView({ set }: { set: SetInfo }) {
           pack.map((c) => c.id)
         ).catch((e) => console.error("recordPackPull failed", e));
         // Fire-and-forget Discord brag for SAR / MUR / UR hits
-        notifyPackHits(user.user_id, pack, set.code);
+        notifyPackHits(user.user_id, pack);
       }
       setOpenedMask((prev) => {
         const next = [...prev];
@@ -105,7 +105,7 @@ export default function SetView({ set }: { set: SetInfo }) {
         (a, b) => RARITY_STYLE[b.rarity].tier - RARITY_STYLE[a.rarity].tier
       );
     // Fire-and-forget Discord brag for any SAR / MUR / UR hits in bulk open
-    notifyPackHits(user.user_id, allCards, set.code);
+    notifyPackHits(user.user_id, allCards);
     setBulkCards(allCards);
     setOpenedMask(new Array(packs.length).fill(true));
     setPhase("bulk-result");

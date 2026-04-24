@@ -5,10 +5,13 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import clsx from "clsx";
 import {
+  MERCHANT_PRICE,
   RARITY_ORDER,
   RARITY_STYLE,
   compareRarity,
 } from "@/lib/rarity";
+import CoinIcon from "./CoinIcon";
+import { bulkSellCards } from "@/lib/db";
 import type { Card, PsaGrading, Rarity } from "@/lib/types";
 import { SETS, getCard } from "@/lib/sets";
 import { useAuth } from "@/lib/auth";
@@ -26,7 +29,7 @@ type Mode = "cards" | "psa";
 type RarityFilter = "ALL" | Rarity;
 
 export default function WalletView() {
-  const { user } = useAuth();
+  const { user, setPoints } = useAuth();
   const params = useSearchParams();
   const initialMode: Mode = params.get("tab") === "psa" ? "psa" : "cards";
   const [mode, setMode] = useState<Mode>(initialMode);
@@ -40,6 +43,11 @@ export default function WalletView() {
   const [loading, setLoading] = useState(true);
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>("ALL");
   const [selected, setSelected] = useState<{ card: Card; count: number } | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  // card_id → count to sell
+  const [sellSelection, setSellSelection] = useState<Record<string, number>>({});
+  const [selling, setSelling] = useState(false);
+  const [sellError, setSellError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -142,6 +150,24 @@ export default function WalletView() {
           rarityFilter={rarityFilter}
           setRarityFilter={setRarityFilter}
           onSelect={(card, count) => setSelected({ card, count })}
+          selectMode={selectMode}
+          setSelectMode={(v) => {
+            setSelectMode(v);
+            if (!v) setSellSelection({});
+          }}
+          sellSelection={sellSelection}
+          toggleSell={(card, delta) => {
+            setSellSelection((prev) => {
+              const cur = prev[card.id] ?? 0;
+              const max =
+                items.find((it) => it.card.id === card.id)?.count ?? 0;
+              const next = Math.max(0, Math.min(max, cur + delta));
+              const copy = { ...prev };
+              if (next === 0) delete copy[card.id];
+              else copy[card.id] = next;
+              return copy;
+            });
+          }}
         />
       ) : (
         <PsaMode items={psaItems} />
@@ -153,6 +179,116 @@ export default function WalletView() {
         onClose={() => setSelected(null)}
         onAfterGift={refresh}
       />
+
+      {/* Bulk sell bottom sheet */}
+      {selectMode && mode === "cards" && (
+        <BulkSellBar
+          items={snap.items}
+          selection={sellSelection}
+          selling={selling}
+          error={sellError}
+          onCancel={() => {
+            setSellSelection({});
+            setSellError(null);
+          }}
+          onSell={async () => {
+            if (!user) return;
+            const payload = Object.entries(sellSelection)
+              .filter(([, n]) => n > 0)
+              .map(([card_id, count]) => {
+                const it = snap.items.find((x) => x.card.id === card_id);
+                const price = it ? MERCHANT_PRICE[it.card.rarity] : 0;
+                return { card_id, count, price };
+              });
+            if (payload.length === 0) return;
+            setSelling(true);
+            setSellError(null);
+            const res = await bulkSellCards(user.id, payload);
+            setSelling(false);
+            if (!res.ok) {
+              setSellError(res.error ?? "판매 실패");
+              return;
+            }
+            if (typeof res.points === "number") setPoints(res.points);
+            setSellSelection({});
+            setSelectMode(false);
+            await refresh();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function BulkSellBar({
+  items,
+  selection,
+  selling,
+  error,
+  onCancel,
+  onSell,
+}: {
+  items: { card: Card; count: number }[];
+  selection: Record<string, number>;
+  selling: boolean;
+  error: string | null;
+  onCancel: () => void;
+  onSell: () => void;
+}) {
+  const { totalCount, totalPoints } = useMemo(() => {
+    let c = 0;
+    let p = 0;
+    for (const [id, n] of Object.entries(selection)) {
+      if (n <= 0) continue;
+      const it = items.find((x) => x.card.id === id);
+      if (!it) continue;
+      c += n;
+      p += n * MERCHANT_PRICE[it.card.rarity];
+    }
+    return { totalCount: c, totalPoints: p };
+  }, [items, selection]);
+
+  const hasAny = totalCount > 0;
+
+  return (
+    <div
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-zinc-950/95 backdrop-blur-md md:bottom-0"
+      style={{
+        paddingBottom:
+          "max(env(safe-area-inset-bottom, 0px), 12px)",
+        // lift above the mobile bottom-tab nav (64px + safe area)
+        marginBottom: "calc(4rem + env(safe-area-inset-bottom, 0px))",
+      }}
+    >
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 flex items-center gap-3 flex-wrap">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-zinc-400">
+            선택: <span className="text-white font-bold">{totalCount}장</span>
+          </p>
+          <p className="text-sm font-bold text-amber-300 tabular-nums inline-flex items-center gap-1">
+            <CoinIcon size="xs" />
+            +{totalPoints.toLocaleString("ko-KR")}p
+          </p>
+          {error && <p className="text-[11px] text-rose-300">{error}</p>}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onCancel}
+            disabled={selling}
+            className="h-10 px-3 rounded-lg bg-white/5 hover:bg-white/10 text-white text-xs font-semibold border border-white/10"
+          >
+            초기화
+          </button>
+          <button
+            onClick={onSell}
+            disabled={selling || !hasAny}
+            style={{ touchAction: "manipulation" }}
+            className="h-10 px-4 rounded-lg bg-gradient-to-r from-emerald-400 to-amber-400 text-zinc-950 font-bold text-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {selling ? "판매 중..." : "선택한 카드 팔기"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -163,17 +299,26 @@ function CardsMode({
   rarityFilter,
   setRarityFilter,
   onSelect,
+  selectMode,
+  setSelectMode,
+  sellSelection,
+  toggleSell,
 }: {
   items: { card: Card; count: number }[];
   rarityCounts: Map<Rarity, number>;
   rarityFilter: RarityFilter;
   setRarityFilter: (r: RarityFilter) => void;
   onSelect: (card: Card, count: number) => void;
+  selectMode: boolean;
+  setSelectMode: (v: boolean) => void;
+  sellSelection: Record<string, number>;
+  toggleSell: (card: Card, delta: number) => void;
 }) {
   return (
     <>
-      {/* Rarity tabs */}
-      <div className="mt-5 flex flex-wrap gap-2">
+      {/* Rarity tabs + select-mode toggle */}
+      <div className="mt-5 flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex flex-wrap gap-2">
         <FilterPill
           active={rarityFilter === "ALL"}
           onClick={() => setRarityFilter("ALL")}
@@ -200,6 +345,19 @@ function CardsMode({
             </FilterPill>
           );
         })}
+        </div>
+        <button
+          onClick={() => setSelectMode(!selectMode)}
+          style={{ touchAction: "manipulation" }}
+          className={clsx(
+            "h-9 px-3 rounded-full text-xs font-semibold border transition shrink-0",
+            selectMode
+              ? "bg-amber-400 text-zinc-950 border-amber-400"
+              : "bg-white/5 text-zinc-200 border-white/10 hover:bg-white/10"
+          )}
+        >
+          {selectMode ? "선택 취소" : "다중선택 판매"}
+        </button>
       </div>
 
       {items.length === 0 ? (
@@ -211,37 +369,59 @@ function CardsMode({
             gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
           }}
         >
-          {items.map(({ card, count }) => (
-            <div
-              key={card.id}
-              role="button"
-              tabIndex={0}
-              className="relative flex flex-col items-center gap-1.5 cursor-pointer active:scale-[0.97] transition-transform"
-              style={{ touchAction: "manipulation" }}
-              onClick={() => onSelect(card, count)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onSelect(card, count);
-                }
-              }}
-            >
-              <PokeCard card={card} revealed size="md" />
-              {count > 1 && (
-                <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur text-white font-bold text-[10px] ring-1 ring-white/20 pointer-events-none">
-                  ×{count}
-                </span>
-              )}
-              <div className="w-full text-center px-1 pointer-events-none">
-                <p className="text-[11px] text-zinc-300 leading-tight line-clamp-2">
-                  {card.name}
-                </p>
-                <p className="text-[10px] text-zinc-500">
-                  {SETS[card.setCode].name} · #{card.number}
-                </p>
+          {items.map(({ card, count }) => {
+            const sellCount = sellSelection[card.id] ?? 0;
+            const isSelected = sellCount > 0;
+            return (
+              <div
+                key={card.id}
+                role="button"
+                tabIndex={0}
+                className={clsx(
+                  "relative flex flex-col items-center gap-1.5 cursor-pointer active:scale-[0.97] transition-transform rounded-xl",
+                  selectMode && isSelected && "ring-2 ring-amber-400"
+                )}
+                style={{ touchAction: "manipulation" }}
+                onClick={() => {
+                  if (selectMode) {
+                    toggleSell(card, 1);
+                  } else {
+                    onSelect(card, count);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    if (selectMode) toggleSell(card, 1);
+                    else onSelect(card, count);
+                  }
+                }}
+              >
+                <PokeCard card={card} revealed size="md" />
+                {count > 1 && !selectMode && (
+                  <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur text-white font-bold text-[10px] ring-1 ring-white/20 pointer-events-none">
+                    ×{count}
+                  </span>
+                )}
+                {selectMode && (
+                  <SellQtyBadge
+                    card={card}
+                    sellCount={sellCount}
+                    owned={count}
+                    onChange={toggleSell}
+                  />
+                )}
+                <div className="w-full text-center px-1 pointer-events-none">
+                  <p className="text-[11px] text-zinc-300 leading-tight line-clamp-2">
+                    {card.name}
+                  </p>
+                  <p className="text-[10px] text-zinc-500">
+                    {SETS[card.setCode].name} · #{card.number}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </>
@@ -293,6 +473,45 @@ function PsaMode({
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function SellQtyBadge({
+  card,
+  sellCount,
+  owned,
+  onChange,
+}: {
+  card: Card;
+  sellCount: number;
+  owned: number;
+  onChange: (card: Card, delta: number) => void;
+}) {
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="absolute top-1 right-1 flex items-center gap-0.5 rounded-full bg-black/80 ring-1 ring-white/20 backdrop-blur p-0.5"
+    >
+      <button
+        type="button"
+        onClick={() => onChange(card, -1)}
+        disabled={sellCount <= 0}
+        className="w-6 h-6 rounded-full bg-white/10 text-white text-xs disabled:opacity-30 active:scale-95"
+      >
+        −
+      </button>
+      <span className="min-w-[18px] text-center text-xs text-white font-bold tabular-nums">
+        {sellCount}
+      </span>
+      <button
+        type="button"
+        onClick={() => onChange(card, 1)}
+        disabled={sellCount >= owned}
+        className="w-6 h-6 rounded-full bg-amber-400 text-zinc-950 text-xs font-bold disabled:opacity-30 active:scale-95"
+      >
+        +
+      </button>
     </div>
   );
 }

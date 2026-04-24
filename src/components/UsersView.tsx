@@ -1,111 +1,34 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import clsx from "clsx";
-import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { getCard, SETS } from "@/lib/sets";
-import { RARITY_LABEL, RARITY_ORDER, RARITY_STYLE } from "@/lib/rarity";
-import type { Card, Rarity } from "@/lib/types";
-import RarityBadge from "./RarityBadge";
+import { fetchUserRankings, type RankingRow } from "@/lib/db";
+import PointsChip from "./PointsChip";
 
-interface DbUserRow {
-  id: string;
-  user_id: string;
-  age: number;
-}
-
-interface OwnershipRow {
-  user_id: string;
-  card_id: string;
-  count: number;
-}
-
-interface UserEntry {
-  id: string;
-  user_id: string;
-  age: number;
-  totalCards: number;
-  totalUnique: number;
-  rarityCounts: Map<Rarity, number>;
-  rarityCards: Map<Rarity, { card: Card; count: number }[]>;
-  topRarity: Rarity | null;
-}
-
-const supabase = createClient();
+/**
+ * Ranking is driven entirely by PSA success points. Card ownership
+ * (even an MUR) doesn't affect rank by itself — users must successfully
+ * PSA-grade cards to climb.
+ */
+const PSA_TIER_POINTS: Record<number, number> = {
+  10: 1000,
+  9: 500,
+  8: 200,
+  7: 100,
+  6: 100,
+};
 
 export default function UsersView() {
   const { user: currentUser } = useAuth();
-  const [entries, setEntries] = useState<UserEntry[]>([]);
+  const [rows, setRows] = useState<RankingRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState<Record<string, Rarity | null>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [usersRes, ownRes] = await Promise.all([
-      supabase.from("users").select("id, user_id, age"),
-      supabase.from("card_ownership").select("user_id, card_id, count"),
-    ]);
-    if (usersRes.error || ownRes.error) {
-      setLoading(false);
-      return;
-    }
-    const users = (usersRes.data ?? []) as DbUserRow[];
-    const ownership = (ownRes.data ?? []) as OwnershipRow[];
-
-    const byUser = new Map<string, OwnershipRow[]>();
-    for (const row of ownership) {
-      if (!byUser.has(row.user_id)) byUser.set(row.user_id, []);
-      byUser.get(row.user_id)!.push(row);
-    }
-
-    const built: UserEntry[] = users.map((u) => {
-      const owned = byUser.get(u.id) ?? [];
-      const rarityCounts = new Map<Rarity, number>();
-      const rarityCards = new Map<Rarity, { card: Card; count: number }[]>();
-      let totalCards = 0;
-      let totalUnique = 0;
-      for (const row of owned) {
-        const card = getCard(row.card_id);
-        if (!card) continue;
-        totalCards += row.count;
-        totalUnique += 1;
-        rarityCounts.set(
-          card.rarity,
-          (rarityCounts.get(card.rarity) ?? 0) + row.count
-        );
-        if (!rarityCards.has(card.rarity)) rarityCards.set(card.rarity, []);
-        rarityCards.get(card.rarity)!.push({ card, count: row.count });
-      }
-      // sort each rarity group: by card number ascending
-      for (const arr of rarityCards.values()) {
-        arr.sort((a, b) => a.card.number.localeCompare(b.card.number));
-      }
-      // top rarity = highest tier actually owned
-      const top =
-        [...rarityCounts.keys()].sort(
-          (a, b) => RARITY_STYLE[b].tier - RARITY_STYLE[a].tier
-        )[0] ?? null;
-      return {
-        id: u.id,
-        user_id: u.user_id,
-        age: u.age,
-        totalCards,
-        totalUnique,
-        rarityCounts,
-        rarityCards,
-        topRarity: top,
-      };
-    });
-    // sort: by highest-tier top rarity, then by total cards desc
-    built.sort((a, b) => {
-      const at = a.topRarity ? RARITY_STYLE[a.topRarity].tier : -1;
-      const bt = b.topRarity ? RARITY_STYLE[b.topRarity].tier : -1;
-      if (at !== bt) return bt - at;
-      return b.totalCards - a.totalCards;
-    });
-    setEntries(built);
+    const r = await fetchUserRankings();
+    setRows(r);
     setLoading(false);
   }, []);
 
@@ -113,23 +36,64 @@ export default function UsersView() {
     load();
   }, [load]);
 
-  const toggle = (userId: string, rarity: Rarity) =>
-    setExpanded((prev) => ({
-      ...prev,
-      [userId]: prev[userId] === rarity ? null : rarity,
-    }));
+  const entries = useMemo(
+    () =>
+      rows
+        .slice()
+        .sort((a, b) => {
+          if (a.rank_score !== b.rank_score)
+            return b.rank_score - a.rank_score;
+          return b.points - a.points;
+        }),
+    [rows]
+  );
 
   return (
-    <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-10 fade-in">
+    <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 md:py-10 fade-in">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight">
             사용자 랭킹
           </h1>
           <p className="mt-1 text-sm text-zinc-400">
-            모든 사용자의 보유 등급을 한눈에. 등급 칩을 누르면 해당 카드 이름이
-            펼쳐집니다.
+            PSA 감별 성공 시 등급별 랭킹 점수를 얻어요. 카드 보유만으로는
+            점수가 오르지 않아요.
           </p>
+        </div>
+      </div>
+
+      {/* Scoring legend */}
+      <div className="mt-4 rounded-xl bg-white/5 border border-white/10 p-3">
+        <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-2">
+          PSA 등급 → 랭킹 점수
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+          {Object.entries(PSA_TIER_POINTS)
+            .sort(([a], [b]) => Number(b) - Number(a))
+            .map(([g, pts]) => (
+              <div
+                key={g}
+                className="flex items-center justify-between rounded-lg bg-black/30 border border-white/5 px-2.5 py-1.5"
+              >
+                <span
+                  className={clsx(
+                    "font-bold",
+                    Number(g) === 10
+                      ? "text-amber-300"
+                      : Number(g) === 9
+                      ? "text-slate-100"
+                      : Number(g) === 8
+                      ? "text-teal-200"
+                      : "text-sky-200"
+                  )}
+                >
+                  PSA {g}
+                </span>
+                <span className="text-zinc-300 tabular-nums font-semibold">
+                  +{pts}점
+                </span>
+              </div>
+            ))}
         </div>
       </div>
 
@@ -142,151 +106,82 @@ export default function UsersView() {
           아직 사용자가 없습니다.
         </p>
       ) : (
-        <div className="mt-6 space-y-3 md:space-y-4">
-          {entries.map((entry, rank) => {
-            const expandedRarity = expanded[entry.id] ?? null;
-            const isMe = currentUser?.id === entry.id;
-            const visibleRarities = RARITY_ORDER.filter(
-              (r) => (entry.rarityCounts.get(r) ?? 0) > 0
-            );
+        <ul className="mt-6 space-y-2">
+          {entries.map((e, rank) => {
+            const isMe = currentUser?.id === e.id;
             return (
-              <motion.article
-                key={entry.id}
+              <motion.li
+                key={e.id}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: rank * 0.03 }}
+                transition={{ delay: Math.min(rank * 0.03, 0.3) }}
                 className={clsx(
-                  "rounded-2xl border bg-white/5 overflow-hidden",
+                  "rounded-2xl border p-3 md:p-4 flex items-center gap-3 md:gap-4",
                   isMe
-                    ? "border-amber-400/50 shadow-[0_0_24px_-6px_rgba(251,191,36,0.4)]"
-                    : "border-white/10"
+                    ? "bg-amber-400/5 border-amber-400/50 shadow-[0_0_24px_-6px_rgba(251,191,36,0.4)]"
+                    : "bg-white/5 border-white/10"
                 )}
               >
-                <div className="p-4 md:p-5 flex items-center gap-3 md:gap-4">
-                  <div
-                    className={clsx(
-                      "shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-black text-sm md:text-base border",
-                      rank === 0
-                        ? "bg-amber-400/20 text-amber-200 border-amber-400/60"
-                        : rank === 1
-                        ? "bg-zinc-300/10 text-zinc-200 border-zinc-300/40"
-                        : rank === 2
-                        ? "bg-orange-500/10 text-orange-200 border-orange-500/40"
-                        : "bg-white/5 text-zinc-400 border-white/10"
+                <div
+                  className={clsx(
+                    "shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-black text-sm md:text-base border",
+                    rank === 0
+                      ? "bg-amber-400/20 text-amber-200 border-amber-400/60"
+                      : rank === 1
+                      ? "bg-zinc-300/10 text-zinc-200 border-zinc-300/40"
+                      : rank === 2
+                      ? "bg-orange-500/10 text-orange-200 border-orange-500/40"
+                      : "bg-white/5 text-zinc-400 border-white/10"
+                  )}
+                >
+                  {rank + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-base md:text-lg font-bold text-white">
+                      {e.user_id}
+                    </h2>
+                    {isMe && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-400 text-zinc-900">
+                        나
+                      </span>
                     )}
-                  >
-                    {rank + 1}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="text-base md:text-lg font-bold text-white">
-                        {entry.user_id}
-                      </h2>
-                      {isMe && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-400 text-zinc-900">
-                          나
-                        </span>
-                      )}
-                      {entry.topRarity && (
-                        <RarityBadge rarity={entry.topRarity} size="xs" />
-                      )}
-                    </div>
-                    <p className="text-[11px] md:text-xs text-zinc-400 mt-0.5">
-                      {entry.age}세 · 총 {entry.totalCards}장 · {entry.totalUnique}
-                      종 보유
-                    </p>
+                  <p className="text-[11px] md:text-xs text-zinc-400 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span>감별 {e.psa_count}회</span>
+                    {e.psa_10 > 0 && (
+                      <span className="text-amber-300 font-semibold">
+                        · PSA 10 ×{e.psa_10}
+                      </span>
+                    )}
+                    {e.psa_9 > 0 && (
+                      <span className="text-slate-200 font-semibold">
+                        · PSA 9 ×{e.psa_9}
+                      </span>
+                    )}
+                    {e.psa_8 > 0 && (
+                      <span className="text-teal-200 font-semibold">
+                        · PSA 8 ×{e.psa_8}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-xl md:text-2xl font-black text-amber-300 tabular-nums leading-none">
+                    {e.rank_score.toLocaleString("ko-KR")}
+                  </div>
+                  <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
+                    랭킹 점수
+                  </div>
+                  <div className="mt-1">
+                    <PointsChip points={e.points} size="sm" />
                   </div>
                 </div>
-
-                {visibleRarities.length === 0 ? (
-                  <div className="px-4 md:px-5 pb-4 text-xs text-zinc-500">
-                    아직 뽑은 카드가 없습니다.
-                  </div>
-                ) : (
-                  <>
-                    <div className="px-4 md:px-5 pb-4 flex flex-wrap gap-2">
-                      {visibleRarities.map((r) => {
-                        const active = expandedRarity === r;
-                        const count = entry.rarityCounts.get(r) ?? 0;
-                        return (
-                          <button
-                            key={r}
-                            onClick={() => toggle(entry.id, r)}
-                            className={clsx(
-                              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition",
-                              active
-                                ? "border-white bg-white text-zinc-900"
-                                : "border-white/10 bg-white/5 text-white hover:bg-white/10"
-                            )}
-                            aria-expanded={active}
-                          >
-                            <span
-                              className={clsx(
-                                "inline-block w-2 h-2 rounded-full",
-                                RARITY_STYLE[r].badge
-                              )}
-                            />
-                            <span>{r}</span>
-                            <span className="opacity-70">×{count}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <AnimatePresence initial={false}>
-                      {expandedRarity && (
-                        <motion.div
-                          key={expandedRarity}
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="px-4 md:px-5 pb-4 md:pb-5 pt-0 border-t border-white/5 bg-black/20">
-                            <div className="pt-3 flex items-center gap-2">
-                              <RarityBadge rarity={expandedRarity} size="sm" />
-                              <span className="text-xs text-zinc-400">
-                                {RARITY_LABEL[expandedRarity]} 카드 목록
-                              </span>
-                            </div>
-                            <ul className="mt-3 space-y-1.5">
-                              {(entry.rarityCards.get(expandedRarity) ?? []).map(
-                                ({ card, count }) => (
-                                  <li
-                                    key={card.id}
-                                    className="flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition"
-                                  >
-                                    <span className="shrink-0 text-[10px] font-mono text-zinc-500">
-                                      #{card.number}
-                                    </span>
-                                    <span className="flex-1 text-sm text-white truncate">
-                                      {card.name}
-                                    </span>
-                                    <span className="text-[11px] text-zinc-400">
-                                      {SETS[card.setCode].name}
-                                    </span>
-                                    {count > 1 && (
-                                      <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-white">
-                                        ×{count}
-                                      </span>
-                                    )}
-                                  </li>
-                                )
-                              )}
-                            </ul>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </>
-                )}
-              </motion.article>
+              </motion.li>
             );
           })}
-        </div>
+        </ul>
       )}
     </div>
   );
 }
-

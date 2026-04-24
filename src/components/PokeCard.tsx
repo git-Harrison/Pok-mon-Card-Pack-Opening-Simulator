@@ -15,54 +15,97 @@ interface Props {
   index?: number;
 }
 
-export default function PokeCard({
+function sizingClass(size: Props["size"]) {
+  return size === "sm"
+    ? "w-[120px] h-[168px]"
+    : size === "lg"
+    ? "w-[220px] h-[308px]"
+    : "w-[160px] h-[224px]";
+}
+
+export default function PokeCard(props: Props) {
+  const { revealed, onReveal, size = "md" } = props;
+  // Wallet / grid / already-revealed case: render a static, non-interactive
+  // card so parent click handlers (e.g. "open detail modal") receive the
+  // tap cleanly. No inner <button>, no 3D flip, no framer-motion events.
+  if (revealed && !onReveal) {
+    return <StaticCard card={props.card} sizing={sizingClass(size)} />;
+  }
+  // Interactive face-down card that flips on tap (pack-opening path).
+  return <FlippableCard {...props} sizing={sizingClass(size)} />;
+}
+
+/* ─────────────── Static (wallet / grid) ─────────────── */
+
+function StaticCard({ card, sizing }: { card: Card; sizing: string }) {
+  const [imgError, setImgError] = useState(false);
+  const style = RARITY_STYLE[card.rarity];
+  const hot = isHighRarity(card.rarity);
+
+  return (
+    <div
+      className={clsx(
+        "relative rounded-xl overflow-hidden isolate ring-2 bg-zinc-900",
+        style.frame,
+        style.glow,
+        sizing
+      )}
+    >
+      {hot && <div className="rarity-ring" />}
+      {card.imageUrl && !imgError ? (
+        <img
+          src={card.imageUrl}
+          alt={card.name}
+          loading="lazy"
+          draggable={false}
+          onError={() => setImgError(true)}
+          className="w-full h-full object-contain bg-zinc-900 select-none pointer-events-none"
+          style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none" }}
+        />
+      ) : (
+        <FallbackFront card={card} />
+      )}
+      {hot && <div className="holo-overlay pointer-events-none" />}
+      <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
+        <div className="flex items-center justify-between">
+          <RarityBadge rarity={card.rarity} size="xs" />
+          <span className="text-[10px] text-white/80">{card.number}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────── Flippable (pack opening) ─────────────── */
+
+function FlippableCard({
   card,
   revealed,
   onReveal,
-  size = "md",
+  size,
   index = 0,
-}: Props) {
+  sizing,
+}: Props & { sizing: string }) {
   const [imgError, setImgError] = useState(false);
   const style = RARITY_STYLE[card.rarity];
-  const highRarity = isHighRarity(card.rarity);
-
-  const sizing =
-    size === "sm"
-      ? "w-[120px] h-[168px]"
-      : size === "lg"
-      ? "w-[220px] h-[308px]"
-      : "w-[160px] h-[224px]";
-
-  // Only treat the card as an interactive button when it has a flip
-  // handler AND is currently face-down. In wallet / grid views (revealed
-  // with no onReveal), render as a plain div so parent click handlers
-  // (e.g. "open detail modal") receive the event without being swallowed
-  // by an inner <button>.
-  const interactive = !revealed && !!onReveal;
-  const Wrapper = interactive ? motion.button : motion.div;
+  const hot = isHighRarity(card.rarity);
+  void size;
 
   return (
-    // Outer clip container keeps the rarity-ring glow strictly inside the card
-    // bounds so it can't bleed into adjacent cards in a grid.
     <div
       className={clsx(
         "relative perspective-1200 rounded-xl overflow-hidden isolate",
         sizing
       )}
     >
-      {highRarity && revealed && <div className="rarity-ring" />}
-      <Wrapper
-        {...(interactive
-          ? {
-              type: "button" as const,
-              onClick: () => onReveal?.(),
-              style: { touchAction: "manipulation" as const },
-            }
-          : {})}
+      {hot && revealed && <div className="rarity-ring" />}
+      <motion.button
+        type="button"
+        onClick={() => !revealed && onReveal?.()}
+        style={{ touchAction: "manipulation" }}
         className={clsx(
           "relative preserve-3d w-full h-full rounded-xl select-none",
-          "ring-2 ring-offset-0",
-          interactive && "cursor-pointer",
+          "ring-2 ring-offset-0 cursor-pointer",
           revealed ? style.frame : "ring-white/10",
           revealed && style.glow
         )}
@@ -73,42 +116,33 @@ export default function PokeCard({
           ease: [0.4, 0, 0.2, 1],
           delay: index * 0.02,
         }}
-        whileHover={
-          interactive
-            ? { scale: 1.02 }
-            : revealed
-            ? { y: -6, scale: 1.03 }
-            : undefined
-        }
+        whileHover={revealed ? { y: -6, scale: 1.03 } : { scale: 1.02 }}
         aria-label={revealed ? card.name : "뒤집힌 카드"}
       >
-        {/* Back face */}
+        {/* Back */}
         <div className="absolute inset-0 backface-hidden rounded-xl overflow-hidden">
           <img
             src="/images/common/card-back.jpg"
             alt=""
             className="w-full h-full object-cover select-none pointer-events-none"
             draggable={false}
-            style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none" }}
           />
         </div>
-
-        {/* Front face */}
+        {/* Front */}
         <div className="absolute inset-0 rotate-y-180 backface-hidden rounded-xl overflow-hidden bg-zinc-900">
-          {!imgError && card.imageUrl ? (
+          {card.imageUrl && !imgError ? (
             <img
               src={card.imageUrl}
               alt={card.name}
               loading="lazy"
-              className="w-full h-full object-contain bg-zinc-900 select-none pointer-events-none"
               draggable={false}
-              style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none" }}
               onError={() => setImgError(true)}
+              className="w-full h-full object-contain bg-zinc-900 select-none pointer-events-none"
             />
           ) : (
             <FallbackFront card={card} />
           )}
-          {highRarity && <div className="holo-overlay pointer-events-none" />}
+          {hot && <div className="holo-overlay pointer-events-none" />}
           {revealed && (
             <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
               <div className="flex items-center justify-between">
@@ -120,9 +154,8 @@ export default function PokeCard({
             </div>
           )}
         </div>
-      </Wrapper>
-
-      {highRarity && revealed && (
+      </motion.button>
+      {hot && revealed && (
         <div className="pointer-events-none">
           <SparkleBurst />
         </div>
@@ -130,6 +163,8 @@ export default function PokeCard({
     </div>
   );
 }
+
+/* ─────────────── Fallback ─────────────── */
 
 function FallbackFront({ card }: { card: Card }) {
   const style = RARITY_STYLE[card.rarity];
