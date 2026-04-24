@@ -119,7 +119,7 @@ export default function Navbar() {
                   href="/admin"
                   aria-label="관리자"
                   title="관리자"
-                  className="hidden sm:inline-flex items-center h-8 px-2 rounded-md bg-amber-400/15 border border-amber-400/40 text-amber-200 text-[11px] font-bold hover:bg-amber-400/25"
+                  className="inline-flex items-center h-8 px-2 rounded-md bg-amber-400/15 border border-amber-400/40 text-amber-200 text-[11px] font-bold hover:bg-amber-400/25"
                 >
                   👑
                 </Link>

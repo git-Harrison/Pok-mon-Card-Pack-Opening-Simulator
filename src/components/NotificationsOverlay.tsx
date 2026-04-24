@@ -31,10 +31,39 @@ export default function NotificationsOverlay() {
     setQueue(rows);
   }, [user]);
 
-  // Fetch on auth change + every route transition.
+  // Fetch on auth change + every route transition so newly-received
+  // taunts can surface quickly.
   useEffect(() => {
     refresh();
   }, [refresh, pathname]);
+
+  // Background polling — keeps the popup timely for users who stay on
+  // one page. 15s strikes a reasonable balance between latency and
+  // RPC load. Pauses when the tab is hidden to avoid background churn.
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    const tick = () => {
+      if (!alive) return;
+      if (typeof document !== "undefined" && document.hidden) return;
+      refresh();
+    };
+    const id = setInterval(tick, 15_000);
+    // Also refresh immediately on tab focus after being hidden.
+    const onVis = () => {
+      if (typeof document !== "undefined" && !document.hidden) refresh();
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVis);
+    }
+    return () => {
+      alive = false;
+      clearInterval(id);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVis);
+      }
+    };
+  }, [user, refresh]);
 
   const current = queue[0] ?? null;
 

@@ -160,6 +160,19 @@ export async function recordPackPull(
 
 // ---------- Box purchase ----------
 
+export async function refundBoxPurchase(userId: string, setCode: SetCode) {
+  const { data, error } = await supabase.rpc("refund_box_purchase", {
+    p_user_id: userId,
+    p_set_code: setCode,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    refunded?: number;
+    points?: number;
+  };
+}
+
 export async function buyBox(userId: string, setCode: SetCode) {
   const { data, error } = await supabase.rpc("buy_box", {
     p_user_id: userId,

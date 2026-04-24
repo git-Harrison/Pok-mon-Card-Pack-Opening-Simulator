@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import type { Card, SetInfo } from "@/lib/types";
 import { drawBox } from "@/lib/pack-draw";
-import { buyBox, recordPackPull } from "@/lib/db";
+import { buyBox, recordPackPull, refundBoxPurchase } from "@/lib/db";
 import { useAuth } from "@/lib/auth";
 import { BOX_COST, RARITY_STYLE } from "@/lib/rarity";
 import PackOpeningStage from "./PackOpeningStage";
@@ -157,7 +157,15 @@ export default function SetView({ set }: { set: SetInfo }) {
           );
         } catch (e) {
           console.error("multi-box persist failed", e);
-          setError("카드 저장에 실패했습니다. 잠시 후 다시 시도해주세요.");
+          const refund = await refundBoxPurchase(user.id, set.code);
+          if (refund.ok && typeof refund.points === "number") {
+            setPoints(refund.points);
+            setError(
+              `${i + 1}/${boxCount}번째 박스 저장 실패 — ${(refund.refunded ?? cost).toLocaleString("ko-KR")}p 환불. 지금까지 열린 ${i}박스는 정상이에요.`
+            );
+          } else {
+            setError("카드 저장 및 환불에 실패했어요. 관리자에게 문의해주세요.");
+          }
           setPhase("sealed");
           return;
         }
@@ -214,14 +222,20 @@ export default function SetView({ set }: { set: SetInfo }) {
       setPhase("grid");
     } catch (e) {
       console.error("box persist failed", e);
-      setError(
-        "카드 저장에 실패했습니다. 잠시 후 다시 시도하거나 관리자에게 문의해주세요."
-      );
+      const refund = await refundBoxPurchase(user.id, set.code);
+      if (refund.ok && typeof refund.points === "number") {
+        setPoints(refund.points);
+        setError(
+          `카드 저장에 실패해 ${(refund.refunded ?? cost).toLocaleString("ko-KR")}p를 환불했어요. 잠시 후 다시 시도해주세요.`
+        );
+      } else {
+        setError("저장 및 환불에 실패했어요. 관리자에게 문의해주세요.");
+      }
       setPacks([]);
       setOpenedMask([]);
       setPhase("sealed");
     }
-  }, [user, phase, set, setPoints]);
+  }, [user, phase, set, cost, setPoints]);
 
   const choosePack = useCallback(
     (index: number) => {
