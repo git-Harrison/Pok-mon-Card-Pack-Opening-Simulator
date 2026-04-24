@@ -1,9 +1,6 @@
 "use client";
 
-import type { Card, Rarity } from "./types";
-
-/** Rarities that trigger pack-pull auto-notifications. */
-const NOTIFY_RARITIES = new Set<Rarity>(["SAR", "UR", "MUR"]);
+import type { Card } from "./types";
 
 async function post(body: Record<string, unknown>): Promise<void> {
   try {
@@ -18,15 +15,13 @@ async function post(body: Record<string, unknown>): Promise<void> {
 }
 
 /**
- * Auto-notify every SAR / UR / MUR card pulled in a pack (or set of packs).
- * AR is intentionally EXCLUDED per spec. Sends one embed per hit card.
+ * Pack-pull hit notifications were removed — the channel was getting
+ * too noisy. Kept as a no-op so existing call sites don't need to
+ * conditionally import.
  */
-export function notifyPackHits(username: string, cards: Card[]): void {
-  const hits = cards.filter((c) => NOTIFY_RARITIES.has(c.rarity));
-  if (hits.length === 0) return;
-  for (const card of hits) {
-    post({ kind: "card-hit", username, cardId: card.id });
-  }
+export function notifyPackHits(_username: string, _cards: Card[]): void {
+  void _username;
+  void _cards;
 }
 
 /** Auto-notify on PSA grade 9 or 10 only. */

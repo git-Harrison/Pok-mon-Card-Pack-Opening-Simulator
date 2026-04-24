@@ -9,7 +9,6 @@ import type { Card, SetInfo } from "@/lib/types";
 import { drawBox } from "@/lib/pack-draw";
 import { buyBox, recordPackPull } from "@/lib/db";
 import { useAuth } from "@/lib/auth";
-import { notifyPackHits } from "@/lib/discord";
 import { BOX_COST, RARITY_STYLE } from "@/lib/rarity";
 import PackOpeningStage from "./PackOpeningStage";
 import RarityBadge from "./RarityBadge";
@@ -156,10 +155,7 @@ export default function SetView({ set }: { set: SetInfo }) {
       setActivePack(index);
       setPhase("opening-pack");
       // Pulls were already saved at box-open time; this is now purely
-      // animation state + Discord brag.
-      if (user) {
-        notifyPackHits(user.display_name, packs[index]);
-      }
+      // animation state. (Discord pack-hit brag was removed — too noisy.)
       setOpenedMask((prev) => {
         const next = [...prev];
         next[index] = true;
@@ -181,7 +177,6 @@ export default function SetView({ set }: { set: SetInfo }) {
       .sort(
         (a, b) => RARITY_STYLE[b.rarity].tier - RARITY_STYLE[a.rarity].tier
       );
-    notifyPackHits(user.display_name, allCards);
     setBulkCards(allCards);
     setOpenedMask(new Array(packs.length).fill(true));
     setPhase("bulk-result");
