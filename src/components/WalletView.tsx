@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import clsx from "clsx";
 import {
-  MERCHANT_PRICE,
+  BULK_SELL_PRICE,
   RARITY_ORDER,
   RARITY_STYLE,
   compareRarity,
@@ -119,7 +119,7 @@ export default function WalletView() {
           <Kpi label="보유 카드" value={`${snap.items.length}종`} />
           <Kpi label="총 장수" value={`${snap.totalCards}장`} />
           <Kpi label="총 개봉" value={`${totalPacks}팩`} />
-          <Kpi label="PSA 감별" value={`${psa.length}장`} highlight />
+          <Kpi label="AURA 감별" value={`${psa.length}장`} highlight />
         </div>
       </div>
 
@@ -132,7 +132,7 @@ export default function WalletView() {
           </span>
         </ModeTab>
         <ModeTab active={mode === "psa"} onClick={() => setMode("psa")}>
-          PSA 감별
+          AURA 감별
           <span className="ml-1.5 text-[10px] opacity-70">{psa.length}</span>
         </ModeTab>
       </div>
@@ -187,7 +187,7 @@ export default function WalletView() {
               .filter(([, n]) => n > 0)
               .map(([card_id, count]) => {
                 const it = snap.items.find((x) => x.card.id === card_id);
-                const price = it ? MERCHANT_PRICE[it.card.rarity] : 0;
+                const price = it ? BULK_SELL_PRICE[it.card.rarity] : 0;
                 return { card_id, count, price };
               });
             if (payload.length === 0) return;
@@ -209,7 +209,7 @@ export default function WalletView() {
             const rarityItems = snap.items.filter((it) => it.card.rarity === rarity);
             if (rarityItems.length === 0) return;
             const totalCount = rarityItems.reduce((s, it) => s + it.count, 0);
-            const totalPoints = totalCount * MERCHANT_PRICE[rarity];
+            const totalPoints = totalCount * BULK_SELL_PRICE[rarity];
             const ok = window.confirm(
               `${rarity} 등급 카드 ${totalCount}장을 전부 판매할까요?\n+${totalPoints.toLocaleString("ko-KR")}p 지급`
             );
@@ -217,7 +217,7 @@ export default function WalletView() {
             const payload = rarityItems.map((it) => ({
               card_id: it.card.id,
               count: it.count,
-              price: MERCHANT_PRICE[rarity],
+              price: BULK_SELL_PRICE[rarity],
             }));
             setSelling(true);
             setSellError(null);
@@ -260,7 +260,7 @@ function BulkSellBar({
     for (const it of items) {
       const cur = m.get(it.card.rarity) ?? { count: 0, price: 0 };
       cur.count += it.count;
-      cur.price += it.count * MERCHANT_PRICE[it.card.rarity];
+      cur.price += it.count * BULK_SELL_PRICE[it.card.rarity];
       m.set(it.card.rarity, cur);
     }
     return RARITY_ORDER.map((r) => ({ rarity: r, ...(m.get(r) ?? { count: 0, price: 0 }) }))
@@ -274,7 +274,7 @@ function BulkSellBar({
       const it = items.find((x) => x.card.id === id);
       if (!it) continue;
       c += n;
-      p += n * MERCHANT_PRICE[it.card.rarity];
+      p += n * BULK_SELL_PRICE[it.card.rarity];
     }
     return { totalCount: c, totalPoints: p };
   }, [items, selection]);
@@ -521,7 +521,7 @@ function PsaMode({
           아직 감별한 카드가 없습니다
         </p>
         <p className="text-sm text-zinc-400">
-          PSA 감별 페이지에서 카드를 맡기고 등급을 받아보세요.
+          AURA 감별 페이지에서 카드를 맡기고 등급을 받아보세요.
         </p>
         <Link
           href="/grading"

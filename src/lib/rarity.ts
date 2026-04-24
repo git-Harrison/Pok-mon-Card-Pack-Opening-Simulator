@@ -103,20 +103,36 @@ export function isHighRarity(r: Rarity): boolean {
 }
 
 // Points the merchant pays when buying a card of this rarity.
-// 상인 매입 단가:
-//   MUR / UR  300,000 · SAR 100,000 · AR  50,000
-//   나머지     10,000
+// 단가표:
+//   MUR 500,000 · UR 300,000 · SAR 300,000 · SR 200,000
+//   MA 100,000 · AR 100,000 · RR 60,000 · 그 외 30,000
 export const MERCHANT_PRICE: Record<Rarity, number> = {
-  C: 10_000,
-  U: 10_000,
-  R: 10_000,
-  RR: 10_000,
+  C: 30_000,
+  U: 30_000,
+  R: 30_000,
+  RR: 60_000,
+  AR: 100_000,
+  MA: 100_000,
+  SR: 200_000,
+  SAR: 300_000,
+  UR: 300_000,
+  MUR: 500_000,
+};
+
+// Bulk-sell payout (지갑 → 일괄판매). 상인 가격보다 낮지만 속도가 장점.
+// MUR 100,000 · UR 50,000 · SAR 30,000
+// MA 10,000 · SR 10,000 · RR 5,000 · 그 외 3,000
+export const BULK_SELL_PRICE: Record<Rarity, number> = {
+  C: 3_000,
+  U: 3_000,
+  R: 3_000,
+  AR: 3_000,
+  RR: 5_000,
   SR: 10_000,
   MA: 10_000,
-  AR: 50_000,
-  SAR: 100_000,
-  MUR: 300_000,
-  UR: 300_000,
+  SAR: 30_000,
+  UR: 50_000,
+  MUR: 100_000,
 };
 
 // Cost in points to open one sealed booster box.

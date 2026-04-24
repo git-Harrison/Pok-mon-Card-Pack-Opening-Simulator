@@ -31,11 +31,7 @@ export default function SetCard({ set }: { set: SetInfo }) {
             alt={`${set.name} 박스`}
             fill
             sizes="(max-width: 768px) 90vw, 33vw"
-            // `mix-blend-mode: multiply` erases the retail-photo white
-            // background so the box looks like it's floating on the
-            // dark app surface.
             className="object-contain drop-shadow-2xl select-none pointer-events-none"
-            style={{ mixBlendMode: "multiply" }}
             priority
             draggable={false}
           />

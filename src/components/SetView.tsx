@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
@@ -15,6 +15,19 @@ import PackOpeningStage from "./PackOpeningStage";
 import RarityBadge from "./RarityBadge";
 import PointsChip from "./PointsChip";
 import CoinIcon from "./CoinIcon";
+
+// Persist an in-progress box across navigations so that pressing the
+// browser back button (e.g. from wallet → back to set) doesn't nuke
+// the packs the user already paid for.
+const BOX_STATE_TTL_MS = 24 * 60 * 60 * 1000;
+interface BoxPersist {
+  packs: Card[][];
+  openedMask: boolean[];
+  savedAt: number;
+}
+function boxKey(userId: string | undefined, setCode: string) {
+  return userId ? `box-state:${userId}:${setCode}` : null;
+}
 
 type Phase =
   | "sealed"
@@ -33,9 +46,65 @@ export default function SetView({ set }: { set: SetInfo }) {
   const [activePack, setActivePack] = useState<number | null>(null);
   const [bulkCards, setBulkCards] = useState<Card[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Guard so the initial restore doesn't write back over itself before
+  // the user makes any change.
+  const hydratedRef = useRef(false);
 
   const cost = BOX_COST[set.code] ?? 30_000;
   const canAfford = !!user && user.points >= cost;
+
+  // Restore any in-progress box on mount.
+  useEffect(() => {
+    const key = boxKey(user?.id, set.code);
+    if (!key || typeof window === "undefined") {
+      hydratedRef.current = true;
+      return;
+    }
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw) as BoxPersist;
+        const fresh = Date.now() - parsed.savedAt < BOX_STATE_TTL_MS;
+        const complete = parsed.openedMask?.every(Boolean);
+        if (
+          fresh &&
+          !complete &&
+          Array.isArray(parsed.packs) &&
+          parsed.packs.length > 0
+        ) {
+          setPacks(parsed.packs);
+          setOpenedMask(parsed.openedMask);
+          setPhase("grid");
+        } else {
+          window.localStorage.removeItem(key);
+        }
+      }
+    } catch {
+      // swallow — corrupt state should not block the UI
+    }
+    hydratedRef.current = true;
+  }, [user?.id, set.code]);
+
+  // Persist whenever the in-progress state changes.
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    const key = boxKey(user?.id, set.code);
+    if (!key || typeof window === "undefined") return;
+    if (packs.length === 0) {
+      window.localStorage.removeItem(key);
+      return;
+    }
+    const payload: BoxPersist = {
+      packs,
+      openedMask,
+      savedAt: Date.now(),
+    };
+    try {
+      window.localStorage.setItem(key, JSON.stringify(payload));
+    } catch {
+      // storage full — nothing to do, next interaction will retry
+    }
+  }, [packs, openedMask, user?.id, set.code]);
 
   const openBox = useCallback(async () => {
     if (!user || phase !== "sealed") return;
@@ -126,7 +195,11 @@ export default function SetView({ set }: { set: SetInfo }) {
     setOpenedMask([]);
     setActivePack(null);
     setBulkCards([]);
-  }, []);
+    const key = boxKey(user?.id, set.code);
+    if (key && typeof window !== "undefined") {
+      window.localStorage.removeItem(key);
+    }
+  }, [user?.id, set.code]);
 
   const openedCount = useMemo(
     () => openedMask.filter(Boolean).length,
@@ -177,18 +250,12 @@ export default function SetView({ set }: { set: SetInfo }) {
           phase === "bulk-result") && (
           <motion.div
             key="grid"
-            className="mt-8 md:mt-10"
+            className="mt-6 md:mt-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <PackGrid
-              set={set}
-              openedMask={openedMask}
-              onChoose={choosePack}
-              disabled={phase !== "grid"}
-            />
-            <div className="mt-6 md:mt-8 flex flex-wrap items-center justify-between gap-3">
+            <div className="mb-4 md:mb-5 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-zinc-400">
                 {remainingCount > 0
                   ? "팩 하나를 눌러 개봉하거나, 모든 팩을 한번에 열어보세요."
@@ -213,6 +280,12 @@ export default function SetView({ set }: { set: SetInfo }) {
                 )}
               </div>
             </div>
+            <PackGrid
+              set={set}
+              openedMask={openedMask}
+              onChoose={choosePack}
+              disabled={phase !== "grid"}
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -308,7 +381,6 @@ function SealedBox({
             fill
             sizes="(max-width: 768px) 90vw, 520px"
             className="object-contain drop-shadow-2xl select-none pointer-events-none"
-            style={{ mixBlendMode: "multiply" }}
             priority
             draggable={false}
           />
@@ -372,7 +444,6 @@ function BoxOpening({ set }: { set: SetInfo }) {
             fill
             sizes="(max-width: 768px) 90vw, 520px"
             className="object-contain select-none pointer-events-none"
-            style={{ mixBlendMode: "multiply" }}
             draggable={false}
           />
         </motion.div>

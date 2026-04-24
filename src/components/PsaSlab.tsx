@@ -3,20 +3,14 @@
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import type { Card } from "@/lib/types";
-import { PSA_LABEL, psaTone } from "@/lib/psa";
+import { GRADE_BRAND, PSA_LABEL, psaTone } from "@/lib/psa";
 import { SETS } from "@/lib/sets";
 
 /**
- * Realistic PSA slab visual:
- *   ┌─────────────────────┐
- *   │ RED HEADER (PSA..)  │
- *   │ CARD NAME + GRADE   │
- *   ├─────────────────────┤
- *   │   CARD IMAGE        │
- *   │   inside plastic    │
- *   ├─────────────────────┤
- *   │ BARCODE │ SET · #N  │
- *   └─────────────────────┘
+ * AURA slab — dark-glass holographic encapsulation.
+ * Layers: outer bezel → inner glass → card window → bottom barcode band.
+ * Grade banner uses the rarity-tier-matched `psaTone(grade)` palette so the
+ * whole component glows in the right hue without hard-coded color logic.
  */
 export default function PsaSlab({
   card,
@@ -37,7 +31,7 @@ export default function PsaSlab({
       ? "w-[150px]"
       : size === "lg"
       ? "w-[260px]"
-      : "w-[195px]";
+      : "w-[200px]";
 
   return (
     <motion.div
@@ -45,64 +39,88 @@ export default function PsaSlab({
       animate={highlight ? { scale: [1, 1.03, 1] } : { scale: 1 }}
       transition={{ duration: 1.2, times: [0, 0.5, 1] }}
       className={clsx(
-        "relative rounded-2xl overflow-hidden isolate ring-1 select-none",
-        // Plastic case shell — light gradient + inner ring for depth
-        "bg-gradient-to-b from-zinc-50 via-white to-zinc-200",
+        "relative rounded-[22px] overflow-hidden isolate ring-1 select-none",
+        "bg-[linear-gradient(160deg,#0b0918_0%,#130b28_45%,#070410_100%)]",
         tone.ring,
         tone.glow,
         width
       )}
+      style={{
+        boxShadow:
+          "0 20px 40px -20px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.6)",
+      }}
     >
-      {/* Inner plastic bevel (creates "case within case" depth) */}
+      {/* Holographic diagonal sheen */}
       <div
         aria-hidden
-        className="absolute inset-1.5 rounded-[14px] pointer-events-none ring-1 ring-black/10"
-        style={{
-          boxShadow: "inset 0 0 8px rgba(255,255,255,0.6)",
-        }}
-      />
-      {/* Diagonal plastic sheen */}
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none opacity-70"
         style={{
           background:
-            "linear-gradient(130deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 30%, rgba(255,255,255,0) 70%, rgba(255,255,255,0.28) 100%)",
+            "linear-gradient(125deg, rgba(255,255,255,0) 0%, rgba(147,197,253,0.1) 20%, rgba(236,72,153,0.08) 40%, rgba(250,204,21,0.08) 60%, rgba(34,197,94,0.08) 80%, rgba(255,255,255,0) 100%)",
+        }}
+      />
+      {/* Noise grain */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none opacity-[0.12] mix-blend-overlay"
+        style={{
+          backgroundImage:
+            "radial-gradient(rgba(255,255,255,0.4) 1px, transparent 1px)",
+          backgroundSize: "3px 3px",
         }}
       />
 
-      {/* ── Red header (PSA brand + card + grade) ── */}
-      <div className="relative m-1.5 rounded-t-[10px] overflow-hidden bg-gradient-to-b from-red-600 to-red-700 text-white shadow-inner">
-        <div className="flex items-stretch">
-          {/* PSA brand mark */}
-          <div className="px-2 py-1.5 flex items-center justify-center bg-red-700/80 border-r border-white/10">
-            <span className="font-black tracking-[0.12em] text-[11px] md:text-xs leading-none">
-              PSA
-            </span>
-          </div>
-          {/* Name + grade line */}
-          <div className="flex-1 px-2 py-1 min-w-0 flex flex-col justify-center">
-            <span className="text-[9px] md:text-[10px] uppercase tracking-wider opacity-85 truncate">
-              {card.name}
-            </span>
-            <span className="text-[8px] md:text-[9px] uppercase tracking-[0.18em] opacity-75 truncate">
-              {label}
-            </span>
-          </div>
-          {/* Grade chip */}
-          <div
-            className={clsx(
-              "px-2.5 flex items-center justify-center font-black text-lg md:text-xl tabular-nums",
-              tone.banner
-            )}
-          >
-            {grade}
-          </div>
+      {/* ── Brand header ── */}
+      <div className="relative px-3 pt-2.5 pb-2 flex items-center gap-2">
+        {/* Brand mark */}
+        <div className="flex items-baseline gap-1 shrink-0">
+          <span className="text-[9px] uppercase tracking-[0.4em] text-white/50 font-semibold">
+            {GRADE_BRAND}
+          </span>
+          <span className="text-[8px] uppercase tracking-[0.3em] text-white/30">
+            ▸ Graded
+          </span>
+        </div>
+        <div className="flex-1 h-px bg-gradient-to-r from-white/5 via-white/15 to-white/5" />
+        {/* Grade pill */}
+        <div
+          className={clsx(
+            "shrink-0 inline-flex items-baseline gap-1 rounded-full px-2 py-0.5 font-black tabular-nums",
+            tone.banner
+          )}
+        >
+          <span className="text-[9px] uppercase tracking-widest font-bold opacity-80">
+            G
+          </span>
+          <span className="text-sm md:text-base leading-none">{grade}</span>
         </div>
       </div>
 
+      {/* ── Name + label line ── */}
+      <div className="relative px-3 pb-2">
+        <p className="text-[11px] md:text-[12px] font-bold text-white leading-tight line-clamp-1">
+          {card.name}
+        </p>
+        <p
+          className={clsx(
+            "text-[8px] md:text-[9px] uppercase tracking-[0.28em] font-semibold mt-0.5",
+            tone.text
+          )}
+        >
+          {label}
+        </p>
+      </div>
+
       {/* ── Card window ── */}
-      <div className="relative mx-1.5 rounded-[4px] overflow-hidden bg-zinc-950 ring-1 ring-black/20">
+      <div
+        className="relative mx-3 rounded-[10px] overflow-hidden ring-1 ring-white/10"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(0,0,0,0.3) 100%)",
+          boxShadow:
+            "inset 0 0 20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12)",
+        }}
+      >
         <div className="relative aspect-[5/7]">
           {card.imageUrl ? (
             <img
@@ -117,47 +135,57 @@ export default function PsaSlab({
               {card.name}
             </div>
           )}
-          {/* subtle reflective sheen on the card window */}
+          {/* Glass reflection sweep */}
           <div
             aria-hidden
             className="absolute inset-0 pointer-events-none"
             style={{
               background:
-                "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 45%)",
+                "linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 70%, rgba(255,255,255,0.08) 100%)",
+            }}
+          />
+          {/* Bottom fade */}
+          <div
+            aria-hidden
+            className="absolute left-0 right-0 bottom-0 h-12 pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0))",
             }}
           />
         </div>
       </div>
 
-      {/* ── Bottom band: barcode + set info ── */}
-      <div className="relative m-1.5 mt-1.5 flex items-center gap-2 px-1.5 py-1">
-        <Barcode />
-        <div className="flex-1 min-w-0 text-right">
-          <div className="text-[8px] md:text-[9px] uppercase tracking-wider text-zinc-600 truncate">
-            {SETS[card.setCode].name}
+      {/* ── Bottom band: set + cert line + barcode ── */}
+      <div className="relative px-3 pt-2 pb-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="text-[8px] md:text-[9px] uppercase tracking-[0.18em] text-white/70 truncate">
+              {SETS[card.setCode].name}
+            </div>
+            <div className="text-[8px] md:text-[9px] uppercase tracking-[0.18em] text-white/30 tabular-nums">
+              #{card.number}
+            </div>
           </div>
-          <div className="text-[8px] md:text-[9px] uppercase tracking-[0.12em] text-zinc-500 tabular-nums">
-            #{card.number}
-          </div>
+          <Barcode />
+        </div>
+        {/* Cert line — fake hash for flavor */}
+        <div className="mt-1.5 text-[8px] font-mono text-white/30 tabular-nums truncate">
+          AURA·{card.setCode.toUpperCase()}·{card.number}·{grade}
         </div>
       </div>
     </motion.div>
   );
 }
 
-/**
- * Decorative barcode rendered as a stack of CSS bars of varying widths.
- * No real data encoded — just visual filler like a real PSA label.
- */
 function Barcode() {
-  // Pseudo-barcode pattern: widths 1–3px repeating, gaps of 1px.
-  const bars = [1, 2, 1, 3, 1, 2, 2, 1, 3, 2, 1, 2, 1, 3, 1, 2, 3, 1, 2, 1, 3, 2, 1, 2];
+  const bars = [1, 2, 1, 3, 1, 2, 2, 1, 3, 2, 1, 2, 1, 3, 1, 2, 3, 1, 2, 1];
   return (
-    <div className="flex items-end h-6 gap-[1px] shrink-0">
+    <div className="flex items-end h-5 gap-[1px] shrink-0 opacity-80">
       {bars.map((w, i) => (
         <span
           key={i}
-          className="bg-zinc-900"
+          className="bg-white/70"
           style={{ width: `${w}px`, height: "100%" }}
         />
       ))}

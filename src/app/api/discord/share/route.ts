@@ -146,11 +146,11 @@ export async function POST(request: Request) {
     content = psaMention(grade);
     const title =
       grade === 10
-        ? `🏆 ${safeUser}님의 PSA 10 GEM MINT!`
-        : `💎 ${safeUser}님의 PSA 9 MINT!`;
+        ? `🏆 ${safeUser}님의 AURA 10 GEM MINT!`
+        : `💎 ${safeUser}님의 AURA 9 MINT!`;
     embed = {
       title,
-      description: `**${card.name}**\n${SETS[card.setCode].name} · #${card.number}\n등급: **PSA ${grade}** (${PSA_LABEL[grade]})`,
+      description: `**${card.name}**\n${SETS[card.setCode].name} · #${card.number}\n등급: **AURA ${grade}** (${PSA_LABEL[grade]})`,
       color: PSA_COLOR[grade] ?? 0x71717a,
       thumbnail: card.imageUrl
         ? { url: absoluteImageUrl(card.imageUrl) }
@@ -167,7 +167,7 @@ export async function POST(request: Request) {
       );
     }
     embed = {
-      title: `😭 ${safeUser}님의 PSA 감정 실패`,
+      title: `😭 ${safeUser}님의 AURA 감정 실패`,
       description: `**${card.name}**\n${SETS[card.setCode].name} · #${card.number}\n감정 중 카드가 손상되었습니다...`,
       color: 0xdc2626,
       thumbnail: card.imageUrl

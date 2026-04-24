@@ -71,7 +71,7 @@ export default function GradingView() {
   const submit = useCallback(async () => {
     if (!user || !selected || phase !== "idle") return;
     if (!isPsaEligible(selected.rarity)) {
-      setError("AR · MA · SAR · MUR · UR 카드만 감별을 받을 수 있어요.");
+      setError("SR · MA · SAR · MUR · UR 카드만 감별을 받을 수 있어요.");
       return;
     }
     setError(null);
@@ -116,7 +116,7 @@ export default function GradingView() {
         <div>
           <h1 className="text-xl md:text-3xl font-black tracking-tight">
             <span className="bg-gradient-to-r from-fuchsia-300 via-violet-200 to-indigo-300 bg-clip-text text-transparent">
-              PSA 감정실
+              AURA 감정실
             </span>
           </h1>
           <p className="text-[10px] md:text-xs text-zinc-500 tracking-[0.2em] uppercase">
@@ -239,7 +239,7 @@ export default function GradingView() {
                 <div className="text-[10px] text-zinc-400 truncate">
                   판정 등급:{" "}
                   <span className={clsx("font-bold", tone?.text)}>
-                    PSA {grade} · {PSA_LABEL[grade]}
+                    AURA {grade} · {PSA_LABEL[grade]}
                   </span>
                 </div>
               </div>
@@ -338,7 +338,7 @@ export default function GradingView() {
               className="flex items-center justify-between rounded-md bg-black/30 border border-white/5 px-2 py-1"
             >
               <span className={clsx("font-bold", psaTone(d.grade).text)}>
-                PSA {d.grade}
+                AURA {d.grade}
               </span>
               <span className="text-zinc-300 tabular-nums font-semibold">
                 {d.pct}%
@@ -550,7 +550,7 @@ function Gauge({
             phase === "revealed" ? tone.text : "text-white"
           )}
         >
-          {phase === "revealed" ? `PSA ${grade}` : `${Math.round(value)}%`}
+          {phase === "revealed" ? `AURA ${grade}` : `${Math.round(value)}%`}
         </span>
       </div>
       <div className="relative h-2.5 rounded-full bg-white/5 overflow-hidden ring-1 ring-white/10">
@@ -591,7 +591,7 @@ function generateCaseId() {
   let s = "";
   for (let i = 0; i < 8; i++)
     s += chars[Math.floor(Math.random() * chars.length)];
-  return `PSA-${s}`;
+  return `AURA-${s}`;
 }
 
 function CardPicker({
@@ -648,7 +648,7 @@ function CardPicker({
             <div className="py-10 text-center text-sm text-zinc-400">
               <p>감정 대상 카드가 없어요.</p>
               <p className="mt-1 text-[11px]">
-                AR · MA · SAR · MUR · UR 카드만 맡길 수 있습니다.
+                SR · MA · SAR · MUR · UR 카드만 맡길 수 있습니다.
               </p>
             </div>
           ) : (
