@@ -523,6 +523,15 @@ export async function fetchUndisplayedGradings(
   return (data ?? []) as PsaGrading[];
 }
 
+export async function wildBattleReward(userId: string, amount: number) {
+  const { data, error } = await supabase.rpc("wild_battle_reward", {
+    p_user_id: userId,
+    p_amount: amount,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as { ok: boolean; awarded?: number; points?: number };
+}
+
 export async function bulkSellGradings(userId: string, gradingIds: string[]) {
   const { data, error } = await supabase.rpc("bulk_sell_gradings", {
     p_user_id: userId,

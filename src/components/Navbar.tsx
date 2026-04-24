@@ -8,6 +8,7 @@ import PointsChip from "./PointsChip";
 import {
   GiftIcon,
   HomeIcon,
+  LeafIcon,
   LogoutIcon,
   MagnifyIcon,
   MuseumIcon,
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { href: "/", label: "홈", Icon: HomeIcon },
   { href: "/wallet", label: "지갑", Icon: WalletIcon },
   { href: "/center", label: "센터", Icon: MuseumIcon },
+  { href: "/wild", label: "야생", Icon: LeafIcon },
   { href: "/merchant", label: "상인", Icon: ShopIcon },
   { href: "/grading", label: "등급", Icon: MagnifyIcon },
   { href: "/users", label: "랭킹", Icon: TrophyIcon },
@@ -73,6 +75,8 @@ export default function Navbar() {
                     ? "사용자 랭킹"
                     : label === "센터"
                     ? "내 포켓몬센터"
+                    : label === "야생"
+                    ? "야생 배틀"
                     : label}
                 </Link>
               ))}
