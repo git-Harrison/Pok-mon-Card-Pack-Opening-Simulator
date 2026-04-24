@@ -26,12 +26,16 @@ export default function PsaSlab({
   const tone = psaTone(grade);
   const label = PSA_LABEL[grade] ?? "";
 
+  // Responsive: slab grows with its container up to its size cap.
+  // This prevents clipping when the slab is placed inside a tight grid
+  // column (e.g. the ManageModal / VisitShowcaseModal 3-column grids)
+  // whose column width is narrower than the slab's design width.
   const width =
     size === "sm"
-      ? "w-[150px]"
+      ? "w-full max-w-[150px]"
       : size === "lg"
-      ? "w-[260px]"
-      : "w-[200px]";
+      ? "w-full max-w-[260px]"
+      : "w-full max-w-[200px]";
 
   return (
     <motion.div

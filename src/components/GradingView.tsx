@@ -440,7 +440,10 @@ function Pedestal({
         </div>
       )}
 
-      {/* The card */}
+      {/* The card. Order matters: the "failed" end-state must win over
+          the default `selected` fallback, otherwise the card reappears
+          after the shatter animation finishes (we never clear `selected`
+          until the user taps 다시 맡기기). */}
       {phase === "revealed" && grade !== null && selected ? (
         <motion.div
           initial={{ scale: 0.6, opacity: 0, y: 20 }}
@@ -452,13 +455,13 @@ function Pedestal({
         </motion.div>
       ) : phase === "failing" && selected ? (
         <ShatteringCard card={selected} />
-      ) : selected ? (
-        <CardOnPedestal card={selected} scanning={phase === "animating"} />
       ) : phase === "failed" ? (
         <div className="text-center py-6">
           <p className="text-5xl mb-2 opacity-60">💔</p>
           <p className="text-xs text-rose-300">카드가 손상되었습니다</p>
         </div>
+      ) : selected ? (
+        <CardOnPedestal card={selected} scanning={phase === "animating"} />
       ) : (
         <EmptyPedestal onPick={onPick} />
       )}

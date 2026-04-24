@@ -121,13 +121,14 @@ export const MERCHANT_PRICE: Record<Rarity, number> = {
 
 // Bulk-sell payout (지갑 → 일괄판매). 상인 가격보다 낮지만 속도가 장점.
 // MUR 100,000 · UR 50,000 · SAR 30,000
-// MA 10,000 · SR 10,000 · RR 5,000 · 그 외 3,000
+// MA 10,000 · SR 10,000 · AR 3,000 · RR 2,000
+// R 1,000 · U 500 · C 300
 export const BULK_SELL_PRICE: Record<Rarity, number> = {
-  C: 3_000,
-  U: 3_000,
-  R: 3_000,
+  C: 300,
+  U: 500,
+  R: 1_000,
+  RR: 2_000,
   AR: 3_000,
-  RR: 5_000,
   SR: 10_000,
   MA: 10_000,
   SAR: 30_000,
