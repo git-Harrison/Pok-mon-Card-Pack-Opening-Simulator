@@ -12,6 +12,7 @@ import {
 import CoinIcon from "./CoinIcon";
 import { bulkSellCards } from "@/lib/db";
 import type { Card, PsaGrading, Rarity } from "@/lib/types";
+import { RARITY_LABEL } from "@/lib/rarity";
 import { SETS, getCard } from "@/lib/sets";
 import { useAuth } from "@/lib/auth";
 import {
@@ -22,7 +23,7 @@ import {
 import Link from "next/link";
 import PokeCard from "./PokeCard";
 import PsaSlab from "./PsaSlab";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
 type Mode = "cards" | "psa";
 type RarityFilter = "ALL" | Rarity;
@@ -41,11 +42,14 @@ export default function WalletView() {
   const [psa, setPsa] = useState<PsaGrading[]>([]);
   const [loading, setLoading] = useState(true);
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>("ALL");
-  const [selectMode, setSelectMode] = useState(false);
-  // card_id → count to sell
-  const [sellSelection, setSellSelection] = useState<Record<string, number>>({});
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [selling, setSelling] = useState(false);
   const [sellError, setSellError] = useState<string | null>(null);
+  const [lastSale, setLastSale] = useState<{
+    rarity: Rarity;
+    count: number;
+    earned: number;
+  } | null>(null);
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -98,10 +102,61 @@ export default function WalletView() {
     return counts;
   }, [snap.items]);
 
+  const rarityTotals = useMemo(() => {
+    const m = new Map<Rarity, { count: number; price: number }>();
+    for (const it of snap.items) {
+      const cur = m.get(it.card.rarity) ?? { count: 0, price: 0 };
+      cur.count += it.count;
+      cur.price += it.count * BULK_SELL_PRICE[it.card.rarity];
+      m.set(it.card.rarity, cur);
+    }
+    return RARITY_ORDER.map((r) => ({
+      rarity: r,
+      ...(m.get(r) ?? { count: 0, price: 0 }),
+    })).filter((x) => x.count > 0);
+  }, [snap.items]);
+
   const totalPacks = useMemo(
     () =>
       Object.values(snap.packsOpenedBySet).reduce((s, n) => s + n, 0),
     [snap.packsOpenedBySet]
+  );
+
+  const sellRarity = useCallback(
+    async (rarity: Rarity) => {
+      if (!user) return;
+      const rarityItems = snap.items.filter(
+        (it) => it.card.rarity === rarity
+      );
+      if (rarityItems.length === 0) return;
+      const totalCount = rarityItems.reduce((s, it) => s + it.count, 0);
+      const totalPoints = totalCount * BULK_SELL_PRICE[rarity];
+      const ok = window.confirm(
+        `${rarity} 등급 카드 ${totalCount}장을 전부 판매할까요?\n+${totalPoints.toLocaleString("ko-KR")}p 지급`
+      );
+      if (!ok) return;
+      const payload = rarityItems.map((it) => ({
+        card_id: it.card.id,
+        count: it.count,
+        price: BULK_SELL_PRICE[rarity],
+      }));
+      setSelling(true);
+      setSellError(null);
+      const res = await bulkSellCards(user.id, payload);
+      setSelling(false);
+      if (!res.ok) {
+        setSellError(res.error ?? "판매 실패");
+        return;
+      }
+      if (typeof res.points === "number") setPoints(res.points);
+      setLastSale({
+        rarity,
+        count: res.sold ?? totalCount,
+        earned: res.earned ?? totalPoints,
+      });
+      await refresh();
+    },
+    [user, snap.items, refresh, setPoints]
   );
 
   return (
@@ -147,218 +202,155 @@ export default function WalletView() {
           rarityCounts={rarityCounts}
           rarityFilter={rarityFilter}
           setRarityFilter={setRarityFilter}
-          selectMode={selectMode}
-          setSelectMode={(v) => {
-            setSelectMode(v);
-            if (!v) setSellSelection({});
+          onOpenBulk={() => {
+            setSellError(null);
+            setLastSale(null);
+            setBulkOpen(true);
           }}
-          sellSelection={sellSelection}
-          toggleSell={(card, delta) => {
-            setSellSelection((prev) => {
-              const cur = prev[card.id] ?? 0;
-              const max =
-                items.find((it) => it.card.id === card.id)?.count ?? 0;
-              const next = Math.max(0, Math.min(max, cur + delta));
-              const copy = { ...prev };
-              if (next === 0) delete copy[card.id];
-              else copy[card.id] = next;
-              return copy;
-            });
-          }}
+          hasAny={snap.items.length > 0}
         />
       ) : (
         <PsaMode items={psaItems} />
       )}
 
-      {/* Bulk sell bottom sheet */}
-      {selectMode && mode === "cards" && (
-        <BulkSellBar
-          items={snap.items}
-          selection={sellSelection}
-          selling={selling}
-          error={sellError}
-          onCancel={() => {
-            setSellSelection({});
-            setSellError(null);
-          }}
-          onSell={async () => {
-            if (!user) return;
-            const payload = Object.entries(sellSelection)
-              .filter(([, n]) => n > 0)
-              .map(([card_id, count]) => {
-                const it = snap.items.find((x) => x.card.id === card_id);
-                const price = it ? BULK_SELL_PRICE[it.card.rarity] : 0;
-                return { card_id, count, price };
-              });
-            if (payload.length === 0) return;
-            setSelling(true);
-            setSellError(null);
-            const res = await bulkSellCards(user.id, payload);
-            setSelling(false);
-            if (!res.ok) {
-              setSellError(res.error ?? "판매 실패");
-              return;
-            }
-            if (typeof res.points === "number") setPoints(res.points);
-            setSellSelection({});
-            setSelectMode(false);
-            await refresh();
-          }}
-          onSellRarity={async (rarity) => {
-            if (!user) return;
-            const rarityItems = snap.items.filter((it) => it.card.rarity === rarity);
-            if (rarityItems.length === 0) return;
-            const totalCount = rarityItems.reduce((s, it) => s + it.count, 0);
-            const totalPoints = totalCount * BULK_SELL_PRICE[rarity];
-            const ok = window.confirm(
-              `${rarity} 등급 카드 ${totalCount}장을 전부 판매할까요?\n+${totalPoints.toLocaleString("ko-KR")}p 지급`
-            );
-            if (!ok) return;
-            const payload = rarityItems.map((it) => ({
-              card_id: it.card.id,
-              count: it.count,
-              price: BULK_SELL_PRICE[rarity],
-            }));
-            setSelling(true);
-            setSellError(null);
-            const res = await bulkSellCards(user.id, payload);
-            setSelling(false);
-            if (!res.ok) {
-              setSellError(res.error ?? "판매 실패");
-              return;
-            }
-            if (typeof res.points === "number") setPoints(res.points);
-            setSellSelection({});
-            await refresh();
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {bulkOpen && mode === "cards" && (
+          <BulkSellModal
+            rarityTotals={rarityTotals}
+            selling={selling}
+            error={sellError}
+            lastSale={lastSale}
+            onClose={() => setBulkOpen(false)}
+            onSellRarity={sellRarity}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function BulkSellBar({
-  items,
-  selection,
+function BulkSellModal({
+  rarityTotals,
   selling,
   error,
-  onCancel,
-  onSell,
+  lastSale,
+  onClose,
   onSellRarity,
 }: {
-  items: { card: Card; count: number }[];
-  selection: Record<string, number>;
+  rarityTotals: { rarity: Rarity; count: number; price: number }[];
   selling: boolean;
   error: string | null;
-  onCancel: () => void;
-  onSell: () => void;
+  lastSale: { rarity: Rarity; count: number; earned: number } | null;
+  onClose: () => void;
   onSellRarity: (rarity: Rarity) => void;
 }) {
-  // Aggregate rarity totals across the wallet
-  const rarityTotals = useMemo(() => {
-    const m = new Map<Rarity, { count: number; price: number }>();
-    for (const it of items) {
-      const cur = m.get(it.card.rarity) ?? { count: 0, price: 0 };
-      cur.count += it.count;
-      cur.price += it.count * BULK_SELL_PRICE[it.card.rarity];
-      m.set(it.card.rarity, cur);
-    }
-    return RARITY_ORDER.map((r) => ({ rarity: r, ...(m.get(r) ?? { count: 0, price: 0 }) }))
-      .filter((x) => x.count > 0);
-  }, [items]);
-  const { totalCount, totalPoints } = useMemo(() => {
-    let c = 0;
-    let p = 0;
-    for (const [id, n] of Object.entries(selection)) {
-      if (n <= 0) continue;
-      const it = items.find((x) => x.card.id === id);
-      if (!it) continue;
-      c += n;
-      p += n * BULK_SELL_PRICE[it.card.rarity];
-    }
-    return { totalCount: c, totalPoints: p };
-  }, [items, selection]);
-
-  const hasAny = totalCount > 0;
-
   return (
-    <div
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-zinc-950/95 backdrop-blur-md md:bottom-0"
+    <motion.div
+      className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center overflow-hidden"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
       style={{
-        paddingBottom:
-          "max(env(safe-area-inset-bottom, 0px), 12px)",
-        // lift above the mobile bottom-tab nav (64px + safe area)
-        marginBottom: "calc(4rem + env(safe-area-inset-bottom, 0px))",
+        paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+        paddingLeft: "12px",
+        paddingRight: "12px",
       }}
     >
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-3">
-        {/* Per-rarity quick-sell row */}
-        {rarityTotals.length > 0 && (
-          <div className="mb-2">
-            <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
-              등급별 바로 팔기
+      <motion.div
+        className="relative w-full max-w-md bg-zinc-950 border border-white/10 rounded-2xl flex flex-col overflow-hidden"
+        style={{ maxHeight: "calc(100dvh - 24px)" }}
+        initial={{ scale: 0.94, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.94, opacity: 0 }}
+        transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between h-12 px-4 border-b border-white/10 shrink-0">
+          <div>
+            <h3 className="text-sm font-bold text-white">일괄 판매</h3>
+            <p className="text-[10px] text-zinc-500">
+              등급을 고르면 해당 등급 카드 전량이 판매됩니다
             </p>
-            <div className="flex flex-wrap gap-1.5">
-              {rarityTotals.map(({ rarity, count, price }) => (
-                <button
-                  key={rarity}
-                  type="button"
-                  disabled={selling}
-                  onClick={() => onSellRarity(rarity)}
-                  style={{ touchAction: "manipulation" }}
-                  className={clsx(
-                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition active:scale-[0.97]",
-                    "bg-white/5 border-white/10 text-white hover:bg-white/10 disabled:opacity-50"
-                  )}
-                >
-                  <span
-                    className={clsx(
-                      "inline-block w-2 h-2 rounded-full",
-                      RARITY_STYLE[rarity].badge
-                    )}
-                  />
-                  <span>{rarity}</span>
-                  <span className="text-zinc-400">{count}장</span>
-                  <span className="text-amber-300">
-                    +{price.toLocaleString("ko-KR")}p
-                  </span>
-                </button>
-              ))}
-            </div>
           </div>
-        )}
-
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-zinc-400">
-              선택: <span className="text-white font-bold">{totalCount}장</span>
-            </p>
-            <p className="text-sm font-bold text-amber-300 tabular-nums inline-flex items-center gap-1">
-              <CoinIcon size="xs" />
-              +{totalPoints.toLocaleString("ko-KR")}p
-            </p>
-            {error && <p className="text-[11px] text-rose-300">{error}</p>}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onCancel}
-              disabled={selling}
-              className="h-10 px-3 rounded-lg bg-white/5 hover:bg-white/10 text-white text-xs font-semibold border border-white/10"
-            >
-              초기화
-            </button>
-            <button
-              onClick={onSell}
-              disabled={selling || !hasAny}
-              style={{ touchAction: "manipulation" }}
-              className="h-10 px-4 rounded-lg bg-gradient-to-r from-emerald-400 to-amber-400 text-zinc-950 font-bold text-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {selling ? "판매 중..." : "선택한 카드 팔기"}
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            aria-label="닫기"
+            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+            style={{ touchAction: "manipulation" }}
+          >
+            ✕
+          </button>
         </div>
-      </div>
-    </div>
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {lastSale && (
+            <div className="mx-3 mt-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs">
+              <p className="text-emerald-200 font-semibold">
+                {lastSale.rarity} 등급 {lastSale.count}장 판매 완료
+              </p>
+              <p className="mt-0.5 text-emerald-300 tabular-nums inline-flex items-center gap-1">
+                <CoinIcon size="xs" />+
+                {lastSale.earned.toLocaleString("ko-KR")}p 지급
+              </p>
+            </div>
+          )}
+          {error && (
+            <div className="mx-3 mt-3 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+              {error}
+            </div>
+          )}
+
+          {rarityTotals.length === 0 ? (
+            <div className="py-10 text-center text-sm text-zinc-400">
+              판매할 카드가 없어요.
+            </div>
+          ) : (
+            <ul className="p-3 space-y-1.5">
+              {rarityTotals.map(({ rarity, count, price }) => (
+                <li key={rarity}>
+                  <button
+                    type="button"
+                    disabled={selling}
+                    onClick={() => onSellRarity(rarity)}
+                    style={{ touchAction: "manipulation" }}
+                    className={clsx(
+                      "w-full flex items-center gap-3 rounded-xl border bg-white/5 border-white/10 px-3 py-2.5 text-left",
+                      "hover:bg-white/10 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    )}
+                  >
+                    <span
+                      className={clsx(
+                        "shrink-0 inline-flex items-center justify-center min-w-[48px] h-8 px-2 rounded-full text-[11px] font-black",
+                        RARITY_STYLE[rarity].badge
+                      )}
+                    >
+                      {rarity}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">
+                        {RARITY_LABEL[rarity]}
+                      </p>
+                      <p className="text-[11px] text-zinc-400 tabular-nums">
+                        {count}장 · 장당{" "}
+                        {BULK_SELL_PRICE[rarity].toLocaleString("ko-KR")}p
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-sm font-black text-amber-300 tabular-nums inline-flex items-center gap-1">
+                        <CoinIcon size="xs" />+
+                        {price.toLocaleString("ko-KR")}
+                      </p>
+                      <p className="text-[10px] text-zinc-500">일괄 판매</p>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -367,63 +359,61 @@ function CardsMode({
   rarityCounts,
   rarityFilter,
   setRarityFilter,
-  selectMode,
-  setSelectMode,
-  sellSelection,
-  toggleSell,
+  onOpenBulk,
+  hasAny,
 }: {
   items: { card: Card; count: number }[];
   rarityCounts: Map<Rarity, number>;
   rarityFilter: RarityFilter;
   setRarityFilter: (r: RarityFilter) => void;
-  selectMode: boolean;
-  setSelectMode: (v: boolean) => void;
-  sellSelection: Record<string, number>;
-  toggleSell: (card: Card, delta: number) => void;
+  onOpenBulk: () => void;
+  hasAny: boolean;
 }) {
   return (
     <>
-      {/* Rarity tabs + select-mode toggle */}
+      {/* Rarity tabs + bulk-sell CTA */}
       <div className="mt-5 flex items-center justify-between gap-2 flex-wrap">
         <div className="flex flex-wrap gap-2">
-        <FilterPill
-          active={rarityFilter === "ALL"}
-          onClick={() => setRarityFilter("ALL")}
-        >
-          전체 등급
-        </FilterPill>
-        {RARITY_ORDER.map((r) => {
-          const count = rarityCounts.get(r) ?? 0;
-          if (count === 0 && rarityFilter !== r) return null;
-          return (
-            <FilterPill
-              key={r}
-              active={rarityFilter === r}
-              onClick={() => setRarityFilter(r)}
-            >
-              <span
-                className={clsx(
-                  "inline-block w-2 h-2 rounded-full mr-1.5",
-                  RARITY_STYLE[r].badge
-                )}
-              />
-              {r}
-              <span className="ml-1.5 text-[10px] opacity-70">{count}</span>
-            </FilterPill>
-          );
-        })}
+          <FilterPill
+            active={rarityFilter === "ALL"}
+            onClick={() => setRarityFilter("ALL")}
+          >
+            전체 등급
+          </FilterPill>
+          {RARITY_ORDER.map((r) => {
+            const count = rarityCounts.get(r) ?? 0;
+            if (count === 0 && rarityFilter !== r) return null;
+            return (
+              <FilterPill
+                key={r}
+                active={rarityFilter === r}
+                onClick={() => setRarityFilter(r)}
+              >
+                <span
+                  className={clsx(
+                    "inline-block w-2 h-2 rounded-full mr-1.5",
+                    RARITY_STYLE[r].badge
+                  )}
+                />
+                {r}
+                <span className="ml-1.5 text-[10px] opacity-70">{count}</span>
+              </FilterPill>
+            );
+          })}
         </div>
         <button
-          onClick={() => setSelectMode(!selectMode)}
+          onClick={onOpenBulk}
+          disabled={!hasAny}
           style={{ touchAction: "manipulation" }}
           className={clsx(
-            "h-9 px-3 rounded-full text-xs font-semibold border transition shrink-0",
-            selectMode
-              ? "bg-amber-400 text-zinc-950 border-amber-400"
-              : "bg-white/5 text-zinc-200 border-white/10 hover:bg-white/10"
+            "h-9 px-3.5 rounded-full text-xs font-bold border transition shrink-0 inline-flex items-center gap-1.5",
+            hasAny
+              ? "bg-gradient-to-r from-emerald-400 to-amber-400 text-zinc-950 border-transparent hover:scale-[1.02] active:scale-[0.97]"
+              : "bg-white/5 text-zinc-500 border-white/10 cursor-not-allowed"
           )}
         >
-          {selectMode ? "선택 취소" : "다중선택 판매"}
+          <CoinIcon size="xs" />
+          일괄 판매
         </button>
       </div>
 
@@ -436,72 +426,29 @@ function CardsMode({
             gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
           }}
         >
-          {items.map(({ card, count }) => {
-            const sellCount = sellSelection[card.id] ?? 0;
-            const isSelected = sellCount > 0;
-            const body = (
-              <>
-                <PokeCard card={card} revealed size="md" />
-                {count > 1 && !selectMode && (
-                  <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur text-white font-bold text-[10px] ring-1 ring-white/20 pointer-events-none">
-                    ×{count}
-                  </span>
-                )}
-                {selectMode && (
-                  <SellQtyBadge
-                    card={card}
-                    sellCount={sellCount}
-                    owned={count}
-                    onChange={toggleSell}
-                  />
-                )}
-                <div className="w-full text-center px-1 pointer-events-none">
-                  <p className="text-[11px] text-zinc-300 leading-tight line-clamp-2">
-                    {card.name}
-                  </p>
-                  <p className="text-[10px] text-zinc-500">
-                    {SETS[card.setCode].name} · #{card.number}
-                  </p>
-                </div>
-              </>
-            );
-            if (selectMode) {
-              return (
-                <div
-                  key={card.id}
-                  role="button"
-                  tabIndex={0}
-                  className={clsx(
-                    "relative flex flex-col items-center gap-1.5 cursor-pointer active:scale-[0.97] transition-transform rounded-xl",
-                    isSelected && "ring-2 ring-amber-400"
-                  )}
-                  style={{ touchAction: "manipulation" }}
-                  onClick={() => toggleSell(card, 1)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      toggleSell(card, 1);
-                    }
-                  }}
-                >
-                  {body}
-                </div>
-              );
-            }
-            // Route-based detail view — much more reliable than a modal
-            // because there is no fixed-position CSS layer that can
-            // conflict with app shell styles.
-            return (
-              <Link
-                key={card.id}
-                href={`/card/${encodeURIComponent(card.id)}`}
-                className="relative flex flex-col items-center gap-1.5 rounded-xl active:scale-[0.97] transition-transform"
-                style={{ touchAction: "manipulation" }}
-              >
-                {body}
-              </Link>
-            );
-          })}
+          {items.map(({ card, count }) => (
+            <Link
+              key={card.id}
+              href={`/card/${encodeURIComponent(card.id)}`}
+              className="relative flex flex-col items-center gap-1.5 rounded-xl active:scale-[0.97] transition-transform"
+              style={{ touchAction: "manipulation" }}
+            >
+              <PokeCard card={card} revealed size="md" />
+              {count > 1 && (
+                <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur text-white font-bold text-[10px] ring-1 ring-white/20 pointer-events-none">
+                  ×{count}
+                </span>
+              )}
+              <div className="w-full text-center px-1 pointer-events-none">
+                <p className="text-[11px] text-zinc-300 leading-tight line-clamp-2">
+                  {card.name}
+                </p>
+                <p className="text-[10px] text-zinc-500">
+                  {SETS[card.setCode].name} · #{card.number}
+                </p>
+              </div>
+            </Link>
+          ))}
         </div>
       )}
     </>
@@ -553,45 +500,6 @@ function PsaMode({
           </div>
         </div>
       ))}
-    </div>
-  );
-}
-
-function SellQtyBadge({
-  card,
-  sellCount,
-  owned,
-  onChange,
-}: {
-  card: Card;
-  sellCount: number;
-  owned: number;
-  onChange: (card: Card, delta: number) => void;
-}) {
-  return (
-    <div
-      onClick={(e) => e.stopPropagation()}
-      className="absolute top-1 right-1 flex items-center gap-0.5 rounded-full bg-black/80 ring-1 ring-white/20 backdrop-blur p-0.5"
-    >
-      <button
-        type="button"
-        onClick={() => onChange(card, -1)}
-        disabled={sellCount <= 0}
-        className="w-6 h-6 rounded-full bg-white/10 text-white text-xs disabled:opacity-30 active:scale-95"
-      >
-        −
-      </button>
-      <span className="min-w-[18px] text-center text-xs text-white font-bold tabular-nums">
-        {sellCount}
-      </span>
-      <button
-        type="button"
-        onClick={() => onChange(card, 1)}
-        disabled={sellCount >= owned}
-        className="w-6 h-6 rounded-full bg-amber-400 text-zinc-950 text-xs font-bold disabled:opacity-30 active:scale-95"
-      >
-        +
-      </button>
     </div>
   );
 }
