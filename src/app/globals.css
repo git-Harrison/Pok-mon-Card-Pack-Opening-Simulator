@@ -94,18 +94,20 @@ samp {
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  mix-blend-mode: color-dodge;
+  /* Softer blend + lower opacity so the card art stays readable. */
+  mix-blend-mode: overlay;
   background: linear-gradient(
     115deg,
     transparent 0%,
-    rgba(255, 0, 170, 0.35) 20%,
-    rgba(0, 200, 255, 0.35) 40%,
-    rgba(255, 230, 0, 0.4) 55%,
-    rgba(120, 255, 160, 0.3) 75%,
+    rgba(255, 0, 170, 0.14) 20%,
+    rgba(0, 200, 255, 0.14) 40%,
+    rgba(255, 230, 0, 0.16) 55%,
+    rgba(120, 255, 160, 0.12) 75%,
     transparent 100%
   );
   background-size: 300% 300%;
   animation: holo-sweep 3.4s ease-in-out infinite;
+  opacity: 0.55;
 }
 
 /* ---------- Shimmering ring used by hit cards ---------- */
@@ -133,8 +135,8 @@ samp {
     #a0ffb2,
     #ffe58a
   );
-  filter: blur(6px);
-  opacity: 0.45;
+  filter: blur(4px);
+  opacity: 0.22;
   animation: ring-spin 6s linear infinite;
   pointer-events: none;
   z-index: 0;

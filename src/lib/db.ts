@@ -244,7 +244,7 @@ export async function fetchGiftQuota(userId: string): Promise<GiftQuota> {
   const { data, error } = await supabase.rpc("gift_quota", {
     p_user_id: userId,
   });
-  if (error) return { used: 0, limit: 3, remaining: 3 };
+  if (error) return { used: 0, limit: 5, remaining: 5 };
   return data as GiftQuota;
 }
 

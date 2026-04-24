@@ -24,7 +24,7 @@ import RarityBadge from "./RarityBadge";
 import PsaSlab from "./PsaSlab";
 import CoinIcon from "./CoinIcon";
 
-type Phase = "idle" | "animating" | "revealed" | "failed";
+type Phase = "idle" | "animating" | "failing" | "revealed" | "failed";
 
 export default function GradingView() {
   const { user, setPoints } = useAuth();
@@ -61,12 +61,23 @@ export default function GradingView() {
       { v: target, t: 2560 },
     ];
     const timers = steps.map((s) => setTimeout(() => setGauge(s.v), s.t));
-    const done = setTimeout(() => setPhase(grade === null ? "failed" : "revealed"), 3300);
+    const done = setTimeout(
+      () => setPhase(grade === null ? "failing" : "revealed"),
+      3300
+    );
     return () => {
       timers.forEach(clearTimeout);
       clearTimeout(done);
     };
   }, [phase, grade]);
+
+  // "failing" phase plays the shatter animation for ~1.8s before collapsing
+  // to the 💔 end state.
+  useEffect(() => {
+    if (phase !== "failing") return;
+    const t = setTimeout(() => setPhase("failed"), 1800);
+    return () => clearTimeout(t);
+  }, [phase]);
 
   const submit = useCallback(async () => {
     if (!user || !selected || phase !== "idle") return;
@@ -116,7 +127,7 @@ export default function GradingView() {
         <div>
           <h1 className="text-xl md:text-3xl font-black tracking-tight">
             <span className="bg-gradient-to-r from-fuchsia-300 via-violet-200 to-indigo-300 bg-clip-text text-transparent">
-              AURA 감정실
+              SSS 감정실
             </span>
           </h1>
           <p className="text-[10px] md:text-xs text-zinc-500 tracking-[0.2em] uppercase">
@@ -183,6 +194,8 @@ export default function GradingView() {
             <div className="text-[10px] text-zinc-400">
               {phase === "animating"
                 ? "측정 중 — 잠시 기다려 주세요"
+                : phase === "failing"
+                ? "카드 균열 감지 — 붕괴 중"
                 : phase === "revealed"
                 ? "판정 완료"
                 : phase === "failed"
@@ -212,7 +225,7 @@ export default function GradingView() {
               <Gauge value={gauge} grade={grade} phase={phase} />
             </div>
           )}
-        {phase === "failed" && (
+        {(phase === "failing" || phase === "failed") && (
           <div className="px-4 pb-3">
             <FailBar />
           </div>
@@ -239,7 +252,7 @@ export default function GradingView() {
                 <div className="text-[10px] text-zinc-400 truncate">
                   판정 등급:{" "}
                   <span className={clsx("font-bold", tone?.text)}>
-                    AURA {grade} · {PSA_LABEL[grade]}
+                    SSS {grade} · {PSA_LABEL[grade]}
                   </span>
                 </div>
               </div>
@@ -293,6 +306,14 @@ export default function GradingView() {
               감정 중...
             </button>
           )}
+          {phase === "failing" && (
+            <button
+              disabled
+              className="col-span-2 h-12 rounded-xl bg-rose-500/10 border border-rose-500/40 text-rose-200 text-sm font-semibold animate-pulse"
+            >
+              카드가 부서지고 있습니다...
+            </button>
+          )}
           {phase === "failed" && (
             <button
               onClick={reset}
@@ -338,7 +359,7 @@ export default function GradingView() {
               className="flex items-center justify-between rounded-md bg-black/30 border border-white/5 px-2 py-1"
             >
               <span className={clsx("font-bold", psaTone(d.grade).text)}>
-                AURA {d.grade}
+                SSS {d.grade}
               </span>
               <span className="text-zinc-300 tabular-nums font-semibold">
                 {d.pct}%
@@ -428,6 +449,8 @@ function Pedestal({
         >
           <PsaSlab card={selected} grade={grade} size="md" highlight />
         </motion.div>
+      ) : phase === "failing" && selected ? (
+        <ShatteringCard card={selected} />
       ) : selected ? (
         <CardOnPedestal card={selected} scanning={phase === "animating"} />
       ) : phase === "failed" ? (
@@ -438,6 +461,132 @@ function Pedestal({
       ) : (
         <EmptyPedestal onPick={onPick} />
       )}
+    </div>
+  );
+}
+
+/**
+ * Shatter animation played during the `failing` phase. The card shakes,
+ * cracks appear, fragments fly outward, and the whole thing fades to
+ * nothing — then the parent swaps to the 💔 end card.
+ */
+function ShatteringCard({ card }: { card: Card }) {
+  const style = RARITY_STYLE[card.rarity];
+  // 6 fragments radiating outward; angles are chosen to feel irregular.
+  const shards = [
+    { dx: -70, dy: -40, rot: -25 },
+    { dx: 60, dy: -60, rot: 18 },
+    { dx: -80, dy: 40, rot: 30 },
+    { dx: 80, dy: 50, rot: -18 },
+    { dx: -20, dy: -80, rot: -10 },
+    { dx: 20, dy: 80, rot: 12 },
+  ];
+  return (
+    <div className="relative flex flex-col items-center gap-3">
+      <motion.div
+        initial={{ x: 0, rotate: 0, scale: 1 }}
+        animate={{
+          x: [0, -4, 4, -6, 6, -3, 3, 0],
+          rotate: [0, -1, 1.5, -2, 2, -0.5, 0],
+          scale: [1, 1.02, 1.04, 1.06, 1.08, 1.1],
+          filter: [
+            "brightness(1) blur(0px)",
+            "brightness(1.1) blur(0px)",
+            "brightness(1.25) blur(1px)",
+            "brightness(1.45) blur(2px) hue-rotate(-10deg)",
+          ],
+        }}
+        transition={{ duration: 1.1, times: [0, 0.2, 0.4, 0.55, 0.7, 0.85, 0.95, 1], ease: "easeIn" }}
+        className={clsx(
+          "relative w-[170px] md:w-[200px] aspect-[5/7] rounded-2xl overflow-hidden isolate ring-2 bg-zinc-900",
+          style.frame
+        )}
+      >
+        {card.imageUrl ? (
+          <img
+            src={card.imageUrl}
+            alt={card.name}
+            className="w-full h-full object-contain bg-zinc-900 select-none pointer-events-none"
+            draggable={false}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-700 to-amber-600 text-white p-4 text-center">
+            {card.name}
+          </div>
+        )}
+        {/* Growing cracks */}
+        <svg
+          aria-hidden
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          viewBox="0 0 100 140"
+          preserveAspectRatio="none"
+        >
+          <motion.path
+            d="M20,10 L45,40 L30,65 L55,90 L35,115 L65,130"
+            stroke="rgba(255,255,255,0.85)"
+            strokeWidth="0.9"
+            fill="none"
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 0.95 }}
+            transition={{ duration: 0.9, delay: 0.25 }}
+          />
+          <motion.path
+            d="M80,20 L60,45 L75,75 L50,95 L70,125"
+            stroke="rgba(255,255,255,0.75)"
+            strokeWidth="0.7"
+            fill="none"
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 0.9 }}
+            transition={{ duration: 0.8, delay: 0.45 }}
+          />
+        </svg>
+      </motion.div>
+
+      {/* Flying fragments (appear near the end, fly outward) */}
+      <div className="absolute inset-0 pointer-events-none">
+        {shards.map((s, i) => (
+          <motion.span
+            key={i}
+            className="absolute left-1/2 top-1/2 w-5 h-7 rounded-sm bg-rose-400/70"
+            style={{ boxShadow: "0 0 12px rgba(244,63,94,0.6)" }}
+            initial={{ x: 0, y: 0, opacity: 0, rotate: 0, scale: 0.6 }}
+            animate={{
+              x: s.dx * 2.5,
+              y: s.dy * 2.5,
+              opacity: [0, 1, 1, 0],
+              rotate: s.rot * 4,
+              scale: [0.6, 1, 0.8, 0.4],
+            }}
+            transition={{
+              duration: 1.1,
+              delay: 0.7 + i * 0.04,
+              ease: [0.2, 0.7, 0.6, 1],
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Red flash */}
+      <motion.div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0, 0.35, 0] }}
+        transition={{ duration: 1.2, times: [0, 0.55, 0.7, 1] }}
+        style={{
+          background:
+            "radial-gradient(closest-side, rgba(244,63,94,0.9), rgba(244,63,94,0) 70%)",
+        }}
+      />
+
+      {/* Platform shadow */}
+      <div
+        className="w-[160px] h-4 rounded-full"
+        style={{
+          background:
+            "radial-gradient(closest-side, rgba(244,63,94,0.45), rgba(244,63,94,0) 70%)",
+        }}
+      />
     </div>
   );
 }
@@ -550,7 +699,7 @@ function Gauge({
             phase === "revealed" ? tone.text : "text-white"
           )}
         >
-          {phase === "revealed" ? `AURA ${grade}` : `${Math.round(value)}%`}
+          {phase === "revealed" ? `SSS ${grade}` : `${Math.round(value)}%`}
         </span>
       </div>
       <div className="relative h-2.5 rounded-full bg-white/5 overflow-hidden ring-1 ring-white/10">
@@ -591,7 +740,7 @@ function generateCaseId() {
   let s = "";
   for (let i = 0; i < 8; i++)
     s += chars[Math.floor(Math.random() * chars.length)];
-  return `AURA-${s}`;
+  return `SSS-${s}`;
 }
 
 function CardPicker({

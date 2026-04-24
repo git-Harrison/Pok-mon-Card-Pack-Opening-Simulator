@@ -128,7 +128,7 @@ export default function GiftsView() {
         </Link>
       </div>
       <p className="mt-2 text-[11px] text-zinc-500">
-        선물은 내 카드지갑에서 카드를 선택하고 보낼 수 있어요. 하루 3회
+        선물은 내 카드지갑에서 카드를 선택하고 보낼 수 있어요. 하루 5회
         제한.
       </p>
 

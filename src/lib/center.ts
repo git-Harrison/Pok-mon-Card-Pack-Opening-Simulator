@@ -10,6 +10,8 @@ export interface ShowcaseSpec {
   tagline: string;
   price: number;
   capacity: number;
+  /** Sabotage defense % subtracted from the 30% base success roll. */
+  defense: number;
   /** Tailwind class for the frame glow / accent. */
   accent: string;
   /** Tailwind class for the display-case body tint. */
@@ -26,9 +28,10 @@ export const SHOWCASES: Record<ShowcaseType, ShowcaseSpec> = {
     tagline: "STARTER PEDESTAL",
     price: 30_000,
     capacity: 1,
+    defense: 0,
     accent: "ring-zinc-400/40 shadow-[0_0_14px_rgba(212,212,216,0.25)]",
     body: "from-zinc-700 to-zinc-800",
-    blurb: "가볍게 카드 한 장을 올려두는 기본 진열대.",
+    blurb: "가볍게 카드 한 장을 올려두는 기본 진열대. 방어 0%.",
     icon: "🪵",
   },
   glass: {
@@ -37,9 +40,10 @@ export const SHOWCASES: Record<ShowcaseType, ShowcaseSpec> = {
     tagline: "GLASS SHOWCASE",
     price: 100_000,
     capacity: 3,
+    defense: 2,
     accent: "ring-sky-300/60 shadow-[0_0_20px_rgba(56,189,248,0.35)]",
     body: "from-sky-800 to-zinc-900",
-    blurb: "세 장까지 전시할 수 있는 투명 유리 쇼케이스.",
+    blurb: "세 장까지 전시할 수 있는 투명 유리 쇼케이스. 방어 2%.",
     icon: "🔷",
   },
   premium: {
@@ -48,9 +52,10 @@ export const SHOWCASES: Record<ShowcaseType, ShowcaseSpec> = {
     tagline: "PREMIUM DISPLAY",
     price: 300_000,
     capacity: 4,
+    defense: 5,
     accent: "ring-fuchsia-300/70 shadow-[0_0_28px_rgba(232,121,249,0.55)]",
     body: "from-fuchsia-900 to-zinc-950",
-    blurb: "네 장을 품고 은은한 조명이 켜지는 프리미엄 전시함.",
+    blurb: "네 장을 품고 은은한 조명이 켜지는 프리미엄 전시함. 방어 5%.",
     icon: "💠",
   },
   legendary: {
@@ -59,12 +64,16 @@ export const SHOWCASES: Record<ShowcaseType, ShowcaseSpec> = {
     tagline: "LEGENDARY VAULT",
     price: 1_000_000,
     capacity: 5,
+    defense: 10,
     accent: "ring-amber-300/80 shadow-[0_0_36px_rgba(251,191,36,0.7)]",
     body: "from-amber-900 to-zinc-950",
-    blurb: "금장 프레임에 다섯 장까지 박제되는 전설의 보관함.",
+    blurb: "금장 프레임에 다섯 장까지 박제되는 전설의 보관함. 방어 10%.",
     icon: "👑",
   },
 };
+
+/** Base sabotage success rate before showcase defense is subtracted. */
+export const SABOTAGE_BASE_RATE = 30;
 
 export const SHOWCASE_ORDER: ShowcaseType[] = [
   "basic",

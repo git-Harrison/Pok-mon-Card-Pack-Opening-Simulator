@@ -190,11 +190,11 @@ export default function CenterView() {
               내 포켓몬센터
             </h1>
             <p className="text-[11px] md:text-xs text-zinc-300/80 mt-1">
-              AURA 9·10 감별 슬랩만 박제 가능. 전시 중엔 지갑에서 숨겨지고
+              SSS 9·10 감별 슬랩만 박제 가능. 전시 중엔 지갑에서 숨겨지고
               판매·선물·재감별이 막혀요.
               <br className="hidden md:block" />
-              수익: <b className="text-slate-100">AURA 9</b> 시간당 3,000p ·{" "}
-              <b className="text-amber-300">AURA 10</b> 시간당 5,000p · 랭킹
+              수익: <b className="text-slate-100">SSS 9</b> 시간당 3,000p ·{" "}
+              <b className="text-amber-300">SSS 10</b> 시간당 5,000p · 랭킹
               +2,000점/장
             </p>
           </div>
@@ -470,7 +470,7 @@ function ShopModal({
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-white">{s.name}</p>
                 <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400">
-                  {s.tagline} · {s.capacity}칸
+                  {s.tagline} · {s.capacity}칸 · 방어 {s.defense}%
                 </p>
                 <p className="text-[11px] text-zinc-300/80 mt-0.5 truncate">
                   {s.blurb}
@@ -584,14 +584,14 @@ function GradingPickModal({
   );
   return (
     <ModalShell
-      title="박제할 AURA 슬랩 선택"
-      subtitle="AURA 9·10 슬랩만 전시 가능 · 박제 중엔 지갑에서 숨겨져요"
+      title="박제할 SSS 슬랩 선택"
+      subtitle="SSS 9·10 슬랩만 전시 가능 · 박제 중엔 지갑에서 숨겨져요"
       onClose={onClose}
     >
       <div className="p-3 md:p-4">
         {items.length === 0 ? (
           <p className="py-12 text-center text-sm text-zinc-400">
-            박제할 AURA 9 / 10 슬랩이 없어요.
+            박제할 SSS 9 / 10 슬랩이 없어요.
             <br />
             감별 페이지에서 등급 9 또는 10을 받아보세요.
           </p>
@@ -621,7 +621,7 @@ function GradingPickModal({
                       tone.text
                     )}
                   >
-                    AURA {g.grade} · 시간당{" "}
+                    SSS {g.grade} · 시간당{" "}
                     {g.grade === 10 ? "5,000" : "3,000"}p
                   </span>
                 </button>

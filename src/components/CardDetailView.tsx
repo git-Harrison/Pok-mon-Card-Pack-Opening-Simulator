@@ -30,6 +30,36 @@ export default function CardDetailView({ cardId }: { cardId: string }) {
   const [loaded, setLoaded] = useState(false);
   const [giftOpen, setGiftOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [shareState, setShareState] = useState<"idle" | "copied" | "shared">(
+    "idle"
+  );
+
+  const handleShare = useCallback(async () => {
+    if (typeof window === "undefined" || !card) return;
+    const url = `${window.location.origin}/card/${encodeURIComponent(card.id)}`;
+    const title = `${card.name} (${card.rarity})`;
+    // Prefer native share on mobile; fall back to clipboard on desktop.
+    if (
+      typeof navigator !== "undefined" &&
+      typeof navigator.share === "function"
+    ) {
+      try {
+        await navigator.share({ title, text: title, url });
+        setShareState("shared");
+        setTimeout(() => setShareState("idle"), 2500);
+        return;
+      } catch {
+        // fall through to clipboard if the user canceled or share failed
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareState("copied");
+      setTimeout(() => setShareState("idle"), 2500);
+    } catch {
+      window.prompt("카드 링크를 복사하세요", url);
+    }
+  }, [card]);
 
   useEffect(() => {
     if (!user) return;
@@ -170,6 +200,18 @@ export default function CardDetailView({ cardId }: { cardId: string }) {
                   className="h-12 rounded-xl bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   친구에게 선물 보내기
+                </button>
+                <button
+                  onClick={handleShare}
+                  style={{ touchAction: "manipulation" }}
+                  className="h-11 rounded-xl bg-gradient-to-r from-fuchsia-500 to-indigo-500 text-white font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition inline-flex items-center justify-center gap-1.5"
+                >
+                  🔗{" "}
+                  {shareState === "copied"
+                    ? "링크 복사됨!"
+                    : shareState === "shared"
+                    ? "공유 완료!"
+                    : "카드 공유하기"}
                 </button>
                 <button
                   onClick={() => router.back()}

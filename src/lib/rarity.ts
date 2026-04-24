@@ -45,51 +45,51 @@ export const RARITY_STYLE: Record<
   R: {
     badge: "bg-sky-600 text-white",
     frame: "ring-sky-400/40",
-    glow: "shadow-[0_0_18px_rgba(56,189,248,0.25)]",
+    glow: "shadow-[0_0_10px_rgba(56,189,248,0.18)]",
     tier: 2,
   },
   RR: {
     badge: "bg-indigo-600 text-white",
     frame: "ring-indigo-400/50",
-    glow: "shadow-[0_0_22px_rgba(129,140,248,0.4)]",
+    glow: "shadow-[0_0_12px_rgba(129,140,248,0.24)]",
     tier: 3,
   },
   AR: {
     badge: "bg-fuchsia-600 text-white",
     frame: "ring-fuchsia-400/60",
-    glow: "shadow-[0_0_24px_rgba(232,121,249,0.45)]",
+    glow: "shadow-[0_0_14px_rgba(232,121,249,0.28)]",
     tier: 4,
   },
   SR: {
     badge: "bg-amber-500 text-zinc-950",
     frame: "ring-amber-300/70",
-    glow: "shadow-[0_0_28px_rgba(251,191,36,0.55)]",
+    glow: "shadow-[0_0_16px_rgba(251,191,36,0.32)]",
     tier: 5,
   },
   MA: {
     badge: "bg-orange-500 text-white",
     frame: "ring-orange-300/80",
-    glow: "shadow-[0_0_30px_rgba(251,146,60,0.55)]",
+    glow: "shadow-[0_0_18px_rgba(251,146,60,0.32)]",
     tier: 6,
   },
   SAR: {
     badge: "bg-gradient-to-r from-pink-500 via-fuchsia-500 to-violet-500 text-white",
     frame: "ring-fuchsia-300/80",
-    glow: "shadow-[0_0_36px_rgba(236,72,153,0.65)]",
+    glow: "shadow-[0_0_20px_rgba(236,72,153,0.38)]",
     tier: 7,
   },
   MUR: {
     badge:
       "bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-zinc-950",
     frame: "ring-amber-300/90",
-    glow: "shadow-[0_0_44px_rgba(251,191,36,0.8)]",
+    glow: "shadow-[0_0_24px_rgba(251,191,36,0.45)]",
     tier: 8,
   },
   UR: {
     badge:
       "bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 text-zinc-950",
     frame: "ring-yellow-300/90",
-    glow: "shadow-[0_0_48px_rgba(250,204,21,0.9)]",
+    glow: "shadow-[0_0_26px_rgba(250,204,21,0.5)]",
     tier: 9,
   },
 };

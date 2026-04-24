@@ -4,15 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import clsx from "clsx";
 import {
-  BULK_SELL_PRICE,
   RARITY_ORDER,
   RARITY_STYLE,
   compareRarity,
 } from "@/lib/rarity";
-import CoinIcon from "./CoinIcon";
-import { bulkSellCards } from "@/lib/db";
 import type { Card, PsaGrading, Rarity } from "@/lib/types";
-import { RARITY_LABEL } from "@/lib/rarity";
 import { SETS, getCard } from "@/lib/sets";
 import { useAuth } from "@/lib/auth";
 import {
@@ -23,13 +19,13 @@ import {
 import Link from "next/link";
 import PokeCard from "./PokeCard";
 import PsaSlab from "./PsaSlab";
-import { AnimatePresence, motion } from "framer-motion";
+import CoinIcon from "./CoinIcon";
 
 type Mode = "cards" | "psa";
 type RarityFilter = "ALL" | Rarity;
 
 export default function WalletView() {
-  const { user, setPoints } = useAuth();
+  const { user } = useAuth();
   const params = useSearchParams();
   const initialMode: Mode = params.get("tab") === "psa" ? "psa" : "cards";
   const [mode, setMode] = useState<Mode>(initialMode);
@@ -42,14 +38,6 @@ export default function WalletView() {
   const [psa, setPsa] = useState<PsaGrading[]>([]);
   const [loading, setLoading] = useState(true);
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>("ALL");
-  const [bulkOpen, setBulkOpen] = useState(false);
-  const [selling, setSelling] = useState(false);
-  const [sellError, setSellError] = useState<string | null>(null);
-  const [lastSale, setLastSale] = useState<{
-    rarity: Rarity;
-    count: number;
-    earned: number;
-  } | null>(null);
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -102,61 +90,10 @@ export default function WalletView() {
     return counts;
   }, [snap.items]);
 
-  const rarityTotals = useMemo(() => {
-    const m = new Map<Rarity, { count: number; price: number }>();
-    for (const it of snap.items) {
-      const cur = m.get(it.card.rarity) ?? { count: 0, price: 0 };
-      cur.count += it.count;
-      cur.price += it.count * BULK_SELL_PRICE[it.card.rarity];
-      m.set(it.card.rarity, cur);
-    }
-    return RARITY_ORDER.map((r) => ({
-      rarity: r,
-      ...(m.get(r) ?? { count: 0, price: 0 }),
-    })).filter((x) => x.count > 0);
-  }, [snap.items]);
-
   const totalPacks = useMemo(
     () =>
       Object.values(snap.packsOpenedBySet).reduce((s, n) => s + n, 0),
     [snap.packsOpenedBySet]
-  );
-
-  const sellRarity = useCallback(
-    async (rarity: Rarity) => {
-      if (!user) return;
-      const rarityItems = snap.items.filter(
-        (it) => it.card.rarity === rarity
-      );
-      if (rarityItems.length === 0) return;
-      const totalCount = rarityItems.reduce((s, it) => s + it.count, 0);
-      const totalPoints = totalCount * BULK_SELL_PRICE[rarity];
-      const ok = window.confirm(
-        `${rarity} 등급 카드 ${totalCount}장을 전부 판매할까요?\n+${totalPoints.toLocaleString("ko-KR")}p 지급`
-      );
-      if (!ok) return;
-      const payload = rarityItems.map((it) => ({
-        card_id: it.card.id,
-        count: it.count,
-        price: BULK_SELL_PRICE[rarity],
-      }));
-      setSelling(true);
-      setSellError(null);
-      const res = await bulkSellCards(user.id, payload);
-      setSelling(false);
-      if (!res.ok) {
-        setSellError(res.error ?? "판매 실패");
-        return;
-      }
-      if (typeof res.points === "number") setPoints(res.points);
-      setLastSale({
-        rarity,
-        count: res.sold ?? totalCount,
-        earned: res.earned ?? totalPoints,
-      });
-      await refresh();
-    },
-    [user, snap.items, refresh, setPoints]
   );
 
   return (
@@ -174,7 +111,7 @@ export default function WalletView() {
           <Kpi label="보유 카드" value={`${snap.items.length}종`} />
           <Kpi label="총 장수" value={`${snap.totalCards}장`} />
           <Kpi label="총 개봉" value={`${totalPacks}팩`} />
-          <Kpi label="AURA 감별" value={`${psa.length}장`} highlight />
+          <Kpi label="SSS 감별" value={`${psa.length}장`} highlight />
         </div>
       </div>
 
@@ -187,7 +124,7 @@ export default function WalletView() {
           </span>
         </ModeTab>
         <ModeTab active={mode === "psa"} onClick={() => setMode("psa")}>
-          AURA 감별
+          SSS 감별
           <span className="ml-1.5 text-[10px] opacity-70">{psa.length}</span>
         </ModeTab>
       </div>
@@ -202,155 +139,12 @@ export default function WalletView() {
           rarityCounts={rarityCounts}
           rarityFilter={rarityFilter}
           setRarityFilter={setRarityFilter}
-          onOpenBulk={() => {
-            setSellError(null);
-            setLastSale(null);
-            setBulkOpen(true);
-          }}
           hasAny={snap.items.length > 0}
         />
       ) : (
         <PsaMode items={psaItems} />
       )}
-
-      <AnimatePresence>
-        {bulkOpen && mode === "cards" && (
-          <BulkSellModal
-            rarityTotals={rarityTotals}
-            selling={selling}
-            error={sellError}
-            lastSale={lastSale}
-            onClose={() => setBulkOpen(false)}
-            onSellRarity={sellRarity}
-          />
-        )}
-      </AnimatePresence>
     </div>
-  );
-}
-
-function BulkSellModal({
-  rarityTotals,
-  selling,
-  error,
-  lastSale,
-  onClose,
-  onSellRarity,
-}: {
-  rarityTotals: { rarity: Rarity; count: number; price: number }[];
-  selling: boolean;
-  error: string | null;
-  lastSale: { rarity: Rarity; count: number; earned: number } | null;
-  onClose: () => void;
-  onSellRarity: (rarity: Rarity) => void;
-}) {
-  return (
-    <motion.div
-      className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center overflow-hidden"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-      style={{
-        paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
-        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
-        paddingLeft: "12px",
-        paddingRight: "12px",
-      }}
-    >
-      <motion.div
-        className="relative w-full max-w-md bg-zinc-950 border border-white/10 rounded-2xl flex flex-col overflow-hidden"
-        style={{ maxHeight: "calc(100dvh - 24px)" }}
-        initial={{ scale: 0.94, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.94, opacity: 0 }}
-        transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between h-12 px-4 border-b border-white/10 shrink-0">
-          <div>
-            <h3 className="text-sm font-bold text-white">일괄 판매</h3>
-            <p className="text-[10px] text-zinc-500">
-              등급을 고르면 해당 등급 카드 전량이 판매됩니다
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="닫기"
-            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
-            style={{ touchAction: "manipulation" }}
-          >
-            ✕
-          </button>
-        </div>
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          {lastSale && (
-            <div className="mx-3 mt-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs">
-              <p className="text-emerald-200 font-semibold">
-                {lastSale.rarity} 등급 {lastSale.count}장 판매 완료
-              </p>
-              <p className="mt-0.5 text-emerald-300 tabular-nums inline-flex items-center gap-1">
-                <CoinIcon size="xs" />+
-                {lastSale.earned.toLocaleString("ko-KR")}p 지급
-              </p>
-            </div>
-          )}
-          {error && (
-            <div className="mx-3 mt-3 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
-              {error}
-            </div>
-          )}
-
-          {rarityTotals.length === 0 ? (
-            <div className="py-10 text-center text-sm text-zinc-400">
-              판매할 카드가 없어요.
-            </div>
-          ) : (
-            <ul className="p-3 space-y-1.5">
-              {rarityTotals.map(({ rarity, count, price }) => (
-                <li key={rarity}>
-                  <button
-                    type="button"
-                    disabled={selling}
-                    onClick={() => onSellRarity(rarity)}
-                    style={{ touchAction: "manipulation" }}
-                    className={clsx(
-                      "w-full flex items-center gap-3 rounded-xl border bg-white/5 border-white/10 px-3 py-2.5 text-left",
-                      "hover:bg-white/10 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    )}
-                  >
-                    <span
-                      className={clsx(
-                        "shrink-0 inline-flex items-center justify-center min-w-[48px] h-8 px-2 rounded-full text-[11px] font-black",
-                        RARITY_STYLE[rarity].badge
-                      )}
-                    >
-                      {rarity}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">
-                        {RARITY_LABEL[rarity]}
-                      </p>
-                      <p className="text-[11px] text-zinc-400 tabular-nums">
-                        {count}장 · 장당{" "}
-                        {BULK_SELL_PRICE[rarity].toLocaleString("ko-KR")}p
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p className="text-sm font-black text-amber-300 tabular-nums inline-flex items-center gap-1">
-                        <CoinIcon size="xs" />+
-                        {price.toLocaleString("ko-KR")}
-                      </p>
-                      <p className="text-[10px] text-zinc-500">일괄 판매</p>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </motion.div>
-    </motion.div>
   );
 }
 
@@ -359,14 +153,12 @@ function CardsMode({
   rarityCounts,
   rarityFilter,
   setRarityFilter,
-  onOpenBulk,
   hasAny,
 }: {
   items: { card: Card; count: number }[];
   rarityCounts: Map<Rarity, number>;
   rarityFilter: RarityFilter;
   setRarityFilter: (r: RarityFilter) => void;
-  onOpenBulk: () => void;
   hasAny: boolean;
 }) {
   return (
@@ -401,20 +193,21 @@ function CardsMode({
             );
           })}
         </div>
-        <button
-          onClick={onOpenBulk}
-          disabled={!hasAny}
-          style={{ touchAction: "manipulation" }}
-          className={clsx(
-            "h-9 px-3.5 rounded-full text-xs font-bold border transition shrink-0 inline-flex items-center gap-1.5",
-            hasAny
-              ? "bg-gradient-to-r from-emerald-400 to-amber-400 text-zinc-950 border-transparent hover:scale-[1.02] active:scale-[0.97]"
-              : "bg-white/5 text-zinc-500 border-white/10 cursor-not-allowed"
-          )}
-        >
-          <CoinIcon size="xs" />
-          일괄 판매
-        </button>
+        {hasAny ? (
+          <Link
+            href="/wallet/bulk-sell"
+            style={{ touchAction: "manipulation" }}
+            className="h-9 px-3.5 rounded-full text-xs font-bold border border-transparent transition shrink-0 inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-400 to-amber-400 text-zinc-950 hover:scale-[1.02] active:scale-[0.97]"
+          >
+            <CoinIcon size="xs" />
+            일괄 판매
+          </Link>
+        ) : (
+          <span className="h-9 px-3.5 rounded-full text-xs font-bold border border-white/10 bg-white/5 text-zinc-500 inline-flex items-center gap-1.5 shrink-0">
+            <CoinIcon size="xs" />
+            일괄 판매
+          </span>
+        )}
       </div>
 
       {items.length === 0 ? (
@@ -468,7 +261,7 @@ function PsaMode({
           아직 감별한 카드가 없습니다
         </p>
         <p className="text-sm text-zinc-400">
-          AURA 감별 페이지에서 카드를 맡기고 등급을 받아보세요.
+          SSS 감별 페이지에서 카드를 맡기고 등급을 받아보세요.
         </p>
         <Link
           href="/grading"

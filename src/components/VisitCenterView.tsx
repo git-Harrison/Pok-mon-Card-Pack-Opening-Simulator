@@ -12,7 +12,7 @@ import {
   type VisitCenter,
 } from "@/lib/db";
 import { notifySabotage } from "@/lib/discord";
-import { SHOWCASES } from "@/lib/center";
+import { SABOTAGE_BASE_RATE, SHOWCASES, type ShowcaseType } from "@/lib/center";
 import { getCard } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
 import PointsChip from "./PointsChip";
@@ -32,6 +32,7 @@ export default function VisitCenterView({ loginId }: { loginId: string }) {
     showcaseId: string;
     slotIndex: number;
     cardId: string;
+    showcaseType: ShowcaseType;
   } | null>(null);
   const [result, setResult] = useState<{
     success: boolean;
@@ -186,6 +187,7 @@ export default function VisitCenterView({ loginId }: { loginId: string }) {
                 showcaseId: viewingShowcase.id,
                 slotIndex,
                 cardId,
+                showcaseType: viewingShowcase.showcase_type,
               })
             }
           />
@@ -193,6 +195,7 @@ export default function VisitCenterView({ loginId }: { loginId: string }) {
         {sabotage && (
           <SabotageConfirmModal
             cardId={sabotage.cardId}
+            showcaseType={sabotage.showcaseType}
             victim={data.display_name ?? ""}
             points={user?.points ?? 0}
             sabotaging={sabotaging}
@@ -286,6 +289,7 @@ function VisitShowcaseModal({
 
 function SabotageConfirmModal({
   cardId,
+  showcaseType,
   victim,
   points,
   sabotaging,
@@ -293,6 +297,7 @@ function SabotageConfirmModal({
   onConfirm,
 }: {
   cardId: string;
+  showcaseType: ShowcaseType;
   victim: string;
   points: number;
   sabotaging: boolean;
@@ -301,8 +306,14 @@ function SabotageConfirmModal({
 }) {
   const card = getCard(cardId);
   const afford = points >= SABOTAGE_COST;
+  const spec = SHOWCASES[showcaseType];
+  const effectiveRate = Math.max(0, SABOTAGE_BASE_RATE - spec.defense);
   return (
-    <ModalShell title="💥 카드 부수기" subtitle="성공률 30%, 실패해도 10만p 소진" onClose={onCancel}>
+    <ModalShell
+      title="💥 카드 부수기"
+      subtitle={`성공률 ${effectiveRate}% (기본 ${SABOTAGE_BASE_RATE}% − ${spec.name} 방어 ${spec.defense}%)`}
+      onClose={onCancel}
+    >
       <div className="p-4 space-y-3">
         {card && (
           <div className="flex items-center gap-3">
@@ -333,8 +344,12 @@ function SabotageConfirmModal({
         )}
 
         <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 px-3 py-2 text-[11px] text-rose-200 leading-relaxed">
-          성공하면 <b>보관함과 그 안의 카드가 전부 소멸</b>해요. 실패해도 10만p는
-          돌아오지 않습니다. 부수기 시도는 디스코드에 자동 공지됩니다.
+          성공 시 <b>보관함과 그 안의 카드가 전부 소멸</b>해요. 실패해도 10만p는
+          돌아오지 않습니다. 이 보관함은{" "}
+          <b className="text-sky-200">{spec.name}</b>이라 방어{" "}
+          <b>{spec.defense}%</b>가 적용돼서 성공률이{" "}
+          <b className="text-rose-100">{effectiveRate}%</b>예요.
+          부수기 시도는 디스코드에 자동 공지됩니다.
         </div>
 
         <div className="flex items-center gap-2">
