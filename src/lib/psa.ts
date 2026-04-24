@@ -49,14 +49,14 @@ export const PSA_DISTRIBUTION = [
 
 /**
  * Bulk-sell price per PCL grade. Must mirror `pcl_sell_price()` in
- * supabase/migrations/20260425_bulk_sell_pcl.sql — the server enforces.
+ * supabase/migrations/20260426_economy_rebalance.sql.
  */
 export const PCL_SELL_PRICE: Record<number, number> = {
-  10: 200_000,
-  9: 100_000,
-  8: 20_000,
-  7: 10_000,
-  6: 10_000,
+  10: 100_000,
+  9: 50_000,
+  8: 10_000,
+  7: 5_000,
+  6: 5_000,
 };
 
 /**

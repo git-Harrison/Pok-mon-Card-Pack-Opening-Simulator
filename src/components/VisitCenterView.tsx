@@ -334,9 +334,9 @@ function SabotageConfirmModal({
         )}
 
         <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 px-3 py-2 text-[11px] text-rose-200 leading-relaxed">
-          성공 시 <b>보관함과 전시 슬랩이 영원히 소멸</b>하고, 보관함가 50%{" "}
+          성공 시 <b>보관함과 전시 슬랩이 영원히 소멸</b>하고, 보관함가 80%{" "}
           <b className="text-amber-200">
-            +{Math.floor(spec.price * 0.5).toLocaleString("ko-KR")}p
+            +{Math.floor(spec.price * 0.8).toLocaleString("ko-KR")}p
           </b>{" "}
           전리품을 획득해요. 동시에 상대는 <b>PCL 등급 점수</b>와{" "}
           <b>전시 +2,000점</b>을 랭킹에서 잃습니다. 실패해도 비용은 돌아오지

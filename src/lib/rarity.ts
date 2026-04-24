@@ -114,37 +114,35 @@ export function cardFxClass(r: Rarity): "fx-mur" | "fx-sar" | null {
 }
 
 // Points the merchant pays when buying a card of this rarity.
-// 단가표:
-//   MUR 500,000 · UR 300,000 · SAR 300,000 · SR 200,000
-//   MA 100,000 · AR 100,000 · RR 60,000 · 그 외 30,000
+// 상인 단가표 (경제 리밸런스 후):
+//   MUR 1,000,000 · UR 600,000 · SAR 600,000 · SR 400,000
+//   MA 200,000 · AR 200,000 · RR 100,000 · 그 외 50,000
 export const MERCHANT_PRICE: Record<Rarity, number> = {
-  C: 30_000,
-  U: 30_000,
-  R: 30_000,
-  RR: 60_000,
-  AR: 100_000,
-  MA: 100_000,
-  SR: 200_000,
-  SAR: 300_000,
-  UR: 300_000,
-  MUR: 500_000,
+  C: 50_000,
+  U: 50_000,
+  R: 50_000,
+  RR: 100_000,
+  AR: 200_000,
+  MA: 200_000,
+  SR: 400_000,
+  SAR: 600_000,
+  UR: 600_000,
+  MUR: 1_000_000,
 };
 
-// Bulk-sell payout (지갑 → 일괄판매). 상인 가격보다 낮지만 속도가 장점.
-// MUR 100,000 · UR 50,000 · SAR 30,000
-// MA 10,000 · SR 10,000 · AR 3,000 · RR 2,000
-// R 1,000 · U 500 · C 300
+// Bulk-sell payout (지갑 → 일괄판매). 상인 단가의 약 1/10 정도로 저평가 —
+// 속도는 빠르지만 수익성은 낮음.
 export const BULK_SELL_PRICE: Record<Rarity, number> = {
-  C: 300,
-  U: 500,
-  R: 1_000,
-  RR: 2_000,
-  AR: 3_000,
-  SR: 10_000,
-  MA: 10_000,
-  SAR: 30_000,
-  UR: 50_000,
-  MUR: 100_000,
+  C: 100,
+  U: 200,
+  R: 500,
+  RR: 1_000,
+  AR: 2_000,
+  SR: 5_000,
+  MA: 5_000,
+  SAR: 15_000,
+  UR: 25_000,
+  MUR: 50_000,
 };
 
 // Cost in points to open one sealed booster box.
