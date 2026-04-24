@@ -130,19 +130,19 @@ export const MERCHANT_PRICE: Record<Rarity, number> = {
   MUR: 1_000_000,
 };
 
-// Bulk-sell payout (지갑 → 일괄판매). 상인 단가의 약 1/10 정도로 저평가 —
-// 속도는 빠르지만 수익성은 낮음.
+// Bulk-sell payout (지갑 → 일괄판매). 상인 단가 대비 약 1/20. 속도는
+// 빠르지만 수익성은 낮음 — 상인 / 선물 / 센터 전시로 돌리는 게 기본 의도.
 export const BULK_SELL_PRICE: Record<Rarity, number> = {
-  C: 100,
-  U: 200,
-  R: 500,
-  RR: 1_000,
-  AR: 2_000,
-  SR: 5_000,
-  MA: 5_000,
-  SAR: 15_000,
-  UR: 25_000,
-  MUR: 50_000,
+  C: 50,
+  U: 100,
+  R: 200,
+  RR: 500,
+  AR: 1_000,
+  SR: 2_000,
+  MA: 2_000,
+  SAR: 6_000,
+  UR: 10_000,
+  MUR: 20_000,
 };
 
 // Cost in points to open one sealed booster box.
