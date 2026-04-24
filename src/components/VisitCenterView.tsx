@@ -19,6 +19,7 @@ import PointsChip from "./PointsChip";
 import CoinIcon from "./CoinIcon";
 import PsaSlab from "./PsaSlab";
 import { CenterBackdrop, CenterGrid, ModalShell } from "./CenterView";
+import PageHeader from "./PageHeader";
 
 export default function VisitCenterView({ loginId }: { loginId: string }) {
   const { user, setPoints } = useAuth();
@@ -133,29 +134,27 @@ export default function VisitCenterView({ loginId }: { loginId: string }) {
     <div className="relative min-h-[calc(100dvh-4rem)]">
       <CenterBackdrop />
       <div className="relative z-10 max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
-        <header className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <Link
-              href="/center"
-              className="text-[11px] text-zinc-300/80 hover:text-white"
-            >
-              ← 내 센터
-            </Link>
-            <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight mt-1">
-              {data.display_name}님의 포켓몬센터
-            </h1>
-            <p className="text-[11px] md:text-xs text-zinc-300/80 mt-1">
-              {isOwn
-                ? "여기는 당신의 센터예요. 자기 센터는 부술 수 없어요."
-                : "전시된 카드를 눌러 부수기를 시도할 수 있어요 (10만p · 30%)."}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            {user && <PointsChip points={user.points} size="sm" />}
-            <Kpi label="보관함" value={`${showcases.length}`} />
-            <Kpi label="전시" value={`${totalCards}장`} highlight />
-          </div>
-        </header>
+        <Link
+          href="/center"
+          className="inline-block mb-1 text-[11px] text-zinc-300/80 hover:text-white"
+        >
+          ← 내 센터
+        </Link>
+        <PageHeader
+          title={`${data.display_name}님의 센터`}
+          subtitle={
+            isOwn
+              ? "자기 센터는 부술 수 없어요."
+              : "전시 카드를 눌러 부수기 시도 · 성공 시 보관함가의 50% 획득"
+          }
+          stats={
+            <>
+              {user && <PointsChip points={user.points} size="sm" />}
+              <Kpi label="보관함" value={`${showcases.length}`} />
+              <Kpi label="전시" value={`${totalCards}`} highlight />
+            </>
+          }
+        />
 
         {error && (
           <div className="mt-3 text-xs text-rose-200 bg-rose-500/15 border border-rose-500/40 rounded-lg px-3 py-2">
@@ -335,16 +334,16 @@ function SabotageConfirmModal({
         )}
 
         <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 px-3 py-2 text-[11px] text-rose-200 leading-relaxed">
-          성공 시 <b>보관함과 그 안의 카드가 전부 소멸</b>하고, 보관함가의
-          50%인{" "}
+          성공 시 <b>보관함과 전시 슬랩이 영원히 소멸</b>하고, 보관함가 50%{" "}
           <b className="text-amber-200">
             +{Math.floor(spec.price * 0.5).toLocaleString("ko-KR")}p
           </b>{" "}
-          전리품을 획득해요. 실패해도 비용은 돌아오지 않습니다. 이 보관함은{" "}
-          <b className="text-sky-200">{spec.name}</b>이라 방어{" "}
-          <b>{spec.defense}%</b>가 적용돼서 성공률이{" "}
-          <b className="text-rose-100">{effectiveRate}%</b>예요.
-          부수기 시도는 디스코드에 자동 공지됩니다.
+          전리품을 획득해요. 동시에 상대는 <b>PCL 등급 점수</b>와{" "}
+          <b>전시 +2,000점</b>을 랭킹에서 잃습니다. 실패해도 비용은 돌아오지
+          않고, 이 <b className="text-sky-200">{spec.name}</b>은 방어{" "}
+          <b>{spec.defense}%</b>라 성공률{" "}
+          <b className="text-rose-100">{effectiveRate}%</b>. 부수기 시도는
+          디스코드에 자동 공지됩니다.
         </div>
 
         <div className="flex items-center gap-2">

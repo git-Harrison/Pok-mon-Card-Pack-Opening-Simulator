@@ -33,6 +33,7 @@ import CoinIcon from "./CoinIcon";
 import RarityBadge from "./RarityBadge";
 import PsaSlab from "./PsaSlab";
 import Portal from "./Portal";
+import PageHeader from "./PageHeader";
 
 export default function CenterView() {
   const { user, setPoints } = useAuth();
@@ -199,26 +200,17 @@ export default function CenterView() {
     <div className="relative min-h-[calc(100dvh-4rem)]">
       <CenterBackdrop />
       <div className="relative z-10 max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
-        <header className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-              내 포켓몬센터
-            </h1>
-            <p className="text-[11px] md:text-xs text-zinc-300/80 mt-1">
-              PCL 9·10 감별 슬랩만 전시 가능. 전시 중엔 지갑에서 숨겨지고
-              판매·선물·재감별이 막혀요.
-              <br className="hidden md:block" />
-              수익: <b className="text-slate-100">PCL 9</b> 시간당 3,000p ·{" "}
-              <b className="text-amber-300">PCL 10</b> 시간당 5,000p · 랭킹
-              +2,000점/장
-            </p>
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            {user && <PointsChip points={user.points} size="sm" />}
-            <Kpi label="보관함" value={`${showcases.length}`} />
-            <Kpi label="전시 중" value={`${totalCards}장`} highlight />
-          </div>
-        </header>
+        <PageHeader
+          title="내 포켓몬센터"
+          subtitle="PCL 9·10 슬랩만 전시 · 시간당 3,000~5,000p + 랭킹 +2,000점/장"
+          stats={
+            <>
+              {user && <PointsChip points={user.points} size="sm" />}
+              <Kpi label="보관함" value={`${showcases.length}`} />
+              <Kpi label="전시" value={`${totalCards}`} highlight />
+            </>
+          }
+        />
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button

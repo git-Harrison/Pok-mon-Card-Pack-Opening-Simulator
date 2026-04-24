@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { fetchUserRankings, type RankingRow } from "@/lib/db";
 import { getCard, SETS } from "@/lib/sets";
 import PointsChip from "./PointsChip";
+import PageHeader from "./PageHeader";
 
 /**
  * Ranking is driven entirely by PSA success points. Card ownership
@@ -52,6 +53,7 @@ export default function UsersView() {
   const [loading, setLoading] = useState(true);
   // { userId: grade } — which grade accordion is expanded for which user
   const [expanded, setExpanded] = useState<Record<string, number | null>>({});
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -81,86 +83,67 @@ export default function UsersView() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 md:py-10 fade-in">
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight">
-            사용자 랭킹
-          </h1>
-          <p className="mt-1 text-sm text-zinc-400">
-            PCL 감별 성공 시 등급별 랭킹 점수를 얻어요. 카드 보유만으로는
-            점수가 오르지 않아요.
-          </p>
-        </div>
-      </div>
+    <div className="max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
+      <PageHeader
+        title="사용자 랭킹"
+        subtitle="PCL 감별 성공 + 센터 전시로 점수를 쌓아 올라가세요"
+        stats={
+          <button
+            onClick={() => setHelpOpen((v) => !v)}
+            className="h-7 px-2.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-semibold text-zinc-300 hover:bg-white/10"
+          >
+            {helpOpen ? "도움말 ▲" : "도움말 ▼"}
+          </button>
+        }
+      />
 
-      {/* Quick guide */}
-      <div className="mt-4 rounded-xl bg-gradient-to-br from-amber-500/10 via-fuchsia-500/5 to-transparent border border-amber-400/30 p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-lg">📈</span>
-          <h2 className="text-sm font-bold text-amber-200">
-            랭킹 점수 올리는 법
-          </h2>
-        </div>
-        <ol className="space-y-1 text-xs text-zinc-200 leading-relaxed">
-          <li>
-            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-400 text-zinc-950 text-[10px] font-black mr-1.5 tabular-nums">
-              1
-            </span>
-            팩을 열어{" "}
-            <span className="font-bold text-white">
-              SR · MA · SAR · MUR · UR
-            </span>{" "}
-            카드를 확보하세요.
-          </li>
-          <li>
-            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-400 text-zinc-950 text-[10px] font-black mr-1.5 tabular-nums">
-              2
-            </span>
-            <Link
-              href="/grading"
-              className="underline underline-offset-2 text-amber-300 hover:text-amber-200 font-semibold"
-            >
-              PCL 감별
-            </Link>
-            {" "}페이지에서 카드 감정을 맡기세요.
-          </li>
-          <li>
-            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-400 text-zinc-950 text-[10px] font-black mr-1.5 tabular-nums">
-              3
-            </span>
-            <span className="text-emerald-300 font-bold">성공(30%)</span> 시
-            등급별 점수 지급,{" "}
-            <span className="text-rose-300 font-bold">실패(70%)</span> 시 카드
-            소실.
-          </li>
-        </ol>
-      </div>
-
-      {/* Scoring legend */}
-      <div className="mt-3 rounded-xl bg-white/5 border border-white/10 p-3">
-        <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-2">
-          PCL 등급 → 랭킹 점수 · 지갑 보너스
-        </p>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
-          {[10, 9, 8, 7, 6].map((g) => (
-            <div
-              key={g}
-              className="rounded-lg bg-black/30 border border-white/5 px-2.5 py-1.5"
-            >
-              <div className="flex items-center justify-between">
-                <span className={clsx("font-bold", GRADE_COLOR[g])}>PCL {g}</span>
-                <span className="text-zinc-200 tabular-nums font-semibold">
-                  +{PSA_TIER_POINTS[g]}점
-                </span>
+      <AnimatePresence initial={false}>
+        {helpOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="rounded-xl bg-white/5 border border-white/10 p-3 mb-3">
+              <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-2">
+                PCL 등급 → 랭킹 점수 · 지갑 보너스
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                {[10, 9, 8, 7, 6].map((g) => (
+                  <div
+                    key={g}
+                    className="rounded-lg bg-black/30 border border-white/5 px-2.5 py-1.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={clsx("font-bold", GRADE_COLOR[g])}>
+                        PCL {g}
+                      </span>
+                      <span className="text-zinc-200 tabular-nums font-semibold">
+                        +{PSA_TIER_POINTS[g]}점
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-[10px] text-zinc-500 tabular-nums text-right">
+                      🪙 +{PSA_TIER_BONUS[g].toLocaleString("ko-KR")}p
+                    </p>
+                  </div>
+                ))}
               </div>
-              <p className="mt-0.5 text-[10px] text-zinc-500 tabular-nums text-right">
-                🪙 +{PSA_TIER_BONUS[g].toLocaleString("ko-KR")}p
+              <p className="mt-2 text-[10px] text-zinc-400 leading-snug">
+                팩 개봉 →{" "}
+                <Link
+                  href="/grading"
+                  className="underline underline-offset-2 text-amber-300 hover:text-amber-200"
+                >
+                  PCL 감별
+                </Link>{" "}
+                → 성공 30% 확률로 등급 획득. 센터 전시 1장당 +2,000점 추가.
+                센터에서 부서지면 전부 차감.
               </p>
             </div>
-          ))}
-        </div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {loading ? (
         <div className="mt-16 flex justify-center">

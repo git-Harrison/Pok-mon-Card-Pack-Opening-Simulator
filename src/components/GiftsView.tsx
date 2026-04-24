@@ -15,6 +15,7 @@ import { getCard, SETS } from "@/lib/sets";
 import type { GiftStatus } from "@/lib/types";
 import RarityBadge from "./RarityBadge";
 import CoinIcon from "./CoinIcon";
+import PageHeader from "./PageHeader";
 
 type Tab = "received" | "sent";
 
@@ -109,28 +110,19 @@ export default function GiftsView() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-10 fade-in">
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight">
-            선물함
-          </h1>
-          <p className="mt-1 text-sm text-zinc-400">
-            친구의 선물을 24시간 안에 수락해 포인트로 구매하세요. 시간이 지나면
-            자동으로 보낸 친구에게 돌아갑니다.
-          </p>
-        </div>
-        <Link
-          href="/wallet"
-          className="h-11 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-sm inline-flex items-center gap-1.5 hover:scale-[1.02] active:scale-[0.98] transition shrink-0"
-        >
-          🎁 카드 선물 보내기
-        </Link>
-      </div>
-      <p className="mt-2 text-[11px] text-zinc-500">
-        선물은 내 카드지갑에서 카드를 선택하고 보낼 수 있어요. 하루 5회
-        제한.
-      </p>
+    <div className="max-w-4xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
+      <PageHeader
+        title="선물함"
+        subtitle="24시간 안에 수락 · 미수락 시 보낸이에게 반환 · 하루 5회"
+        stats={
+          <Link
+            href="/wallet"
+            className="h-9 px-3 rounded-full bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-[11px] inline-flex items-center gap-1 hover:scale-[1.02] active:scale-[0.98] transition shrink-0"
+          >
+            🎁 선물 보내기
+          </Link>
+        }
+      />
 
       <div className="mt-6 flex gap-2">
         <TabPill active={tab === "received"} onClick={() => setTab("received")}>

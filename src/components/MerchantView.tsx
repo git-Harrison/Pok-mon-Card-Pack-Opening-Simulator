@@ -23,6 +23,8 @@ import type { Card, MerchantState } from "@/lib/types";
 import RarityBadge from "./RarityBadge";
 import PointsChip from "./PointsChip";
 import CoinIcon from "./CoinIcon";
+import NpcDialog, { type NpcMood } from "./NpcDialog";
+import PageHeader from "./PageHeader";
 
 type Phase = "idle" | "refreshing" | "selling" | "sold";
 
@@ -169,38 +171,67 @@ export default function MerchantView() {
   const rarityStyle = wantedCard ? RARITY_STYLE[wantedCard.rarity] : null;
   const fx = wantedCard ? cardFxClass(wantedCard.rarity) : null;
 
+  // Merchant mood + dialogue drives off the current state. Every state
+  // swap retypes the bubble so the NPC feels reactive.
+  const merchantMood: NpcMood =
+    phase === "selling"
+      ? "working"
+      : phase === "sold"
+      ? "happy"
+      : phase === "refreshing"
+      ? "working"
+      : sellsRemaining <= 0
+      ? "sad"
+      : ownedCount > 0
+      ? "excited"
+      : "idle";
+  const merchantLine =
+    phase === "selling"
+      ? "오호, 거래 성사! 지폐 준비할게냥~"
+      : phase === "sold" && lastEarned !== null
+      ? `+${lastEarned.toLocaleString("ko-KR")}p 지급! 또 팔러 와냥!`
+      : phase === "refreshing"
+      ? "다른 카드 찾아보고 있냥…"
+      : sellsRemaining <= 0
+      ? "이번 시간은 매입 끝났냥. 한 시간 뒤에 다시 와."
+      : !wantedCard
+      ? "오늘은 뭘 들고 왔냥?"
+      : ownedCount > 0
+      ? `오, 마침 그 ${wantedCard.rarity} 카드! 바로 사줄게냥.`
+      : `${wantedCard.rarity} 카드 찾고 있어냥. 있으면 가져와~`;
+
   return (
-    <div className="max-w-2xl mx-auto px-4 md:px-6 py-4 md:py-8 fade-in">
-      {/* Shop sign header */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="relative w-12 h-12 md:w-14 md:h-14 shrink-0">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-b from-amber-500/30 to-transparent blur-md" />
-            <img
-              src="/images/common/merchant-meowth.png"
-              alt="상인"
-              className={clsx(
-                "relative w-full h-full object-contain",
-                phase === "idle" && "animate-bob"
-              )}
-              draggable={false}
-            />
-          </div>
-          <div>
-            <h1 className="text-xl md:text-3xl font-black text-amber-100 tracking-tight">
-              카드 상인
-            </h1>
-            <p className="text-[11px] text-amber-200/70 tracking-wide">
-              TRADING POST · 매입 전문
-            </p>
-          </div>
-        </div>
-        <PointsChip points={user.points} highlight />
+    <div className="max-w-2xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
+      <PageHeader
+        title="카드 상인"
+        subtitle="매입 전문 NPC · 시간당 판매 5회 · 교체 5회"
+        tone="amber"
+        icon="🐾"
+        stats={<PointsChip points={user.points} highlight />}
+      />
+
+      {/* NPC stage */}
+      <div
+        className="rounded-2xl border border-amber-900/40 px-3 py-3"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(180,83,9,0.18) 0%, rgba(41,37,36,0.6) 60%)",
+        }}
+      >
+        <NpcDialog
+          src="/images/common/merchant-meowth.png"
+          alt="상인 냐옹"
+          text={merchantLine}
+          mood={merchantMood}
+          accent="amber"
+          nameplate={{ role: "냥트레이더", name: "상인 냥냥" }}
+          sizeClass="w-16 h-16 md:w-20 md:h-20"
+        />
       </div>
 
       {/* Trading post panel */}
       <section
-        className="relative mt-5 rounded-2xl border-2 overflow-hidden"
+        className="relative mt-3 rounded-2xl border-2 overflow-hidden"
         style={{
           borderColor: "rgba(180, 83, 9, 0.35)",
           background:

@@ -20,6 +20,7 @@ import Link from "next/link";
 import PokeCard from "./PokeCard";
 import PsaSlab from "./PsaSlab";
 import CoinIcon from "./CoinIcon";
+import PageHeader from "./PageHeader";
 
 type Mode = "cards" | "psa";
 type RarityFilter = "ALL" | Rarity;
@@ -97,23 +98,19 @@ export default function WalletView() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-10 fade-in">
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight">
-            내 카드지갑
-          </h1>
-          <p className="mt-1 text-sm text-zinc-400">
-            서버에 안전하게 저장되는 내 수집 카드. 카드를 눌러 자세히 보거나 다른 친구에게 선물할 수 있습니다.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-xs">
-          <Kpi label="보유 카드" value={`${snap.items.length}종`} />
-          <Kpi label="총 장수" value={`${snap.totalCards}장`} />
-          <Kpi label="총 개봉" value={`${totalPacks}팩`} />
-          <Kpi label="PCL 감별" value={`${psa.length}장`} highlight />
-        </div>
-      </div>
+    <div className="max-w-6xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
+      <PageHeader
+        title="내 카드지갑"
+        subtitle="카드를 눌러 상세·선물·공유"
+        stats={
+          <>
+            <Kpi label="종류" value={`${snap.items.length}`} />
+            <Kpi label="장수" value={`${snap.totalCards}`} />
+            <Kpi label="개봉" value={`${totalPacks}팩`} />
+            <Kpi label="PCL" value={`${psa.length}`} highlight />
+          </>
+        }
+      />
 
       {/* Primary mode tabs */}
       <div className="mt-6 inline-flex items-stretch rounded-xl bg-white/5 border border-white/10 p-1">

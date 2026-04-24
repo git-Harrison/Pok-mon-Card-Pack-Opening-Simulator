@@ -17,6 +17,7 @@ import {
   RARITY_STYLE,
 } from "@/lib/rarity";
 import CoinIcon from "./CoinIcon";
+import PageHeader from "./PageHeader";
 import type { Rarity } from "@/lib/types";
 
 /**
@@ -122,15 +123,12 @@ export default function BulkSellView() {
         </Link>
       </div>
 
-      <header className="mt-2">
-        <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-          일괄 판매
-        </h1>
-        <p className="mt-1 text-sm text-zinc-400">
-          등급을 고르면 그 등급 카드가 전부 즉시 판매됩니다. 상인보다는
-          단가가 낮지만 횟수 제한이 없어요.
-        </p>
-      </header>
+      <div className="mt-2">
+        <PageHeader
+          title="일괄 판매"
+          subtitle="등급 선택 시 그 등급 전량 즉시 판매 · 횟수 제한 없음"
+        />
+      </div>
 
       {/* Grand total summary */}
       <div className="mt-4 rounded-xl border border-white/10 bg-white/5 px-4 py-3 flex items-center justify-between gap-3">

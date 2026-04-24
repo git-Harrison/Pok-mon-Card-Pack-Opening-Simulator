@@ -27,6 +27,8 @@ import RarityBadge from "./RarityBadge";
 import PsaSlab from "./PsaSlab";
 import CoinIcon from "./CoinIcon";
 import Portal from "./Portal";
+import NpcDialog, { type NpcMood } from "./NpcDialog";
+import PageHeader from "./PageHeader";
 
 type Phase = "idle" | "animating" | "failing" | "revealed" | "failed";
 
@@ -176,39 +178,18 @@ export default function GradingView() {
           }}
         />
 
-        {/* Examiner strip */}
+        {/* Examiner NPC with reactive dialogue */}
         <div className="relative px-4 pt-3 flex items-center gap-3">
-          <div className="relative w-10 h-10 md:w-12 md:h-12 shrink-0">
-            <div className="absolute inset-0 rounded-full bg-fuchsia-400/30 blur-md" />
-            <motion.img
-              src="/images/common/grader-alakazam.png"
-              alt="감정사"
-              className={clsx(
-                "relative w-full h-full object-contain",
-                phase === "idle" && "animate-bob",
-                phase === "animating" && "animate-wiggle"
-              )}
-              draggable={false}
-            />
-          </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] uppercase tracking-[0.2em] text-fuchsia-300/80">
-              감정사
-            </div>
-            <div className="text-sm font-bold text-white">후딘 박사</div>
-            <div className="text-[10px] text-zinc-400">
-              {phase === "animating"
-                ? "측정 중 — 잠시 기다려 주세요"
-                : phase === "failing"
-                ? "카드 균열 감지 — 붕괴 중"
-                : phase === "revealed"
-                ? "판정 완료"
-                : phase === "failed"
-                ? "감정 실패 — 카드 손상"
-                : selected
-                ? "감정 준비 완료"
-                : "감정 대기 중"}
-            </div>
+            <NpcDialog
+              src="/images/common/grader-alakazam.png"
+              alt="감정사 후딘 박사"
+              text={graderLine(phase, selected, grade)}
+              mood={graderMood(phase)}
+              accent="fuchsia"
+              nameplate={{ role: "감정사", name: "후딘 박사" }}
+              sizeClass="w-14 h-14 md:w-16 md:h-16"
+            />
           </div>
           <StatusDot phase={phase} />
         </div>
@@ -787,6 +768,30 @@ function generateCaseId() {
   for (let i = 0; i < 8; i++)
     s += chars[Math.floor(Math.random() * chars.length)];
   return `PCL-${s}`;
+}
+
+/** Map the grading state machine to an NPC mood. */
+function graderMood(phase: Phase): NpcMood {
+  if (phase === "animating") return "working";
+  if (phase === "failing") return "shocked";
+  if (phase === "failed") return "sad";
+  if (phase === "revealed") return "excited";
+  return "idle";
+}
+
+/** Pick a short reactive line per state. */
+function graderLine(phase: Phase, selected: Card | null, grade: number | null): string {
+  if (phase === "animating") return "측정 중… 카드 표면을 스캔하고 있어요.";
+  if (phase === "failing") return "이런! 카드에 균열이 퍼지고 있어요…";
+  if (phase === "failed") return "감정에 실패했어요. 카드가 손상됐습니다.";
+  if (phase === "revealed" && grade !== null) {
+    if (grade === 10) return "놀라워요! 완벽한 GEM MINT 판정입니다!";
+    if (grade === 9) return "훌륭해요! MINT 등급을 받으셨네요.";
+    if (grade === 8) return "안정적인 NM-MT 등급이에요.";
+    return `결과: PCL ${grade}등급입니다.`;
+  }
+  if (selected) return "언제든 준비되면 감정을 시작할게요.";
+  return "감정할 카드를 골라주세요.";
 }
 
 function CardPicker({
