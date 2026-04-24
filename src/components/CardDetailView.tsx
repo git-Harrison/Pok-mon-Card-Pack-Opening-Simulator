@@ -36,20 +36,49 @@ export default function CardDetailView({ cardId }: { cardId: string }) {
 
   const handleShare = useCallback(async () => {
     if (typeof window === "undefined" || !card) return;
-    const url = `${window.location.origin}/card/${encodeURIComponent(card.id)}`;
+    const origin = window.location.origin;
+    const url = `${origin}/card/${encodeURIComponent(card.id)}`;
     const title = `${card.name} (${card.rarity})`;
-    // Prefer native share on mobile; fall back to clipboard on desktop.
-    if (
-      typeof navigator !== "undefined" &&
-      typeof navigator.share === "function"
-    ) {
+
+    // Try image-file share first (mobile native picker attaches the art).
+    // We proxy via /api/card-image so fetch() doesn't trip Pokellector CORS.
+    try {
+      const res = await fetch(
+        `${origin}/api/card-image/${encodeURIComponent(card.id)}`
+      );
+      if (res.ok) {
+        const blob = await res.blob();
+        const mime = blob.type || "image/png";
+        const ext = mime.split("/")[1]?.split(";")[0] ?? "png";
+        const filename = `${card.id}.${ext}`;
+        const file = new File([blob], filename, { type: mime });
+        const nav = navigator as Navigator & {
+          canShare?: (data: ShareData) => boolean;
+        };
+        if (
+          typeof nav.share === "function" &&
+          typeof nav.canShare === "function" &&
+          nav.canShare({ files: [file] })
+        ) {
+          await nav.share({ files: [file], title, text: title });
+          setShareState("shared");
+          setTimeout(() => setShareState("idle"), 2500);
+          return;
+        }
+      }
+    } catch {
+      // fall through to URL / clipboard
+    }
+
+    // No file-share support — share the URL instead.
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       try {
         await navigator.share({ title, text: title, url });
         setShareState("shared");
         setTimeout(() => setShareState("idle"), 2500);
         return;
       } catch {
-        // fall through to clipboard if the user canceled or share failed
+        // user canceled or error; fall through to clipboard
       }
     }
     try {
