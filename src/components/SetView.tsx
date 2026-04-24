@@ -107,9 +107,18 @@ export default function SetView({ set }: { set: SetInfo }) {
   } | null>(null);
   const [multiProgress, setMultiProgress] = useState({ done: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
+  // Separate channel for "wallet is full" so the UI can show a bigger
+  // banner with a direct link to 일괄 판매 instead of a tiny tooltip.
+  const [capError, setCapError] = useState<string | null>(null);
   // Guard so the initial restore doesn't write back over itself before
   // the user makes any change.
   const hydratedRef = useRef(false);
+
+  // Clear both channels on any new attempt.
+  const clearErrors = useCallback(() => {
+    setError(null);
+    setCapError(null);
+  }, []);
 
   const cost = BOX_COST[set.code] ?? 30_000;
   const canAfford = !!user && user.points >= cost;
@@ -177,7 +186,7 @@ export default function SetView({ set }: { set: SetInfo }) {
         );
         return;
       }
-      setError(null);
+      clearErrors();
       setPhase("multi-buying");
       setMultiProgress({ done: 0, total: boxCount });
 
@@ -197,15 +206,16 @@ export default function SetView({ set }: { set: SetInfo }) {
         spent += res.price ?? cost;
         const drawn = drawBox(set);
         try {
-          await Promise.all(
-            drawn.map((pack) =>
-              persistPackWithRetry(
-                user.id,
-                set.code,
-                pack.map((c) => c.id)
-              )
-            )
-          );
+          // Sequential: the server holds a per-user advisory lock, so
+          // parallel calls would serialize anyway — better to send one
+          // at a time than tie up 10 Supabase connections.
+          for (const pack of drawn) {
+            await persistPackWithRetry(
+              user.id,
+              set.code,
+              pack.map((c) => c.id)
+            );
+          }
         } catch (e) {
           console.error("multi-box persist failed", e);
           const serverMsg = errorMessage(e);
@@ -216,13 +226,18 @@ export default function SetView({ set }: { set: SetInfo }) {
           }
           const refundTail = refund.ok
             ? `${refunded.toLocaleString("ko-KR")}p 환불됐어요.`
-            : "환불에 실패했어요. 관리자에게 문의해주세요.";
-          const msg = isIntentionalRejection(e) && serverMsg
-            ? `${serverMsg} (${i}박스까지는 정상 · ${refundTail})`
-            : refund.ok
-            ? `${i + 1}/${boxCount}번째 박스 저장 실패 — ${refunded.toLocaleString("ko-KR")}p 환불. ${i}박스까지는 정상이에요.`
-            : "카드 저장 및 환불에 실패했어요. 관리자에게 문의해주세요.";
-          setError(msg);
+            : "환불은 실패했어요. 관리자에게 문의해주세요.";
+          if (isIntentionalRejection(e) && serverMsg) {
+            setCapError(
+              `${serverMsg}\n(지금까지 ${i}박스는 정상 저장됐고, ${refundTail})`
+            );
+          } else {
+            setError(
+              refund.ok
+                ? `${i + 1}/${boxCount}번째 박스 저장 실패 — ${refunded.toLocaleString("ko-KR")}p 환불. ${i}박스까지는 정상이에요.`
+                : "카드 저장 및 환불에 실패했어요. 관리자에게 문의해주세요."
+            );
+          }
           // If some earlier boxes did land successfully, at least show
           // those cards instead of tossing the user back to sealed with
           // no receipt.
@@ -261,7 +276,7 @@ export default function SetView({ set }: { set: SetInfo }) {
 
   const openBox = useCallback(async () => {
     if (!user || phase !== "sealed") return;
-    setError(null);
+    clearErrors();
     setPhase("buying");
     const res = await buyBox(user.id, set.code);
     if (!res.ok || typeof res.points !== "number") {
@@ -280,32 +295,32 @@ export default function SetView({ set }: { set: SetInfo }) {
     // the actual saves to finish. Each save has 3 retries with backoff
     // so transient network blips don't cost the user a box.
     try {
-      await Promise.all(
-        drawn.map((pack) =>
-          persistPackWithRetry(
-            user.id,
-            set.code,
-            pack.map((c) => c.id)
-          )
-        )
-      );
+      // Sequential (server has per-user advisory lock; see multi-box).
+      for (const pack of drawn) {
+        await persistPackWithRetry(
+          user.id,
+          set.code,
+          pack.map((c) => c.id)
+        );
+      }
       setPhase("grid");
     } catch (e) {
       console.error("box persist failed", e);
       const serverMsg = errorMessage(e);
       const refund = await refundBoxPurchase(user.id, set.code);
+      const refunded = refund.ok ? (refund.refunded ?? cost) : 0;
       if (refund.ok && typeof refund.points === "number") {
         setPoints(refund.points);
-        const refundNote = `${(refund.refunded ?? cost).toLocaleString("ko-KR")}p 환불됨.`;
-        setError(
-          isIntentionalRejection(e) && serverMsg
-            ? `${serverMsg} (${refundNote})`
-            : `카드 저장에 실패해 ${refundNote} 잠시 후 다시 시도해주세요.`
-        );
+      }
+      const refundNote = refund.ok
+        ? `${refunded.toLocaleString("ko-KR")}p 환불됐어요.`
+        : "환불은 실패했어요. 관리자에게 문의해주세요.";
+      if (isIntentionalRejection(e) && serverMsg) {
+        setCapError(`${serverMsg}\n(${refundNote})`);
       } else {
         setError(
-          isIntentionalRejection(e) && serverMsg
-            ? `${serverMsg} (환불 실패 — 관리자에게 문의해주세요.)`
+          refund.ok
+            ? `카드 저장에 실패해 ${refundNote} 잠시 후 다시 시도해주세요.`
             : "저장 및 환불에 실패했어요. 관리자에게 문의해주세요."
         );
       }
@@ -313,7 +328,7 @@ export default function SetView({ set }: { set: SetInfo }) {
       setOpenedMask([]);
       setPhase("sealed");
     }
-  }, [user, phase, set, cost, setPoints]);
+  }, [user, phase, set, cost, setPoints, clearErrors]);
 
   const choosePack = useCallback(
     (index: number) => {
@@ -409,6 +424,7 @@ export default function SetView({ set }: { set: SetInfo }) {
             canAfford={canAfford}
             loading={phase === "buying"}
             error={error}
+            capError={capError}
             onOpen={openBox}
             onOpenMulti={openMulti}
           />
@@ -534,6 +550,7 @@ function SealedBox({
   canAfford,
   loading,
   error,
+  capError,
   onOpen,
   onOpenMulti,
 }: {
@@ -543,6 +560,7 @@ function SealedBox({
   canAfford: boolean;
   loading: boolean;
   error: string | null;
+  capError: string | null;
   onOpen: () => void;
   onOpenMulti: (n: number) => void;
 }) {
@@ -637,8 +655,37 @@ function SealedBox({
           포인트가 부족해요. 상인에게 카드를 팔거나 선물로 모아보세요.
         </p>
       )}
+      {capError && (
+        <div className="text-sm text-amber-100 bg-amber-500/10 border border-amber-400/40 rounded-xl px-4 py-3 space-y-2">
+          <div className="flex items-start gap-2">
+            <span className="text-lg leading-none">💼</span>
+            <div className="flex-1">
+              <div className="font-semibold text-amber-200">
+                지갑이 가득 찼어요
+              </div>
+              <div className="mt-1 whitespace-pre-line text-amber-100/90 text-[13px]">
+                {capError}
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Link
+              href="/wallet/bulk-sell"
+              className="text-[12px] px-3 py-1.5 rounded-full bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/40 text-amber-100 transition"
+            >
+              🎫 일괄 판매로 이동
+            </Link>
+            <Link
+              href="/wallet"
+              className="text-[12px] px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 transition"
+            >
+              📖 지갑 확인
+            </Link>
+          </div>
+        </div>
+      )}
       {error && (
-        <p className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">
+        <p className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2 whitespace-pre-line">
           {error}
         </p>
       )}

@@ -58,6 +58,11 @@ samp {
   background: #3f3f46;
 }
 
+/* Horizontally-scrolling chip rows (wallet filters, etc.) — hide
+   the scrollbar but keep native scroll/momentum. */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* ---------- 3D & animation utilities ---------- */
 .perspective-1200 {
   perspective: 1200px;

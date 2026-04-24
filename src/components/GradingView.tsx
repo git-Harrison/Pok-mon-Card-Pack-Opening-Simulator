@@ -89,11 +89,15 @@ export default function GradingView() {
   const submit = useCallback(async () => {
     if (!user || !selected || phase !== "idle") return;
     if (!isPsaEligible(selected.rarity)) {
-      setError("SR · MA · SAR · MUR · UR 카드만 감별을 받을 수 있어요.");
+      setError("SR · MA · SAR · UR · MUR 카드만 감별을 받을 수 있어요.");
       return;
     }
     setError(null);
     const res = await submitPsaGrading(user.id, selected.id, selected.rarity);
+    // Server has already decremented (success) or burned (failure)
+    // the card — refresh the local wallet immediately so the picker
+    // reflects reality before the user reopens it.
+    if (res.ok) void refreshWallet();
     if (!res.ok) {
       setError(res.error ?? "감별 접수에 실패했어요.");
       return;
@@ -849,7 +853,7 @@ function CardPicker({
             <div className="py-10 text-center text-sm text-zinc-400">
               <p>감정 대상 카드가 없어요.</p>
               <p className="mt-1 text-[11px]">
-                SR · MA · SAR · MUR · UR 카드만 맡길 수 있습니다.
+                SR · MA · SAR · UR · MUR 카드만 맡길 수 있습니다.
               </p>
             </div>
           ) : (
@@ -1042,7 +1046,7 @@ function BulkGradingModal({
                   <div className="py-10 text-center text-sm text-zinc-400">
                     <p>감정 대상 카드가 없어요.</p>
                     <p className="mt-1 text-[11px]">
-                      SR · MA · SAR · MUR · UR 카드만 맡길 수 있습니다.
+                      SR · MA · SAR · UR · MUR 카드만 맡길 수 있습니다.
                     </p>
                   </div>
                 ) : (

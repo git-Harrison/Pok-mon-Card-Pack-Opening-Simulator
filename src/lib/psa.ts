@@ -1,12 +1,12 @@
 import type { Rarity } from "./types";
 
-/** AURA 감정 대상 등급 — SR/MA/SAR/MUR/UR 카드만 맡길 수 있음. */
+/** PCL 감정 대상 등급 — SR/MA/SAR/UR/MUR 만 맡길 수 있음. */
 export const PSA_ELIGIBLE_RARITIES: readonly Rarity[] = [
   "SR",
   "MA",
   "SAR",
-  "MUR",
   "UR",
+  "MUR",
 ] as const;
 
 export function isPsaEligible(rarity: Rarity): boolean {

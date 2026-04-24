@@ -114,11 +114,15 @@ export default function WalletView() {
             <Kpi label="종류" value={`${snap.items.length}`} />
             <Kpi
               label="장수"
-              value={`${snap.totalCards} / 1,000`}
-              highlight={snap.totalCards >= 900}
+              value={`${snap.totalCards} / 5,000`}
+              highlight={snap.totalCards >= 4500}
             />
             <Kpi label="개봉" value={`${totalPacks}팩`} />
-            <Kpi label="PCL" value={`${psa.length}`} highlight />
+            <Kpi
+              label="PCL"
+              value={`${psa.length} / 1,000`}
+              highlight={psa.length >= 900}
+            />
           </>
         }
       />
@@ -171,14 +175,17 @@ function CardsMode({
 }) {
   return (
     <>
-      {/* Rarity tabs + bulk-sell CTA */}
-      <div className="mt-5 flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex flex-wrap gap-2">
+      {/* Compact filter row: single horizontal scroll + tight bulk-sell chip. */}
+      <div className="mt-4 flex items-center gap-2">
+        <div
+          className="flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar"
+          style={{ scrollbarWidth: "none" }}
+        >
           <FilterPill
             active={rarityFilter === "ALL"}
             onClick={() => setRarityFilter("ALL")}
           >
-            전체 등급
+            전체
           </FilterPill>
           {RARITY_ORDER.map((r) => {
             const count = rarityCounts.get(r) ?? 0;
@@ -191,12 +198,14 @@ function CardsMode({
               >
                 <span
                   className={clsx(
-                    "inline-block w-2 h-2 rounded-full mr-1.5",
+                    "inline-block w-1.5 h-1.5 rounded-full mr-1",
                     RARITY_STYLE[r].badge
                   )}
                 />
                 {r}
-                <span className="ml-1.5 text-[10px] opacity-70">{count}</span>
+                <span className="ml-1 text-[10px] opacity-60 tabular-nums">
+                  {count}
+                </span>
               </FilterPill>
             );
           })}
@@ -205,15 +214,18 @@ function CardsMode({
           <Link
             href="/wallet/bulk-sell"
             style={{ touchAction: "manipulation" }}
-            className="h-9 px-3.5 rounded-full text-xs font-bold border border-transparent transition shrink-0 inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-400 to-amber-400 text-zinc-950 hover:scale-[1.02] active:scale-[0.97]"
+            aria-label="일괄 판매"
+            className="shrink-0 h-7 px-2.5 rounded-full text-[11px] font-bold inline-flex items-center gap-1 bg-gradient-to-r from-emerald-400 to-amber-400 text-zinc-950 hover:scale-[1.03] active:scale-[0.97] transition"
           >
             <CoinIcon size="xs" />
-            일괄 판매
+            <span className="hidden sm:inline">일괄 판매</span>
+            <span className="sm:hidden">판매</span>
           </Link>
         ) : (
-          <span className="h-9 px-3.5 rounded-full text-xs font-bold border border-white/10 bg-white/5 text-zinc-500 inline-flex items-center gap-1.5 shrink-0">
+          <span className="shrink-0 h-7 px-2.5 rounded-full text-[11px] font-bold border border-white/10 bg-white/5 text-zinc-500 inline-flex items-center gap-1">
             <CoinIcon size="xs" />
-            일괄 판매
+            <span className="hidden sm:inline">일괄 판매</span>
+            <span className="sm:hidden">판매</span>
           </span>
         )}
       </div>
@@ -401,7 +413,7 @@ function FilterPill({
     <button
       onClick={onClick}
       className={clsx(
-        "inline-flex items-center px-2.5 py-1.5 rounded-full text-xs font-semibold border transition",
+        "shrink-0 inline-flex items-center px-2 py-1 rounded-full text-[11px] font-semibold border transition whitespace-nowrap",
         active
           ? "bg-white text-zinc-900 border-white"
           : "bg-white/5 text-zinc-300 border-white/10 hover:bg-white/10 hover:text-white"

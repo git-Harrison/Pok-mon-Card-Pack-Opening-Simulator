@@ -49,6 +49,102 @@ function randomFarewell(name: string): string {
   return line.replace("{name}", name);
 }
 
+/** Battle biomes — picked per encounter. Pure CSS so we don't
+ *  ship any new asset bytes and can't fail on missing images. */
+interface Biome {
+  key: string;
+  name: string;
+  sky: string; // main vertical gradient
+  ground: string; // ground glow (bottom radial)
+  accent: string; // decorative tint (corner radial)
+  border: string;
+  emoji: string; // tiny flair in the corner
+}
+
+const BIOMES: readonly Biome[] = [
+  {
+    key: "grass",
+    name: "풀숲",
+    sky: "linear-gradient(180deg, #0a1730 0%, #1b3a66 30%, #1f4722 60%, #0c2012 100%)",
+    ground:
+      "radial-gradient(70% 100% at 50% 0%, rgba(74,222,128,0.3), rgba(34,197,94,0) 70%)",
+    accent:
+      "radial-gradient(50% 40% at 85% 15%, rgba(253,224,71,0.18), transparent 70%)",
+    border: "border-emerald-500/30",
+    emoji: "🌿",
+  },
+  {
+    key: "cave",
+    name: "동굴",
+    sky: "linear-gradient(180deg, #110a1f 0%, #1d1330 40%, #1a0e28 70%, #090612 100%)",
+    ground:
+      "radial-gradient(70% 100% at 50% 0%, rgba(139,92,246,0.28), rgba(76,29,149,0) 70%)",
+    accent:
+      "radial-gradient(45% 40% at 18% 20%, rgba(196,181,253,0.22), transparent 70%)",
+    border: "border-violet-500/30",
+    emoji: "🕳️",
+  },
+  {
+    key: "beach",
+    name: "해변",
+    sky: "linear-gradient(180deg, #0a1a3c 0%, #1c3d74 30%, #d6b884 70%, #b89766 100%)",
+    ground:
+      "radial-gradient(70% 100% at 50% 0%, rgba(251,191,36,0.3), rgba(217,119,6,0) 70%)",
+    accent:
+      "radial-gradient(40% 35% at 80% 20%, rgba(253,224,71,0.3), transparent 70%)",
+    border: "border-sky-400/30",
+    emoji: "🏖️",
+  },
+  {
+    key: "volcano",
+    name: "화산",
+    sky: "linear-gradient(180deg, #1a0a0a 0%, #3d1414 30%, #5a1a0a 55%, #1a0606 100%)",
+    ground:
+      "radial-gradient(70% 100% at 50% 0%, rgba(239,68,68,0.35), rgba(127,29,29,0) 70%)",
+    accent:
+      "radial-gradient(55% 45% at 80% 18%, rgba(251,146,60,0.28), transparent 70%)",
+    border: "border-rose-500/40",
+    emoji: "🌋",
+  },
+  {
+    key: "snow",
+    name: "설산",
+    sky: "linear-gradient(180deg, #0f1b2c 0%, #1e3a5f 30%, #7ba4c9 65%, #c7dbec 100%)",
+    ground:
+      "radial-gradient(70% 100% at 50% 0%, rgba(186,230,253,0.38), rgba(147,197,253,0) 70%)",
+    accent:
+      "radial-gradient(50% 40% at 20% 18%, rgba(219,234,254,0.25), transparent 70%)",
+    border: "border-sky-200/40",
+    emoji: "❄️",
+  },
+  {
+    key: "night-forest",
+    name: "밤의 숲",
+    sky: "linear-gradient(180deg, #050817 0%, #0b1230 35%, #0f2a1e 65%, #060c0a 100%)",
+    ground:
+      "radial-gradient(70% 100% at 50% 0%, rgba(16,185,129,0.22), rgba(4,120,87,0) 70%)",
+    accent:
+      "radial-gradient(45% 40% at 82% 16%, rgba(226,232,240,0.28), transparent 70%)",
+    border: "border-emerald-400/25",
+    emoji: "🌙",
+  },
+  {
+    key: "ruins",
+    name: "고대 유적",
+    sky: "linear-gradient(180deg, #1a1205 0%, #3a2a10 35%, #2a1e0c 65%, #120a04 100%)",
+    ground:
+      "radial-gradient(70% 100% at 50% 0%, rgba(217,181,87,0.28), rgba(161,98,7,0) 70%)",
+    accent:
+      "radial-gradient(50% 40% at 75% 20%, rgba(251,191,36,0.22), transparent 70%)",
+    border: "border-amber-600/35",
+    emoji: "🏛️",
+  },
+];
+
+function pickBiome(): Biome {
+  return BIOMES[Math.floor(Math.random() * BIOMES.length)];
+}
+
 interface Slab {
   gradingId: string;
   cardId: string;
@@ -102,6 +198,7 @@ export default function WildView() {
   const [attackingSide, setAttackingSide] = useState<"player" | "enemy" | null>(null);
   const [rewarded, setRewarded] = useState<number | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [biome, setBiome] = useState<Biome>(() => BIOMES[0]);
   const floaterSeq = useRef(0);
 
   const refresh = useCallback(async () => {
@@ -172,6 +269,7 @@ export default function WildView() {
     setBubble(null);
     setFloaters([]);
     setRewarded(null);
+    setBiome(pickBiome());
     setPhase("intro");
   }, []);
 
@@ -250,9 +348,10 @@ export default function WildView() {
       setPhase("dying");
       await say(randomFarewell(slab.name), "player", 2400);
       if (user) {
-        // Fire-and-forget — UI will transition to "lost" regardless so
-        // the user never sees a stuck state on network flake.
-        void wildBattleLoss(user.id, slab.gradingId);
+        const res = await wildBattleLoss(user.id, slab.gradingId);
+        if (!res.ok) console.error("wild_battle_loss failed", res);
+        // Refresh eligible slabs so the deleted one is gone.
+        void refresh();
       }
       setPhase("lost");
       setCooldownUntil(Date.now() + 30_000);
@@ -260,7 +359,7 @@ export default function WildView() {
     }
     setBubble({ side: "player", text: "내 턴!" });
     setPhase("player-turn");
-  }, [slab, wild, wildHp, addFloater, say, user, setPoints]);
+  }, [slab, wild, wildHp, addFloater, say, user, setPoints, refresh]);
 
   const flee = useCallback(async () => {
     if (!wild) return;
@@ -355,6 +454,7 @@ export default function WildView() {
           enemyHit={enemyHit}
           playerHit={playerHit}
           attackingSide={attackingSide}
+          biome={biome}
         />
       )}
 
@@ -495,6 +595,7 @@ function BattleScene({
   enemyHit,
   playerHit,
   attackingSide,
+  biome,
 }: {
   wild: WildMon;
   wildHp: number;
@@ -505,26 +606,37 @@ function BattleScene({
   enemyHit: boolean;
   playerHit: boolean;
   attackingSide: "player" | "enemy" | null;
+  biome: Biome;
 }) {
   const wildBubble = bubble?.side === "wild" ? bubble.text : "";
   const playerBubble = bubble?.side === "player" ? bubble.text : "";
   return (
     <div
-      className="relative mt-4 rounded-2xl overflow-hidden border border-emerald-500/30"
+      className={clsx(
+        "relative mt-4 rounded-2xl overflow-hidden border",
+        biome.border
+      )}
       style={{
         aspectRatio: "4 / 5",
-        background:
-          "linear-gradient(180deg, #0a1730 0%, #102a52 30%, #19351f 55%, #0e2015 100%)",
+        background: biome.sky,
       }}
     >
-      {/* Grass ground */}
+      {/* Biome accent glow (upper corner) */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: biome.accent }}
+      />
+      {/* Biome name tag (top-left) */}
+      <div className="absolute top-2 left-2 md:top-3 md:left-3 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur text-[10px] md:text-[11px] text-white/90 border border-white/10 inline-flex items-center gap-1 pointer-events-none z-10">
+        <span>{biome.emoji}</span>
+        <span className="font-semibold">{biome.name}</span>
+      </div>
+      {/* Biome ground glow */}
       <div
         aria-hidden
         className="absolute inset-x-0 bottom-0 h-1/3 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(60% 100% at 50% 0%, rgba(34,197,94,0.25), rgba(34,197,94,0) 70%)",
-        }}
+        style={{ background: biome.ground }}
       />
 
       {/* Enemy (top-right): bubble on the LEFT of the sprite */}
