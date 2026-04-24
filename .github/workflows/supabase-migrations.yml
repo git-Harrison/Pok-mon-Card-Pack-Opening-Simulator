@@ -1,5 +1,5 @@
 name: Apply Supabase migrations
-# trigger: re-run after SUPABASE_DB_URL rotation
+# retrigger: verify SUPABASE_DB_URL fix
 
 on:
   push:
