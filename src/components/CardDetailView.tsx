@@ -12,7 +12,7 @@ import {
   fetchWallet,
 } from "@/lib/db";
 import { getCard, SETS } from "@/lib/sets";
-import { RARITY_LABEL, RARITY_STYLE, isHighRarity } from "@/lib/rarity";
+import { RARITY_LABEL, RARITY_STYLE, cardFxClass } from "@/lib/rarity";
 import type { Card, GiftQuota } from "@/lib/types";
 import RarityBadge from "./RarityBadge";
 import CoinIcon from "./CoinIcon";
@@ -118,7 +118,7 @@ export default function CardDetailView({ cardId }: { cardId: string }) {
     );
   }
 
-  const hot = isHighRarity(card.rarity);
+  const fx = cardFxClass(card.rarity);
   const style = RARITY_STYLE[card.rarity];
 
   return (
@@ -145,12 +145,12 @@ export default function CardDetailView({ cardId }: { cardId: string }) {
         <div className="grid grid-cols-1 md:grid-cols-5">
           {/* Card image */}
           <div className="md:col-span-3 relative p-5 md:p-8 flex items-center justify-center bg-gradient-to-br from-zinc-900 to-black min-h-[320px]">
-            {hot && (
+            {fx && (
               <div
-                className="absolute inset-0 opacity-60 pointer-events-none"
+                className="absolute inset-0 opacity-40 pointer-events-none"
                 style={{
                   background: `radial-gradient(closest-side, ${
-                    style.tier >= 7 ? "#f59e0b" : "#818cf8"
+                    card.rarity === "MUR" ? "#f59e0b" : "#c084fc"
                   }55, transparent 70%)`,
                 }}
               />
@@ -173,7 +173,6 @@ export default function CardDetailView({ cardId }: { cardId: string }) {
                 aspectRatio: "5 / 7",
               }}
             >
-              {hot && <div className="rarity-ring" />}
               {card.imageUrl && !imgError ? (
                 <img
                   src={card.imageUrl}
@@ -189,7 +188,7 @@ export default function CardDetailView({ cardId }: { cardId: string }) {
                   </div>
                 </div>
               )}
-              {hot && <div className="holo-overlay" />}
+              {fx && <div className={fx} />}
             </motion.div>
           </div>
 

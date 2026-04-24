@@ -18,7 +18,7 @@ import {
   type WalletSnapshot,
 } from "@/lib/db";
 import { getCard, SETS, SET_ORDER } from "@/lib/sets";
-import { MERCHANT_PRICE, RARITY_STYLE, isHighRarity } from "@/lib/rarity";
+import { MERCHANT_PRICE, RARITY_STYLE, cardFxClass } from "@/lib/rarity";
 import type { Card, MerchantState } from "@/lib/types";
 import RarityBadge from "./RarityBadge";
 import PointsChip from "./PointsChip";
@@ -167,7 +167,7 @@ export default function MerchantView() {
   }
 
   const rarityStyle = wantedCard ? RARITY_STYLE[wantedCard.rarity] : null;
-  const isHot = wantedCard ? isHighRarity(wantedCard.rarity) : false;
+  const fx = wantedCard ? cardFxClass(wantedCard.rarity) : null;
 
   return (
     <div className="max-w-2xl mx-auto px-4 md:px-6 py-4 md:py-8 fade-in">
@@ -271,7 +271,6 @@ export default function MerchantView() {
                     aspectRatio: "5 / 7",
                   }}
                 >
-                  {isHot && <div className="rarity-ring" />}
                   {wantedCard.imageUrl ? (
                     <img
                       src={wantedCard.imageUrl}
@@ -284,7 +283,7 @@ export default function MerchantView() {
                       {wantedCard.name}
                     </div>
                   )}
-                  {isHot && <div className="holo-overlay pointer-events-none" />}
+                  {fx && <div className={fx} />}
                 </motion.div>
               )}
               {phase === "sold" && lastEarned !== null && (

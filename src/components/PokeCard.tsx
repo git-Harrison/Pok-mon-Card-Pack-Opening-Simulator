@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import type { Card } from "@/lib/types";
-import { RARITY_STYLE, isHighRarity } from "@/lib/rarity";
+import { RARITY_STYLE, cardFxClass } from "@/lib/rarity";
 import RarityBadge from "./RarityBadge";
 
 interface Props {
@@ -40,12 +40,8 @@ export default function PokeCard(props: Props) {
 function StaticCard({ card, sizing }: { card: Card; sizing: string }) {
   const [imgError, setImgError] = useState(false);
   const style = RARITY_STYLE[card.rarity];
-  const hot = isHighRarity(card.rarity);
+  const fx = cardFxClass(card.rarity);
 
-  // In grid/wallet views we intentionally drop the outer `box-shadow` glow
-  // — body has `overflow-x-hidden` + page padding is tight, so the blur
-  // tail on edge cards was being clipped. The animated gradient-border
-  // `.rarity-ring` below now carries the rarity cue instead.
   return (
     <div
       className={clsx(
@@ -54,7 +50,6 @@ function StaticCard({ card, sizing }: { card: Card; sizing: string }) {
         sizing
       )}
     >
-      {hot && <div className="rarity-ring" />}
       {card.imageUrl && !imgError ? (
         <img
           src={card.imageUrl}
@@ -68,8 +63,8 @@ function StaticCard({ card, sizing }: { card: Card; sizing: string }) {
       ) : (
         <FallbackFront card={card} />
       )}
-      {hot && <div className="holo-overlay pointer-events-none" />}
-      <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
+      {fx && <div className={fx} />}
+      <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent pointer-events-none z-[3]">
         <div className="flex items-center justify-between">
           <RarityBadge rarity={card.rarity} size="xs" />
           <span className="text-[10px] text-white/80">{card.number}</span>
@@ -91,7 +86,7 @@ function FlippableCard({
 }: Props & { sizing: string }) {
   const [imgError, setImgError] = useState(false);
   const style = RARITY_STYLE[card.rarity];
-  const hot = isHighRarity(card.rarity);
+  const fx = cardFxClass(card.rarity);
   void size;
 
   return (
@@ -101,7 +96,6 @@ function FlippableCard({
         sizing
       )}
     >
-      {hot && revealed && <div className="rarity-ring" />}
       <motion.button
         type="button"
         onClick={() => !revealed && onReveal?.()}
@@ -145,9 +139,9 @@ function FlippableCard({
           ) : (
             <FallbackFront card={card} />
           )}
-          {hot && <div className="holo-overlay pointer-events-none" />}
+          {fx && revealed && <div className={fx} />}
           {revealed && (
-            <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
+            <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent pointer-events-none z-[3]">
               <div className="flex items-center justify-between">
                 <RarityBadge rarity={card.rarity} size="xs" />
                 <span className="text-[10px] text-white/80">
@@ -158,7 +152,7 @@ function FlippableCard({
           )}
         </div>
       </motion.button>
-      {hot && revealed && (
+      {fx && revealed && (
         <div className="pointer-events-none">
           <SparkleBurst />
         </div>

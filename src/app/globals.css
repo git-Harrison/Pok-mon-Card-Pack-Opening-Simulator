@@ -73,99 +73,115 @@ samp {
   transform: rotateY(180deg);
 }
 
-/* ---------- Holo sheen for high-rarity cards ---------- */
-@keyframes holo-sweep {
-  0% {
-    background-position: 0% 50%;
-    opacity: 0.55;
-  }
-  50% {
-    background-position: 100% 50%;
-    opacity: 0.9;
-  }
-  100% {
-    background-position: 0% 50%;
-    opacity: 0.55;
-  }
-}
+/* ─────────────── Rarity effects (MUR / SAR only) ───────────────
+   Only MUR and SAR carry an animated effect. AR / SR / MA / UR stay
+   visually calm so the art reads cleanly. MUR and SAR each get a
+   distinct treatment:
 
-.holo-overlay {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  /* Softer blend + lower opacity so the card art stays readable. */
-  mix-blend-mode: overlay;
-  background: linear-gradient(
-    115deg,
-    transparent 0%,
-    rgba(255, 0, 170, 0.14) 20%,
-    rgba(0, 200, 255, 0.14) 40%,
-    rgba(255, 230, 0, 0.16) 55%,
-    rgba(120, 255, 160, 0.12) 75%,
-    transparent 100%
-  );
-  background-size: 300% 300%;
-  animation: holo-sweep 3.4s ease-in-out infinite;
-  opacity: 0.55;
-}
+     MUR → 황금 광휘  (gold foil shimmer that sweeps diagonally)
+     SAR → 별빛 아우로라 (prismatic ripple + twinkling starfield)
+   ─────────────────────────────────────────────────────────────── */
 
-/* ---------- Shimmering ring used by hit cards ---------- */
 @keyframes ring-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
-/* Animated *border-only* rainbow sweep for high-rarity cards. The
-   gradient lives in a 2px-thick frame around the card's edge — never
-   in the center — via mask-composite: exclude. This keeps the art
-   fully visible while still calling out the hit. */
-.rarity-ring {
+/* MUR — diagonal gold foil shimmer. */
+@keyframes mur-foil {
+  0%   { transform: translateX(-120%) skewX(-18deg); opacity: 0; }
+  25%  { opacity: 0.9; }
+  75%  { opacity: 0.9; }
+  100% { transform: translateX(260%) skewX(-18deg); opacity: 0; }
+}
+
+.fx-mur {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  padding: 2px;
-  background: conic-gradient(
-    from 0deg,
-    #ffd7a0 0deg,
-    #ff8fd2 90deg,
-    #8ae2ff 180deg,
-    #a0ffb2 270deg,
-    #ffd7a0 360deg
-  );
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: ring-spin 5s linear infinite;
+  overflow: hidden;
   pointer-events: none;
-  opacity: 0.9;
   z-index: 2;
 }
-
-/* A softer shimmer pulse layered under the border for extra depth. */
-.rarity-ring::after {
+/* The moving gold band */
+.fx-mur::before {
   content: "";
   position: absolute;
-  inset: -6px;
-  border-radius: inherit;
-  background: radial-gradient(
-    closest-side,
-    rgba(255, 220, 140, 0.35),
-    transparent 70%
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 55%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 210, 120, 0.35) 30%,
+    rgba(255, 244, 200, 0.7) 50%,
+    rgba(255, 210, 120, 0.35) 70%,
+    transparent 100%
   );
-  filter: blur(4px);
-  opacity: 0.6;
-  animation: holo-sweep 4s ease-in-out infinite;
-  z-index: -1;
+  mix-blend-mode: screen;
+  animation: mur-foil 3.4s ease-in-out infinite;
+}
+/* A permanent warm inset so the card feels like gold foil even between sweeps */
+.fx-mur::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 24px rgba(251, 191, 36, 0.35),
+    inset 0 0 4px rgba(255, 236, 180, 0.55);
+  pointer-events: none;
+}
+
+/* SAR — rotating aurora conic sweep behind a tiny twinkling starfield. */
+@keyframes sar-twinkle {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 0.85; }
+}
+
+.fx-sar {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+}
+/* Aurora: a soft, blurred, rotating pink-violet-blue conic */
+.fx-sar::before {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(236, 72, 153, 0) 0deg,
+    rgba(236, 72, 153, 0.35) 60deg,
+    rgba(167, 139, 250, 0.4) 130deg,
+    rgba(96, 165, 250, 0.35) 200deg,
+    rgba(236, 72, 153, 0.35) 280deg,
+    rgba(236, 72, 153, 0) 360deg
+  );
+  filter: blur(22px);
+  mix-blend-mode: screen;
+  opacity: 0.65;
+  animation: ring-spin 9s linear infinite;
+}
+/* Starfield — tiny static sparkle dots that gently pulse */
+.fx-sar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.2px 1.2px at 18% 22%, #fff 0, transparent 60%),
+    radial-gradient(1px 1px at 72% 15%, #fff 0, transparent 60%),
+    radial-gradient(1.2px 1.2px at 42% 68%, #fff 0, transparent 60%),
+    radial-gradient(1px 1px at 86% 58%, #fff 0, transparent 60%),
+    radial-gradient(1px 1px at 12% 82%, #fff 0, transparent 60%),
+    radial-gradient(1.4px 1.4px at 58% 34%, #fff 0, transparent 60%),
+    radial-gradient(1px 1px at 30% 48%, #fff 0, transparent 60%);
+  mix-blend-mode: screen;
+  animation: sar-twinkle 2.6s ease-in-out infinite;
 }
 
 /* ---------- Pack foil shine ---------- */

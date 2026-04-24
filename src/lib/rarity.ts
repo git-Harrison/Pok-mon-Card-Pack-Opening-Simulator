@@ -102,6 +102,17 @@ export function isHighRarity(r: Rarity): boolean {
   return RARITY_STYLE[r].tier >= 4;
 }
 
+/**
+ * Returns the CSS class name of the card-art effect overlay for a given
+ * rarity, or null if no effect should render. Only MUR and SAR get
+ * effects; every other rarity stays visually plain.
+ */
+export function cardFxClass(r: Rarity): "fx-mur" | "fx-sar" | null {
+  if (r === "MUR") return "fx-mur";
+  if (r === "SAR") return "fx-sar";
+  return null;
+}
+
 // Points the merchant pays when buying a card of this rarity.
 // 단가표:
 //   MUR 500,000 · UR 300,000 · SAR 300,000 · SR 200,000

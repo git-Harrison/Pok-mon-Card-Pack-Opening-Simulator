@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AnimatePresence, motion, PanInfo } from "framer-motion";
 import clsx from "clsx";
 import type { Card } from "@/lib/types";
-import { RARITY_STYLE, isHighRarity } from "@/lib/rarity";
+import { RARITY_STYLE, cardFxClass } from "@/lib/rarity";
 import RarityBadge from "./RarityBadge";
 
 type Stage = "tearing" | "single" | "grid";
@@ -395,7 +395,7 @@ function StageCard({
   onFlip: () => void;
 }) {
   const style = RARITY_STYLE[card.rarity];
-  const hot = isHighRarity(card.rarity);
+  const fx = cardFxClass(card.rarity);
   return (
     <div
       className="relative rounded-2xl overflow-hidden isolate"
@@ -405,7 +405,6 @@ function StageCard({
         maxHeight: "58dvh",
       }}
     >
-      {hot && revealed && <div className="rarity-ring" />}
       <button
         type="button"
         onClick={onFlip}
@@ -454,7 +453,7 @@ function StageCard({
                 </div>
               </div>
             )}
-            {hot && <div className="holo-overlay pointer-events-none" />}
+            {fx && revealed && <div className={fx} />}
           </div>
         </motion.div>
       </button>
@@ -497,7 +496,7 @@ function GridStage({ pack }: { pack: Card[] }) {
 
 function MiniCard({ card }: { card: Card }) {
   const style = RARITY_STYLE[card.rarity];
-  const hot = isHighRarity(card.rarity);
+  const fx = cardFxClass(card.rarity);
   return (
     <div
       className={clsx(
@@ -506,7 +505,6 @@ function MiniCard({ card }: { card: Card }) {
         style.glow
       )}
     >
-      {hot && <div className="rarity-ring" />}
       {card.imageUrl ? (
         <img
           src={card.imageUrl}
@@ -520,10 +518,8 @@ function MiniCard({ card }: { card: Card }) {
           {card.name}
         </div>
       )}
-      {hot && <div className="holo-overlay pointer-events-none" />}
-      {/* Rarity badge anchored to the bottom-left of the card image so
-          it sits visually inside the card instead of floating below it. */}
-      <div className="absolute left-1.5 bottom-1.5 pointer-events-none">
+      {fx && <div className={fx} />}
+      <div className="absolute left-1.5 bottom-1.5 pointer-events-none z-[3]">
         <RarityBadge rarity={card.rarity} size="xs" />
       </div>
     </div>
