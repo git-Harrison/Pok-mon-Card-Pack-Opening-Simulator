@@ -455,13 +455,13 @@ function PsaMode({
   }
   return (
     <div
-      className="mt-6 md:mt-8 grid gap-6 md:gap-8 place-items-center"
+      className="mt-6 md:mt-8 grid gap-10 md:gap-12 place-items-center"
       style={{
-        gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+        gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
       }}
     >
       {items.map(({ grading, card }) => (
-        <div key={grading.id} className="flex flex-col items-center gap-2">
+        <div key={grading.id} className="flex flex-col items-center gap-3">
           <PsaSlab card={card} grade={grading.grade} size="md" />
           <div className="w-full text-center px-1">
             <p className="text-[11px] text-zinc-300 leading-tight line-clamp-2">

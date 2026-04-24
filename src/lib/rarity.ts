@@ -103,18 +103,20 @@ export function isHighRarity(r: Rarity): boolean {
 }
 
 // Points the merchant pays when buying a card of this rarity.
-// AR 이상은 만 포인트부터 시작 — SR / MA / SAR / MUR / UR 는 확실히 비싸게.
+// 상인 매입 단가:
+//   MUR / UR  300,000 · SAR 100,000 · AR  50,000
+//   나머지     10,000
 export const MERCHANT_PRICE: Record<Rarity, number> = {
-  C: 50,
-  U: 200,
-  R: 500,
-  RR: 2_000,
-  AR: 10_000,
-  SR: 20_000,
-  MA: 30_000,
-  SAR: 50_000,
-  MUR: 100_000,
-  UR: 100_000,
+  C: 10_000,
+  U: 10_000,
+  R: 10_000,
+  RR: 10_000,
+  SR: 10_000,
+  MA: 10_000,
+  AR: 50_000,
+  SAR: 100_000,
+  MUR: 300_000,
+  UR: 300_000,
 };
 
 // Cost in points to open one sealed booster box.

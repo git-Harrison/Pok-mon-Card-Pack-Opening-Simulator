@@ -53,6 +53,9 @@ export interface MerchantState {
   price: number;
   refreshes_remaining: number;
   next_refresh_at: string;
+  sells_this_hour: number;
+  sells_limit: number;
+  sells_hour_start: string;
 }
 
 export type GiftStatus = "pending" | "accepted" | "expired" | "declined";

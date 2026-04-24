@@ -31,14 +31,14 @@ function pickRandomCard(): Card {
   return all[Math.floor(Math.random() * all.length)];
 }
 
-function formatCountdown(iso: string): string {
+function fmtCountdown(iso: string): string {
   const ms = new Date(iso).getTime() - Date.now();
-  if (ms <= 0) return "곧 충전";
+  if (ms <= 0) return "곧";
   const m = Math.floor(ms / 60000);
   const s = Math.floor((ms % 60000) / 1000);
   const h = Math.floor(m / 60);
-  if (h > 0) return `${h}h ${m % 60}m 뒤`;
-  return `${m}m ${s}s 뒤`;
+  if (h > 0) return `${h}시간 ${m % 60}분`;
+  return `${m}분 ${s}초`;
 }
 
 export default function MerchantView() {
@@ -48,7 +48,6 @@ export default function MerchantView() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
   const [lastEarned, setLastEarned] = useState<number | null>(null);
-  const [wiggleKey, setWiggleKey] = useState(0);
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -70,6 +69,7 @@ export default function MerchantView() {
       const res = await refreshMerchantRPC(user.id, picked.id, price);
       if (res.ok) {
         setState({
+          ...m,
           card_id: res.card_id ?? picked.id,
           price: res.price ?? price,
           refreshes_remaining: res.refreshes_remaining ?? m.refreshes_remaining,
@@ -93,6 +93,15 @@ export default function MerchantView() {
     return wallet.items.find((it) => it.card.id === wantedCard.id)?.count ?? 0;
   }, [wallet, wantedCard]);
 
+  const sellsRemaining = state
+    ? Math.max(0, state.sells_limit - state.sells_this_hour)
+    : 0;
+  const sellWindowEnd = state
+    ? new Date(
+        new Date(state.sells_hour_start).getTime() + 60 * 60 * 1000
+      ).toISOString()
+    : null;
+
   const onRefresh = useCallback(async () => {
     if (!user || phase !== "idle") return;
     const picked = pickRandomCard();
@@ -101,32 +110,41 @@ export default function MerchantView() {
     setPhase("refreshing");
     const res = await refreshMerchantRPC(user.id, picked.id, price);
     if (!res.ok) {
-      setError(res.error ?? "새로고침 실패");
+      setError(res.error ?? "교체 실패");
       setPhase("idle");
       const fresh = await getMerchantState(user.id);
       setState(fresh);
       return;
     }
     setTimeout(() => {
-      setState({
-        card_id: res.card_id ?? picked.id,
-        price: res.price ?? price,
-        refreshes_remaining: res.refreshes_remaining ?? 0,
-        next_refresh_at: res.next_refresh_at ?? new Date().toISOString(),
-      });
+      setState((prev) =>
+        prev
+          ? {
+              ...prev,
+              card_id: res.card_id ?? picked.id,
+              price: res.price ?? price,
+              refreshes_remaining:
+                res.refreshes_remaining ?? prev.refreshes_remaining,
+              next_refresh_at: res.next_refresh_at ?? prev.next_refresh_at,
+            }
+          : prev
+      );
       setPhase("idle");
     }, 450);
   }, [user, phase]);
 
   const onSell = useCallback(async () => {
     if (!user || !wantedCard || phase !== "idle" || ownedCount <= 0) return;
+    if (sellsRemaining <= 0) {
+      setError("1시간 판매 한도에 도달했어요.");
+      return;
+    }
     setError(null);
     setPhase("selling");
-    setWiggleKey((k) => k + 1);
     setTimeout(async () => {
       const res = await sellToMerchant(user.id, wantedCard.id);
       if (!res.ok) {
-        setError(res.error ?? "판매 실패");
+        setError(res.error ?? "거래 실패");
         setPhase("idle");
         return;
       }
@@ -136,9 +154,9 @@ export default function MerchantView() {
       setTimeout(() => {
         setPhase("idle");
         setLastEarned(null);
-      }, 1400);
+      }, 1500);
     }, 900);
-  }, [user, wantedCard, phase, ownedCount, state?.price, refreshMe, loadAll]);
+  }, [user, wantedCard, phase, ownedCount, sellsRemaining, state?.price, refreshMe, loadAll]);
 
   if (!user || !state) {
     return (
@@ -153,90 +171,83 @@ export default function MerchantView() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 md:px-6 py-4 md:py-8 fade-in">
-      {/* ── Compact header ── */}
+      {/* Shop sign header */}
       <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-xl md:text-3xl font-black text-white tracking-tight">
-            카드 상인
-          </h1>
-          <p className="hidden md:block text-xs text-zinc-400 mt-1">
-            상인이 원하는 카드와 같은 카드를 갖고 있으면 포인트로 바꿀 수 있어요.
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="relative w-12 h-12 md:w-14 md:h-14 shrink-0">
+            <div className="absolute inset-0 rounded-full bg-gradient-to-b from-amber-500/30 to-transparent blur-md" />
+            <img
+              src="/images/common/merchant-meowth.png"
+              alt="상인"
+              className={clsx(
+                "relative w-full h-full object-contain",
+                phase === "idle" && "animate-bob"
+              )}
+              draggable={false}
+            />
+          </div>
+          <div>
+            <h1 className="text-xl md:text-3xl font-black text-amber-100 tracking-tight">
+              카드 상인
+            </h1>
+            <p className="text-[11px] text-amber-200/70 tracking-wide">
+              TRADING POST · 매입 전문
+            </p>
+          </div>
         </div>
         <PointsChip points={user.points} highlight />
       </div>
 
-      {/* ── Stage: Meowth + speech on top, card + controls below ── */}
-      <section className="relative mt-4 rounded-2xl border border-white/10 bg-gradient-to-br from-amber-500/10 via-rose-500/5 to-transparent p-3 md:p-5">
-        {/* Meowth + speech (always horizontal) */}
-        <div className="flex items-center gap-3">
-          <div className="relative w-20 h-20 md:w-24 md:h-24 shrink-0">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-b from-amber-400/30 to-transparent blur-xl" />
-            <motion.img
-              key={wiggleKey}
-              src="/images/common/merchant-meowth.png"
-              alt="카드 상인 냥체스터"
-              className={clsx(
-                "relative w-full h-full object-contain drop-shadow-xl",
-                phase === "idle" && "animate-bob",
-                (phase === "selling" || phase === "sold") && "animate-wiggle"
-              )}
-              draggable={false}
-            />
-            <AnimatePresence>
-              {phase === "sold" &&
-                Array.from({ length: 10 }).map((_, i) => {
-                  const angle = (i / 10) * Math.PI * 2 - Math.PI / 2;
-                  const dx = Math.cos(angle) * 70;
-                  const dy = Math.sin(angle) * 70;
-                  return (
-                    <span
-                      key={i}
-                      aria-hidden
-                      className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-                      style={
-                        {
-                          animation: `coin-fly 1s ease-out ${i * 0.02}s forwards`,
-                          ["--end" as string]: `translate(${dx}px, ${dy}px)`,
-                        } as React.CSSProperties
-                      }
-                    >
-                      <CoinIcon size="md" />
-                    </span>
-                  );
-                })}
-            </AnimatePresence>
+      {/* Trading post panel */}
+      <section
+        className="relative mt-5 rounded-2xl border-2 overflow-hidden"
+        style={{
+          borderColor: "rgba(180, 83, 9, 0.35)",
+          background:
+            "linear-gradient(180deg, rgba(41, 37, 36, 0.85) 0%, rgba(20, 14, 10, 0.95) 100%)",
+        }}
+      >
+        {/* Top plaque */}
+        <div
+          className="flex items-center justify-between px-4 py-2 border-b border-amber-900/40"
+          style={{
+            background:
+              "linear-gradient(90deg, rgba(180,83,9,0.18), rgba(180,83,9,0.06))",
+          }}
+        >
+          <div className="text-[11px] uppercase tracking-[0.25em] text-amber-300/80 font-bold">
+            오늘의 매입
           </div>
-          <div className="flex-1 min-w-0 rounded-2xl bg-zinc-900/95 border border-white/10 p-2.5 text-xs md:text-sm leading-snug">
-            {phase === "sold" ? (
-              <p className="text-emerald-300 font-semibold">
-                고맙다냥! {lastEarned?.toLocaleString("ko-KR")}p 받았다냥
-              </p>
-            ) : phase === "selling" ? (
-              <p className="text-zinc-200">좋은 카드다냥! 기다려라냥...</p>
-            ) : wantedCard ? (
-              <>
-                <p className="text-zinc-200">
-                  지금은{" "}
-                  <span className="font-bold text-white">{wantedCard.name}</span>
-                  을 찾고 있다냥.
-                </p>
-                {ownedCount > 0 ? (
-                  <p className="mt-0.5 text-amber-300 font-semibold">
-                    너가 {ownedCount}장 갖고있다! 팔아라냥
-                  </p>
-                ) : (
-                  <p className="mt-0.5 text-zinc-400">보유 중 아님. 새로고침 ↓</p>
-                )}
-              </>
-            ) : (
-              <p className="text-zinc-300">새 카드를 찾고있다냥...</p>
-            )}
+          <div className="flex items-center gap-2 text-[10px]">
+            <CounterChip
+              label="매입"
+              used={state.sells_this_hour}
+              limit={state.sells_limit}
+              tone="emerald"
+              endIso={sellWindowEnd}
+            />
+            <CounterChip
+              label="교체"
+              used={5 - state.refreshes_remaining}
+              limit={5}
+              tone="amber"
+              endIso={
+                state.refreshes_remaining < 5 ? state.next_refresh_at : null
+              }
+            />
           </div>
         </div>
 
-        {/* Card + offer */}
-        <div className="mt-4 flex flex-col items-center gap-3">
+        {/* Card stage */}
+        <div className="relative p-4 md:p-6 flex flex-col items-center gap-4">
+          {/* Spotlight under the card */}
+          <div
+            className="absolute inset-x-0 top-4 h-40 md:h-48 pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(closest-side at 50% 30%, rgba(251,191,36,0.22), rgba(251,191,36,0) 70%)",
+            }}
+          />
           <div className="relative" style={{ minHeight: 0 }}>
             <AnimatePresence mode="wait">
               {wantedCard && phase !== "sold" && (
@@ -246,7 +257,7 @@ export default function MerchantView() {
                   animate={{ x: 0, opacity: 1, rotate: 0, scale: 1 }}
                   exit={
                     phase === "selling"
-                      ? { x: -180, y: -60, opacity: 0, rotate: -16, scale: 0.6 }
+                      ? { x: -220, y: -80, opacity: 0, rotate: -20, scale: 0.6 }
                       : { x: -80, opacity: 0, rotate: -8, scale: 0.9 }
                   }
                   transition={{ type: "spring", stiffness: 220, damping: 20 }}
@@ -256,7 +267,7 @@ export default function MerchantView() {
                     rarityStyle?.glow
                   )}
                   style={{
-                    width: "min(48vw, 180px)",
+                    width: "min(58vw, 220px)",
                     aspectRatio: "5 / 7",
                   }}
                 >
@@ -276,60 +287,107 @@ export default function MerchantView() {
                   {isHot && <div className="holo-overlay pointer-events-none" />}
                 </motion.div>
               )}
-              {phase === "sold" && (
+              {phase === "sold" && lastEarned !== null && (
                 <motion.div
-                  key="empty"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
+                  key="sold"
+                  initial={{ opacity: 0, scale: 0.6 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
                   className="text-center py-10"
                 >
-                  <p className="text-5xl mb-2">✨</p>
-                  <p className="text-xs text-zinc-300">판매 완료!</p>
+                  <p className="text-5xl mb-2">💰</p>
+                  <p className="text-xs text-amber-200 mb-2">거래 성사</p>
+                  <p className="text-2xl font-black text-amber-300 tabular-nums">
+                    +{lastEarned.toLocaleString("ko-KR")}p
+                  </p>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
+          {/* Card meta + price tag */}
           {wantedCard && phase !== "sold" && (
-            <div className="w-full flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2 min-w-0">
-                <RarityBadge rarity={wantedCard.rarity} size="xs" />
-                <span className="text-[10px] text-zinc-400 truncate">
-                  {SETS[wantedCard.setCode].name} · #{wantedCard.number}
-                </span>
+            <div className="relative w-full max-w-sm">
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <RarityBadge rarity={wantedCard.rarity} size="xs" />
+                  </div>
+                  <h2 className="text-base md:text-lg font-bold text-white leading-tight truncate">
+                    {wantedCard.name}
+                  </h2>
+                  <p className="text-[10px] text-zinc-400 truncate">
+                    {SETS[wantedCard.setCode].name} · #{wantedCard.number}
+                  </p>
+                </div>
+                {/* Price tag */}
+                <div
+                  className="shrink-0 relative rounded-lg px-3 py-2 text-right border-2"
+                  style={{
+                    borderColor: "rgba(251, 191, 36, 0.5)",
+                    background:
+                      "linear-gradient(135deg, rgba(251,191,36,0.15), rgba(180,83,9,0.15))",
+                  }}
+                >
+                  <div className="text-[9px] uppercase tracking-wider text-amber-300/80">
+                    매입가
+                  </div>
+                  <div className="inline-flex items-center gap-1 mt-0.5">
+                    <CoinIcon size="sm" />
+                    <span className="text-sm md:text-base font-black text-amber-200 tabular-nums">
+                      {state.price.toLocaleString("ko-KR")}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/10 border border-amber-400/40 text-amber-200 px-2.5 py-1 text-xs font-bold shrink-0">
-                <CoinIcon size="xs" />
-                <span>{state.price.toLocaleString("ko-KR")}p</span>
-              </div>
+
+              {/* Inventory status */}
+              <p className="mt-3 text-xs text-zinc-400">
+                {ownedCount > 0 ? (
+                  <span className="text-emerald-300 font-semibold">
+                    ✓ 보유 중 ({ownedCount}장) — 거래 가능
+                  </span>
+                ) : (
+                  <span className="text-zinc-500">
+                    보유 중인 카드가 아니에요. 교체를 시도해 보세요.
+                  </span>
+                )}
+              </p>
             </div>
           )}
         </div>
 
         {error && (
-          <p className="mt-3 text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">
+          <div className="mx-4 mb-3 text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">
             {error}
-          </p>
+          </div>
         )}
 
         {/* Actions */}
-        <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="px-4 pb-4 grid grid-cols-2 gap-2">
           <button
             onClick={onSell}
-            disabled={phase !== "idle" || ownedCount <= 0 || !wantedCard}
+            disabled={
+              phase !== "idle" ||
+              ownedCount <= 0 ||
+              !wantedCard ||
+              sellsRemaining <= 0
+            }
             style={{ touchAction: "manipulation" }}
             className={clsx(
               "h-12 rounded-xl font-bold text-sm transition-all",
-              ownedCount > 0 && phase === "idle"
-                ? "bg-gradient-to-r from-emerald-400 to-amber-400 text-zinc-950 hover:scale-[1.02] active:scale-[0.98] shadow-[0_10px_30px_-10px_rgba(52,211,153,0.6)]"
-                : "bg-white/5 text-zinc-500 cursor-not-allowed"
+              ownedCount > 0 && phase === "idle" && sellsRemaining > 0
+                ? "bg-gradient-to-r from-emerald-500 to-amber-400 text-zinc-950 hover:scale-[1.02] active:scale-[0.98] shadow-[0_10px_30px_-10px_rgba(52,211,153,0.5)]"
+                : "bg-white/5 text-zinc-500 cursor-not-allowed border border-white/5"
             )}
           >
             {phase === "selling"
-              ? "판매 중..."
+              ? "거래 중..."
+              : sellsRemaining <= 0
+              ? "매입 마감"
               : ownedCount <= 0
               ? "보유 중 아님"
-              : `+${state.price.toLocaleString("ko-KR")}p 받고 팔기`}
+              : "이 카드 팔기"}
           </button>
           <button
             onClick={onRefresh}
@@ -342,26 +400,115 @@ export default function MerchantView() {
               "h-12 rounded-xl font-bold text-sm transition-all",
               phase === "idle" &&
                 (wantedCard === null || state.refreshes_remaining > 0)
-                ? "bg-white text-zinc-900 hover:scale-[1.02] active:scale-[0.98]"
-                : "bg-white/5 text-zinc-500 cursor-not-allowed"
+                ? "bg-amber-100 text-amber-950 hover:scale-[1.02] active:scale-[0.98]"
+                : "bg-white/5 text-zinc-500 cursor-not-allowed border border-white/5"
             )}
           >
             {phase === "refreshing"
               ? "교체 중..."
-              : `새로고침 (${state.refreshes_remaining}/5)`}
+              : `교체 (${state.refreshes_remaining}/5)`}
           </button>
         </div>
-
-        <p className="mt-2 text-center text-[10px] text-zinc-500">
-          {state.refreshes_remaining < 5
-            ? `충전 ${formatCountdown(state.next_refresh_at)}`
-            : "새로고침 5회 충전 완료"}
-          {" · "}
-          <Link href="/" className="underline hover:text-zinc-300">
-            상인의 매물은 모든 세트 랜덤
-          </Link>
-        </p>
       </section>
+
+      {/* Rate card */}
+      <div className="mt-4 rounded-xl bg-white/5 border border-white/10 p-3">
+        <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-2">
+          등급별 매입 단가
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 text-[11px]">
+          <RateRow rarity="MUR" price={MERCHANT_PRICE.MUR} />
+          <RateRow rarity="UR" price={MERCHANT_PRICE.UR} />
+          <RateRow rarity="SAR" price={MERCHANT_PRICE.SAR} />
+          <RateRow rarity="AR" price={MERCHANT_PRICE.AR} />
+          <RateRow rarity="SR" price={MERCHANT_PRICE.SR} />
+          <RateRow rarity="MA" price={MERCHANT_PRICE.MA} />
+          <RateRow rarity="RR" price={MERCHANT_PRICE.RR} />
+          <RateRow rarity="C" price={MERCHANT_PRICE.C} label="그 외" />
+        </div>
+        <p className="mt-2 text-[10px] text-zinc-500 text-center">
+          매물은 모든 세트에서 무작위 · 1시간당 판매 5회 · 교체 최대 5회
+          (1시간마다 +1 충전)
+        </p>
+      </div>
+
+      <p className="mt-3 text-center text-[10px] text-zinc-500">
+        <Link href="/" className="underline hover:text-zinc-300">
+          다른 세트 팩 열러 가기
+        </Link>
+      </p>
+    </div>
+  );
+}
+
+function CounterChip({
+  label,
+  used,
+  limit,
+  tone,
+  endIso,
+}: {
+  label: string;
+  used: number;
+  limit: number;
+  tone: "emerald" | "amber";
+  endIso: string | null;
+}) {
+  const remaining = Math.max(0, limit - used);
+  const toneClass =
+    tone === "emerald"
+      ? "border-emerald-400/40 text-emerald-200 bg-emerald-500/10"
+      : "border-amber-400/40 text-amber-200 bg-amber-500/10";
+  return (
+    <div
+      className={clsx(
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 border",
+        toneClass
+      )}
+      title={endIso ? `리셋: ${fmtCountdown(endIso)}` : undefined}
+    >
+      <span className="text-[9px] uppercase tracking-wider opacity-80">
+        {label}
+      </span>
+      <span className="font-black tabular-nums text-[11px]">
+        {remaining}/{limit}
+      </span>
+    </div>
+  );
+}
+
+function RateRow({
+  rarity,
+  price,
+  label,
+}: {
+  rarity: keyof typeof MERCHANT_PRICE;
+  price: number;
+  label?: string;
+}) {
+  const style = RARITY_STYLE[rarity];
+  return (
+    <div className="flex items-center justify-between rounded-md bg-black/30 border border-white/5 px-2 py-1">
+      <span
+        className={clsx(
+          "inline-flex items-center gap-1 font-bold",
+          rarity === "MUR" || rarity === "UR"
+            ? "text-amber-300"
+            : rarity === "SAR"
+            ? "text-fuchsia-300"
+            : rarity === "AR"
+            ? "text-pink-300"
+            : "text-zinc-300"
+        )}
+      >
+        <span
+          className={clsx("inline-block w-1.5 h-1.5 rounded-full", style.badge)}
+        />
+        {label ?? rarity}
+      </span>
+      <span className="text-amber-100 tabular-nums font-semibold">
+        {price.toLocaleString("ko-KR")}p
+      </span>
     </div>
   );
 }
