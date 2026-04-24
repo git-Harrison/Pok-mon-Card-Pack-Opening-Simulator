@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import NotificationsOverlay from "@/components/NotificationsOverlay";
 import { AuthProvider } from "@/lib/auth";
 
 export const metadata: Metadata = {
@@ -46,6 +47,7 @@ export default function RootLayout({
               The Pokémon Company / 포켓몬 코리아에 있습니다.
             </footer>
           </main>
+          <NotificationsOverlay />
         </AuthProvider>
       </body>
     </html>

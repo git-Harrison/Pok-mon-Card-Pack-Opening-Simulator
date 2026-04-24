@@ -9,6 +9,7 @@ import {
   acceptGift,
   declineGift,
   fetchGifts,
+  markGiftsViewed,
   type GiftRow,
 } from "@/lib/db";
 import { getCard, SETS } from "@/lib/sets";
@@ -72,7 +73,10 @@ export default function GiftsView() {
 
   useEffect(() => {
     refresh();
-  }, [refresh]);
+    // Arriving on /gifts clears the nav badge — all pending received
+    // gifts are considered acknowledged from this point on.
+    if (user) markGiftsViewed(user.id);
+  }, [refresh, user]);
 
   const list = useMemo(
     () => (tab === "received" ? gifts.received : gifts.sent),

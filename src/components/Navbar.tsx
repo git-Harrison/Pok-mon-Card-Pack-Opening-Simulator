@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
+import { fetchUnseenGiftCount } from "@/lib/db";
 import PointsChip from "./PointsChip";
 import {
   GiftIcon,
@@ -33,6 +35,24 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const isPublic = pathname === "/login" || pathname === "/signup";
 
+  // Gift badge: count of pending received gifts that haven't been
+  // viewed yet. Refreshes on route change so visiting /gifts (which
+  // marks them viewed) clears the dot on next nav transition.
+  const [giftBadge, setGiftBadge] = useState(0);
+  useEffect(() => {
+    if (!user) {
+      setGiftBadge(0);
+      return;
+    }
+    let canceled = false;
+    fetchUnseenGiftCount(user.id).then((n) => {
+      if (!canceled) setGiftBadge(n);
+    });
+    return () => {
+      canceled = true;
+    };
+  }, [user, pathname]);
+
   return (
     <>
       {/* ─── Top bar (always sticky) ─── */}
@@ -54,32 +74,40 @@ export default function Navbar() {
           {/* Desktop: inline nav */}
           {user && (
             <nav className="hidden md:flex items-center gap-1">
-              {NAV_ITEMS.map(({ href, label }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className={clsx(
-                    "px-3 py-1.5 text-sm rounded-md transition-colors",
-                    pathname === href
-                      ? "bg-white/10 text-white"
-                      : "text-zinc-300 hover:bg-white/5 hover:text-white"
-                  )}
-                >
-                  {label === "지갑"
-                    ? "내 카드지갑"
-                    : label === "상인"
-                    ? "카드 상인"
-                    : label === "등급"
-                    ? "등급 감별"
-                    : label === "랭킹"
-                    ? "사용자 랭킹"
-                    : label === "센터"
-                    ? "내 포켓몬센터"
-                    : label === "야생"
-                    ? "야생 배틀"
-                    : label}
-                </Link>
-              ))}
+              {NAV_ITEMS.map(({ href, label }) => {
+                const showBadge = href === "/gifts" && giftBadge > 0;
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={clsx(
+                      "relative px-3 py-1.5 text-sm rounded-md transition-colors",
+                      pathname === href
+                        ? "bg-white/10 text-white"
+                        : "text-zinc-300 hover:bg-white/5 hover:text-white"
+                    )}
+                  >
+                    {label === "지갑"
+                      ? "내 카드지갑"
+                      : label === "상인"
+                      ? "카드 상인"
+                      : label === "등급"
+                      ? "등급 감별"
+                      : label === "랭킹"
+                      ? "사용자 랭킹"
+                      : label === "센터"
+                      ? "내 포켓몬센터"
+                      : label === "야생"
+                      ? "야생 배틀"
+                      : label}
+                    {showBadge && (
+                      <span className="absolute -top-0.5 -right-1 min-w-[18px] h-[18px] rounded-full bg-rose-500 text-white text-[10px] font-black px-1 inline-flex items-center justify-center ring-2 ring-black/40">
+                        {giftBadge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
             </nav>
           )}
 
@@ -131,12 +159,13 @@ export default function Navbar() {
             {NAV_ITEMS.map(({ href, label, Icon }) => {
               const active =
                 pathname === href || (href !== "/" && pathname.startsWith(href));
+              const showBadge = href === "/gifts" && giftBadge > 0;
               return (
                 <li key={href} className="flex-1">
                   <Link
                     href={href}
                     className={clsx(
-                      "h-full flex flex-col items-center justify-center gap-0.5 transition",
+                      "relative h-full flex flex-col items-center justify-center gap-0.5 transition",
                       active ? "text-amber-300" : "text-zinc-400 hover:text-white"
                     )}
                   >
@@ -147,6 +176,11 @@ export default function Navbar() {
                       )}
                     />
                     <span className="text-[10px] font-medium">{label}</span>
+                    {showBadge && (
+                      <span className="absolute top-1.5 right-1/4 min-w-[18px] h-[18px] rounded-full bg-rose-500 text-white text-[10px] font-black px-1 inline-flex items-center justify-center ring-2 ring-black/60 translate-x-1/2">
+                        {giftBadge}
+                      </span>
+                    )}
                   </Link>
                 </li>
               );

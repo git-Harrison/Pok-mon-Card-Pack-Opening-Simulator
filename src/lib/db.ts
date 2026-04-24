@@ -390,6 +390,65 @@ export async function fetchPsaGradings(
   return fetchUndisplayedGradings(userId);
 }
 
+// ---------- Taunts ----------
+
+export interface TauntRow {
+  id: string;
+  from_user_id: string | null;
+  from_name: string;
+  to_user_id: string;
+  message: string;
+  seen: boolean;
+  created_at: string;
+}
+
+export async function sendTaunt(
+  fromUserId: string,
+  toLogin: string,
+  message: string
+) {
+  const { data, error } = await supabase.rpc("send_taunt", {
+    p_from_id: fromUserId,
+    p_to_login: toLogin,
+    p_message: message,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as { ok: boolean; error?: string };
+}
+
+export async function fetchUnseenTaunts(userId: string): Promise<TauntRow[]> {
+  const { data, error } = await supabase.rpc("fetch_unseen_taunts", {
+    p_user_id: userId,
+  });
+  if (error) return [];
+  return (data ?? []) as TauntRow[];
+}
+
+export async function markTauntSeen(tauntId: string, userId: string) {
+  const { error } = await supabase.rpc("mark_taunt_seen", {
+    p_taunt_id: tauntId,
+    p_user_id: userId,
+  });
+  return { ok: !error };
+}
+
+// ---------- Gift badge ----------
+
+export async function fetchUnseenGiftCount(userId: string): Promise<number> {
+  const { data, error } = await supabase.rpc("fetch_unseen_gift_count", {
+    p_user_id: userId,
+  });
+  if (error) return 0;
+  return (data as number) ?? 0;
+}
+
+export async function markGiftsViewed(userId: string) {
+  const { error } = await supabase.rpc("mark_gifts_viewed", {
+    p_user_id: userId,
+  });
+  return { ok: !error };
+}
+
 // ---------- Admin ----------
 
 export interface AdminUserRow {

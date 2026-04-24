@@ -35,7 +35,12 @@ type Phase =
   | "grid"
   | "opening-pack"
   | "bulk"
-  | "bulk-result";
+  | "bulk-result"
+  | "multi-buying"
+  | "multi-result";
+
+// Bulk-purchase sizes offered by the "여러 박스 한번에" shortcut.
+const MULTI_OPTIONS: number[] = [3, 5, 10];
 
 export default function SetView({ set }: { set: SetInfo }) {
   const { user, setPoints } = useAuth();
@@ -44,6 +49,12 @@ export default function SetView({ set }: { set: SetInfo }) {
   const [openedMask, setOpenedMask] = useState<boolean[]>([]);
   const [activePack, setActivePack] = useState<number | null>(null);
   const [bulkCards, setBulkCards] = useState<Card[]>([]);
+  const [multiResult, setMultiResult] = useState<{
+    boxCount: number;
+    totalSpent: number;
+    cards: Card[];
+  } | null>(null);
+  const [multiProgress, setMultiProgress] = useState({ done: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
   // Guard so the initial restore doesn't write back over itself before
   // the user makes any change.
@@ -104,6 +115,69 @@ export default function SetView({ set }: { set: SetInfo }) {
       // storage full — nothing to do, next interaction will retry
     }
   }, [packs, openedMask, user?.id, set.code]);
+
+  const openMulti = useCallback(
+    async (boxCount: number) => {
+      if (!user || phase !== "sealed") return;
+      const totalCost = cost * boxCount;
+      if (user.points < totalCost) {
+        setError(
+          `포인트가 부족해요. 필요 ${totalCost.toLocaleString("ko-KR")}p · 보유 ${user.points.toLocaleString("ko-KR")}p`
+        );
+        return;
+      }
+      setError(null);
+      setPhase("multi-buying");
+      setMultiProgress({ done: 0, total: boxCount });
+
+      const allCards: Card[] = [];
+      let spent = 0;
+
+      // Buy + draw + persist each box sequentially so partial failure
+      // surfaces cleanly and we don't overdraw on points.
+      for (let i = 0; i < boxCount; i++) {
+        const res = await buyBox(user.id, set.code);
+        if (!res.ok || typeof res.points !== "number") {
+          setError(res.error ?? "박스 구매 실패");
+          setPhase("sealed");
+          return;
+        }
+        setPoints(res.points);
+        spent += res.price ?? cost;
+        const drawn = drawBox(set);
+        try {
+          await Promise.all(
+            drawn.map((pack) =>
+              recordPackPull(
+                user.id,
+                set.code,
+                pack.map((c) => c.id)
+              )
+            )
+          );
+        } catch (e) {
+          console.error("multi-box persist failed", e);
+          setError("카드 저장에 실패했습니다. 잠시 후 다시 시도해주세요.");
+          setPhase("sealed");
+          return;
+        }
+        for (const pack of drawn) for (const c of pack) allCards.push(c);
+        setMultiProgress({ done: i + 1, total: boxCount });
+      }
+
+      allCards.sort(
+        (a, b) => RARITY_STYLE[b.rarity].tier - RARITY_STYLE[a.rarity].tier
+      );
+      setMultiResult({ boxCount, totalSpent: spent, cards: allCards });
+      setPhase("multi-result");
+    },
+    [user, phase, set, cost, setPoints]
+  );
+
+  const closeMulti = useCallback(() => {
+    setMultiResult(null);
+    setPhase("sealed");
+  }, []);
 
   const openBox = useCallback(async () => {
     if (!user || phase !== "sealed") return;
@@ -239,10 +313,19 @@ export default function SetView({ set }: { set: SetInfo }) {
             key="sealed"
             set={set}
             cost={cost}
+            userPoints={user?.points ?? 0}
             canAfford={canAfford}
             loading={phase === "buying"}
             error={error}
             onOpen={openBox}
+            onOpenMulti={openMulti}
+          />
+        )}
+        {phase === "multi-buying" && (
+          <MultiBuyingOverlay
+            key="multi-buying"
+            done={multiProgress.done}
+            total={multiProgress.total}
           />
         )}
         {phase === "opening" && <BoxOpening key="opening" set={set} />}
@@ -311,6 +394,16 @@ export default function SetView({ set }: { set: SetInfo }) {
           />
         )}
         {phase === "bulk" && <BulkLoading key="bulk-loading" />}
+        {phase === "multi-result" && multiResult && (
+          <MultiResultOverlay
+            key="multi-result"
+            setName={set.name}
+            boxCount={multiResult.boxCount}
+            totalSpent={multiResult.totalSpent}
+            cards={multiResult.cards}
+            onClose={closeMulti}
+          />
+        )}
       </AnimatePresence>
     </div>
   );
@@ -345,17 +438,21 @@ function Stat({
 function SealedBox({
   set,
   cost,
+  userPoints,
   canAfford,
   loading,
   error,
   onOpen,
+  onOpenMulti,
 }: {
   set: SetInfo;
   cost: number;
+  userPoints: number;
   canAfford: boolean;
   loading: boolean;
   error: string | null;
   onOpen: () => void;
+  onOpenMulti: (n: number) => void;
 }) {
   return (
     <motion.div
@@ -411,6 +508,38 @@ function SealedBox({
           </>
         )}
       </button>
+
+      {/* Multi-box shortcut: buys + auto-opens N boxes all at once. */}
+      <div className="flex flex-col items-center gap-1.5">
+        <p className="text-[10px] uppercase tracking-wider text-zinc-500">
+          여러 박스 한번에 (자동 개봉)
+        </p>
+        <div className="flex items-center gap-1.5">
+          {MULTI_OPTIONS.map((n) => {
+            const total = cost * n;
+            const afford = userPoints >= total;
+            return (
+              <button
+                key={n}
+                onClick={() => onOpenMulti(n)}
+                disabled={!afford || loading}
+                style={{ touchAction: "manipulation" }}
+                className={clsx(
+                  "h-10 px-3 rounded-lg text-xs font-black inline-flex items-center gap-1 transition",
+                  afford && !loading
+                    ? "bg-white/10 border border-white/20 text-white hover:bg-white/15 active:scale-[0.97]"
+                    : "bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed"
+                )}
+              >
+                <span>×{n}</span>
+                <span className="text-[10px] font-semibold opacity-80 tabular-nums">
+                  {total.toLocaleString("ko-KR")}p
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
       {!canAfford && !loading && (
         <p className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">
           포인트가 부족해요. 상인에게 카드를 팔거나 선물로 모아보세요.
@@ -636,6 +765,143 @@ function PackGrid({
           )}
         </motion.button>
       ))}
+    </motion.div>
+  );
+}
+
+function MultiBuyingOverlay({
+  done,
+  total,
+}: {
+  done: number;
+  total: number;
+}) {
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 bg-black/92 flex items-center justify-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <div className="text-center">
+        <div className="w-14 h-14 mx-auto rounded-full border-4 border-white/15 border-t-amber-400 animate-spin" />
+        <p className="mt-4 text-base font-black text-white tabular-nums">
+          박스 {done} / {total}
+        </p>
+        <p className="mt-1 text-xs text-zinc-400">
+          박스를 열고 팩을 자동으로 개봉하는 중...
+        </p>
+        <div className="mt-3 h-1 w-60 mx-auto rounded-full bg-white/10 overflow-hidden">
+          <motion.div
+            className="h-full bg-gradient-to-r from-amber-400 to-rose-500"
+            initial={{ width: 0 }}
+            animate={{ width: `${pct}%` }}
+            transition={{ duration: 0.3 }}
+          />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function MultiResultOverlay({
+  setName,
+  boxCount,
+  totalSpent,
+  cards,
+  onClose,
+}: {
+  setName: string;
+  boxCount: number;
+  totalSpent: number;
+  cards: Card[];
+  onClose: () => void;
+}) {
+  const byRarity = cards.reduce<Record<string, number>>((acc, c) => {
+    acc[c.rarity] = (acc[c.rarity] ?? 0) + 1;
+    return acc;
+  }, {});
+  const hitTiers = ["MUR", "UR", "SAR", "MA", "SR", "AR", "RR"] as const;
+  const topHits = hitTiers.filter((t) => (byRarity[t] ?? 0) > 0);
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 bg-black/95 flex flex-col"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <div
+        className="shrink-0 border-b border-white/10 bg-black/95"
+        style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 16px)" }}
+      >
+        <div className="flex items-center justify-between gap-2 px-3 md:px-6 h-12">
+          <div className="text-xs md:text-sm text-zinc-200 font-semibold truncate">
+            {setName} · 박스 ×{boxCount} 결과 ({cards.length}장)
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="닫기"
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+      <div className="shrink-0 bg-black/70 border-b border-white/5 px-3 md:px-6 py-2">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-3 flex-wrap">
+          <div className="text-[11px] text-zinc-400 tabular-nums">
+            소비 {totalSpent.toLocaleString("ko-KR")}p
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {topHits.length === 0 && (
+              <span className="text-[11px] text-zinc-500">큰 히트 없음</span>
+            )}
+            {topHits.map((r) => (
+              <span
+                key={r}
+                className={clsx(
+                  "text-[10px] font-black px-2 py-0.5 rounded-full",
+                  RARITY_STYLE[r].badge
+                )}
+              >
+                {r} ×{byRarity[r]}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div
+          className="grid gap-3 md:gap-4 px-4 md:px-6 py-4 md:py-6 mx-auto max-w-5xl"
+          style={{
+            gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))",
+          }}
+        >
+          {cards.map((card, i) => (
+            <BulkMiniCard key={i} card={card} />
+          ))}
+        </div>
+      </div>
+      <div
+        className="shrink-0 border-t border-white/10 bg-black/70 backdrop-blur"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="max-w-3xl mx-auto px-3 md:px-6 py-3 flex items-center justify-center gap-2">
+          <Link
+            href="/wallet"
+            className="h-11 px-5 rounded-xl bg-white/10 text-white font-semibold text-sm hover:bg-white/15 inline-flex items-center"
+          >
+            지갑 보기
+          </Link>
+          <button
+            onClick={onClose}
+            className="h-11 px-5 rounded-xl bg-white text-zinc-900 font-bold text-sm"
+          >
+            확인
+          </button>
+        </div>
+      </div>
     </motion.div>
   );
 }

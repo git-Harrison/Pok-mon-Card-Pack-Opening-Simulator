@@ -5,10 +5,11 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
-import { fetchUserRankings, type RankingRow } from "@/lib/db";
+import { fetchUserRankings, sendTaunt, type RankingRow } from "@/lib/db";
 import { getCard, SETS } from "@/lib/sets";
 import PointsChip from "./PointsChip";
 import PageHeader from "./PageHeader";
+import Portal from "./Portal";
 
 /**
  * Ranking is driven entirely by PSA success points. Card ownership
@@ -60,6 +61,7 @@ export default function UsersView() {
   const [expanded, setExpanded] = useState<Record<string, number | null>>({});
   const [helpOpen, setHelpOpen] = useState(false);
   const [mode, setMode] = useState<RankingMode>("rank");
+  const [tauntTarget, setTauntTarget] = useState<RankingRow | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -261,6 +263,16 @@ export default function UsersView() {
                       >
                         🏛️ 센터
                       </Link>
+                      {!isMe && (
+                        <button
+                          type="button"
+                          onClick={() => setTauntTarget(e)}
+                          aria-label={`${e.display_name}에게 조롱 보내기`}
+                          className="inline-flex items-center gap-1 h-6 px-2 rounded-full bg-gradient-to-r from-rose-500/80 to-amber-500/80 hover:from-rose-500 hover:to-amber-500 text-white text-[10px] font-bold transition"
+                        >
+                          🔥 조롱
+                        </button>
+                      )}
                     </div>
                     <p className="text-[11px] md:text-xs text-zinc-400 mt-0.5">
                       감별 {e.psa_count}회 · 전시 {e.showcase_count ?? 0}장 ·
@@ -391,6 +403,165 @@ export default function UsersView() {
           })}
         </ul>
       )}
+
+      <AnimatePresence>
+        {tauntTarget && (
+          <TauntComposer
+            target={tauntTarget}
+            onClose={() => setTauntTarget(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+const TAUNT_PRESETS = [
+  "네 센터는 장식용이야?",
+  "다음엔 내가 부수러 간다",
+  "그 등급 그거밖에 안 나와?",
+  "랭킹 올라오는 거 구경만 하지 말고 덤벼!",
+  "오늘도 나한테 한 방 먹을 준비됐지?",
+];
+
+function TauntComposer({
+  target,
+  onClose,
+}: {
+  target: RankingRow;
+  onClose: () => void;
+}) {
+  const { user } = useAuth();
+  const [msg, setMsg] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  const submit = useCallback(async () => {
+    if (!user || sending) return;
+    const text = msg.trim();
+    if (text.length < 1) {
+      setError("메시지를 입력하세요.");
+      return;
+    }
+    setSending(true);
+    setError(null);
+    const res = await sendTaunt(user.id, target.user_id, text);
+    setSending(false);
+    if (!res.ok) {
+      setError(res.error ?? "전송 실패");
+      return;
+    }
+    setDone(true);
+    setTimeout(onClose, 900);
+  }, [user, msg, sending, target.user_id, onClose]);
+
+  return (
+    <Portal>
+      <motion.div
+        className="fixed inset-0 z-[150] bg-black/85 backdrop-blur-md flex items-center justify-center overflow-hidden"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{
+          paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+          paddingLeft: "12px",
+          paddingRight: "12px",
+        }}
+      >
+        <motion.div
+          className="relative w-full max-w-md bg-zinc-900 border border-rose-500/40 rounded-2xl overflow-hidden shadow-2xl"
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-white/10 bg-rose-500/10">
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-white">
+                🔥 {target.display_name}에게 조롱 보내기
+              </h3>
+              <p className="text-[10px] text-rose-200/80 truncate">
+                받는 사람 페이지에 강제 팝업으로 떠요
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              aria-label="닫기"
+              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="p-4">
+            <textarea
+              value={msg}
+              onChange={(e) => setMsg(e.target.value.slice(0, 200))}
+              rows={3}
+              maxLength={200}
+              placeholder="던질 말을 적어주세요..."
+              style={{ fontSize: "16px" }}
+              className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-rose-400/60 resize-none"
+            />
+            <div className="mt-1 flex items-center justify-between text-[10px] text-zinc-500">
+              <span>1~200자</span>
+              <span className="tabular-nums">{msg.length} / 200</span>
+            </div>
+
+            <div className="mt-3">
+              <p className="text-[10px] uppercase tracking-wider text-zinc-400 mb-1.5">
+                빠른 선택
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {TAUNT_PRESETS.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setMsg(t)}
+                    className="text-[11px] px-2 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 hover:bg-white/10"
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {error && (
+              <p className="mt-3 text-xs text-rose-300">{error}</p>
+            )}
+            {done && (
+              <p className="mt-3 text-xs text-emerald-300">전송 완료!</p>
+            )}
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={sending}
+                className="h-11 rounded-lg bg-white/10 hover:bg-white/15 text-white text-sm font-semibold"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={submit}
+                disabled={sending || done || msg.trim().length < 1}
+                className={clsx(
+                  "h-11 rounded-lg font-black text-sm",
+                  sending || done || msg.trim().length < 1
+                    ? "bg-white/5 text-zinc-500"
+                    : "bg-gradient-to-r from-rose-500 to-amber-500 text-zinc-950 active:scale-[0.98]"
+                )}
+              >
+                {sending ? "보내는 중..." : done ? "전송됨" : "🔥 보내기"}
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </Portal>
   );
 }
