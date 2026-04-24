@@ -237,7 +237,7 @@ function VisitShowcaseModal({
       }
       onClose={onClose}
     >
-      <div className="p-3 md:p-4">
+      <div className="p-3 md:p-5">
         <div className="flex justify-center">
           {Array.from({ length: spec.capacity }).map((_, i) => {
             const row = showcase.cards.find((c) => c.slot_index === i);
@@ -246,7 +246,7 @@ function VisitShowcaseModal({
               return (
                 <div
                   key={i}
-                  className="aspect-[5/7] rounded-lg border-2 border-dashed border-white/15 bg-white/[0.02]"
+                  className="w-full max-w-[320px] aspect-[5/7] rounded-lg border-2 border-dashed border-white/15 bg-white/[0.02]"
                 />
               );
             }
@@ -259,13 +259,13 @@ function VisitShowcaseModal({
                 onClick={() => clickable && onAttack(i, row.card_id)}
                 style={{ touchAction: "manipulation" }}
                 className={clsx(
-                  "relative flex flex-col items-center gap-1 text-left rounded-lg transition",
+                  "relative flex flex-col items-center gap-2 text-left rounded-lg transition w-full max-w-[320px]",
                   clickable && "hover:scale-[1.03] active:scale-[0.98]"
                 )}
               >
-                <PsaSlab card={card} grade={row.grade} size="sm" />
+                <PsaSlab card={card} grade={row.grade} size="lg" />
                 {clickable && (
-                  <span className="text-[9px] font-bold text-rose-300">
+                  <span className="text-xs font-bold text-rose-300">
                     💥 부수기 가능
                   </span>
                 )}

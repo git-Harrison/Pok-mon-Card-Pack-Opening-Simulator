@@ -121,10 +121,12 @@ export default function SetView({ set }: { set: SetInfo }) {
     setPacks(drawn);
     setOpenedMask(new Array(drawn.length).fill(false));
     setPhase("opening");
-    // Persist every pack's pulls immediately. If the user navigates away
-    // before tapping anything, the cards already live in card_ownership
-    // so nothing is lost. Pack-tap handlers no longer hit the server.
-    Promise.all(
+    // Persist every pack's pulls BEFORE handing off to the grid. The 1.1s
+    // opening animation runs in parallel, so a typical save finishes
+    // before the user sees any cards. If persistence fails we surface
+    // the error — otherwise pulls (MUR 등 고등급 포함) could be shown
+    // in the animation without ever landing in card_ownership.
+    const persistPromise = Promise.all(
       drawn.map((pack) =>
         recordPackPull(
           user.id,
@@ -132,8 +134,20 @@ export default function SetView({ set }: { set: SetInfo }) {
           pack.map((c) => c.id)
         )
       )
-    ).catch((e) => console.error("box persist failed", e));
-    setTimeout(() => setPhase("grid"), 1100);
+    );
+    const minAnimation = new Promise<void>((r) => setTimeout(r, 1100));
+    try {
+      await Promise.all([persistPromise, minAnimation]);
+      setPhase("grid");
+    } catch (e) {
+      console.error("box persist failed", e);
+      setError(
+        "카드 저장에 실패했습니다. 잠시 후 다시 시도하거나 관리자에게 문의해주세요."
+      );
+      setPacks([]);
+      setOpenedMask([]);
+      setPhase("sealed");
+    }
   }, [user, phase, set, setPoints]);
 
   const choosePack = useCallback(

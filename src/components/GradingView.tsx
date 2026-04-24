@@ -6,10 +6,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
 import {
+  bulkSubmitPsaGrading,
   fetchWallet,
   submitPsaGrading,
+  type BulkGradingResult,
   type WalletSnapshot,
 } from "@/lib/db";
+import { getCard } from "@/lib/sets";
 import { RARITY_STYLE, compareRarity } from "@/lib/rarity";
 import {
   PSA_DISTRIBUTION,
@@ -31,6 +34,7 @@ export default function GradingView() {
   const { user, setPoints } = useAuth();
   const [wallet, setWallet] = useState<WalletSnapshot | null>(null);
   const [picking, setPicking] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [selected, setSelected] = useState<Card | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [grade, setGrade] = useState<number | null>(null);
@@ -344,6 +348,25 @@ export default function GradingView() {
         </div>
       </section>
 
+      {/* Bulk grading CTA */}
+      <button
+        type="button"
+        onClick={() => setBulkOpen(true)}
+        disabled={phase !== "idle" && phase !== "revealed" && phase !== "failed"}
+        style={{ touchAction: "manipulation" }}
+        className={clsx(
+          "mt-3 w-full h-12 rounded-xl border text-sm font-bold inline-flex items-center justify-center gap-2 transition",
+          phase !== "idle" && phase !== "revealed" && phase !== "failed"
+            ? "bg-white/5 border-white/10 text-zinc-500 cursor-not-allowed"
+            : "bg-fuchsia-500/10 border-fuchsia-400/40 text-fuchsia-100 hover:bg-fuchsia-500/20"
+        )}
+      >
+        📚 일괄 감별
+        <span className="text-[11px] font-semibold opacity-80">
+          · 여러 장 한번에, 애니메이션 없이 결과만
+        </span>
+      </button>
+
       {/* Odds strip */}
       <div className="mt-3 rounded-xl bg-white/5 border border-white/10 p-3">
         <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-400 mb-2">
@@ -388,6 +411,18 @@ export default function GradingView() {
               setPicking(false);
             }}
             onClose={() => setPicking(false)}
+          />
+        )}
+        {bulkOpen && wallet && user && (
+          <BulkGradingModal
+            wallet={wallet}
+            userId={user.id}
+            username={user.display_name}
+            onClose={() => {
+              setBulkOpen(false);
+              refreshWallet();
+            }}
+            onPointsChange={setPoints}
           />
         )}
       </AnimatePresence>
@@ -456,10 +491,17 @@ function Pedestal({
       ) : phase === "failing" && selected ? (
         <ShatteringCard card={selected} />
       ) : phase === "failed" ? (
-        <div className="text-center py-6">
-          <p className="text-5xl mb-2 opacity-60">💔</p>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center"
+        >
+          <p className="text-6xl leading-none opacity-70 drop-shadow-[0_0_12px_rgba(244,63,94,0.45)]">
+            💔
+          </p>
           <p className="text-xs text-rose-300">카드가 손상되었습니다</p>
-        </div>
+        </motion.div>
       ) : selected ? (
         <CardOnPedestal card={selected} scanning={phase === "animating"} />
       ) : (
@@ -854,5 +896,484 @@ function CardPicker({
         </motion.div>
       </motion.div>
     </Portal>
+  );
+}
+
+/* ─────────────── Bulk grading ─────────────── */
+
+type BulkPhase = "picking" | "submitting" | "done";
+
+function BulkGradingModal({
+  wallet,
+  userId,
+  username,
+  onClose,
+  onPointsChange,
+}: {
+  wallet: WalletSnapshot;
+  userId: string;
+  username: string;
+  onClose: () => void;
+  onPointsChange: (points: number) => void;
+}) {
+  const eligible = useMemo(() => {
+    return wallet.items
+      .filter((it) => isPsaEligible(it.card.rarity))
+      .sort((a, b) => compareRarity(a.card.rarity, b.card.rarity));
+  }, [wallet]);
+
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [phase, setPhase] = useState<BulkPhase>("picking");
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<BulkGradingResult | null>(null);
+
+  const totalSelected = useMemo(
+    () => Object.values(counts).reduce((s, n) => s + n, 0),
+    [counts]
+  );
+
+  const bump = useCallback(
+    (cardId: string, max: number, delta: number) => {
+      setCounts((prev) => {
+        const cur = prev[cardId] ?? 0;
+        const next = Math.max(0, Math.min(max, cur + delta));
+        if (next === cur) return prev;
+        const out = { ...prev };
+        if (next === 0) delete out[cardId];
+        else out[cardId] = next;
+        return out;
+      });
+    },
+    []
+  );
+
+  const selectAll = useCallback(() => {
+    const next: Record<string, number> = {};
+    for (const it of eligible) next[it.card.id] = it.count;
+    setCounts(next);
+  }, [eligible]);
+
+  const clearAll = useCallback(() => setCounts({}), []);
+
+  const submit = useCallback(async () => {
+    if (totalSelected === 0 || phase !== "picking") return;
+    setError(null);
+    setPhase("submitting");
+    // Expand into flat array: each card repeated `count` times.
+    const cardIds: string[] = [];
+    for (const [id, n] of Object.entries(counts)) {
+      for (let i = 0; i < n; i++) cardIds.push(id);
+    }
+    const res = await bulkSubmitPsaGrading(userId, cardIds);
+    if (!res.ok) {
+      setError(res.error ?? "일괄 감별에 실패했어요.");
+      setPhase("picking");
+      return;
+    }
+    if (typeof res.points === "number") onPointsChange(res.points);
+    // Discord brag for hits. Failures don't notify individually here to
+    // avoid spamming the channel on bulk submissions.
+    for (const r of res.results ?? []) {
+      if (r.ok && !r.failed && typeof r.grade === "number") {
+        notifyPsaGrade(username, r.card_id, r.grade);
+      }
+    }
+    setResult(res);
+    setPhase("done");
+  }, [totalSelected, phase, counts, userId, username, onPointsChange]);
+
+  return (
+    <Portal>
+      <motion.div
+        className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center overflow-hidden"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{
+          paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+          paddingLeft: "12px",
+          paddingRight: "12px",
+        }}
+      >
+        <motion.div
+          className="relative w-full max-w-2xl bg-zinc-950 border border-white/10 rounded-2xl flex flex-col overflow-hidden"
+          style={{ maxHeight: "calc(100dvh - 24px)" }}
+          initial={{ scale: 0.94, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.94, opacity: 0 }}
+          transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between h-12 px-4 border-b border-white/10 shrink-0">
+            <h3 className="text-sm font-bold text-white">
+              {phase === "done" ? "일괄 감별 결과" : "일괄 감별 · 여러 장 한번에"}
+            </h3>
+            <button
+              onClick={onClose}
+              aria-label="닫기"
+              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+              style={{ touchAction: "manipulation" }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {phase === "done" && result ? (
+            <BulkResults result={result} onClose={onClose} />
+          ) : (
+            <>
+              <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4">
+                {eligible.length === 0 ? (
+                  <div className="py-10 text-center text-sm text-zinc-400">
+                    <p>감정 대상 카드가 없어요.</p>
+                    <p className="mt-1 text-[11px]">
+                      SR · MA · SAR · MUR · UR 카드만 맡길 수 있습니다.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <div className="text-[11px] text-zinc-400">
+                        실패 시 카드 소실 · 감별 확률은 단일 감별과 동일
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={selectAll}
+                          className="h-8 px-2.5 rounded-md bg-white/5 hover:bg-white/10 text-xs text-zinc-200 font-semibold border border-white/10"
+                        >
+                          전부 선택
+                        </button>
+                        <button
+                          type="button"
+                          onClick={clearAll}
+                          className="h-8 px-2.5 rounded-md bg-white/5 hover:bg-white/10 text-xs text-zinc-200 font-semibold border border-white/10"
+                        >
+                          초기화
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      {eligible.map(({ card, count }) => (
+                        <BulkPickRow
+                          key={card.id}
+                          card={card}
+                          owned={count}
+                          selected={counts[card.id] ?? 0}
+                          onBump={(delta) => bump(card.id, count, delta)}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {error && (
+                <div className="mx-4 mb-2 text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2 shrink-0">
+                  {error}
+                </div>
+              )}
+
+              <div className="shrink-0 border-t border-white/10 p-3 bg-black/40">
+                <button
+                  type="button"
+                  onClick={submit}
+                  disabled={totalSelected === 0 || phase === "submitting"}
+                  className={clsx(
+                    "w-full h-12 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 transition",
+                    totalSelected > 0 && phase !== "submitting"
+                      ? "bg-gradient-to-r from-fuchsia-500 to-indigo-500 text-white hover:scale-[1.01] active:scale-[0.98] shadow-[0_10px_30px_-10px_rgba(168,85,247,0.6)]"
+                      : "bg-white/5 text-zinc-500 cursor-not-allowed border border-white/10"
+                  )}
+                  style={{ touchAction: "manipulation" }}
+                >
+                  {phase === "submitting" ? (
+                    <>
+                      <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      감정 중...
+                    </>
+                  ) : (
+                    <>
+                      감정 의뢰 접수 · {totalSelected}장
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
+          )}
+        </motion.div>
+      </motion.div>
+    </Portal>
+  );
+}
+
+function BulkPickRow({
+  card,
+  owned,
+  selected,
+  onBump,
+}: {
+  card: Card;
+  owned: number;
+  selected: number;
+  onBump: (delta: number) => void;
+}) {
+  return (
+    <div
+      className={clsx(
+        "flex items-center gap-3 rounded-lg p-2 border transition",
+        selected > 0
+          ? "bg-fuchsia-500/10 border-fuchsia-400/40"
+          : "bg-white/5 border-white/10"
+      )}
+    >
+      <div
+        className={clsx(
+          "relative w-10 aspect-[5/7] rounded shrink-0 overflow-hidden ring-1",
+          RARITY_STYLE[card.rarity].frame
+        )}
+      >
+        {card.imageUrl ? (
+          <img
+            src={card.imageUrl}
+            alt=""
+            loading="lazy"
+            draggable={false}
+            className="w-full h-full object-contain bg-zinc-900 pointer-events-none"
+          />
+        ) : null}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <RarityBadge rarity={card.rarity} size="xs" />
+          <p className="text-[12px] text-white font-semibold truncate">
+            {card.name}
+          </p>
+        </div>
+        <p className="text-[10px] text-zinc-500 tabular-nums mt-0.5">
+          보유 {owned}장
+        </p>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <button
+          type="button"
+          onClick={() => onBump(-1)}
+          disabled={selected === 0}
+          aria-label="하나 빼기"
+          className={clsx(
+            "w-8 h-8 rounded-md text-base font-bold leading-none flex items-center justify-center transition",
+            selected === 0
+              ? "bg-white/5 text-zinc-600 cursor-not-allowed"
+              : "bg-white/10 hover:bg-white/15 text-white"
+          )}
+          style={{ touchAction: "manipulation" }}
+        >
+          −
+        </button>
+        <span className="w-8 text-center text-sm font-bold tabular-nums text-white">
+          {selected}
+        </span>
+        <button
+          type="button"
+          onClick={() => onBump(1)}
+          disabled={selected >= owned}
+          aria-label="하나 더하기"
+          className={clsx(
+            "w-8 h-8 rounded-md text-base font-bold leading-none flex items-center justify-center transition",
+            selected >= owned
+              ? "bg-white/5 text-zinc-600 cursor-not-allowed"
+              : "bg-fuchsia-500/30 hover:bg-fuchsia-500/45 text-white"
+          )}
+          style={{ touchAction: "manipulation" }}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function BulkResults({
+  result,
+  onClose,
+}: {
+  result: BulkGradingResult;
+  onClose: () => void;
+}) {
+  const rows = result.results ?? [];
+  const success = result.success_count ?? 0;
+  const fail = result.fail_count ?? 0;
+  const skipped = result.skipped_count ?? 0;
+  const bonus = result.bonus ?? 0;
+
+  // Group by grade for quick scanning.
+  const gradeBreakdown = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const r of rows) {
+      if (r.ok && !r.failed && typeof r.grade === "number") {
+        m.set(r.grade, (m.get(r.grade) ?? 0) + 1);
+      }
+    }
+    return Array.from(m.entries()).sort((a, b) => b[0] - a[0]);
+  }, [rows]);
+
+  return (
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+      {/* Summary */}
+      <div className="shrink-0 p-4 border-b border-white/10 bg-black/30">
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <SummaryChip label="성공" value={`${success}`} tone="emerald" />
+          <SummaryChip label="실패" value={`${fail}`} tone="rose" />
+          <SummaryChip
+            label="보너스"
+            value={`+${bonus.toLocaleString("ko-KR")}p`}
+            tone="amber"
+          />
+        </div>
+        {gradeBreakdown.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
+            {gradeBreakdown.map(([g, n]) => {
+              const tone = psaTone(g);
+              return (
+                <span
+                  key={g}
+                  className={clsx(
+                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[11px] font-bold tabular-nums",
+                    tone.text
+                  )}
+                  style={{ borderColor: "rgba(255,255,255,0.12)" }}
+                >
+                  PCL {g} · {n}장
+                </span>
+              );
+            })}
+          </div>
+        )}
+        {skipped > 0 && (
+          <p className="mt-2 text-[10px] text-zinc-500 text-center">
+            보유하지 않은 카드 {skipped}장은 건너뛰었어요.
+          </p>
+        )}
+      </div>
+
+      {/* Per-card list */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-1.5">
+        {rows.map((r, i) => (
+          <BulkResultRow key={`${r.card_id}-${i}`} row={r} />
+        ))}
+      </div>
+
+      <div className="shrink-0 border-t border-white/10 p-3 bg-black/40">
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full h-12 rounded-xl bg-white text-zinc-900 font-bold text-sm"
+          style={{ touchAction: "manipulation" }}
+        >
+          확인
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function BulkResultRow({
+  row,
+}: {
+  row: NonNullable<BulkGradingResult["results"]>[number];
+}) {
+  const card = getCard(row.card_id);
+  const isGraded = row.ok && !row.failed && typeof row.grade === "number";
+  const tone = isGraded ? psaTone(row.grade as number) : null;
+  return (
+    <div
+      className={clsx(
+        "flex items-center gap-3 rounded-lg p-2 border",
+        row.failed
+          ? "bg-rose-500/5 border-rose-500/25"
+          : isGraded
+          ? "bg-white/5 border-white/10"
+          : "bg-white/3 border-white/10 opacity-70"
+      )}
+    >
+      <div
+        className={clsx(
+          "relative w-10 aspect-[5/7] rounded shrink-0 overflow-hidden ring-1",
+          card ? RARITY_STYLE[card.rarity].frame : "ring-white/10"
+        )}
+      >
+        {card?.imageUrl ? (
+          <img
+            src={card.imageUrl}
+            alt=""
+            loading="lazy"
+            draggable={false}
+            className={clsx(
+              "w-full h-full object-contain bg-zinc-900 pointer-events-none",
+              row.failed && "grayscale opacity-50"
+            )}
+          />
+        ) : null}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[12px] text-white font-semibold truncate">
+          {card?.name ?? row.card_id}
+        </p>
+        <p className="text-[10px] text-zinc-500 truncate mt-0.5">
+          {row.failed
+            ? "감별 실패 · 카드 소실"
+            : isGraded
+            ? `${PSA_LABEL[row.grade as number] ?? ""}${
+                row.bonus ? ` · +${row.bonus.toLocaleString("ko-KR")}p` : ""
+              }`
+            : row.error === "not_owned"
+            ? "보유하지 않아 건너뜀"
+            : "건너뜀"}
+        </p>
+      </div>
+      <div className="shrink-0">
+        {row.failed ? (
+          <span className="text-rose-300 text-lg">💔</span>
+        ) : isGraded ? (
+          <span
+            className={clsx(
+              "inline-flex items-center justify-center w-11 h-9 rounded-md font-black tabular-nums",
+              tone?.banner
+            )}
+          >
+            {row.grade}
+          </span>
+        ) : (
+          <span className="text-[10px] text-zinc-500">—</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SummaryChip({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: "emerald" | "rose" | "amber";
+}) {
+  const classes =
+    tone === "emerald"
+      ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-200"
+      : tone === "rose"
+      ? "bg-rose-500/10 border-rose-500/40 text-rose-200"
+      : "bg-amber-400/10 border-amber-400/40 text-amber-200";
+  return (
+    <div className={clsx("rounded-lg border px-2 py-1.5", classes)}>
+      <div className="text-[9px] uppercase tracking-[0.18em] opacity-80">
+        {label}
+      </div>
+      <div className="text-sm font-black tabular-nums mt-0.5">{value}</div>
+    </div>
   );
 }

@@ -288,6 +288,38 @@ export async function submitPsaGrading(userId: string, cardId: string) {
   };
 }
 
+export interface BulkGradingResultItem {
+  card_id: string;
+  ok: boolean;
+  failed?: boolean;
+  grade?: number;
+  bonus?: number;
+  error?: string;
+}
+
+export interface BulkGradingResult {
+  ok: boolean;
+  error?: string;
+  results?: BulkGradingResultItem[];
+  success_count?: number;
+  fail_count?: number;
+  skipped_count?: number;
+  bonus?: number;
+  points?: number;
+}
+
+export async function bulkSubmitPsaGrading(
+  userId: string,
+  cardIds: string[]
+): Promise<BulkGradingResult> {
+  const { data, error } = await supabase.rpc("bulk_submit_psa_grading", {
+    p_user_id: userId,
+    p_card_ids: cardIds,
+  });
+  if (error) return { ok: false, error: error.message };
+  return data as BulkGradingResult;
+}
+
 export interface RankingPsaGrading {
   id: string;
   card_id: string;

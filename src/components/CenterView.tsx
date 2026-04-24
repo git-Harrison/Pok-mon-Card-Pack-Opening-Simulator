@@ -542,20 +542,23 @@ function ManageModal({
       subtitle={`${showcase.cards.length}/${spec.capacity}칸 전시 중`}
       onClose={onClose}
     >
-      <div className="p-3 md:p-4 space-y-3">
+      <div className="p-3 md:p-5 space-y-3">
         <div className="flex justify-center">
           {Array.from({ length: spec.capacity }).map((_, i) => {
             const row = showcase.cards.find((c) => c.slot_index === i);
             const card = row ? getCard(row.card_id) : null;
             return (
-              <div key={i} className="flex flex-col items-center gap-1.5">
+              <div
+                key={i}
+                className="flex flex-col items-center gap-2 w-full max-w-[320px]"
+              >
                 {card && row ? (
                   <>
-                    <PsaSlab card={card} grade={row.grade} size="sm" />
+                    <PsaSlab card={card} grade={row.grade} size="lg" />
                     <button
                       type="button"
                       onClick={() => onUndisplay(i)}
-                      className="w-full h-8 rounded-md bg-white/10 hover:bg-white/15 text-xs text-white font-semibold"
+                      className="w-full h-10 rounded-md bg-white/10 hover:bg-white/15 text-sm text-white font-semibold"
                     >
                       꺼내기
                     </button>
@@ -564,13 +567,11 @@ function ManageModal({
                   <button
                     type="button"
                     onClick={() => onPickSlot(i)}
-                    className="w-full aspect-[5/7] rounded-lg border-2 border-dashed border-white/20 bg-white/5 text-zinc-400 hover:text-white hover:border-white/40 transition flex flex-col items-center justify-center gap-1"
+                    className="w-full aspect-[5/7] rounded-lg border-2 border-dashed border-white/20 bg-white/5 text-zinc-400 hover:text-white hover:border-white/40 transition flex flex-col items-center justify-center gap-2"
                     style={{ touchAction: "manipulation" }}
                   >
-                    <span className="text-2xl opacity-70">＋</span>
-                    <span className="text-[10px] font-semibold">
-                      슬랩 전시
-                    </span>
+                    <span className="text-4xl opacity-70">＋</span>
+                    <span className="text-sm font-semibold">슬랩 전시</span>
                   </button>
                 )}
               </div>

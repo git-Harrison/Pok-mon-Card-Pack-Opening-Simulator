@@ -32,8 +32,8 @@ export default function PsaSlab({
     size === "sm"
       ? "w-full max-w-[150px]"
       : size === "lg"
-      ? "w-full max-w-[260px]"
-      : "w-full max-w-[200px]";
+      ? "w-full max-w-[320px]"
+      : "w-full max-w-[220px]";
 
   const cert = `${card.setCode.toUpperCase()}-${card.number}-${grade}`;
 
@@ -44,23 +44,32 @@ export default function PsaSlab({
       transition={{ duration: 1.2, times: [0, 0.5, 1] }}
       className={clsx(
         "relative rounded-2xl overflow-hidden isolate ring-1 select-none",
-        "bg-[linear-gradient(165deg,#0d0a1d_0%,#17102e_50%,#090514_100%)]",
+        "bg-[linear-gradient(168deg,#1a1030_0%,#231847_45%,#0b0620_100%)]",
         tone.ring,
         tone.glow,
         width
       )}
       style={{
         boxShadow:
-          "0 16px 36px -18px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.6)",
+          "0 20px 44px -20px rgba(0,0,0,0.95), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.7)",
       }}
     >
       {/* Subtle holographic sheen over the whole slab */}
       <div
         aria-hidden
-        className="absolute inset-0 pointer-events-none opacity-60"
+        className="absolute inset-0 pointer-events-none opacity-70"
         style={{
           background:
-            "linear-gradient(130deg, rgba(255,255,255,0) 0%, rgba(147,197,253,0.08) 25%, rgba(236,72,153,0.06) 50%, rgba(250,204,21,0.06) 75%, rgba(255,255,255,0) 100%)",
+            "linear-gradient(130deg, rgba(255,255,255,0) 0%, rgba(147,197,253,0.12) 25%, rgba(236,72,153,0.10) 50%, rgba(250,204,21,0.10) 75%, rgba(255,255,255,0) 100%)",
+        }}
+      />
+      {/* Top-edge highlight */}
+      <div
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 100%)",
         }}
       />
 
@@ -69,11 +78,11 @@ export default function PsaSlab({
         {/* Brand column */}
         <div
           className={clsx(
-            "shrink-0 px-2.5 py-1.5 flex flex-col items-center justify-center border-r border-white/10",
+            "shrink-0 px-1.5 md:px-2 py-1.5 flex flex-col items-center justify-center border-r border-white/10",
             tone.text
           )}
         >
-          <span className="text-[11px] md:text-xs font-black tracking-[0.18em] leading-none">
+          <span className="text-[10px] md:text-[11px] font-black tracking-[0.16em] leading-none">
             {GRADE_BRAND}
           </span>
           <span className="mt-0.5 text-[7px] uppercase tracking-[0.22em] opacity-70 leading-none">
@@ -82,7 +91,7 @@ export default function PsaSlab({
         </div>
         {/* Card info column */}
         <div className="flex-1 min-w-0 px-2 py-1.5 flex flex-col justify-center">
-          <p className="text-[11px] md:text-[12px] font-bold text-white leading-tight truncate">
+          <p className="text-[11px] md:text-[12px] font-bold text-white leading-snug line-clamp-2 break-keep">
             {card.name}
           </p>
           <p className="text-[8px] md:text-[9px] uppercase tracking-[0.14em] text-white/55 truncate mt-0.5">
@@ -92,7 +101,7 @@ export default function PsaSlab({
         {/* Grade banner */}
         <div
           className={clsx(
-            "shrink-0 flex flex-col items-center justify-center px-2.5 font-black tabular-nums",
+            "shrink-0 flex flex-col items-center justify-center px-2 md:px-2.5 font-black tabular-nums",
             tone.banner
           )}
         >
