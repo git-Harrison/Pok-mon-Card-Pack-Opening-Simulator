@@ -8,12 +8,13 @@ import {
   RARITY_STYLE,
   compareRarity,
 } from "@/lib/rarity";
-import type { Card, PsaGrading, Rarity } from "@/lib/types";
+import type { Card, Rarity } from "@/lib/types";
 import { SETS, getCard } from "@/lib/sets";
 import { useAuth } from "@/lib/auth";
 import {
-  fetchPsaGradings,
+  fetchAllGradingsWithDisplay,
   fetchWallet,
+  type PsaGradingWithDisplay,
   type WalletSnapshot,
 } from "@/lib/db";
 import Link from "next/link";
@@ -36,7 +37,7 @@ export default function WalletView() {
     packsOpenedBySet: { m2a: 0, m2: 0, sv8: 0, sv2a: 0, sv8a: 0, sv5a: 0 },
     totalCards: 0,
   });
-  const [psa, setPsa] = useState<PsaGrading[]>([]);
+  const [psa, setPsa] = useState<PsaGradingWithDisplay[]>([]);
   const [loading, setLoading] = useState(true);
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>("ALL");
 
@@ -44,7 +45,7 @@ export default function WalletView() {
     if (!user) return;
     const [w, g] = await Promise.all([
       fetchWallet(user.id),
-      fetchPsaGradings(user.id),
+      fetchAllGradingsWithDisplay(user.id),
     ]);
     setSnap(w);
     setPsa(g);
@@ -75,9 +76,15 @@ export default function WalletView() {
         return { grading: g, card };
       })
       .filter(
-        (v): v is { grading: PsaGrading; card: Card } => v !== null
+        (v): v is { grading: PsaGradingWithDisplay; card: Card } => v !== null
       )
-      .sort((a, b) => b.grading.grade - a.grading.grade);
+      .sort((a, b) => {
+        // Undisplayed first, then by grade desc so active slabs feel primary.
+        if (a.grading.displayed !== b.grading.displayed) {
+          return a.grading.displayed ? 1 : -1;
+        }
+        return b.grading.grade - a.grading.grade;
+      });
   }, [psa]);
 
   const rarityCounts = useMemo(() => {
@@ -252,7 +259,7 @@ function CardsMode({
 function PsaMode({
   items,
 }: {
-  items: { grading: PsaGrading; card: Card }[];
+  items: { grading: PsaGradingWithDisplay; card: Card }[];
 }) {
   if (items.length === 0) {
     return (
@@ -273,28 +280,55 @@ function PsaMode({
       </div>
     );
   }
+  const displayedCount = items.filter((x) => x.grading.displayed).length;
   return (
-    <div
-      className="mt-6 md:mt-8 grid gap-10 md:gap-12 place-items-center"
-      style={{
-        gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-      }}
-    >
-      {items.map(({ grading, card }) => (
-        <div key={grading.id} className="flex flex-col items-center gap-3">
-          <PsaSlab card={card} grade={grading.grade} size="md" />
-          <div className="w-full text-center px-1">
-            <p className="text-[11px] text-zinc-300 leading-tight line-clamp-2">
-              {card.name}
-            </p>
-            <p className="text-[10px] text-zinc-500 tabular-nums">
-              {SETS[card.setCode].name} · #{card.number} ·{" "}
-              {new Date(grading.graded_at).toLocaleDateString("ko-KR")}
-            </p>
+    <>
+      {/* Context blurb — explains the "전시 중" badge + wild lockout. */}
+      <div className="mt-4 rounded-xl border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 py-2 text-[11px] text-fuchsia-100 leading-snug">
+        🏛️ <b>전시 중</b> 배지가 붙은 슬랩은 지금 센터에 전시돼 있어요.
+        전시된 카드는 <b>일괄 판매 · 야생 배틀 · 재감별</b>에 사용할 수 없고,
+        센터에서 꺼내거나 상대에게 부서지기 전까지 잠겨있어요.
+        {displayedCount > 0 && (
+          <span className="ml-1 text-fuchsia-300 font-bold">
+            (현재 {displayedCount}장 전시 중)
+          </span>
+        )}
+      </div>
+      <div
+        className="mt-6 md:mt-8 grid gap-10 md:gap-12 place-items-center"
+        style={{
+          gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+        }}
+      >
+        {items.map(({ grading, card }) => (
+          <div
+            key={grading.id}
+            className={clsx(
+              "relative flex flex-col items-center gap-3",
+              grading.displayed && "opacity-80"
+            )}
+          >
+            <div className="relative">
+              <PsaSlab card={card} grade={grading.grade} size="md" />
+              {grading.displayed && (
+                <span className="absolute -top-2 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-fuchsia-500 text-white text-[10px] font-black shadow-[0_4px_10px_rgba(217,70,239,0.6)] whitespace-nowrap">
+                  🏛️ 전시 중
+                </span>
+              )}
+            </div>
+            <div className="w-full text-center px-1">
+              <p className="text-[11px] text-zinc-300 leading-tight line-clamp-2">
+                {card.name}
+              </p>
+              <p className="text-[10px] text-zinc-500 tabular-nums">
+                {SETS[card.setCode].name} · #{card.number} ·{" "}
+                {new Date(grading.graded_at).toLocaleDateString("ko-KR")}
+              </p>
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </>
   );
 }
 

@@ -595,6 +595,20 @@ export async function fetchUndisplayedGradings(
   return (data ?? []) as PsaGrading[];
 }
 
+export interface PsaGradingWithDisplay extends PsaGrading {
+  displayed: boolean;
+}
+
+export async function fetchAllGradingsWithDisplay(
+  userId: string
+): Promise<PsaGradingWithDisplay[]> {
+  const { data, error } = await supabase.rpc("get_all_gradings_with_display", {
+    p_user_id: userId,
+  });
+  if (error) return [];
+  return (data ?? []) as PsaGradingWithDisplay[];
+}
+
 export async function wildBattleReward(userId: string, amount: number) {
   const { data, error } = await supabase.rpc("wild_battle_reward", {
     p_user_id: userId,
