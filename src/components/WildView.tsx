@@ -76,7 +76,10 @@ export default function WildView() {
   const [wild, setWild] = useState<WildMon | null>(null);
   const [wildHp, setWildHp] = useState(0);
   const [slab, setSlab] = useState<Slab | null>(null);
-  const [message, setMessage] = useState<string>("");
+  const [bubble, setBubble] = useState<{
+    side: "wild" | "player";
+    text: string;
+  } | null>(null);
   const [floaters, setFloaters] = useState<FloatingDamage[]>([]);
   const [enemyHit, setEnemyHit] = useState(false);
   const [playerHit, setPlayerHit] = useState(false);
@@ -135,19 +138,22 @@ export default function WildView() {
     []
   );
 
-  const sayAndPause = useCallback((text: string, ms = 1100) => {
-    return new Promise<void>((resolve) => {
-      setMessage(text);
-      setTimeout(resolve, ms);
-    });
-  }, []);
+  const say = useCallback(
+    (text: string, side: "wild" | "player", ms = 1100) => {
+      return new Promise<void>((resolve) => {
+        setBubble({ side, text });
+        setTimeout(resolve, ms);
+      });
+    },
+    []
+  );
 
   const encounter = useCallback(() => {
     const w = WILD_POOL[Math.floor(Math.random() * WILD_POOL.length)];
     setWild(w);
     setWildHp(w.hp);
     setSlab(null);
-    setMessage("");
+    setBubble(null);
     setFloaters([]);
     setRewarded(null);
     setPhase("intro");
@@ -156,7 +162,7 @@ export default function WildView() {
   // Auto-advance from intro → picking after short dialogue.
   useEffect(() => {
     if (phase !== "intro" || !wild) return;
-    setMessage(wild.cry);
+    setBubble({ side: "wild", text: wild.cry });
     const t = setTimeout(() => setPhase("picking"), 1500);
     return () => clearTimeout(t);
   }, [phase, wild]);
@@ -165,11 +171,11 @@ export default function WildView() {
     async (s: Slab) => {
       setSlab({ ...s });
       setPhase("starting");
-      await sayAndPause(`좋아! ${s.name} — 가자!`, 900);
-      setMessage("내 턴!");
+      await say(`좋아! ${s.name} — 가자!`, "player", 900);
+      setBubble({ side: "player", text: "내 턴!" });
       setPhase("player-turn");
     },
-    [sayAndPause]
+    [say]
   );
 
   const playerAttack = useCallback(async () => {
@@ -177,8 +183,7 @@ export default function WildView() {
     const mult = effectiveness(slab.type!, wild.type);
     const dmg = computeDamage(slab.atk, mult);
     setAttackingSide("player");
-    await sayAndPause(`${slab.name}의 공격!`, 500);
-    // play the hit
+    await say(`${slab.name}의 공격!`, "player", 500);
     if (mult === 0) {
       addFloater("enemy", 0, false, true);
     } else {
@@ -189,11 +194,12 @@ export default function WildView() {
     const newHp = Math.max(0, wildHp - dmg);
     setWildHp(newHp);
     const label = effectivenessLabel(mult);
-    if (label.text) await sayAndPause(label.text, 700);
+    // Effectiveness reads on the side of the Pokemon that TOOK the hit.
+    if (label.text) await say(label.text, "wild", 700);
     setAttackingSide(null);
 
     if (newHp <= 0) {
-      await sayAndPause(`야생의 ${wild.name}은(는) 쓰러졌다!`, 900);
+      await say(`야생의 ${wild.name}은(는) 쓰러졌다!`, "wild", 900);
       const prize = winReward(wild.hp);
       setRewarded(prize);
       if (user) {
@@ -205,7 +211,7 @@ export default function WildView() {
     }
     // enemy counter-attack
     setPhase("enemy-attack");
-    await sayAndPause(`야생의 ${wild.name}의 공격!`, 600);
+    await say(`야생의 ${wild.name}의 공격!`, "wild", 600);
     setAttackingSide("enemy");
     const emult = effectiveness(wild.type, slab.type!);
     const edmg = computeDamage(wild.atk, emult);
@@ -219,31 +225,31 @@ export default function WildView() {
     const newSlabHp = Math.max(0, slab.hp - edmg);
     setSlab({ ...slab, hp: newSlabHp });
     const elabel = effectivenessLabel(emult);
-    if (elabel.text) await sayAndPause(elabel.text, 700);
+    if (elabel.text) await say(elabel.text, "player", 700);
     setAttackingSide(null);
 
     if (newSlabHp <= 0) {
-      await sayAndPause(`${slab.name}은(는) 더 이상 싸울 수 없다…`, 1000);
+      await say(`${slab.name}은(는) 더 이상 싸울 수 없다…`, "player", 1000);
       setPhase("lost");
-      setCooldownUntil(Date.now() + 30_000); // 30s cooldown after a loss
+      setCooldownUntil(Date.now() + 30_000);
       return;
     }
-    setMessage("내 턴!");
+    setBubble({ side: "player", text: "내 턴!" });
     setPhase("player-turn");
-  }, [slab, wild, wildHp, addFloater, sayAndPause, user, setPoints]);
+  }, [slab, wild, wildHp, addFloater, say, user, setPoints]);
 
   const flee = useCallback(async () => {
     if (!wild) return;
-    await sayAndPause("무사히 도망쳤다!", 800);
+    await say("무사히 도망쳤다!", "player", 800);
     resetAll();
-  }, [wild, sayAndPause]);
+  }, [wild, say]);
 
   const resetAll = useCallback(() => {
     setPhase("idle");
     setWild(null);
     setWildHp(0);
     setSlab(null);
-    setMessage("");
+    setBubble(null);
     setFloaters([]);
     setAttackingSide(null);
     setRewarded(null);
@@ -320,7 +326,7 @@ export default function WildView() {
           wildHp={wildHp}
           slab={slab}
           phase={phase}
-          message={message}
+          bubble={bubble}
           floaters={floaters}
           enemyHit={enemyHit}
           playerHit={playerHit}
@@ -454,7 +460,7 @@ function BattleScene({
   wildHp,
   slab,
   phase,
-  message,
+  bubble,
   floaters,
   enemyHit,
   playerHit,
@@ -464,12 +470,14 @@ function BattleScene({
   wildHp: number;
   slab: Slab | null;
   phase: Phase;
-  message: string;
+  bubble: { side: "wild" | "player"; text: string } | null;
   floaters: FloatingDamage[];
   enemyHit: boolean;
   playerHit: boolean;
   attackingSide: "player" | "enemy" | null;
 }) {
+  const wildBubble = bubble?.side === "wild" ? bubble.text : "";
+  const playerBubble = bubble?.side === "player" ? bubble.text : "";
   return (
     <div
       className="relative mt-4 rounded-2xl overflow-hidden border border-emerald-500/30"
@@ -489,72 +497,91 @@ function BattleScene({
         }}
       />
 
-      {/* Enemy (top-right) */}
+      {/* Enemy (top-right): bubble on the LEFT of the sprite */}
       <div className="absolute top-3 right-3 md:top-6 md:right-6 flex flex-col items-end">
         <HpBar label={wild.name} hp={wildHp} max={wild.hp} type={wild.type} />
-        <motion.div
-          initial={{ x: 200, opacity: 0 }}
-          animate={{
-            x: 0,
-            opacity: wildHp > 0 ? 1 : 0,
-            y: enemyHit ? [0, -4, 4, 0] : 0,
-            rotate: wildHp <= 0 ? 80 : 0,
-          }}
-          transition={
-            enemyHit
-              ? { duration: 0.35 }
-              : { type: "spring", stiffness: 180, damping: 18 }
-          }
-          className="relative mt-2"
-        >
-          {attackingSide === "enemy" && (
-            <motion.div
-              className="absolute inset-0 pointer-events-none"
-              initial={{ x: 0 }}
-              animate={{ x: [-6, -30, 0] }}
-              transition={{ duration: 0.45 }}
-            />
-          )}
-          <WildSprite dex={wild.dex} hit={enemyHit} />
-          {/* Floating damage over the enemy */}
+        <div className="mt-2 flex items-center gap-2">
+          {/* Wild speech bubble — pops to the left of the sprite */}
           <AnimatePresence>
-            {floaters
-              .filter((f) => f.target === "enemy")
-              .map((f) => (
-                <FloatingNumber key={f.id} damage={f} />
-              ))}
+            {wildBubble && (
+              <SpeechBubble key={wildBubble} text={wildBubble} side="left" />
+            )}
           </AnimatePresence>
-        </motion.div>
+          <motion.div
+            initial={{ x: 200, opacity: 0 }}
+            animate={{
+              x: 0,
+              opacity: wildHp > 0 ? 1 : 0,
+              y: enemyHit ? [0, -4, 4, 0] : 0,
+              rotate: wildHp <= 0 ? 80 : 0,
+            }}
+            transition={
+              enemyHit
+                ? { duration: 0.35 }
+                : { type: "spring", stiffness: 180, damping: 18 }
+            }
+            className="relative"
+          >
+            {attackingSide === "enemy" && (
+              <motion.div
+                className="absolute inset-0 pointer-events-none"
+                initial={{ x: 0 }}
+                animate={{ x: [-6, -30, 0] }}
+                transition={{ duration: 0.45 }}
+              />
+            )}
+            <WildSprite dex={wild.dex} hit={enemyHit} />
+            <AnimatePresence>
+              {floaters
+                .filter((f) => f.target === "enemy")
+                .map((f) => (
+                  <FloatingNumber key={f.id} damage={f} />
+                ))}
+            </AnimatePresence>
+          </motion.div>
+        </div>
       </div>
 
-      {/* Player (bottom-left) */}
+      {/* Player (bottom-left): bubble on the RIGHT of the card */}
       <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 flex flex-col items-start">
         {slab && (
           <>
-            <motion.div
-              initial={{ x: -200, opacity: 0 }}
-              animate={{
-                x: 0,
-                opacity: slab.hp > 0 ? 1 : 0.2,
-                y: playerHit ? [0, -4, 4, 0] : 0,
-                rotate: slab.hp <= 0 ? -15 : 0,
-              }}
-              transition={
-                playerHit
-                  ? { duration: 0.35 }
-                  : { type: "spring", stiffness: 180, damping: 18 }
-              }
-              className="relative"
-            >
-              <PlayerSlab slab={slab} />
+            <div className="flex items-center gap-2">
+              <motion.div
+                initial={{ x: -200, opacity: 0 }}
+                animate={{
+                  x: 0,
+                  opacity: slab.hp > 0 ? 1 : 0.2,
+                  y: playerHit ? [0, -4, 4, 0] : 0,
+                  rotate: slab.hp <= 0 ? -15 : 0,
+                }}
+                transition={
+                  playerHit
+                    ? { duration: 0.35 }
+                    : { type: "spring", stiffness: 180, damping: 18 }
+                }
+                className="relative"
+              >
+                <PlayerSlab slab={slab} />
+                <AnimatePresence>
+                  {floaters
+                    .filter((f) => f.target === "player")
+                    .map((f) => (
+                      <FloatingNumber key={f.id} damage={f} />
+                    ))}
+                </AnimatePresence>
+              </motion.div>
+              {/* Player speech bubble — pops to the right of the card */}
               <AnimatePresence>
-                {floaters
-                  .filter((f) => f.target === "player")
-                  .map((f) => (
-                    <FloatingNumber key={f.id} damage={f} />
-                  ))}
+                {playerBubble && (
+                  <SpeechBubble
+                    key={playerBubble}
+                    text={playerBubble}
+                    side="right"
+                  />
+                )}
               </AnimatePresence>
-            </motion.div>
+            </div>
             <div className="mt-2">
               <HpBar
                 label={slab.name}
@@ -567,22 +594,6 @@ function BattleScene({
           </>
         )}
       </div>
-
-      {/* Bottom message dock */}
-      <AnimatePresence>
-        {message && (
-          <motion.div
-            key={message}
-            className="absolute inset-x-0 bottom-0 px-3 py-2.5 bg-black/70 backdrop-blur-md border-t border-white/10 text-white text-sm font-semibold text-center"
-            initial={{ y: 30, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 30, opacity: 0 }}
-            transition={{ duration: 0.18 }}
-          >
-            {message}
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Center overlay — intro/starting glyphs */}
       {phase === "intro" && (
@@ -874,6 +885,41 @@ function ResultPanel({
           그만하기
         </button>
       </div>
+    </motion.div>
+  );
+}
+
+/** Small character-adjacent speech bubble with a tail. */
+function SpeechBubble({
+  text,
+  side,
+}: {
+  text: string;
+  side: "left" | "right";
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4, scale: 0.85 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 4, scale: 0.9 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className={clsx(
+        "relative max-w-[140px] md:max-w-[160px] rounded-xl px-2.5 py-1.5",
+        "bg-white text-zinc-900 text-[11px] md:text-xs font-bold leading-snug",
+        "shadow-[0_4px_14px_rgba(0,0,0,0.4)] break-keep"
+      )}
+    >
+      {text}
+      {/* tail */}
+      <span
+        aria-hidden
+        className={clsx(
+          "absolute top-1/2 -translate-y-1/2 w-0 h-0 border-y-[6px] border-y-transparent",
+          side === "left"
+            ? "-right-1.5 border-l-[7px] border-l-white"
+            : "-left-1.5 border-r-[7px] border-r-white"
+        )}
+      />
     </motion.div>
   );
 }
