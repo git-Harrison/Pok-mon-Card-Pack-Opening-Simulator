@@ -261,6 +261,13 @@ export async function submitPsaGrading(userId: string, cardId: string) {
   };
 }
 
+export interface RankingPsaGrading {
+  id: string;
+  card_id: string;
+  grade: number;
+  graded_at: string;
+}
+
 export interface RankingRow {
   id: string;
   user_id: string;
@@ -271,6 +278,9 @@ export interface RankingRow {
   psa_10: number;
   psa_9: number;
   psa_8: number;
+  psa_7: number;
+  psa_6: number;
+  gradings: RankingPsaGrading[];
 }
 
 export async function fetchUserRankings(): Promise<RankingRow[]> {

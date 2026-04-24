@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import clsx from "clsx";
 import {
@@ -20,8 +19,8 @@ import {
   fetchWallet,
   type WalletSnapshot,
 } from "@/lib/db";
+import Link from "next/link";
 import PokeCard from "./PokeCard";
-import CardDetailModal from "./CardDetailModal";
 import PsaSlab from "./PsaSlab";
 import { motion } from "framer-motion";
 
@@ -42,7 +41,6 @@ export default function WalletView() {
   const [psa, setPsa] = useState<PsaGrading[]>([]);
   const [loading, setLoading] = useState(true);
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>("ALL");
-  const [selected, setSelected] = useState<{ card: Card; count: number } | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   // card_id → count to sell
   const [sellSelection, setSellSelection] = useState<Record<string, number>>({});
@@ -149,7 +147,6 @@ export default function WalletView() {
           rarityCounts={rarityCounts}
           rarityFilter={rarityFilter}
           setRarityFilter={setRarityFilter}
-          onSelect={(card, count) => setSelected({ card, count })}
           selectMode={selectMode}
           setSelectMode={(v) => {
             setSelectMode(v);
@@ -172,13 +169,6 @@ export default function WalletView() {
       ) : (
         <PsaMode items={psaItems} />
       )}
-
-      <CardDetailModal
-        card={selected?.card ?? null}
-        count={selected?.count ?? 0}
-        onClose={() => setSelected(null)}
-        onAfterGift={refresh}
-      />
 
       {/* Bulk sell bottom sheet */}
       {selectMode && mode === "cards" && (
@@ -298,7 +288,6 @@ function CardsMode({
   rarityCounts,
   rarityFilter,
   setRarityFilter,
-  onSelect,
   selectMode,
   setSelectMode,
   sellSelection,
@@ -308,7 +297,6 @@ function CardsMode({
   rarityCounts: Map<Rarity, number>;
   rarityFilter: RarityFilter;
   setRarityFilter: (r: RarityFilter) => void;
-  onSelect: (card: Card, count: number) => void;
   selectMode: boolean;
   setSelectMode: (v: boolean) => void;
   sellSelection: Record<string, number>;
@@ -372,31 +360,8 @@ function CardsMode({
           {items.map(({ card, count }) => {
             const sellCount = sellSelection[card.id] ?? 0;
             const isSelected = sellCount > 0;
-            return (
-              <div
-                key={card.id}
-                role="button"
-                tabIndex={0}
-                className={clsx(
-                  "relative flex flex-col items-center gap-1.5 cursor-pointer active:scale-[0.97] transition-transform rounded-xl",
-                  selectMode && isSelected && "ring-2 ring-amber-400"
-                )}
-                style={{ touchAction: "manipulation" }}
-                onClick={() => {
-                  if (selectMode) {
-                    toggleSell(card, 1);
-                  } else {
-                    onSelect(card, count);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    if (selectMode) toggleSell(card, 1);
-                    else onSelect(card, count);
-                  }
-                }}
-              >
+            const body = (
+              <>
                 <PokeCard card={card} revealed size="md" />
                 {count > 1 && !selectMode && (
                   <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur text-white font-bold text-[10px] ring-1 ring-white/20 pointer-events-none">
@@ -419,7 +384,43 @@ function CardsMode({
                     {SETS[card.setCode].name} · #{card.number}
                   </p>
                 </div>
-              </div>
+              </>
+            );
+            if (selectMode) {
+              return (
+                <div
+                  key={card.id}
+                  role="button"
+                  tabIndex={0}
+                  className={clsx(
+                    "relative flex flex-col items-center gap-1.5 cursor-pointer active:scale-[0.97] transition-transform rounded-xl",
+                    isSelected && "ring-2 ring-amber-400"
+                  )}
+                  style={{ touchAction: "manipulation" }}
+                  onClick={() => toggleSell(card, 1)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      toggleSell(card, 1);
+                    }
+                  }}
+                >
+                  {body}
+                </div>
+              );
+            }
+            // Route-based detail view — much more reliable than a modal
+            // because there is no fixed-position CSS layer that can
+            // conflict with app shell styles.
+            return (
+              <Link
+                key={card.id}
+                href={`/card/${encodeURIComponent(card.id)}`}
+                className="relative flex flex-col items-center gap-1.5 rounded-xl active:scale-[0.97] transition-transform"
+                style={{ touchAction: "manipulation" }}
+              >
+                {body}
+              </Link>
             );
           })}
         </div>

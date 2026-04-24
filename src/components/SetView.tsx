@@ -308,6 +308,7 @@ function SealedBox({
             fill
             sizes="(max-width: 768px) 90vw, 520px"
             className="object-contain drop-shadow-2xl select-none pointer-events-none"
+            style={{ mixBlendMode: "multiply" }}
             priority
             draggable={false}
           />
@@ -371,6 +372,7 @@ function BoxOpening({ set }: { set: SetInfo }) {
             fill
             sizes="(max-width: 768px) 90vw, 520px"
             className="object-contain select-none pointer-events-none"
+            style={{ mixBlendMode: "multiply" }}
             draggable={false}
           />
         </motion.div>
