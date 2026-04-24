@@ -347,6 +347,48 @@ export async function fetchPsaGradings(
   return fetchUndisplayedGradings(userId);
 }
 
+// ---------- Admin ----------
+
+export interface AdminUserRow {
+  id: string;
+  user_id: string;
+  display_name: string;
+  age: number;
+  points: number;
+}
+
+export async function adminListUsers(adminId: string) {
+  const { data, error } = await supabase.rpc("admin_list_users", {
+    p_admin_id: adminId,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    error?: string;
+    users?: AdminUserRow[];
+  };
+}
+
+export async function adminGrantPoints(
+  adminId: string,
+  target: string,
+  amount: number
+) {
+  const { data, error } = await supabase.rpc("admin_grant_points", {
+    p_admin_id: adminId,
+    p_target: target,
+    p_amount: amount,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    error?: string;
+    target_name?: string;
+    amount?: number;
+    points?: number;
+  };
+}
+
 // ---------- Center (museum) ----------
 
 import type { ShowcaseType } from "./center";

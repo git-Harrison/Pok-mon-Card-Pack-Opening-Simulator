@@ -7,10 +7,10 @@ import { GRADE_BRAND, PSA_LABEL, psaTone } from "@/lib/psa";
 import { SETS } from "@/lib/sets";
 
 /**
- * PCL slab — dark-glass holographic encapsulation.
- * Layers: outer bezel → inner glass → card window → bottom barcode band.
- * Grade banner uses the rarity-tier-matched `psaTone(grade)` palette so the
- * whole component glows in the right hue without hard-coded color logic.
+ * PCL grading slab. Mirrors a real PSA slab's proportions — chunky
+ * header that reads [brand stack] [card info] [grade number], a
+ * recessed card window, and a minimal bottom band with cert + barcode.
+ * The whole slab glows in the grade's palette via `psaTone(grade)`.
  */
 export default function PsaSlab({
   card,
@@ -26,10 +26,8 @@ export default function PsaSlab({
   const tone = psaTone(grade);
   const label = PSA_LABEL[grade] ?? "";
 
-  // Responsive: slab grows with its container up to its size cap.
-  // This prevents clipping when the slab is placed inside a tight grid
-  // column (e.g. the ManageModal / VisitShowcaseModal 3-column grids)
-  // whose column width is narrower than the slab's design width.
+  // Responsive: slab fits its container up to the size cap so it never
+  // overflows narrow modal grid columns.
   const width =
     size === "sm"
       ? "w-full max-w-[150px]"
@@ -37,92 +35,94 @@ export default function PsaSlab({
       ? "w-full max-w-[260px]"
       : "w-full max-w-[200px]";
 
+  const cert = `${card.setCode.toUpperCase()}-${card.number}-${grade}`;
+
   return (
     <motion.div
       initial={false}
       animate={highlight ? { scale: [1, 1.03, 1] } : { scale: 1 }}
       transition={{ duration: 1.2, times: [0, 0.5, 1] }}
       className={clsx(
-        "relative rounded-[22px] overflow-hidden isolate ring-1 select-none",
-        "bg-[linear-gradient(160deg,#0b0918_0%,#130b28_45%,#070410_100%)]",
+        "relative rounded-2xl overflow-hidden isolate ring-1 select-none",
+        "bg-[linear-gradient(165deg,#0d0a1d_0%,#17102e_50%,#090514_100%)]",
         tone.ring,
         tone.glow,
         width
       )}
       style={{
         boxShadow:
-          "0 20px 40px -20px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.6)",
+          "0 16px 36px -18px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.6)",
       }}
     >
-      {/* Holographic diagonal sheen */}
+      {/* Subtle holographic sheen over the whole slab */}
       <div
         aria-hidden
-        className="absolute inset-0 pointer-events-none opacity-70"
+        className="absolute inset-0 pointer-events-none opacity-60"
         style={{
           background:
-            "linear-gradient(125deg, rgba(255,255,255,0) 0%, rgba(147,197,253,0.1) 20%, rgba(236,72,153,0.08) 40%, rgba(250,204,21,0.08) 60%, rgba(34,197,94,0.08) 80%, rgba(255,255,255,0) 100%)",
-        }}
-      />
-      {/* Noise grain */}
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none opacity-[0.12] mix-blend-overlay"
-        style={{
-          backgroundImage:
-            "radial-gradient(rgba(255,255,255,0.4) 1px, transparent 1px)",
-          backgroundSize: "3px 3px",
+            "linear-gradient(130deg, rgba(255,255,255,0) 0%, rgba(147,197,253,0.08) 25%, rgba(236,72,153,0.06) 50%, rgba(250,204,21,0.06) 75%, rgba(255,255,255,0) 100%)",
         }}
       />
 
-      {/* ── Brand header ── */}
-      <div className="relative px-3 pt-2.5 pb-2 flex items-center gap-2">
-        {/* Brand mark */}
-        <div className="flex items-baseline gap-1 shrink-0">
-          <span className="text-[9px] uppercase tracking-[0.4em] text-white/50 font-semibold">
-            {GRADE_BRAND}
-          </span>
-          <span className="text-[8px] uppercase tracking-[0.3em] text-white/30">
-            ▸ Graded
-          </span>
-        </div>
-        <div className="flex-1 h-px bg-gradient-to-r from-white/5 via-white/15 to-white/5" />
-        {/* Grade pill */}
+      {/* ── Header: brand | card info | grade ── */}
+      <div className="relative flex items-stretch">
+        {/* Brand column */}
         <div
           className={clsx(
-            "shrink-0 inline-flex items-baseline gap-1 rounded-full px-2 py-0.5 font-black tabular-nums",
-            tone.banner
-          )}
-        >
-          <span className="text-[9px] uppercase tracking-widest font-bold opacity-80">
-            G
-          </span>
-          <span className="text-sm md:text-base leading-none">{grade}</span>
-        </div>
-      </div>
-
-      {/* ── Name + label line ── */}
-      <div className="relative px-3 pb-2">
-        <p className="text-[11px] md:text-[12px] font-bold text-white leading-tight line-clamp-1">
-          {card.name}
-        </p>
-        <p
-          className={clsx(
-            "text-[8px] md:text-[9px] uppercase tracking-[0.28em] font-semibold mt-0.5",
+            "shrink-0 px-2.5 py-1.5 flex flex-col items-center justify-center border-r border-white/10",
             tone.text
           )}
         >
+          <span className="text-[11px] md:text-xs font-black tracking-[0.18em] leading-none">
+            {GRADE_BRAND}
+          </span>
+          <span className="mt-0.5 text-[7px] uppercase tracking-[0.22em] opacity-70 leading-none">
+            Graded
+          </span>
+        </div>
+        {/* Card info column */}
+        <div className="flex-1 min-w-0 px-2 py-1.5 flex flex-col justify-center">
+          <p className="text-[11px] md:text-[12px] font-bold text-white leading-tight truncate">
+            {card.name}
+          </p>
+          <p className="text-[8px] md:text-[9px] uppercase tracking-[0.14em] text-white/55 truncate mt-0.5">
+            {SETS[card.setCode].name} · #{card.number}
+          </p>
+        </div>
+        {/* Grade banner */}
+        <div
+          className={clsx(
+            "shrink-0 flex flex-col items-center justify-center px-2.5 font-black tabular-nums",
+            tone.banner
+          )}
+        >
+          <span className="text-[7px] uppercase tracking-[0.2em] font-bold opacity-80 leading-none">
+            Grade
+          </span>
+          <span className="text-xl md:text-2xl leading-none mt-0.5">
+            {grade}
+          </span>
+        </div>
+      </div>
+
+      {/* Label strip (e.g. GEM MINT) */}
+      <div
+        className={clsx(
+          "relative px-3 py-1 text-center border-t border-white/5 border-b border-white/5",
+          tone.text
+        )}
+      >
+        <span className="text-[9px] md:text-[10px] uppercase tracking-[0.3em] font-bold">
           {label}
-        </p>
+        </span>
       </div>
 
       {/* ── Card window ── */}
       <div
-        className="relative mx-3 rounded-[10px] overflow-hidden ring-1 ring-white/10"
+        className="relative m-2.5 rounded-md overflow-hidden ring-1 ring-white/10 bg-zinc-950"
         style={{
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(0,0,0,0.3) 100%)",
           boxShadow:
-            "inset 0 0 20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12)",
+            "inset 0 0 16px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)",
         }}
       >
         <div className="relative aspect-[5/7]">
@@ -145,51 +145,32 @@ export default function PsaSlab({
             className="absolute inset-0 pointer-events-none"
             style={{
               background:
-                "linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 70%, rgba(255,255,255,0.08) 100%)",
-            }}
-          />
-          {/* Bottom fade */}
-          <div
-            aria-hidden
-            className="absolute left-0 right-0 bottom-0 h-12 pointer-events-none"
-            style={{
-              background:
-                "linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0))",
+                "linear-gradient(135deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 45%)",
             }}
           />
         </div>
       </div>
 
-      {/* ── Bottom band: set + cert line + barcode ── */}
-      <div className="relative px-3 pt-2 pb-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <div className="text-[8px] md:text-[9px] uppercase tracking-[0.18em] text-white/70 truncate">
-              {SETS[card.setCode].name}
-            </div>
-            <div className="text-[8px] md:text-[9px] uppercase tracking-[0.18em] text-white/30 tabular-nums">
-              #{card.number}
-            </div>
-          </div>
-          <Barcode />
-        </div>
-        {/* Cert line — fake hash for flavor */}
-        <div className="mt-1.5 text-[8px] font-mono text-white/30 tabular-nums truncate">
-          PCL·{card.setCode.toUpperCase()}·{card.number}·{grade}
-        </div>
+      {/* ── Bottom band: cert + barcode ── */}
+      <div className="relative px-3 pb-2 flex items-center justify-between gap-2">
+        <span className="text-[8px] md:text-[9px] font-mono tracking-wider text-white/45 truncate">
+          {GRADE_BRAND} · {cert}
+        </span>
+        <Barcode />
       </div>
     </motion.div>
   );
 }
 
+/** Decorative barcode — static widths, flat white bars. */
 function Barcode() {
-  const bars = [1, 2, 1, 3, 1, 2, 2, 1, 3, 2, 1, 2, 1, 3, 1, 2, 3, 1, 2, 1];
+  const bars = [1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 3, 1];
   return (
-    <div className="flex items-end h-5 gap-[1px] shrink-0 opacity-80">
+    <div className="flex items-end h-3.5 gap-[1px] shrink-0 opacity-70">
       {bars.map((w, i) => (
         <span
           key={i}
-          className="bg-white/70"
+          className="bg-white/85"
           style={{ width: `${w}px`, height: "100%" }}
         />
       ))}
