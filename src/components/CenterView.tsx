@@ -205,7 +205,7 @@ export default function CenterView() {
               내 포켓몬센터
             </h1>
             <p className="text-[11px] md:text-xs text-zinc-300/80 mt-1">
-              PCL 9·10 감별 슬랩만 박제 가능. 전시 중엔 지갑에서 숨겨지고
+              PCL 9·10 감별 슬랩만 전시 가능. 전시 중엔 지갑에서 숨겨지고
               판매·선물·재감별이 막혀요.
               <br className="hidden md:block" />
               수익: <b className="text-slate-100">PCL 9</b> 시간당 3,000p ·{" "}
@@ -216,7 +216,7 @@ export default function CenterView() {
           <div className="flex items-center gap-2 text-xs">
             {user && <PointsChip points={user.points} size="sm" />}
             <Kpi label="보관함" value={`${showcases.length}`} />
-            <Kpi label="박제 중" value={`${totalCards}장`} highlight />
+            <Kpi label="전시 중" value={`${totalCards}장`} highlight />
           </div>
         </header>
 
@@ -539,20 +539,11 @@ function ManageModal({
   return (
     <ModalShell
       title={`${spec.icon} ${spec.name}`}
-      subtitle={`${showcase.cards.length}/${spec.capacity}칸 박제 중`}
+      subtitle={`${showcase.cards.length}/${spec.capacity}칸 전시 중`}
       onClose={onClose}
     >
       <div className="p-3 md:p-4 space-y-3">
-        <div
-          className={clsx(
-            "grid gap-2",
-            spec.capacity <= 2
-              ? "grid-cols-2"
-              : spec.capacity <= 4
-              ? "grid-cols-2"
-              : "grid-cols-3"
-          )}
-        >
+        <div className="flex justify-center">
           {Array.from({ length: spec.capacity }).map((_, i) => {
             const row = showcase.cards.find((c) => c.slot_index === i);
             const card = row ? getCard(row.card_id) : null;
@@ -578,7 +569,7 @@ function ManageModal({
                   >
                     <span className="text-2xl opacity-70">＋</span>
                     <span className="text-[10px] font-semibold">
-                      슬랩 박제
+                      슬랩 전시
                     </span>
                   </button>
                 )}
@@ -613,14 +604,14 @@ function GradingPickModal({
   );
   return (
     <ModalShell
-      title="박제할 PCL 슬랩 선택"
-      subtitle="PCL 9·10 슬랩만 전시 가능 · 박제 중엔 지갑에서 숨겨져요"
+      title="전시할 PCL 슬랩 선택"
+      subtitle="PCL 9·10 슬랩만 전시 가능 · 전시 중엔 지갑에서 숨겨져요"
       onClose={onClose}
     >
       <div className="p-3 md:p-4">
         {items.length === 0 ? (
           <p className="py-12 text-center text-sm text-zinc-400">
-            박제할 PCL 9 / 10 슬랩이 없어요.
+            전시할 PCL 9 / 10 슬랩이 없어요.
             <br />
             감별 페이지에서 등급 9 또는 10을 받아보세요.
           </p>

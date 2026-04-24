@@ -153,7 +153,7 @@ export default function VisitCenterView({ loginId }: { loginId: string }) {
           <div className="flex items-center gap-2 text-xs">
             {user && <PointsChip points={user.points} size="sm" />}
             <Kpi label="보관함" value={`${showcases.length}`} />
-            <Kpi label="박제" value={`${totalCards}장`} highlight />
+            <Kpi label="전시" value={`${totalCards}장`} highlight />
           </div>
         </header>
 
@@ -238,16 +238,7 @@ function VisitShowcaseModal({
       onClose={onClose}
     >
       <div className="p-3 md:p-4">
-        <div
-          className={clsx(
-            "grid gap-2",
-            spec.capacity <= 2
-              ? "grid-cols-2"
-              : spec.capacity <= 4
-              ? "grid-cols-2"
-              : "grid-cols-3"
-          )}
-        >
+        <div className="flex justify-center">
           {Array.from({ length: spec.capacity }).map((_, i) => {
             const row = showcase.cards.find((c) => c.slot_index === i);
             const card = row ? getCard(row.card_id) : null;
@@ -447,7 +438,7 @@ function SabotageResultModal({
         <p className="text-center text-xs text-zinc-300">
           {result.success ? (
             <>
-              <b className="text-rose-300">{result.cardsDestroyed}장</b>의 박제
+              <b className="text-rose-300">{result.cardsDestroyed}장</b>의 전시
               카드가 영원히 사라졌습니다.
             </>
           ) : (

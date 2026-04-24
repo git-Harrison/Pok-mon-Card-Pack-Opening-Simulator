@@ -231,7 +231,7 @@ export default function UsersView() {
                       </Link>
                     </div>
                     <p className="text-[11px] md:text-xs text-zinc-400 mt-0.5">
-                      감별 {e.psa_count}회 · 박제 {e.showcase_count ?? 0}장
+                      감별 {e.psa_count}회 · 전시 {e.showcase_count ?? 0}장
                     </p>
                   </div>
                   <div className="text-right shrink-0">

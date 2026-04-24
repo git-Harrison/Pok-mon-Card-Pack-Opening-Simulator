@@ -343,7 +343,7 @@ export async function fetchPsaGradings(
   userId: string
 ): Promise<PsaGrading[]> {
   // Uses the v4 helper that excludes slabs currently on display in
-  // the user's museum — those are considered 박제되어 지갑에서 제외.
+  // the user's museum — those are considered 전시 중이라 지갑에서 제외.
   return fetchUndisplayedGradings(userId);
 }
 
