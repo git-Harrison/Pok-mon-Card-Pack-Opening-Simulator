@@ -32,6 +32,7 @@ import PointsChip from "./PointsChip";
 import CoinIcon from "./CoinIcon";
 import RarityBadge from "./RarityBadge";
 import PsaSlab from "./PsaSlab";
+import Portal from "./Portal";
 
 export default function CenterView() {
   const { user, setPoints } = useAuth();
@@ -673,47 +674,49 @@ export function ModalShell({
   children: React.ReactNode;
 }) {
   return (
-    <motion.div
-      className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center overflow-hidden"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-      style={{
-        paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
-        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
-        paddingLeft: "12px",
-        paddingRight: "12px",
-      }}
-    >
+    <Portal>
       <motion.div
-        className="relative w-full max-w-md bg-zinc-950 border border-white/10 rounded-2xl flex flex-col overflow-hidden"
-        style={{ maxHeight: "calc(100dvh - 24px)" }}
-        initial={{ scale: 0.94, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.94, opacity: 0 }}
-        transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center overflow-hidden"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{
+          paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+          paddingLeft: "12px",
+          paddingRight: "12px",
+        }}
       >
-        <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-white/10 shrink-0">
-          <div className="min-w-0">
-            <h3 className="text-sm font-bold text-white truncate">{title}</h3>
-            {subtitle && (
-              <p className="text-[10px] text-zinc-400 truncate">{subtitle}</p>
-            )}
+        <motion.div
+          className="relative w-full max-w-md bg-zinc-950 border border-white/10 rounded-2xl flex flex-col overflow-hidden"
+          style={{ maxHeight: "calc(100dvh - 24px)" }}
+          initial={{ scale: 0.94, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.94, opacity: 0 }}
+          transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-white/10 shrink-0">
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-white truncate">{title}</h3>
+              {subtitle && (
+                <p className="text-[10px] text-zinc-400 truncate">{subtitle}</p>
+              )}
+            </div>
+            <button
+              onClick={onClose}
+              aria-label="닫기"
+              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+              style={{ touchAction: "manipulation" }}
+            >
+              ✕
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="닫기"
-            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
-            style={{ touchAction: "manipulation" }}
-          >
-            ✕
-          </button>
-        </div>
-        <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>
+          <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>
+        </motion.div>
       </motion.div>
-    </motion.div>
+    </Portal>
   );
 }
 
