@@ -50,6 +50,8 @@ const GRADE_RING: Record<number, string> = {
   6: "border-indigo-400/40 bg-indigo-500/10",
 };
 
+type RankingMode = "rank" | "power";
+
 export default function UsersView() {
   const { user: currentUser } = useAuth();
   const [rows, setRows] = useState<RankingRow[]>([]);
@@ -57,6 +59,7 @@ export default function UsersView() {
   // { userId: grade } — which grade accordion is expanded for which user
   const [expanded, setExpanded] = useState<Record<string, number | null>>({});
   const [helpOpen, setHelpOpen] = useState(false);
+  const [mode, setMode] = useState<RankingMode>("rank");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -72,10 +75,16 @@ export default function UsersView() {
   const entries = useMemo(
     () =>
       rows.slice().sort((a, b) => {
-        if (a.rank_score !== b.rank_score) return b.rank_score - a.rank_score;
+        if (mode === "power") {
+          const ap = a.center_power ?? 0;
+          const bp = b.center_power ?? 0;
+          if (ap !== bp) return bp - ap;
+        } else {
+          if (a.rank_score !== b.rank_score) return b.rank_score - a.rank_score;
+        }
         return b.points - a.points;
       }),
-    [rows]
+    [rows, mode]
   );
 
   const toggleGrade = (userId: string, grade: number) => {
@@ -148,6 +157,42 @@ export default function UsersView() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Tab switcher: 랭킹 점수 / 전투력 */}
+      <div className="mt-3 inline-flex items-stretch rounded-xl bg-white/5 border border-white/10 p-1">
+        <button
+          type="button"
+          onClick={() => setMode("rank")}
+          className={clsx(
+            "px-4 py-1.5 rounded-lg text-xs font-bold transition-colors",
+            mode === "rank"
+              ? "bg-white text-zinc-900"
+              : "text-zinc-300 hover:text-white"
+          )}
+        >
+          🏆 랭킹 점수
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("power")}
+          className={clsx(
+            "px-4 py-1.5 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1",
+            mode === "power"
+              ? "bg-rose-500 text-white"
+              : "text-zinc-300 hover:text-white"
+          )}
+        >
+          ⚔️ 전투력
+        </button>
+      </div>
+      {mode === "power" && (
+        <p className="mt-2 text-[11px] text-zinc-400 leading-snug">
+          전투력 = 센터에 전시된 슬랩마다{" "}
+          <b className="text-zinc-200">희귀도 점수</b>(SR 5·MA 6·SAR 7·UR 8·MUR
+          10) × <b className="text-zinc-200">PCL 점수</b>(9→9, 10→10) 를 모두
+          합산.
+        </p>
+      )}
 
       {loading ? (
         <div className="mt-16 flex justify-center">
@@ -223,15 +268,32 @@ export default function UsersView() {
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-xl md:text-2xl font-black text-amber-300 tabular-nums leading-none">
-                      {e.rank_score.toLocaleString("ko-KR")}
-                    </div>
-                    <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
-                      랭킹 점수
-                    </div>
-                    <div className="mt-1">
-                      <PointsChip points={e.points} size="sm" />
-                    </div>
+                    {mode === "power" ? (
+                      <>
+                        <div className="text-xl md:text-2xl font-black text-rose-300 tabular-nums leading-none inline-flex items-center gap-1">
+                          <span aria-hidden>⚔️</span>
+                          {(e.center_power ?? 0).toLocaleString("ko-KR")}
+                        </div>
+                        <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
+                          전투력
+                        </div>
+                        <div className="mt-1 text-[10px] text-zinc-400 tabular-nums">
+                          랭킹 {e.rank_score.toLocaleString("ko-KR")}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-xl md:text-2xl font-black text-amber-300 tabular-nums leading-none">
+                          {e.rank_score.toLocaleString("ko-KR")}
+                        </div>
+                        <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
+                          랭킹 점수
+                        </div>
+                        <div className="mt-1">
+                          <PointsChip points={e.points} size="sm" />
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 

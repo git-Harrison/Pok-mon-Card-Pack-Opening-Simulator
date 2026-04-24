@@ -350,6 +350,8 @@ export interface RankingRow {
   showcase_count: number;
   /** Successful sabotage attempts by this user (each worth +100 rank). */
   sabotage_wins: number;
+  /** Σ rarity_power × pcl_power across currently-displayed slabs. */
+  center_power: number;
   gradings: RankingPsaGrading[];
 }
 
