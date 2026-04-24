@@ -9,11 +9,13 @@ import {
   buyShowcase,
   claimShowcaseIncome,
   displayGrading,
+  fetchSabotageLogs,
   fetchUndisplayedGradings,
   fetchUserCenter,
   removeShowcase,
   undisplayGrading,
   type CenterShowcase,
+  type SabotageLog,
 } from "@/lib/db";
 import type { PsaGrading } from "@/lib/types";
 import {
@@ -49,6 +51,18 @@ export default function CenterView() {
     showcaseId: string;
     slotIndex: number;
   } | null>(null);
+  const [logOpen, setLogOpen] = useState(false);
+  const [logs, setLogs] = useState<SabotageLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+
+  const openLogs = useCallback(async () => {
+    if (!user) return;
+    setLogOpen(true);
+    setLogsLoading(true);
+    const rows = await fetchSabotageLogs(user.id);
+    setLogs(rows);
+    setLogsLoading(false);
+  }, [user]);
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -212,6 +226,12 @@ export default function CenterView() {
           >
             🔗 {copied ? "복사 완료!" : "초대 링크 복사"}
           </button>
+          <button
+            onClick={openLogs}
+            className="h-9 px-3 rounded-full bg-white/10 hover:bg-white/15 text-white font-bold text-xs border border-white/15 transition inline-flex items-center gap-1.5"
+          >
+            📜 방문 기록
+          </button>
           <p className="text-[11px] text-zinc-400">
             친구가 링크를 누르면 내 센터를 구경하고, 10만p로 카드에{" "}
             <b className="text-rose-300">부수기(30%)</b>를 시도할 수 있어요.
@@ -272,6 +292,13 @@ export default function CenterView() {
             gradings={availableGradings}
             onClose={() => setPickTarget(null)}
             onPick={handlePickGrading}
+          />
+        )}
+        {logOpen && (
+          <SabotageLogModal
+            logs={logs}
+            loading={logsLoading}
+            onClose={() => setLogOpen(false)}
           />
         )}
       </AnimatePresence>
@@ -687,6 +714,100 @@ export function ModalShell({
         <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>
       </motion.div>
     </motion.div>
+  );
+}
+
+function SabotageLogModal({
+  logs,
+  loading,
+  onClose,
+}: {
+  logs: SabotageLog[];
+  loading: boolean;
+  onClose: () => void;
+}) {
+  const relTime = (iso: string) => {
+    const d = new Date(iso);
+    const diff = Date.now() - d.getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "방금";
+    if (mins < 60) return `${mins}분 전`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}시간 전`;
+    const days = Math.floor(hrs / 24);
+    if (days < 7) return `${days}일 전`;
+    return d.toLocaleDateString("ko-KR");
+  };
+  const successCount = logs.filter((l) => l.success).length;
+  return (
+    <ModalShell
+      title="📜 방문 기록"
+      subtitle={`총 ${logs.length}회 시도 · 성공 ${successCount}회`}
+      onClose={onClose}
+    >
+      <div className="p-3 md:p-4">
+        {loading ? (
+          <div className="py-10 flex justify-center">
+            <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+          </div>
+        ) : logs.length === 0 ? (
+          <p className="py-10 text-center text-sm text-zinc-400">
+            아직 내 센터에 부수기를 시도한 사람이 없어요.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {logs.map((l) => {
+              const card = l.card_id ? getCard(l.card_id) : null;
+              return (
+                <li
+                  key={l.id}
+                  className={clsx(
+                    "flex items-center gap-3 rounded-lg border px-3 py-2",
+                    l.success
+                      ? "bg-rose-500/10 border-rose-500/40"
+                      : "bg-white/5 border-white/10"
+                  )}
+                >
+                  <span
+                    className={clsx(
+                      "shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full text-lg",
+                      l.success
+                        ? "bg-rose-500/20 text-rose-200"
+                        : "bg-slate-500/20 text-slate-200"
+                    )}
+                  >
+                    {l.success ? "💥" : "🛡️"}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-white truncate">
+                      {l.attacker_name}{" "}
+                      <span
+                        className={clsx(
+                          "ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded",
+                          l.success
+                            ? "bg-rose-500 text-white"
+                            : "bg-white/10 text-zinc-300"
+                        )}
+                      >
+                        {l.success ? "성공" : "실패"}
+                      </span>
+                    </p>
+                    <p className="text-[11px] text-zinc-400 truncate">
+                      {card
+                        ? `${card.name} · ${card.rarity}${l.grade ? ` · SSS ${l.grade}` : ""}`
+                        : "알 수 없는 카드"}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-[10px] text-zinc-500 tabular-nums">
+                    {relTime(l.created_at)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </ModalShell>
   );
 }
 

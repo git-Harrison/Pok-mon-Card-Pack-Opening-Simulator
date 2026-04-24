@@ -478,6 +478,26 @@ export async function fetchCenterByLogin(loginId: string): Promise<VisitCenter> 
   return data as VisitCenter;
 }
 
+export interface SabotageLog {
+  id: string;
+  attacker_name: string;
+  card_id: string | null;
+  grade: number | null;
+  showcase_type: string | null;
+  success: boolean;
+  created_at: string;
+}
+
+export async function fetchSabotageLogs(
+  userId: string
+): Promise<SabotageLog[]> {
+  const { data, error } = await supabase.rpc("get_sabotage_logs", {
+    p_user_id: userId,
+  });
+  if (error) return [];
+  return (data ?? []) as SabotageLog[];
+}
+
 export async function sabotageCard(
   attackerId: string,
   showcaseId: string,
