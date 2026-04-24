@@ -49,14 +49,14 @@ export const PSA_DISTRIBUTION = [
 
 /**
  * Bulk-sell price per PCL grade. Must mirror `pcl_sell_price()` in
- * supabase/migrations/20260429_wallet_sell_cut.sql.
+ * supabase/migrations/20260502_wallet_sell_cut_v2.sql.
  */
 export const PCL_SELL_PRICE: Record<number, number> = {
-  10: 40_000,
-  9: 20_000,
-  8: 4_000,
-  7: 2_000,
-  6: 2_000,
+  10: 20_000,
+  9: 10_000,
+  8: 2_000,
+  7: 1_000,
+  6: 1_000,
 };
 
 /**

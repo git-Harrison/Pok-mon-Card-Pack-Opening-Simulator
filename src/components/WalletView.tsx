@@ -136,7 +136,7 @@ export default function WalletView() {
           rarityCounts={rarityCounts}
           rarityFilter={rarityFilter}
           setRarityFilter={setRarityFilter}
-          hasAny={snap.items.length > 0}
+          hasAny={snap.items.length > 0 || psa.length > 0}
         />
       ) : (
         <PsaMode items={psaItems} />

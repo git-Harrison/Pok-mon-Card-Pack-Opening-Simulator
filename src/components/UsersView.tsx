@@ -263,7 +263,7 @@ export default function UsersView() {
                       >
                         🏛️ 센터
                       </Link>
-                      {!isMe && (
+                      {!isMe && mode === "power" && (
                         <button
                           type="button"
                           onClick={() => setTauntTarget(e)}
