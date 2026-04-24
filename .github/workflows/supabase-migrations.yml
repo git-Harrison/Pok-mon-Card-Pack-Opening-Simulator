@@ -1,0 +1,85 @@
+name: Apply Supabase migrations
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**.sql"
+      - ".github/workflows/supabase-migrations.yml"
+  workflow_dispatch:
+
+# Serialize runs so two pushes in a row don't race on the same DB.
+concurrency:
+  group: supabase-migrations-prod
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    name: Apply pending migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify DB secret is set
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::SUPABASE_DB_URL secret is not configured."
+            echo "Set it in GitHub → Settings → Secrets and variables → Actions."
+            echo "Format: postgres://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres"
+            exit 1
+          fi
+
+      - name: Apply migrations
+        env:
+          PGSSLMODE: require
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+
+          # Bootstrap: per-file checksum ledger. Re-runnable.
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          create table if not exists _migrations (
+            filename text primary key,
+            checksum text not null,
+            applied_at timestamptz not null default now()
+          );
+          SQL
+
+          applied=0
+          skipped=0
+          shopt -s nullglob
+          files=(supabase/migrations/*.sql)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No migration files found."
+            exit 0
+          fi
+
+          # Alphabetical (= chronological with YYYYMMDD prefix) ordering.
+          IFS=$'\n' sorted=($(printf '%s\n' "${files[@]}" | sort))
+          unset IFS
+
+          for f in "${sorted[@]}"; do
+            name=$(basename "$f")
+            checksum=$(shasum -a 256 "$f" | awk '{print $1}')
+            existing=$(
+              psql "$DATABASE_URL" -tAc \
+                "select checksum from _migrations where filename = '$name'" \
+              | tr -d '[:space:]'
+            )
+            if [ "$existing" = "$checksum" ]; then
+              echo "✓ $name (unchanged, skipped)"
+              skipped=$((skipped + 1))
+              continue
+            fi
+            echo "→ Applying $name"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c \
+              "insert into _migrations (filename, checksum) values ('$name', '$checksum') on conflict (filename) do update set checksum = excluded.checksum, applied_at = now();"
+            echo "✓ $name (applied)"
+            applied=$((applied + 1))
+          done
+
+          echo ""
+          echo "Summary: $applied applied, $skipped skipped."
