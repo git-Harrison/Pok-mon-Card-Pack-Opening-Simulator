@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
@@ -62,38 +63,94 @@ export default function UsersView() {
         </div>
       </div>
 
+      {/* How to rank up — brief guide */}
+      <div className="mt-4 rounded-xl bg-gradient-to-br from-amber-500/10 via-fuchsia-500/5 to-transparent border border-amber-400/30 p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-lg">📈</span>
+          <h2 className="text-sm font-bold text-amber-200">
+            랭킹 점수 올리는 법
+          </h2>
+        </div>
+        <ol className="space-y-1 text-xs text-zinc-200 leading-relaxed">
+          <li>
+            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-400 text-zinc-950 text-[10px] font-black mr-1.5 tabular-nums">
+              1
+            </span>
+            팩을 열어 <span className="font-bold text-white">AR · MA · SAR · MUR · UR</span> 카드를 확보하세요.
+          </li>
+          <li>
+            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-400 text-zinc-950 text-[10px] font-black mr-1.5 tabular-nums">
+              2
+            </span>
+            <Link
+              href="/grading"
+              className="underline underline-offset-2 text-amber-300 hover:text-amber-200 font-semibold"
+            >
+              PSA 감별
+            </Link>
+            {" "}페이지에서 카드 감정을 맡기세요.
+          </li>
+          <li>
+            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-400 text-zinc-950 text-[10px] font-black mr-1.5 tabular-nums">
+              3
+            </span>
+            <span className="text-emerald-300 font-bold">성공(30%)</span> 시
+            등급별 점수 지급, <span className="text-rose-300 font-bold">실패(70%)</span> 시
+            카드 소실 — 쫄깃하게 즐기세요.
+          </li>
+        </ol>
+        <p className="mt-2 pt-2 border-t border-white/10 text-[10px] text-zinc-400">
+          💡 카드 보유만으로는 점수가 오르지 않아요. 감별에 성공해야 랭킹이 올라갑니다.
+        </p>
+      </div>
+
       {/* Scoring legend */}
-      <div className="mt-4 rounded-xl bg-white/5 border border-white/10 p-3">
+      <div className="mt-3 rounded-xl bg-white/5 border border-white/10 p-3">
         <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-2">
-          PSA 등급 → 랭킹 점수
+          PSA 등급 → 랭킹 점수 · 지갑 보너스
         </p>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
           {Object.entries(PSA_TIER_POINTS)
             .sort(([a], [b]) => Number(b) - Number(a))
-            .map(([g, pts]) => (
-              <div
-                key={g}
-                className="flex items-center justify-between rounded-lg bg-black/30 border border-white/5 px-2.5 py-1.5"
-              >
-                <span
-                  className={clsx(
-                    "font-bold",
-                    Number(g) === 10
-                      ? "text-amber-300"
-                      : Number(g) === 9
-                      ? "text-slate-100"
-                      : Number(g) === 8
-                      ? "text-teal-200"
-                      : "text-sky-200"
-                  )}
+            .map(([g, pts]) => {
+              const bonus =
+                Number(g) === 10
+                  ? 50000
+                  : Number(g) === 9
+                  ? 30000
+                  : Number(g) === 8
+                  ? 10000
+                  : 3000;
+              return (
+                <div
+                  key={g}
+                  className="rounded-lg bg-black/30 border border-white/5 px-2.5 py-1.5"
                 >
-                  PSA {g}
-                </span>
-                <span className="text-zinc-300 tabular-nums font-semibold">
-                  +{pts}점
-                </span>
-              </div>
-            ))}
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={clsx(
+                        "font-bold",
+                        Number(g) === 10
+                          ? "text-amber-300"
+                          : Number(g) === 9
+                          ? "text-slate-100"
+                          : Number(g) === 8
+                          ? "text-teal-200"
+                          : "text-sky-200"
+                      )}
+                    >
+                      PSA {g}
+                    </span>
+                    <span className="text-zinc-200 tabular-nums font-semibold">
+                      +{pts}점
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-[10px] text-zinc-500 tabular-nums text-right">
+                    🪙 +{bonus.toLocaleString("ko-KR")}p
+                  </p>
+                </div>
+              );
+            })}
         </div>
       </div>
 
