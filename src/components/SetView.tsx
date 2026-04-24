@@ -9,10 +9,34 @@ import type { Card, SetInfo } from "@/lib/types";
 import { drawBox } from "@/lib/pack-draw";
 import { buyBox, recordPackPull, refundBoxPurchase } from "@/lib/db";
 
+// Postgres errcode for our own RAISE EXCEPTION (wallet cap, etc.).
+// These are intentional server-side rejections — retrying is pointless
+// and the user needs the real message, not a generic "저장 실패".
+function isIntentionalRejection(e: unknown): boolean {
+  if (!e || typeof e !== "object") return false;
+  const r = e as { code?: string; message?: string };
+  if (r.code === "P0001") return true;
+  if (typeof r.message === "string" && r.message.includes("지갑 보유 한도"))
+    return true;
+  return false;
+}
+
+function errorMessage(e: unknown): string {
+  if (!e) return "";
+  if (typeof e === "string") return e;
+  if (typeof e === "object" && e !== null) {
+    const r = e as { message?: unknown };
+    if (typeof r.message === "string") return r.message;
+  }
+  return "";
+}
+
 /**
  * recordPackPull with exponential backoff. Network blips or cold
  * Supabase connections shouldn't cost the user a box — retry a few
- * times before surfacing the failure.
+ * times before surfacing the failure. Intentional server rejections
+ * (wallet cap, etc.) bypass the retry and are thrown immediately so
+ * the user sees the actual reason.
  */
 async function persistPackWithRetry(
   userId: string,
@@ -27,6 +51,7 @@ async function persistPackWithRetry(
       return;
     } catch (e) {
       lastErr = e;
+      if (isIntentionalRejection(e)) throw e;
       if (i < tries - 1) {
         await new Promise((r) => setTimeout(r, 500 * (i + 1)));
       }
@@ -183,12 +208,18 @@ export default function SetView({ set }: { set: SetInfo }) {
           );
         } catch (e) {
           console.error("multi-box persist failed", e);
+          const serverMsg = errorMessage(e);
           const refund = await refundBoxPurchase(user.id, set.code);
           const refunded = refund.ok ? refund.refunded ?? cost : 0;
           if (refund.ok && typeof refund.points === "number") {
             setPoints(refund.points);
           }
-          const msg = refund.ok
+          const refundTail = refund.ok
+            ? `${refunded.toLocaleString("ko-KR")}p 환불됐어요.`
+            : "환불에 실패했어요. 관리자에게 문의해주세요.";
+          const msg = isIntentionalRejection(e) && serverMsg
+            ? `${serverMsg} (${i}박스까지는 정상 · ${refundTail})`
+            : refund.ok
             ? `${i + 1}/${boxCount}번째 박스 저장 실패 — ${refunded.toLocaleString("ko-KR")}p 환불. ${i}박스까지는 정상이에요.`
             : "카드 저장 및 환불에 실패했어요. 관리자에게 문의해주세요.";
           setError(msg);
@@ -261,14 +292,22 @@ export default function SetView({ set }: { set: SetInfo }) {
       setPhase("grid");
     } catch (e) {
       console.error("box persist failed", e);
+      const serverMsg = errorMessage(e);
       const refund = await refundBoxPurchase(user.id, set.code);
       if (refund.ok && typeof refund.points === "number") {
         setPoints(refund.points);
+        const refundNote = `${(refund.refunded ?? cost).toLocaleString("ko-KR")}p 환불됨.`;
         setError(
-          `카드 저장에 실패해 ${(refund.refunded ?? cost).toLocaleString("ko-KR")}p를 환불했어요. 잠시 후 다시 시도해주세요.`
+          isIntentionalRejection(e) && serverMsg
+            ? `${serverMsg} (${refundNote})`
+            : `카드 저장에 실패해 ${refundNote} 잠시 후 다시 시도해주세요.`
         );
       } else {
-        setError("저장 및 환불에 실패했어요. 관리자에게 문의해주세요.");
+        setError(
+          isIntentionalRejection(e) && serverMsg
+            ? `${serverMsg} (환불 실패 — 관리자에게 문의해주세요.)`
+            : "저장 및 환불에 실패했어요. 관리자에게 문의해주세요."
+        );
       }
       setPacks([]);
       setOpenedMask([]);

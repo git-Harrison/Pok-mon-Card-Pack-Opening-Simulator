@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import {
   fetchUndisplayedGradings,
+  wildBattleLoss,
   wildBattleReward,
 } from "@/lib/db";
 import type { PsaGrading } from "@/lib/types";
@@ -30,8 +31,23 @@ type Phase =
   | "player-turn"
   | "enemy-attack"
   | "message"
+  | "dying"
   | "won"
   | "lost";
+
+/** 카드가 부서질 때 랜덤하게 고르는 마지막 대사. {name} 을 치환. */
+const FAREWELL_LINES = [
+  "잘 싸웠어… 고마웠어, {name}…",
+  "미안해, 내가 부족했어… 잘 가, {name}.",
+  "{name}… 영원히 잊지 않을게.",
+  "끝까지 버텨줘서 고마워, {name}…",
+  "좋은 친구였어, {name}…",
+];
+
+function randomFarewell(name: string): string {
+  const line = FAREWELL_LINES[Math.floor(Math.random() * FAREWELL_LINES.length)];
+  return line.replace("{name}", name);
+}
 
 interface Slab {
   gradingId: string;
@@ -229,7 +245,15 @@ export default function WildView() {
     setAttackingSide(null);
 
     if (newSlabHp <= 0) {
-      await say(`${slab.name}은(는) 더 이상 싸울 수 없다…`, "player", 1000);
+      // Dying phase — farewell message + shatter animation, then the
+      // server permanently deletes the grading.
+      setPhase("dying");
+      await say(randomFarewell(slab.name), "player", 2400);
+      if (user) {
+        // Fire-and-forget — UI will transition to "lost" regardless so
+        // the user never sees a stuck state on network flake.
+        void wildBattleLoss(user.id, slab.gradingId);
+      }
       setPhase("lost");
       setCooldownUntil(Date.now() + 30_000);
       return;
@@ -371,11 +395,11 @@ export default function WildView() {
       {phase === "lost" && (
         <ResultPanel
           tone="lose"
-          title={`${slab?.name}은(는) 쓰러졌다…`}
+          title={`${slab?.name}은(는) 영원히 사라졌다…`}
           message={
             cooldownLeft > 0
-              ? `잠시 휴식이 필요해요. ${cooldownLeft}초 뒤 다시 시도`
-              : "다시 도전해 보세요."
+              ? `슬랩이 삭제됐어요. ${cooldownLeft}초 뒤 다시 시도 가능.`
+              : "슬랩이 삭제됐어요. 다시 도전해 보세요."
           }
           disableAgain={cooldownLeft > 0}
           onAgain={encounter}
@@ -426,6 +450,12 @@ function IdleCTA({
         >
           {blocked ? `${cooldownLeft}초 뒤 재도전` : "야생 만나러 가기"}
         </button>
+      </div>
+      {/* Permanent-loss warning — spelled out so no one stumbles into
+          a battle thinking their slab is safe. */}
+      <div className="mx-5 mb-5 md:mx-8 md:mb-8 rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-200 leading-relaxed">
+        ⚠️ <b>지면 사용한 PCL 슬랩이 영원히 삭제</b>돼요. 그 카드로 얻었던
+        랭킹 점수도 함께 사라집니다. 신중하게 상대의 타입을 보고 고르세요.
       </div>
     </div>
   );
@@ -549,20 +579,39 @@ function BattleScene({
             <div className="flex items-center gap-2">
               <motion.div
                 initial={{ x: -200, opacity: 0 }}
-                animate={{
-                  x: 0,
-                  opacity: slab.hp > 0 ? 1 : 0.2,
-                  y: playerHit ? [0, -4, 4, 0] : 0,
-                  rotate: slab.hp <= 0 ? -15 : 0,
-                }}
+                animate={
+                  phase === "dying"
+                    ? {
+                        x: [0, -2, 2, -2, 0],
+                        opacity: [1, 0.9, 0.7, 0.35, 0],
+                        scale: [1, 1.02, 0.97, 0.92, 0.7],
+                        filter: [
+                          "blur(0px) brightness(1)",
+                          "blur(1px) brightness(1.15)",
+                          "blur(3px) brightness(1.3)",
+                          "blur(6px) brightness(1.2)",
+                          "blur(12px) brightness(0.6)",
+                        ],
+                        rotate: [0, -2, 3, -4, -8],
+                      }
+                    : {
+                        x: 0,
+                        opacity: slab.hp > 0 ? 1 : 0.2,
+                        y: playerHit ? [0, -4, 4, 0] : 0,
+                        rotate: slab.hp <= 0 ? -15 : 0,
+                      }
+                }
                 transition={
-                  playerHit
+                  phase === "dying"
+                    ? { duration: 2.2, ease: "easeIn" }
+                    : playerHit
                     ? { duration: 0.35 }
                     : { type: "spring", stiffness: 180, damping: 18 }
                 }
                 className="relative"
               >
                 <PlayerSlab slab={slab} />
+                {phase === "dying" && <DeathParticles />}
                 <AnimatePresence>
                   {floaters
                     .filter((f) => f.target === "player")
@@ -921,5 +970,47 @@ function SpeechBubble({
         )}
       />
     </motion.div>
+  );
+}
+
+/** Soft "파스스" dust particles rising + fading as the slab disintegrates. */
+function DeathParticles() {
+  const dots = Array.from({ length: 14 }).map((_, i) => {
+    const angle = (i / 14) * Math.PI * 2 + Math.random() * 0.6;
+    const dist = 40 + Math.random() * 60;
+    return {
+      i,
+      dx: Math.cos(angle) * dist,
+      dy: -40 - Math.random() * 70,
+      delay: Math.random() * 0.6,
+      size: 2 + Math.random() * 3,
+    };
+  });
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      {dots.map((d) => (
+        <motion.span
+          key={d.i}
+          className="absolute left-1/2 top-1/2 rounded-full bg-rose-200/80"
+          style={{
+            width: d.size,
+            height: d.size,
+            boxShadow: "0 0 6px rgba(251,207,232,0.8)",
+          }}
+          initial={{ x: 0, y: 0, opacity: 0, scale: 0.6 }}
+          animate={{
+            x: d.dx,
+            y: d.dy,
+            opacity: [0, 1, 0.8, 0],
+            scale: [0.6, 1, 0.9, 0.4],
+          }}
+          transition={{
+            duration: 1.8 + Math.random() * 0.5,
+            delay: d.delay,
+            ease: "easeOut",
+          }}
+        />
+      ))}
+    </div>
   );
 }
