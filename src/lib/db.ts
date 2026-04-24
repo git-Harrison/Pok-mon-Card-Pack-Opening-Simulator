@@ -16,6 +16,7 @@ const supabase = createClient();
 export interface DbUser {
   id: string;
   user_id: string;
+  display_name: string;
   age: number;
   points: number;
 }
@@ -46,6 +47,8 @@ export interface GiftRow {
   message: string | null;
   from_login?: string;
   to_login?: string;
+  from_nickname?: string;
+  to_nickname?: string;
 }
 
 // ---------- Auth ----------
@@ -56,23 +59,47 @@ export async function rpcLogin(loginId: string, password: string) {
     p_password: password,
   });
   if (error) return { ok: false as const, error: error.message };
-  return data as { ok: boolean; error?: string; user?: { id: string; user_id: string; age: number } };
+  return data as {
+    ok: boolean;
+    error?: string;
+    user?: {
+      id: string;
+      user_id: string;
+      age: number;
+      display_name: string;
+    };
+  };
 }
 
-export async function rpcSignup(loginId: string, password: string, age: number) {
+export async function rpcSignup(
+  loginId: string,
+  password: string,
+  age: number,
+  displayName: string
+) {
   const { data, error } = await supabase.rpc("auth_signup", {
     p_user_id: loginId,
     p_password: password,
     p_age: age,
+    p_display_name: displayName,
   });
   if (error) return { ok: false as const, error: error.message };
-  return data as { ok: boolean; error?: string; user?: { id: string; user_id: string; age: number } };
+  return data as {
+    ok: boolean;
+    error?: string;
+    user?: {
+      id: string;
+      user_id: string;
+      age: number;
+      display_name: string;
+    };
+  };
 }
 
 export async function fetchMe(userId: string): Promise<DbUser | null> {
   const { data, error } = await supabase
     .from("users")
-    .select("id, user_id, age, points")
+    .select("id, user_id, display_name, age, points")
     .eq("id", userId)
     .single();
   if (error || !data) return null;
@@ -191,14 +218,14 @@ export async function sellToMerchant(userId: string, cardId: string) {
 
 export async function createGift(
   fromUserId: string,
-  toLoginId: string,
+  toNickname: string,
   cardId: string,
   pricePoints: number,
   message?: string
 ) {
   const { data, error } = await supabase.rpc("create_gift", {
     p_from_id: fromUserId,
-    p_to_user_id: toLoginId,
+    p_to_user_id: toNickname,
     p_card_id: cardId,
     p_price_points: pricePoints,
     p_message: message ?? null,
@@ -271,6 +298,7 @@ export interface RankingPsaGrading {
 export interface RankingRow {
   id: string;
   user_id: string;
+  display_name: string;
   age: number;
   points: number;
   rank_score: number;
@@ -330,7 +358,7 @@ export async function fetchGifts(userId: string): Promise<{
   await expirePendingGifts();
 
   const select =
-    "id, from_user_id, to_user_id, card_id, status, price_points, expires_at, accepted_at, settled_at, created_at, message, from:users!from_user_id(user_id), to:users!to_user_id(user_id)";
+    "id, from_user_id, to_user_id, card_id, status, price_points, expires_at, accepted_at, settled_at, created_at, message, from:users!from_user_id(user_id, display_name), to:users!to_user_id(user_id, display_name)";
 
   const [recv, sent] = await Promise.all([
     supabase
@@ -364,6 +392,8 @@ export async function fetchGifts(userId: string): Promise<{
       message: (r.message as string | null) ?? null,
       from_login: (r.from as { user_id?: string } | null)?.user_id,
       to_login: (r.to as { user_id?: string } | null)?.user_id,
+      from_nickname: (r.from as { display_name?: string } | null)?.display_name,
+      to_nickname: (r.to as { display_name?: string } | null)?.display_name,
     }));
   return { received: shape(recv.data ?? []), sent: shape(sent.data ?? []) };
 }

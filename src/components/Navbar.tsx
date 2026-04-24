@@ -80,7 +80,7 @@ export default function Navbar() {
             <div className="flex items-center gap-2">
               <PointsChip points={user.points} size="sm" />
               <span className="hidden sm:inline text-xs text-zinc-400">
-                <span className="text-zinc-200 font-semibold">{user.user_id}</span>
+                <span className="text-zinc-200 font-semibold">{user.display_name}</span>
               </span>
               <button
                 onClick={logout}

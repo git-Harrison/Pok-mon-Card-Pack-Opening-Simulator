@@ -84,7 +84,7 @@ export default function GradingView() {
       setGrade(null);
       setGauge(0);
       setPhase("animating");
-      notifyPsaFail(user.user_id, selected.id);
+      notifyPsaFail(user.display_name, selected.id);
       return;
     }
     if (typeof res.grade !== "number") {
@@ -95,7 +95,7 @@ export default function GradingView() {
     setBonus(res.bonus ?? 0);
     if (typeof res.points === "number") setPoints(res.points);
     setPhase("animating");
-    notifyPsaGrade(user.user_id, selected.id, res.grade);
+    notifyPsaGrade(user.display_name, selected.id, res.grade);
   }, [user, selected, phase, setPoints]);
 
   const reset = useCallback(async () => {

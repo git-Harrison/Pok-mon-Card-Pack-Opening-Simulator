@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
@@ -119,7 +120,17 @@ export default function GiftsView() {
             자동으로 보낸 친구에게 돌아갑니다.
           </p>
         </div>
+        <Link
+          href="/wallet"
+          className="h-11 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-sm inline-flex items-center gap-1.5 hover:scale-[1.02] active:scale-[0.98] transition shrink-0"
+        >
+          🎁 카드 선물 보내기
+        </Link>
       </div>
+      <p className="mt-2 text-[11px] text-zinc-500">
+        선물은 내 카드지갑에서 카드를 선택하고 보낼 수 있어요. 하루 3회
+        제한.
+      </p>
 
       <div className="mt-6 flex gap-2">
         <TabPill active={tab === "received"} onClick={() => setTab("received")}>
@@ -165,7 +176,9 @@ export default function GiftsView() {
               const card = getCard(g.card_id);
               if (!card) return null;
               const isReceived = tab === "received";
-              const counterparty = isReceived ? g.from_login : g.to_login;
+              const counterparty = isReceived
+                ? g.from_nickname ?? g.from_login
+                : g.to_nickname ?? g.to_login;
               const ss = statusStyle(g.status);
               const countdown =
                 g.status === "pending" ? formatCountdown(g.expires_at) : null;

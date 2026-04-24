@@ -20,7 +20,8 @@ interface AuthContextValue {
   signup: (
     loginId: string,
     password: string,
-    age: number
+    age: number,
+    displayName: string
   ) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
   refreshMe: () => Promise<void>;
@@ -99,13 +100,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signup = useCallback(
-    async (loginId: string, password: string, age: number) => {
-      const res = await rpcSignup(loginId, password, age);
+    async (
+      loginId: string,
+      password: string,
+      age: number,
+      displayName: string
+    ) => {
+      const res = await rpcSignup(loginId, password, age, displayName);
       if (!res.ok || !res.user) {
         return { ok: false, error: res.error ?? "회원가입 실패" };
       }
       const fresh = await fetchMe(res.user.id);
-      persist(fresh ?? { ...res.user, points: 0 });
+      persist(
+        fresh ?? {
+          ...res.user,
+          points: 0,
+        }
+      );
       return { ok: true };
     },
     [persist]

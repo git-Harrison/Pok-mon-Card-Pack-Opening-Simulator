@@ -263,7 +263,7 @@ function GiftForm({
     <div ref={formRef} className="mt-auto rounded-xl bg-white/5 border border-white/10 p-4">
       <label className="block">
         <span className="text-xs text-zinc-300 mb-2 block">
-          받는 사람 아이디
+          받는 사람 닉네임
         </span>
         <input
           value={recipient}

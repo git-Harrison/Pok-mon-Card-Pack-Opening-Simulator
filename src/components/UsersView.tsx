@@ -215,7 +215,7 @@ export default function UsersView() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h2 className="text-base md:text-lg font-bold text-white">
-                        {e.user_id}
+                        {e.display_name}
                       </h2>
                       {isMe && (
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-400 text-zinc-900">

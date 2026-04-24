@@ -11,6 +11,7 @@ export default function SignupPage() {
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [age, setAge] = useState("");
+  const [nickname, setNickname] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -22,13 +23,13 @@ export default function SignupPage() {
     e.preventDefault();
     if (submitting) return;
     const ageNum = Number(age);
-    if (!loginId || !password || !Number.isFinite(ageNum)) {
+    if (!loginId || !password || !nickname.trim() || !Number.isFinite(ageNum)) {
       setError("모든 항목을 입력해 주세요.");
       return;
     }
     setSubmitting(true);
     setError(null);
-    const res = await signup(loginId, password, ageNum);
+    const res = await signup(loginId, password, ageNum, nickname.trim());
     setSubmitting(false);
     if (!res.ok) {
       setError(res.error ?? "회원가입 실패");
@@ -67,6 +68,20 @@ export default function SignupPage() {
               autoComplete="new-password"
               className="mt-1 w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400/70"
               placeholder="4자 이상"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold text-zinc-300">닉네임</span>
+            <input
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value.slice(0, 20))}
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              maxLength={20}
+              style={{ fontSize: "16px" }}
+              className="mt-1 w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400/70"
+              placeholder="랭킹·선물·디스코드에 표시"
             />
           </label>
           <label className="block">
