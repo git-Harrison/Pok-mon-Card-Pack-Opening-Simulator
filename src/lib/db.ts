@@ -272,10 +272,15 @@ export async function expirePendingGifts() {
 
 // ---------- PSA grading ----------
 
-export async function submitPsaGrading(userId: string, cardId: string) {
+export async function submitPsaGrading(
+  userId: string,
+  cardId: string,
+  rarity: string
+) {
   const { data, error } = await supabase.rpc("submit_psa_grading", {
     p_user_id: userId,
     p_card_id: cardId,
+    p_rarity: rarity,
   });
   if (error) return { ok: false as const, error: error.message };
   return data as {
@@ -310,11 +315,13 @@ export interface BulkGradingResult {
 
 export async function bulkSubmitPsaGrading(
   userId: string,
-  cardIds: string[]
+  cardIds: string[],
+  rarities: string[]
 ): Promise<BulkGradingResult> {
   const { data, error } = await supabase.rpc("bulk_submit_psa_grading", {
     p_user_id: userId,
     p_card_ids: cardIds,
+    p_rarities: rarities,
   });
   if (error) return { ok: false, error: error.message };
   return data as BulkGradingResult;

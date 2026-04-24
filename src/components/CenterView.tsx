@@ -202,7 +202,7 @@ export default function CenterView() {
       <div className="relative z-10 max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
         <PageHeader
           title="내 포켓몬센터"
-          subtitle="PCL 9·10 슬랩만 전시 · 시간당 3,000~5,000p 수익"
+          subtitle="PCL 9·10 슬랩만 전시 · 시간당 희귀도+등급 기반 수익"
           stats={
             <>
               {user && <PointsChip points={user.points} size="sm" />}

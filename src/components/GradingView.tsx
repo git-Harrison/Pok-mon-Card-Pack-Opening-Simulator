@@ -93,7 +93,7 @@ export default function GradingView() {
       return;
     }
     setError(null);
-    const res = await submitPsaGrading(user.id, selected.id);
+    const res = await submitPsaGrading(user.id, selected.id, selected.rarity);
     if (!res.ok) {
       setError(res.error ?? "감별 접수에 실패했어요.");
       return;
@@ -964,12 +964,20 @@ function BulkGradingModal({
     if (totalSelected === 0 || phase !== "picking") return;
     setError(null);
     setPhase("submitting");
-    // Expand into flat array: each card repeated `count` times.
+    // Expand into flat arrays: each card repeated `count` times; the
+    // rarities[] array is kept parallel so the server can credit
+    // hourly income at the right tier later.
     const cardIds: string[] = [];
+    const rarities: string[] = [];
     for (const [id, n] of Object.entries(counts)) {
-      for (let i = 0; i < n; i++) cardIds.push(id);
+      const item = eligible.find((it) => it.card.id === id);
+      const rarity = item?.card.rarity ?? "";
+      for (let i = 0; i < n; i++) {
+        cardIds.push(id);
+        rarities.push(rarity);
+      }
     }
-    const res = await bulkSubmitPsaGrading(userId, cardIds);
+    const res = await bulkSubmitPsaGrading(userId, cardIds, rarities);
     if (!res.ok) {
       setError(res.error ?? "일괄 감별에 실패했어요.");
       setPhase("picking");
