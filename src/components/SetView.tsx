@@ -75,7 +75,6 @@ import { useAuth } from "@/lib/auth";
 import { BOX_COST, RARITY_STYLE } from "@/lib/rarity";
 import PackOpeningStage from "./PackOpeningStage";
 import RarityBadge from "./RarityBadge";
-import PointsChip from "./PointsChip";
 import CoinIcon from "./CoinIcon";
 import HelpButton from "./HelpButton";
 
@@ -447,7 +446,6 @@ export default function SetView({ set }: { set: SetInfo }) {
           <p className="text-xs md:text-sm text-zinc-400 mt-1">{set.subtitle}</p>
         </div>
         <div className="flex items-center gap-2 text-xs flex-wrap min-w-0 justify-end">
-          {user && <PointsChip points={user.points} size="sm" />}
           <Stat label="박스당" value={`${set.packsPerBox}팩`} />
           <Stat label="팩당" value={`${set.cardsPerPack}장`} />
           <Stat

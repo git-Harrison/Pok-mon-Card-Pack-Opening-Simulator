@@ -18,7 +18,6 @@ import { SABOTAGE_BASE_RATE, SHOWCASES, type ShowcaseType } from "@/lib/center";
 import { getCard } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
 import { getCharacter } from "@/lib/profile";
-import PointsChip from "./PointsChip";
 import CoinIcon from "./CoinIcon";
 import PsaSlab from "./PsaSlab";
 import { CenterBackdrop, CenterGrid, ModalShell } from "./CenterView";
@@ -155,7 +154,6 @@ export default function VisitCenterView({ loginId }: { loginId: string }) {
           subtitle={isOwn ? "자기 센터는 부술 수 없어요." : undefined}
           stats={
             <>
-              {user && <PointsChip points={user.points} size="sm" />}
               <Kpi label="보관함" value={`${showcases.length}`} />
               <Kpi label="전시" value={`${totalCards}`} highlight />
               <HelpButton

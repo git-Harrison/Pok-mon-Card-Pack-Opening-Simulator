@@ -1,7 +1,7 @@
 import type { WildType } from "./types";
 
 /**
- * Wild Pokemon pool — 15 iconic mons across varied types. Sprites are
+ * Wild Pokemon pool — Gen-1 iconic mons across varied types. Sprites are
  * served directly from PokeAPI's GitHub (animated Gen-5 BW for motion,
  * static PNG fallback).
  */
@@ -46,6 +46,27 @@ export const WILD_POOL: WildMon[] = [
   { dex: 147, name: "미뇽",      type: "드래곤", hp: 55,  atk: 18, cry: "미뇽이 긴 몸을 휘감았다!" },
   { dex: 150, name: "뮤츠",      type: "에스퍼", hp: 85,  atk: 22, cry: "뮤츠의 시선이 정신을 뒤흔든다!" },
   { dex: 261, name: "포챠나",    type: "악",     hp: 50,  atk: 16, cry: "포챠나가 이빨을 드러냈다!" },
+  { dex: 16,  name: "구구",      type: "비행",   hp: 45,  atk: 13, cry: "구구가 날개를 퍼덕인다!" },
+  { dex: 19,  name: "꼬렛",      type: "노말",   hp: 42,  atk: 14, cry: "꼬렛이 이빨을 드러냈다!" },
+  { dex: 23,  name: "아보",      type: "독",     hp: 48,  atk: 15, cry: "아보가 스르륵 혀를 날름거린다…" },
+  { dex: 27,  name: "모래두지",  type: "땅",     hp: 55,  atk: 15, cry: "모래두지가 몸을 둥글게 말았다!" },
+  { dex: 37,  name: "식스테일",  type: "불꽃",   hp: 48,  atk: 15, cry: "식스테일의 꼬리가 일렁인다!" },
+  { dex: 52,  name: "나옹",      type: "노말",   hp: 50,  atk: 15, cry: "나옹이 발톱을 세웠다!" },
+  { dex: 54,  name: "고라파덕",  type: "물",     hp: 55,  atk: 14, cry: "고라파덕이 머리를 감싸쥐었다…" },
+  { dex: 63,  name: "캐이시",    type: "에스퍼", hp: 42,  atk: 17, cry: "캐이시가 텔레포트를 시도한다…" },
+  { dex: 77,  name: "포니타",    type: "불꽃",   hp: 55,  atk: 16, cry: "포니타가 갈기에 불을 붙였다!" },
+  { dex: 83,  name: "파오리",    type: "비행",   hp: 50,  atk: 15, cry: "파오리가 파를 내밀었다!" },
+  { dex: 95,  name: "롱스톤",    type: "바위",   hp: 75,  atk: 14, cry: "롱스톤이 굉음을 내며 솟아올랐다!" },
+  { dex: 109, name: "또가스",    type: "독",     hp: 55,  atk: 15, cry: "또가스가 매캐한 가스를 뿜었다…" },
+  { dex: 122, name: "마임맨",    type: "에스퍼", hp: 55,  atk: 16, cry: "마임맨이 보이지 않는 벽을 세웠다!" },
+  { dex: 123, name: "스라크",    type: "벌레",   hp: 60,  atk: 18, cry: "스라크가 낫을 휘둘렀다!" },
+  { dex: 130, name: "갸라도스",  type: "물",     hp: 88,  atk: 20, cry: "갸라도스가 격렬하게 포효한다!" },
+  { dex: 133, name: "이브이",    type: "노말",   hp: 50,  atk: 14, cry: "이브이가 귀를 쫑긋 세웠다!" },
+  { dex: 132, name: "메타몽",    type: "노말",   hp: 48,  atk: 13, cry: "메타몽이 형태를 바꾸려 한다…" },
+  { dex: 144, name: "프리져",    type: "얼음",   hp: 82,  atk: 19, cry: "프리져가 차가운 바람을 일으킨다!" },
+  { dex: 145, name: "썬더",      type: "전기",   hp: 80,  atk: 20, cry: "썬더의 깃털에 번개가 일렁인다!" },
+  { dex: 146, name: "파이어",    type: "불꽃",   hp: 80,  atk: 21, cry: "파이어가 화염을 휘날린다!" },
+  { dex: 149, name: "망나뇽",    type: "드래곤", hp: 90,  atk: 21, cry: "망나뇽이 하늘에서 내려왔다!" },
 ];
 
 /** Pick one at uniform random. */

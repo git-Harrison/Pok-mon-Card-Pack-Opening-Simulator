@@ -20,7 +20,6 @@ import { effectiveness, effectivenessLabel } from "@/lib/wild/typechart";
 import { computeDamage, slabStats, winReward } from "@/lib/wild/stats";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 import PageHeader from "./PageHeader";
-import PointsChip from "./PointsChip";
 import CoinIcon from "./CoinIcon";
 import HelpButton, { type HelpSection } from "./HelpButton";
 
