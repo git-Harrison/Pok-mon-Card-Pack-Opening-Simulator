@@ -1,6 +1,6 @@
 "use client";
 
-import PokeLoader from "./PokeLoader";
+import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSearchParams } from "next/navigation";
@@ -147,9 +147,7 @@ export default function WalletView() {
       </div>
 
       {loading ? (
-        <div className="mt-16 flex justify-center">
-          <PokeLoader size="md" />
-        </div>
+        <CenteredPokeLoader />
       ) : mode === "cards" ? (
         <CardsMode
           items={items}

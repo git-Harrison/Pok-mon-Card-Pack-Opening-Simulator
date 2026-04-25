@@ -1,6 +1,6 @@
 "use client";
 
-import PokeLoader from "./PokeLoader";
+import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
@@ -156,9 +156,7 @@ export default function ProfileView() {
       />
 
       {loading ? (
-        <div className="mt-16 flex justify-center">
-          <PokeLoader size="md" />
-        </div>
+        <CenteredPokeLoader />
       ) : (
         <>
           <ProfileBanner

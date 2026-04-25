@@ -1,6 +1,6 @@
 "use client";
 
-import PokeLoader from "./PokeLoader";
+import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -560,9 +560,7 @@ export default function WildView() {
   // ── render ──
   if (loading) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-16 flex justify-center">
-        <PokeLoader size="md" />
-      </div>
+      <CenteredPokeLoader />
     );
   }
   if (eligibleSlabs.length === 0) {
@@ -1116,38 +1114,85 @@ function PickSlabPanel({
   slabs: Slab[];
   onPick: (s: Slab) => void;
 }) {
+  const [typeFilter, setTypeFilter] = useState<WildType | "ALL">("ALL");
+
+  const typeCounts = useMemo(() => {
+    const m = new Map<WildType, number>();
+    for (const s of slabs) {
+      if (!s.type) continue;
+      m.set(s.type, (m.get(s.type) ?? 0) + 1);
+    }
+    return m;
+  }, [slabs]);
+
+  const types = useMemo(
+    () =>
+      (Array.from(typeCounts.entries()) as [WildType, number][])
+        .sort((a, b) => b[1] - a[1]),
+    [typeCounts]
+  );
+
+  const filtered = useMemo(
+    () =>
+      typeFilter === "ALL"
+        ? slabs
+        : slabs.filter((s) => s.type === typeFilter),
+    [slabs, typeFilter]
+  );
+
   return (
     <div className="mt-2 md:mt-4">
-      <p className="text-[11px] md:text-xs text-zinc-400 mb-1.5 md:mb-2 px-1">
+      <p className="text-[11px] md:text-xs text-zinc-400 mb-2 px-1">
         싸울 PCL 슬랩을 고르세요 — 타입 상성을 잘 살피고!
       </p>
-      <ul
-        className={clsx(
-          "flex gap-2 overflow-x-auto pb-1 -mx-3 px-3 snap-x snap-mandatory",
-          "md:grid md:gap-2 md:overflow-visible md:mx-0 md:px-0 md:snap-none"
-        )}
-        style={{
-          scrollbarWidth: "thin",
-          gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-        }}
-      >
-        {slabs.map((s) => {
+      <div className="flex items-center gap-1.5 flex-wrap mb-2">
+        <button
+          type="button"
+          onClick={() => setTypeFilter("ALL")}
+          style={{ touchAction: "manipulation" }}
+          className={clsx(
+            "h-8 px-2.5 rounded-full text-[11px] font-bold border transition",
+            typeFilter === "ALL"
+              ? "bg-white text-zinc-900 border-white"
+              : "bg-white/5 text-zinc-300 border-white/10 hover:bg-white/10"
+          )}
+        >
+          전체
+          <span className="ml-1 text-[9px] opacity-70 tabular-nums">
+            {slabs.length}
+          </span>
+        </button>
+        {types.map(([t, n]) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTypeFilter(t)}
+            style={{ touchAction: "manipulation" }}
+            className={clsx(
+              "h-8 px-2.5 rounded-full text-[11px] font-bold border transition inline-flex items-center gap-1",
+              typeFilter === t
+                ? clsx("border-white", TYPE_STYLE[t].badge)
+                : "bg-white/5 text-zinc-300 border-white/10 hover:bg-white/10"
+            )}
+          >
+            {t}
+            <span className="text-[9px] opacity-80 tabular-nums">{n}</span>
+          </button>
+        ))}
+      </div>
+      <ul className="flex flex-col gap-1.5">
+        {filtered.map((s) => {
           const tone = psaTone(s.grade);
           return (
-            <li
-              key={s.gradingId}
-              className="snap-start shrink-0 w-[44%] sm:w-[32%] md:w-auto"
-            >
+            <li key={s.gradingId}>
               <button
                 onClick={() => onPick(s)}
                 style={{ touchAction: "manipulation" }}
-                className={clsx(
-                  "w-full flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-1.5 md:py-2 text-left hover:bg-white/10 active:scale-[0.98] transition"
-                )}
+                className="w-full flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-2.5 py-2 text-left hover:bg-white/10 active:scale-[0.99] transition"
               >
                 <div
                   className={clsx(
-                    "shrink-0 w-9 h-12 md:w-10 md:h-14 rounded-md overflow-hidden ring-2 bg-zinc-900",
+                    "shrink-0 w-10 h-14 rounded-md overflow-hidden ring-2 bg-zinc-900",
                     RARITY_STYLE[s.rarity].frame
                   )}
                 >
@@ -1161,13 +1206,13 @@ function PickSlabPanel({
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10.5px] md:text-[11px] font-bold text-white truncate">
+                  <p className="text-[12px] font-bold text-white truncate">
                     {s.name}
                   </p>
-                  <p className="text-[10px] flex items-center gap-1 mt-0.5">
+                  <div className="mt-0.5 flex items-center gap-1 flex-wrap">
                     <span
                       className={clsx(
-                        "px-1 py-[1px] rounded font-black text-[9px]",
+                        "px-1.5 py-0.5 rounded font-black text-[9px]",
                         tone.banner
                       )}
                     >
@@ -1176,22 +1221,30 @@ function PickSlabPanel({
                     {s.type && (
                       <span
                         className={clsx(
-                          "px-1 py-[1px] rounded font-bold text-[9px]",
+                          "px-1.5 py-0.5 rounded font-bold text-[9px]",
                           TYPE_STYLE[s.type].badge
                         )}
                       >
                         {s.type}
                       </span>
                     )}
-                  </p>
-                  <p className="text-[9px] text-zinc-400 tabular-nums mt-0.5">
-                    HP {s.maxHp} · ATK {s.atk}
-                  </p>
+                    <span className="text-[10px] text-zinc-400 tabular-nums">
+                      HP {s.maxHp} · ATK {s.atk}
+                    </span>
+                  </div>
                 </div>
+                <span aria-hidden className="shrink-0 text-zinc-500 text-sm">
+                  ›
+                </span>
               </button>
             </li>
           );
         })}
+        {filtered.length === 0 && (
+          <li className="text-center text-[11px] text-zinc-500 py-6">
+            이 타입의 슬랩이 없어요.
+          </li>
+        )}
       </ul>
     </div>
   );

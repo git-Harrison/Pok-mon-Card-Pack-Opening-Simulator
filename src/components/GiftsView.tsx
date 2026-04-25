@@ -1,6 +1,6 @@
 "use client";
 
-import PokeLoader from "./PokeLoader";
+import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
@@ -168,9 +168,7 @@ export default function GiftsView() {
       )}
 
       {loading ? (
-        <div className="mt-16 flex justify-center">
-          <PokeLoader size="md" />
-        </div>
+        <CenteredPokeLoader />
       ) : list.length === 0 ? (
         <div className="mt-10 rounded-2xl border border-dashed border-white/10 bg-white/5 py-10 flex flex-col items-center gap-2 text-center px-4">
           <span className="text-4xl">📭</span>

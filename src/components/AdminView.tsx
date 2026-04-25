@@ -1,5 +1,6 @@
 "use client";
 
+import PokeLoader from "./PokeLoader";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -224,7 +225,7 @@ export default function AdminView() {
       </h2>
       {loading ? (
         <div className="mt-4 py-8 flex justify-center">
-          <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+          <PokeLoader size="sm" />
         </div>
       ) : (
         <ul className="mt-3 space-y-1.5">

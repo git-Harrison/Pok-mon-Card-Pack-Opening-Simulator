@@ -1,6 +1,6 @@
 "use client";
 
-import PokeLoader from "./PokeLoader";
+import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -222,9 +222,7 @@ export default function BulkSellView() {
       )}
 
       {loading ? (
-        <div className="mt-12 flex justify-center">
-          <PokeLoader size="md" />
-        </div>
+        <CenteredPokeLoader />
       ) : !hasAny ? (
         <div className="mt-10 rounded-2xl border border-dashed border-white/10 bg-white/5 py-12 flex flex-col items-center gap-3 text-center px-4">
           <span className="text-5xl">🎴</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import PokeLoader from "./PokeLoader";
+import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
@@ -114,9 +114,7 @@ export default function UsersView() {
       )}
 
       {loading ? (
-        <div className="mt-16 flex justify-center">
-          <PokeLoader size="md" />
-        </div>
+        <CenteredPokeLoader />
       ) : entries.length === 0 ? (
         <p className="mt-16 text-center text-zinc-400 text-sm">
           아직 사용자가 없습니다.

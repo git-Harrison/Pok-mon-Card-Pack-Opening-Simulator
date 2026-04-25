@@ -1,5 +1,6 @@
 "use client";
 
+import PokeLoader from "./PokeLoader";
 import {
   useCallback,
   useEffect,
@@ -233,7 +234,7 @@ export default function UserSelect({
                 <div className="flex-1 overflow-y-auto overscroll-contain min-h-0 px-2 pb-3">
                   {loading ? (
                     <div className="py-12 flex justify-center">
-                      <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                      <PokeLoader size="sm" />
                     </div>
                   ) : filtered.length === 0 ? (
                     <p className="py-12 text-center text-sm text-zinc-500">

@@ -1,6 +1,6 @@
 "use client";
 
-import PokeLoader from "./PokeLoader";
+import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -286,9 +286,7 @@ export default function CenterView() {
         )}
 
         {loading ? (
-          <div className="mt-12 flex justify-center">
-            <PokeLoader size="md" />
-          </div>
+          <CenteredPokeLoader />
         ) : (
           <CenterGrid
             byCell={byCell}
@@ -878,7 +876,7 @@ function SabotageLogModal({
       <div className="p-3 md:p-4">
         {loading ? (
           <div className="py-10 flex justify-center">
-            <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+            <PokeLoader size="sm" />
           </div>
         ) : logs.length === 0 ? (
           <p className="py-10 text-center text-sm text-zinc-400">

@@ -82,6 +82,7 @@ async function persistBatchWithRetry(
 }
 import { useAuth } from "@/lib/auth";
 import { BOX_COST, RARITY_STYLE } from "@/lib/rarity";
+import PokeLoader from "./PokeLoader";
 import PackOpeningStage from "./PackOpeningStage";
 import RarityBadge from "./RarityBadge";
 import CoinIcon from "./CoinIcon";
@@ -828,9 +829,9 @@ function BulkLoading() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 rounded-full border-4 border-white/15 border-t-amber-400 animate-spin" />
-        <p className="text-sm text-white">모든 팩을 한번에 여는 중...</p>
+      <div className="flex flex-col items-center gap-3">
+        <PokeLoader size="lg" />
+        <p className="text-sm text-white font-semibold">모든 팩을 한번에 여는 중...</p>
       </div>
     </motion.div>
   );
@@ -1011,7 +1012,9 @@ function MultiBuyingOverlay({
       exit={{ opacity: 0 }}
     >
       <div className="text-center">
-        <div className="w-14 h-14 mx-auto rounded-full border-4 border-white/15 border-t-amber-400 animate-spin" />
+        <div className="mx-auto inline-block">
+          <PokeLoader size="lg" />
+        </div>
         <p className="mt-4 text-base font-black text-white tabular-nums">
           {done < total ? `박스 ${done} / ${total} 구매 중` : `${total}박스 일괄 저장 중`}
         </p>

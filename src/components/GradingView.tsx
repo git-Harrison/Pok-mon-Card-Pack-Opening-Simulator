@@ -1,5 +1,6 @@
 "use client";
 
+import PokeLoader from "./PokeLoader";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -1003,7 +1004,7 @@ function BulkGradingModal({
                 >
                   {phase === "submitting" ? (
                     <>
-                      <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      <PokeLoader size="sm" />
                       감별 중...
                     </>
                   ) : (
