@@ -6,7 +6,13 @@ import Link from "next/link";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
-import { fetchUserRankings, sendTaunt, type RankingRow } from "@/lib/db";
+import {
+  fetchUserActivity,
+  fetchUserRankings,
+  sendTaunt,
+  type RankingRow,
+  type UserActivityEvent,
+} from "@/lib/db";
 import { usePresence } from "@/lib/usePresence";
 import { getCard } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
@@ -26,6 +32,33 @@ export default function UsersView() {
   const [mode, setMode] = useState<RankingMode>("rank");
   const [tauntTarget, setTauntTarget] = useState<RankingRow | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [activityCache, setActivityCache] = useState<
+    Record<string, UserActivityEvent[]>
+  >({});
+  const [activityLoading, setActivityLoading] = useState<
+    Record<string, boolean>
+  >({});
+
+  const activityKey = useCallback(
+    (uid: string, m: RankingMode) => `${uid}::${m}`,
+    []
+  );
+
+  useEffect(() => {
+    if (!expandedId) return;
+    const key = activityKey(expandedId, mode);
+    if (activityCache[key] || activityLoading[key]) return;
+    setActivityLoading((prev) => ({ ...prev, [key]: true }));
+    let cancelled = false;
+    fetchUserActivity(expandedId, mode).then((events) => {
+      if (cancelled) return;
+      setActivityCache((prev) => ({ ...prev, [key]: events }));
+      setActivityLoading((prev) => ({ ...prev, [key]: false }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [expandedId, mode, activityKey, activityCache, activityLoading]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -128,7 +161,6 @@ export default function UsersView() {
             const def = getCharacter(e.character);
             const isOnline = onlineSet.has(e.id);
             const isExpanded = expandedId === e.id;
-            const petCount = e.main_card_ids?.length ?? 0;
             const isTopThree = rank < 3;
             const trophy = rank === 0 ? "🏆" : rank === 1 ? "🥈" : rank === 2 ? "🥉" : null;
 
@@ -260,82 +292,20 @@ export default function UsersView() {
                 <AnimatePresence initial={false}>
                   {isExpanded && (
                     <motion.div
-                      key="stats"
+                      key="activity"
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.2, ease: "easeOut" }}
                       className="overflow-hidden"
                     >
-                      <div className="px-3 md:px-4 pb-3 grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                        {mode === "rank" && (
-                          <>
-                            <StatChip
-                              icon="🏆"
-                              label="PCL10"
-                              value={e.psa_10 ?? 0}
-                              accent="text-amber-300"
-                            />
-                            <StatChip
-                              icon="💥"
-                              label="부수기 승"
-                              value={e.sabotage_wins ?? 0}
-                              accent="text-rose-300"
-                            />
-                            <StatChip
-                              icon="🛡️"
-                              label="전시 중"
-                              value={e.showcase_count ?? 0}
-                              accent="text-emerald-300"
-                            />
-                          </>
-                        )}
-                        {mode === "power" && (
-                          <>
-                            <StatChip
-                              icon="⚔️"
-                              label="전투력"
-                              value={e.center_power ?? 0}
-                              accent="text-rose-300"
-                            />
-                            <StatChip
-                              icon="📖"
-                              label="도감"
-                              value={e.pokedex_count ?? 0}
-                              accent="text-emerald-300"
-                            />
-                            <StatChip
-                              icon="🛡️"
-                              label="전시 중"
-                              value={e.showcase_count ?? 0}
-                              accent="text-amber-300"
-                            />
-                          </>
-                        )}
-                        {mode === "pet" && (
-                          <>
-                            <StatChip
-                              icon="🐾"
-                              label="펫 점수"
-                              value={e.pet_score ?? 0}
-                              accent="text-fuchsia-300"
-                            />
-                            <StatChip
-                              icon="🃏"
-                              label="펫 슬롯"
-                              value={petCount}
-                              suffix=" / 5"
-                              accent="text-amber-300"
-                            />
-                            <StatChip
-                              icon="🏆"
-                              label="PCL10"
-                              value={e.psa_10 ?? 0}
-                              accent="text-emerald-300"
-                            />
-                          </>
-                        )}
-                      </div>
+                      <ActivityFeed
+                        events={activityCache[activityKey(e.id, mode)]}
+                        loading={
+                          activityLoading[activityKey(e.id, mode)] === true
+                        }
+                        mode={mode}
+                      />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -407,32 +377,89 @@ export default function UsersView() {
   );
 }
 
-function StatChip({
-  icon,
-  label,
-  value,
-  suffix,
-  accent,
+function formatRelativeKo(iso: string): string {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return "";
+  const diffMs = Date.now() - t;
+  const sec = Math.floor(diffMs / 1000);
+  if (sec < 60) return "방금 전";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}분 전`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}시간 전`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day}일 전`;
+  const d = new Date(t);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+}
+
+function modeAccent(mode: RankingMode): string {
+  if (mode === "power") return "text-rose-300";
+  if (mode === "pet") return "text-fuchsia-300";
+  return "text-amber-300";
+}
+
+function ActivityFeed({
+  events,
+  loading,
+  mode,
 }: {
-  icon: string;
-  label: string;
-  value: number;
-  suffix?: string;
-  accent: string;
+  events: UserActivityEvent[] | undefined;
+  loading: boolean;
+  mode: RankingMode;
 }) {
+  if (loading || events === undefined) {
+    return (
+      <div className="px-3 md:px-4 pb-3 space-y-1.5">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-9 rounded-lg bg-white/[0.04] border border-white/10 animate-pulse"
+          />
+        ))}
+      </div>
+    );
+  }
+  if (events.length === 0) {
+    return (
+      <div className="px-3 md:px-4 pb-3">
+        <p className="text-center text-xs text-zinc-500 py-3">
+          최근 활동 없음
+        </p>
+      </div>
+    );
+  }
+  const accent = modeAccent(mode);
   return (
-    <div className="flex flex-col items-start gap-0.5 px-2.5 py-2 rounded-xl bg-white/[0.03] border border-white/10">
-      <span className="text-[10px] uppercase tracking-wider text-zinc-500">
-        {icon} {label}
-      </span>
-      <span className={clsx("text-sm md:text-base font-black tabular-nums", accent)}>
-        {value.toLocaleString("ko-KR")}
-        {suffix && (
-          <span className="text-[10px] text-zinc-500 font-semibold">
-            {suffix}
-          </span>
-        )}
-      </span>
+    <div className="px-3 md:px-4 pb-3">
+      <ul className="space-y-1">
+        {events.map((ev, idx) => (
+          <li
+            key={`${ev.source}-${ev.occurred_at}-${idx}`}
+            className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white/[0.03] border border-white/10"
+          >
+            <span className="flex-1 min-w-0 text-[12px] text-zinc-200 truncate">
+              {ev.label}
+            </span>
+            <span
+              className={clsx(
+                "shrink-0 text-[12px] font-black tabular-nums",
+                accent
+              )}
+            >
+              +{ev.points.toLocaleString("ko-KR")}p
+            </span>
+            <span className="shrink-0 text-[10px] text-zinc-500 tabular-nums">
+              {formatRelativeKo(ev.occurred_at)}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

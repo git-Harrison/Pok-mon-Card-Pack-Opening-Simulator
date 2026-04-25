@@ -109,10 +109,6 @@ export async function fetchMe(userId: string): Promise<DbUser | null> {
   return data as DbUser;
 }
 
-export async function touchLastSeen(userId: string) {
-  await supabase.rpc("touch_last_seen", { p_user_id: userId });
-}
-
 // ---------- Users directory ----------
 
 export interface UserListEntry {
@@ -164,31 +160,6 @@ export async function fetchWallet(userId: string): Promise<WalletSnapshot> {
   }
   for (const it of items) totalCards += it.count;
   return { items, packsOpenedBySet, totalCards };
-}
-
-export async function recordPackPull(
-  userId: string,
-  setCode: SetCode,
-  cardIds: string[],
-  rarities: string[],
-  autoSellSubAR: boolean
-) {
-  const { data, error } = await supabase.rpc("record_pack_pull_v4", {
-    p_user_id: userId,
-    p_set_code: setCode,
-    p_card_ids: cardIds,
-    p_rarities: rarities,
-    p_auto_sell_sub_ar: autoSellSubAR,
-  });
-  if (error) throw error;
-  return data as {
-    ok: boolean;
-    pack_open_id: string;
-    sold_count: number;
-    sold_earned: number;
-    kept_count: number;
-    points: number;
-  };
 }
 
 export interface BatchPullPack {
@@ -310,32 +281,11 @@ export async function declineGift(giftId: string, userId: string) {
   return data as { ok: boolean; error?: string };
 }
 
-export async function expirePendingGifts() {
+async function expirePendingGifts() {
   await supabase.rpc("expire_pending_gifts");
 }
 
 // ---------- PSA grading ----------
-
-export async function submitPsaGrading(
-  userId: string,
-  cardId: string,
-  rarity: string
-) {
-  const { data, error } = await supabase.rpc("submit_psa_grading", {
-    p_user_id: userId,
-    p_card_id: cardId,
-    p_rarity: rarity,
-  });
-  if (error) return { ok: false as const, error: error.message };
-  return data as {
-    ok: boolean;
-    error?: string;
-    grade?: number;
-    failed?: boolean;
-    bonus?: number;
-    points?: number;
-  };
-}
 
 export interface BulkGradingResultItem {
   card_id: string;
@@ -431,6 +381,27 @@ export async function fetchUserRankings(): Promise<RankingRow[]> {
   return (data ?? []) as RankingRow[];
 }
 
+export type UserActivityTab = "rank" | "power" | "pet";
+
+export interface UserActivityEvent {
+  label: string;
+  points: number;
+  source: string;
+  occurred_at: string;
+}
+
+export async function fetchUserActivity(
+  userId: string,
+  tab: UserActivityTab
+): Promise<UserActivityEvent[]> {
+  const { data, error } = await supabase.rpc("get_user_activity", {
+    p_user_id: userId,
+    p_tab: tab,
+  });
+  if (error) return [];
+  return (data ?? []) as UserActivityEvent[];
+}
+
 export interface BulkSellItem {
   card_id: string;
   count: number;
@@ -500,6 +471,43 @@ export async function markTauntSeen(tauntId: string, userId: string) {
     p_user_id: userId,
   });
   return { ok: !error };
+}
+
+export interface TauntEntry {
+  id: string;
+  from_user_id: string;
+  from_name: string;
+  to_user_id: string;
+  to_name: string;
+  message: string;
+  created_at: string;
+}
+
+export async function fetchTauntHistory(
+  userId: string
+): Promise<{
+  ok: boolean;
+  sent: TauntEntry[];
+  received: TauntEntry[];
+  error?: string;
+}> {
+  const { data, error } = await supabase.rpc("get_taunt_history", {
+    p_user_id: userId,
+    p_limit: 50,
+  });
+  if (error) return { ok: false, sent: [], received: [], error: error.message };
+  const out = (data ?? {}) as {
+    ok?: boolean;
+    sent?: TauntEntry[];
+    received?: TauntEntry[];
+    error?: string;
+  };
+  return {
+    ok: out.ok ?? false,
+    sent: out.sent ?? [],
+    received: out.received ?? [],
+    error: out.error,
+  };
 }
 
 // ---------- Gift badge ----------
