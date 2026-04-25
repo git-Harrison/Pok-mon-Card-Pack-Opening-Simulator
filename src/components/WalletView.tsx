@@ -2,7 +2,7 @@
 
 import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useSearchParams } from "next/navigation";
 import clsx from "clsx";
 import {
@@ -119,13 +119,11 @@ export default function WalletView() {
         <div className="inline-flex items-stretch rounded-xl bg-white/5 border border-white/10 p-1">
           <ModeTab active={mode === "psa"} onClick={() => setMode("psa")}>
             PCL 감별
-            <span className="ml-1.5 text-[10px] opacity-70">{psaItems.length}</span>
+            <CountBadge value={psaItems.length} />
           </ModeTab>
           <ModeTab active={mode === "cards"} onClick={() => setMode("cards")}>
             보유 카드
-            <span className="ml-1.5 text-[10px] opacity-70">
-              {snap.items.length}
-            </span>
+            <CountBadge value={snap.items.length} />
           </ModeTab>
         </div>
         {hasAny ? (
@@ -148,15 +146,35 @@ export default function WalletView() {
 
       {loading ? (
         <CenteredPokeLoader />
-      ) : mode === "cards" ? (
-        <CardsMode
-          items={items}
-          rarityCounts={rarityCounts}
-          rarityFilter={rarityFilter}
-          setRarityFilter={setRarityFilter}
-        />
       ) : (
-        <PsaMode items={psaItems} onAfterGift={refresh} />
+        <AnimatePresence mode="wait" initial={false}>
+          {mode === "cards" ? (
+            <motion.div
+              key="cards"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+            >
+              <CardsMode
+                items={items}
+                rarityCounts={rarityCounts}
+                rarityFilter={rarityFilter}
+                setRarityFilter={setRarityFilter}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="psa"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+            >
+              <PsaMode items={psaItems} onAfterGift={refresh} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       )}
     </div>
   );
@@ -173,6 +191,7 @@ function CardsMode({
   rarityFilter: RarityFilter;
   setRarityFilter: (r: RarityFilter) => void;
 }) {
+  const reduce = useReducedMotion();
   return (
     <>
       <div className="mt-4 flex items-center gap-1.5 flex-wrap">
@@ -209,31 +228,59 @@ function CardsMode({
       {items.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="mt-4 md:mt-5 grid grid-cols-3 gap-2 md:gap-3">
+        <motion.div
+          key={`cards-${rarityFilter}`}
+          className="mt-4 md:mt-5 grid grid-cols-3 gap-2 md:gap-3"
+          initial="hidden"
+          animate="show"
+          variants={{
+            hidden: {},
+            show: {
+              transition: {
+                staggerChildren: reduce ? 0 : 0.02,
+                delayChildren: reduce ? 0 : 0.04,
+              },
+            },
+          }}
+        >
           {items.map(({ card, count }) => (
-            <Link
+            <motion.div
               key={card.id}
-              href={`/card/${encodeURIComponent(card.id)}`}
-              className="relative flex flex-col items-center gap-1.5 rounded-xl p-1.5 active:scale-[0.97] transition-transform"
-              style={{ touchAction: "manipulation" }}
+              variants={{
+                hidden: reduce
+                  ? { opacity: 1, y: 0 }
+                  : { opacity: 0, y: 8, scale: 0.97 },
+                show: {
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                  transition: { duration: 0.26, ease: [0.2, 0.8, 0.2, 1] },
+                },
+              }}
             >
-              <PokeCard card={card} revealed size="md" />
-              {count > 1 && (
-                <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur text-white font-bold text-[10px] ring-1 ring-white/20 pointer-events-none">
-                  ×{count}
-                </span>
-              )}
-              <div className="w-full text-center px-1 pointer-events-none">
-                <p className="text-[11px] text-zinc-300 leading-tight line-clamp-2">
-                  {card.name}
-                </p>
-                <p className="text-[10px] text-zinc-500">
-                  {SETS[card.setCode].name} · #{card.number}
-                </p>
-              </div>
-            </Link>
+              <Link
+                href={`/card/${encodeURIComponent(card.id)}`}
+                className="relative flex flex-col items-center gap-1.5 rounded-xl p-1.5 active:scale-[0.97] transition-transform"
+                style={{ touchAction: "manipulation" }}
+              >
+                <PokeCard card={card} revealed size="md" />
+                {count > 1 && (
+                  <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur text-white font-bold text-[10px] ring-1 ring-white/20 pointer-events-none">
+                    ×{count}
+                  </span>
+                )}
+                <div className="w-full text-center px-1 pointer-events-none">
+                  <p className="text-[11px] text-zinc-300 leading-tight line-clamp-2">
+                    {card.name}
+                  </p>
+                  <p className="text-[10px] text-zinc-500">
+                    {SETS[card.setCode].name} · #{card.number}
+                  </p>
+                </div>
+              </Link>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
     </>
   );
@@ -246,6 +293,7 @@ function PsaMode({
   items: { grading: PsaGradingWithDisplay; card: Card }[];
   onAfterGift: () => void | Promise<void>;
 }) {
+  const reduce = useReducedMotion();
   const [giftTarget, setGiftTarget] = useState<{
     grading: PsaGradingWithDisplay;
     card: Card;
@@ -272,16 +320,40 @@ function PsaMode({
   }
   return (
     <>
-      <div className="mt-4 grid grid-cols-3 gap-2 md:gap-3 place-items-stretch">
+      <motion.div
+        className="mt-4 grid grid-cols-3 gap-2 md:gap-3 place-items-stretch"
+        initial="hidden"
+        animate="show"
+        variants={{
+          hidden: {},
+          show: {
+            transition: {
+              staggerChildren: reduce ? 0 : 0.025,
+              delayChildren: reduce ? 0 : 0.04,
+            },
+          },
+        }}
+      >
         {items.map(({ grading, card }) => {
           const giftable = grading.grade >= 6;
           return (
-            <button
+            <motion.button
               key={grading.id}
               type="button"
               onClick={() => setGiftTarget({ grading, card })}
               disabled={!giftable}
               style={{ touchAction: "manipulation" }}
+              variants={{
+                hidden: reduce
+                  ? { opacity: 1, y: 0 }
+                  : { opacity: 0, y: 8, scale: 0.97 },
+                show: {
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                  transition: { duration: 0.26, ease: [0.2, 0.8, 0.2, 1] },
+                },
+              }}
               className={clsx(
                 "relative flex flex-col items-center gap-1 w-full text-left active:scale-[0.98] transition",
                 !giftable && "cursor-not-allowed"
@@ -293,10 +365,10 @@ function PsaMode({
               <p className="w-full text-center text-[10px] text-zinc-300 leading-tight line-clamp-1 px-0.5">
                 {card.name}
               </p>
-            </button>
+            </motion.button>
           );
         })}
-      </div>
+      </motion.div>
 
       <SlabGiftComposer
         target={giftTarget}
@@ -570,6 +642,26 @@ function Kpi({
         {value}
       </div>
     </div>
+  );
+}
+
+function CountBadge({ value }: { value: number }) {
+  const reduce = useReducedMotion();
+  return (
+    <span className="ml-1.5 text-[10px] opacity-70 inline-block tabular-nums">
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={value}
+          initial={reduce ? false : { y: -6, opacity: 0, scale: 0.85 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={reduce ? { opacity: 0 } : { y: 6, opacity: 0, scale: 0.85 }}
+          transition={{ type: "spring", stiffness: 420, damping: 22 }}
+          className="inline-block"
+        >
+          {value}
+        </motion.span>
+      </AnimatePresence>
+    </span>
   );
 }
 

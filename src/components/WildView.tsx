@@ -4,7 +4,7 @@ import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import {
   fetchUndisplayedGradings,
@@ -717,12 +717,16 @@ function IdleCTA({
   onStart: () => void;
 }) {
   const blocked = cooldownLeft > 0;
+  const reduce = useReducedMotion();
   const flavor = useMemo(
     () => IDLE_FLAVORS[Math.floor(Math.random() * IDLE_FLAVORS.length)],
     []
   );
   return (
-    <div
+    <motion.div
+      initial={reduce ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.32, ease: "easeOut" }}
       className="rounded-2xl border border-emerald-500/25 overflow-hidden"
       style={{
         background:
@@ -733,9 +737,14 @@ function IdleCTA({
         <div className="text-5xl md:text-6xl mb-3 motion-safe:animate-bounce">
           {flavor.icon}
         </div>
-        <h2 className="text-base md:text-xl font-black text-white">
+        <motion.h2
+          className="text-base md:text-xl font-black text-white"
+          initial={reduce ? false : { opacity: 0, filter: "blur(4px)" }}
+          animate={{ opacity: 1, filter: "blur(0px)" }}
+          transition={{ duration: 0.4, delay: 0.08, ease: "easeOut" }}
+        >
           {flavor.title}
-        </h2>
+        </motion.h2>
         <p className="mt-1 text-[11px] md:text-xs text-zinc-300">
           보유한 PCL 슬랩 {count}장으로 야생 포켓몬과 겨룹니다.
         </p>
@@ -784,7 +793,7 @@ function IdleCTA({
         ⚠️ <b>지면 사용한 PCL 슬랩이 영원히 삭제</b>돼요. 그 카드로 얻었던
         랭킹 점수도 함께 사라집니다. 신중하게 상대의 타입을 보고 고르세요.
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -835,11 +844,22 @@ function BattleScene({
   attackingSide: "player" | "enemy" | null;
   biome: Biome;
 }) {
+  const reduce = useReducedMotion();
   const wildBubble = bubble?.side === "wild" ? bubble.text : "";
   const playerBubble = bubble?.side === "player" ? bubble.text : "";
   return (
-    <section
+    <motion.section
       className="relative mt-3 overflow-visible aspect-[4/3.2] md:aspect-[4/4]"
+      animate={
+        phase === "lost" && !reduce
+          ? { x: [0, -8, 8, -6, 6, -3, 3, 0] }
+          : { x: 0 }
+      }
+      transition={
+        phase === "lost"
+          ? { duration: 0.55, ease: "easeOut" }
+          : { duration: 0 }
+      }
     >
       <div
         aria-hidden
@@ -850,12 +870,24 @@ function BattleScene({
         style={{ background: biome.sky }}
       >
         {biome.image && (
-          <img
+          <motion.img
             src={biome.image}
             alt=""
             draggable={false}
             className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
             style={{ imageRendering: "pixelated" }}
+            initial={reduce ? false : { scale: 1.06, x: -8 }}
+            animate={reduce ? {} : { scale: 1.06, x: [-8, 8, -8] }}
+            transition={
+              reduce
+                ? { duration: 0 }
+                : {
+                    duration: 18,
+                    ease: "easeInOut",
+                    repeat: Infinity,
+                    repeatType: "loop",
+                  }
+            }
           />
         )}
         <div
@@ -1004,13 +1036,35 @@ function BattleScene({
         <motion.div
           className="absolute inset-0 flex items-center justify-center pointer-events-none"
           initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: [0, 1, 1, 0] }}
-          transition={{ duration: 1.4, times: [0, 0.2, 0.7, 1] }}
+          animate={{
+            scale: [0, 1.15, 1, 1, 0.9],
+            opacity: [0, 1, 1, 1, 0],
+            rotate: [0, -6, 4, -2, 0],
+          }}
+          transition={{ duration: 1.4, times: [0, 0.18, 0.35, 0.7, 1] }}
         >
-          <span className="text-5xl">❗</span>
+          <motion.span
+            className="text-5xl drop-shadow-[0_4px_12px_rgba(0,0,0,0.7)]"
+            animate={
+              reduce
+                ? {}
+                : {
+                    filter: [
+                      "brightness(1)",
+                      "brightness(1.6)",
+                      "brightness(1)",
+                      "brightness(1.4)",
+                      "brightness(1)",
+                    ],
+                  }
+            }
+            transition={{ duration: 0.6, times: [0, 0.15, 0.3, 0.55, 1] }}
+          >
+            ❗
+          </motion.span>
         </motion.div>
       )}
-    </section>
+    </motion.section>
   );
 }
 
@@ -1309,10 +1363,16 @@ function ResultPanel({
   disableAgain?: boolean;
 }) {
   const win = tone === "win";
+  const reduce = useReducedMotion();
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, y: 20, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={
+        win
+          ? { type: "spring", stiffness: 320, damping: 18 }
+          : { duration: 0.32, ease: "easeOut" }
+      }
       className={clsx(
         "mt-4 rounded-2xl border p-5 text-center",
         win
@@ -1320,7 +1380,18 @@ function ResultPanel({
           : "border-rose-500/50 bg-rose-500/10"
       )}
     >
-      <div className="text-4xl mb-2">{win ? "🏆" : "💥"}</div>
+      <motion.div
+        className="text-4xl mb-2"
+        initial={reduce ? false : { scale: 0, rotate: win ? -30 : 0 }}
+        animate={
+          win
+            ? { scale: [0, 1.3, 0.95, 1.08, 1], rotate: [-30, 12, -6, 0] }
+            : { scale: [0, 1.1, 1], rotate: 0 }
+        }
+        transition={{ duration: win ? 0.7 : 0.4, ease: "easeOut", delay: 0.05 }}
+      >
+        {win ? "🏆" : "💥"}
+      </motion.div>
       <h3
         className={clsx(
           "text-lg font-black",
