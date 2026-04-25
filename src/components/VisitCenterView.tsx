@@ -231,12 +231,7 @@ function VisitShowcaseModal({
   onClose: () => void;
   onAttack: (slotIndex: number, cardId: string) => void;
 }) {
-  const spec = SHOWCASES[showcase.showcase_type];
-  const isVault = showcase.showcase_type === "vault";
-  const sortedCards = useMemo(
-    () => showcase.cards.slice().sort((a, b) => a.slot_index - b.slot_index),
-    [showcase.cards]
-  );
+  const spec = SHOWCASES[showcase.showcase_type] ?? SHOWCASES.basic;
   return (
     <ModalShell
       title={`${spec.icon} ${spec.name}`}
@@ -248,76 +243,41 @@ function VisitShowcaseModal({
       onClose={onClose}
     >
       <div className="p-3 md:p-5">
-        {isVault ? (
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-            {sortedCards.map((row) => {
-              const card = getCard(row.card_id);
-              if (!card) return null;
-              const clickable = canSabotage;
+        <div className="flex justify-center">
+          {Array.from({ length: spec.capacity }).map((_, i) => {
+            const row = showcase.cards.find((c) => c.slot_index === i);
+            const card = row ? getCard(row.card_id) : null;
+            if (!card || !row) {
               return (
-                <button
-                  key={row.slot_index}
-                  type="button"
-                  disabled={!clickable}
-                  onClick={() => clickable && onAttack(row.slot_index, row.card_id)}
-                  style={{ touchAction: "manipulation" }}
-                  className={clsx(
-                    "relative flex flex-col items-center gap-1 text-left rounded-lg transition",
-                    clickable && "hover:scale-[1.03] active:scale-[0.98]"
-                  )}
-                >
-                  <PsaSlab card={card} grade={row.grade} size="sm" />
-                  {clickable && (
-                    <span className="text-[10px] font-bold text-rose-300">
-                      💥 부수기
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-            {sortedCards.length === 0 && (
-              <p className="col-span-full py-10 text-center text-sm text-zinc-400">
-                전시된 카드가 없어요.
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="flex justify-center">
-            {Array.from({ length: spec.capacity }).map((_, i) => {
-              const row = showcase.cards.find((c) => c.slot_index === i);
-              const card = row ? getCard(row.card_id) : null;
-              if (!card || !row) {
-                return (
-                  <div
-                    key={i}
-                    className="w-full max-w-[320px] aspect-[5/7] rounded-lg border-2 border-dashed border-white/15 bg-white/[0.02]"
-                  />
-                );
-              }
-              const clickable = canSabotage;
-              return (
-                <button
+                <div
                   key={i}
-                  type="button"
-                  disabled={!clickable}
-                  onClick={() => clickable && onAttack(i, row.card_id)}
-                  style={{ touchAction: "manipulation" }}
-                  className={clsx(
-                    "relative flex flex-col items-center gap-2 text-left rounded-lg transition w-full max-w-[320px]",
-                    clickable && "hover:scale-[1.03] active:scale-[0.98]"
-                  )}
-                >
-                  <PsaSlab card={card} grade={row.grade} size="lg" />
-                  {clickable && (
-                    <span className="text-xs font-bold text-rose-300">
-                      💥 부수기 가능
-                    </span>
-                  )}
-                </button>
+                  className="w-full max-w-[320px] aspect-[5/7] rounded-lg border-2 border-dashed border-white/15 bg-white/[0.02]"
+                />
               );
-            })}
-          </div>
-        )}
+            }
+            const clickable = canSabotage;
+            return (
+              <button
+                key={i}
+                type="button"
+                disabled={!clickable}
+                onClick={() => clickable && onAttack(i, row.card_id)}
+                style={{ touchAction: "manipulation" }}
+                className={clsx(
+                  "relative flex flex-col items-center gap-2 text-left rounded-lg transition w-full max-w-[320px]",
+                  clickable && "hover:scale-[1.03] active:scale-[0.98]"
+                )}
+              >
+                <PsaSlab card={card} grade={row.grade} size="lg" />
+                {clickable && (
+                  <span className="text-xs font-bold text-rose-300">
+                    💥 부수기 가능
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </ModalShell>
   );

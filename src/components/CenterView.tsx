@@ -7,7 +7,7 @@ import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import {
-  bulkDisplayPclSlabs,
+  bulkCreateShowcases,
   buyShowcase,
   claimShowcaseIncome,
   displayGrading,
@@ -19,6 +19,7 @@ import {
   type CenterShowcase,
   type SabotageLog,
 } from "@/lib/db";
+import { fetchProfile } from "@/lib/profile";
 import type { PsaGrading } from "@/lib/types";
 import {
   CENTER_GRID_COLS,
@@ -29,10 +30,8 @@ import {
   type ShowcaseType,
 } from "@/lib/center";
 import { getCard } from "@/lib/sets";
-import { RARITY_STYLE } from "@/lib/rarity";
 import { psaTone } from "@/lib/psa";
 import CoinIcon from "./CoinIcon";
-import RarityBadge from "./RarityBadge";
 import PsaSlab from "./PsaSlab";
 import Portal from "./Portal";
 import PageHeader from "./PageHeader";
@@ -44,6 +43,7 @@ export default function CenterView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   // open modals
   const [shopSlot, setShopSlot] = useState<{ x: number; y: number } | null>(
@@ -54,6 +54,7 @@ export default function CenterView() {
     showcaseId: string;
     slotIndex: number;
   } | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [logs, setLogs] = useState<SabotageLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
@@ -69,12 +70,20 @@ export default function CenterView() {
 
   const refresh = useCallback(async () => {
     if (!user) return;
-    const [c, g] = await Promise.all([
+    const [c, g, prof] = await Promise.all([
       fetchUserCenter(user.id),
       fetchUndisplayedGradings(user.id),
+      fetchProfile(user.id),
     ]);
+    const pets = new Set(prof.main_card_ids ?? []);
     setShowcases(c);
-    setAvailableGradings(g.filter((x) => x.grade === 9 || x.grade === 10));
+    // 펫으로 등록된 슬랩은 어디에도 노출되지 않도록 클라이언트에서도
+    // 한 번 더 거른다 — RPC 가 거부하더라도 사전에 안 보이게.
+    setAvailableGradings(
+      g.filter(
+        (x) => (x.grade === 9 || x.grade === 10) && !pets.has(x.id)
+      )
+    );
     setLoading(false);
   }, [user]);
 
@@ -171,23 +180,31 @@ export default function CenterView() {
     [user, pickTarget, refresh]
   );
 
-  const handleBulkDisplay = useCallback(
-    async (showcaseId: string) => {
-      if (!user) return;
+  const handleBulkSubmit = useCallback(
+    async (type: ShowcaseType, gradingIds: string[]) => {
+      if (!user) return { ok: false as const, error: "로그인이 필요해요." };
       setError(null);
-      const res = await bulkDisplayPclSlabs(user.id, showcaseId);
+      const res = await bulkCreateShowcases(user.id, type, gradingIds);
       if (!res.ok) {
         setError(res.error ?? "일괄 전시 실패");
-        return;
+        return res;
       }
-      const n = res.displayed_count ?? 0;
-      if (n === 0) {
-        setError("전시 가능한 PCL 9·10 슬랩이 없거나 보관함이 가득 찼어요.");
-      }
+      if (typeof res.points === "number") setPoints(res.points);
+      const n = res.created_count ?? gradingIds.length;
+      setBulkOpen(false);
+      setToast(`${n}개 전시 완료`);
       await refresh();
+      return res;
     },
-    [user, refresh]
+    [user, setPoints, refresh]
   );
+
+  // toast auto-dismiss
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2800);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const inviteUrl = useMemo(() => {
     if (!user || typeof window === "undefined") return "";
@@ -210,6 +227,25 @@ export default function CenterView() {
     () => showcases.reduce((s, sc) => s + sc.cards.length, 0),
     [showcases]
   );
+
+  const emptyCellCount = useMemo(
+    () =>
+      Math.max(
+        0,
+        CENTER_GRID_COLS * CENTER_GRID_ROWS - showcases.length
+      ),
+    [showcases]
+  );
+
+  // 일괄 전시 후보 — PCL 9·10, 미전시, 펫 아님 (refresh 단계에서 펫 필터됨)
+  const bulkCandidates = useMemo(() => {
+    return availableGradings.filter(
+      (g) =>
+        !showcases.some((s) =>
+          s.cards.some((c) => c.grading_id === g.id)
+        )
+    );
+  }, [availableGradings, showcases]);
 
   const incomePerHour = useMemo(() => {
     let trade = 0;
@@ -277,6 +313,21 @@ export default function CenterView() {
           >
             📜 방문 기록
           </button>
+          <button
+            onClick={() => {
+              setError(null);
+              setBulkOpen(true);
+            }}
+            disabled={emptyCellCount === 0}
+            className={clsx(
+              "h-9 px-3 rounded-full font-bold text-xs transition inline-flex items-center gap-1.5",
+              emptyCellCount === 0
+                ? "bg-white/5 text-zinc-500 border border-white/10 cursor-not-allowed"
+                : "bg-gradient-to-r from-emerald-400 to-sky-500 text-zinc-950 hover:scale-[1.02] active:scale-[0.98] shadow-[0_8px_24px_-8px_rgba(52,211,153,0.6)]"
+            )}
+          >
+            🚀 일괄 전시{emptyCellCount > 0 && ` (${emptyCellCount}칸)`}
+          </button>
         </div>
 
         {error && (
@@ -317,7 +368,6 @@ export default function CenterView() {
               handleUndisplay(manageShowcase.id, slotIndex)
             }
             onRemove={handleRemoveShowcase}
-            onBulkDisplay={() => handleBulkDisplay(manageShowcase.id)}
           />
         )}
         {pickTarget && (
@@ -342,6 +392,29 @@ export default function CenterView() {
             loading={logsLoading}
             onClose={() => setLogOpen(false)}
           />
+        )}
+        {bulkOpen && (
+          <BulkShowcaseCreateModal
+            emptyCells={emptyCellCount}
+            candidates={bulkCandidates}
+            points={user?.points ?? 0}
+            onClose={() => setBulkOpen(false)}
+            onSubmit={handleBulkSubmit}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key="toast"
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className="fixed left-1/2 -translate-x-1/2 bottom-8 z-[200] px-4 py-3 rounded-xl bg-zinc-950 border border-emerald-400/50 text-emerald-100 font-bold text-sm shadow-2xl"
+          >
+            {toast}
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
@@ -436,105 +509,71 @@ function ShowcaseCell({
   onClick?: () => void;
 }) {
   const spec = SHOWCASES[showcase.showcase_type];
-  const filled = showcase.cards.length;
-  const isVault = showcase.showcase_type === "vault";
+  // Defensive: if a stale 'vault' row somehow survives (it shouldn't,
+  // the migration deletes them), fall back to the basic spec so the
+  // grid keeps rendering instead of crashing on undefined.
+  const safeSpec = spec ?? SHOWCASES.basic;
   const isButton = Boolean(onClick);
   const Root: "button" | "div" = isButton ? "button" : "div";
-  const previewCards = isVault ? showcase.cards.slice(0, 4) : showcase.cards;
   return (
     <Root
       {...(isButton ? { type: "button" as const, onClick } : {})}
       className={clsx(
         "relative aspect-[3/4] rounded-xl overflow-hidden ring-1 text-left transition",
         "bg-gradient-to-b",
-        spec.body,
-        spec.accent,
+        safeSpec.body,
+        safeSpec.accent,
         isButton && "hover:scale-[1.03] active:scale-[0.98]"
       )}
       style={{ touchAction: "manipulation" }}
     >
       <div className="absolute top-0 inset-x-0 px-1.5 py-1 bg-black/50 backdrop-blur-sm flex items-center justify-between gap-1">
         <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] text-white/90 truncate">
-          {spec.icon} {spec.name}
+          {safeSpec.icon} {safeSpec.name}
         </span>
         <span className="text-[8px] text-white/70 tabular-nums shrink-0">
-          {filled}/{spec.capacity}
+          {showcase.cards.length}/{safeSpec.capacity}
         </span>
       </div>
-      {isVault ? (
-        <div className="absolute inset-x-1 bottom-1 top-5 flex flex-col items-center justify-center gap-1">
-          <div className="grid grid-cols-2 gap-[2px] w-[78%]">
-            {Array.from({ length: 4 }).map((_, i) => {
-              const cardRow = previewCards[i];
-              const card = cardRow ? getCard(cardRow.card_id) : null;
-              return (
-                <div
-                  key={i}
+      <div className="absolute inset-x-1 bottom-1 top-5 flex items-center justify-center gap-[2px]">
+        {Array.from({ length: safeSpec.capacity }).map((_, i) => {
+          const cardRow = showcase.cards.find((c) => c.slot_index === i);
+          const card = cardRow ? getCard(cardRow.card_id) : null;
+          return (
+            <div
+              key={i}
+              className={clsx(
+                "relative flex-1 h-full rounded-sm overflow-hidden",
+                card
+                  ? "bg-zinc-950 ring-1 ring-white/20"
+                  : "bg-black/35 ring-1 ring-white/10"
+              )}
+            >
+              {card?.imageUrl ? (
+                <img
+                  src={card.imageUrl}
+                  alt=""
+                  draggable={false}
+                  loading="lazy"
+                  className="w-full h-full object-contain pointer-events-none"
+                />
+              ) : null}
+              {cardRow && (
+                <span
                   className={clsx(
-                    "relative aspect-[5/7] rounded-sm overflow-hidden",
-                    card
-                      ? "bg-zinc-950 ring-1 ring-white/20"
-                      : "bg-black/40 ring-1 ring-white/10"
+                    "absolute top-0 right-0 px-[3px] text-[8px] font-black tabular-nums leading-tight",
+                    cardRow.grade === 10
+                      ? "bg-amber-400 text-zinc-950"
+                      : "bg-slate-200 text-zinc-900"
                   )}
                 >
-                  {card?.imageUrl && (
-                    <img
-                      src={card.imageUrl}
-                      alt=""
-                      draggable={false}
-                      loading="lazy"
-                      className="w-full h-full object-contain pointer-events-none"
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          <span className="px-1.5 py-0.5 rounded-full bg-emerald-400 text-emerald-950 text-[9px] font-black tabular-nums">
-            {filled}장 전시 중
-          </span>
-        </div>
-      ) : (
-        <div className="absolute inset-x-1 bottom-1 top-5 flex items-center justify-center gap-[2px]">
-          {Array.from({ length: spec.capacity }).map((_, i) => {
-            const cardRow = showcase.cards.find((c) => c.slot_index === i);
-            const card = cardRow ? getCard(cardRow.card_id) : null;
-            return (
-              <div
-                key={i}
-                className={clsx(
-                  "relative flex-1 h-full rounded-sm overflow-hidden",
-                  card
-                    ? "bg-zinc-950 ring-1 ring-white/20"
-                    : "bg-black/35 ring-1 ring-white/10"
-                )}
-              >
-                {card?.imageUrl ? (
-                  <img
-                    src={card.imageUrl}
-                    alt=""
-                    draggable={false}
-                    loading="lazy"
-                    className="w-full h-full object-contain pointer-events-none"
-                  />
-                ) : null}
-                {cardRow && (
-                  <span
-                    className={clsx(
-                      "absolute top-0 right-0 px-[3px] text-[8px] font-black tabular-nums leading-tight",
-                      cardRow.grade === 10
-                        ? "bg-amber-400 text-zinc-950"
-                        : "bg-slate-200 text-zinc-900"
-                    )}
-                  >
-                    {cardRow.grade}
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  {cardRow.grade}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </Root>
   );
 }
@@ -603,23 +642,15 @@ function ManageModal({
   onPickSlot,
   onUndisplay,
   onRemove,
-  onBulkDisplay,
 }: {
   showcase: CenterShowcase;
   onClose: () => void;
   onPickSlot: (slotIndex: number) => void;
   onUndisplay: (slotIndex: number) => void;
   onRemove: () => void;
-  onBulkDisplay: () => void;
 }) {
-  const spec = SHOWCASES[showcase.showcase_type];
-  const isVault = showcase.showcase_type === "vault";
+  const spec = SHOWCASES[showcase.showcase_type] ?? SHOWCASES.basic;
   const filled = showcase.cards.length;
-  const remaining = Math.max(0, spec.capacity - filled);
-  const sortedCards = useMemo(
-    () => showcase.cards.slice().sort((a, b) => a.slot_index - b.slot_index),
-    [showcase.cards]
-  );
   return (
     <ModalShell
       title={`${spec.icon} ${spec.name}`}
@@ -627,89 +658,41 @@ function ManageModal({
       onClose={onClose}
     >
       <div className="p-3 md:p-5 space-y-3">
-        {isVault ? (
-          <>
-            <button
-              type="button"
-              onClick={onBulkDisplay}
-              disabled={remaining === 0}
-              style={{ touchAction: "manipulation" }}
-              className={clsx(
-                "w-full h-12 rounded-xl font-black text-sm transition inline-flex items-center justify-center gap-2",
-                remaining === 0
-                  ? "bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed"
-                  : "bg-gradient-to-r from-emerald-400 to-sky-500 text-zinc-950 hover:scale-[1.01] active:scale-[0.98] shadow-[0_10px_30px_-10px_rgba(52,211,153,0.7)]"
-              )}
-            >
-              📦 일괄 전시 ({remaining}칸 비어있음)
-            </button>
-            <p className="text-[11px] text-zinc-400 text-center">
-              보유한 PCL 9·10 슬랩이 빈 칸을 채울 때까지 자동으로 박제돼요.
-            </p>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-              {sortedCards.map((row) => {
-                const card = getCard(row.card_id);
-                if (!card) return null;
-                return (
-                  <div
-                    key={row.slot_index}
-                    className="flex flex-col items-center gap-1"
-                  >
-                    <PsaSlab card={card} grade={row.grade} size="sm" />
+        <div className="flex justify-center">
+          {Array.from({ length: spec.capacity }).map((_, i) => {
+            const row = showcase.cards.find((c) => c.slot_index === i);
+            const card = row ? getCard(row.card_id) : null;
+            return (
+              <div
+                key={i}
+                className="flex flex-col items-center gap-2 w-full max-w-[320px]"
+              >
+                {card && row ? (
+                  <>
+                    <PsaSlab card={card} grade={row.grade} size="lg" />
                     <button
                       type="button"
-                      onClick={() => onUndisplay(row.slot_index)}
-                      className="w-full h-7 rounded-md bg-white/10 hover:bg-white/15 text-[10px] text-white font-semibold"
+                      onClick={() => onUndisplay(i)}
+                      className="w-full h-10 rounded-md bg-white/10 hover:bg-white/15 text-sm text-white font-semibold"
                     >
                       꺼내기
                     </button>
-                  </div>
-                );
-              })}
-              {filled === 0 && (
-                <p className="col-span-full py-8 text-center text-sm text-zinc-400">
-                  아직 전시된 슬랩이 없어요.
-                </p>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="flex justify-center">
-            {Array.from({ length: spec.capacity }).map((_, i) => {
-              const row = showcase.cards.find((c) => c.slot_index === i);
-              const card = row ? getCard(row.card_id) : null;
-              return (
-                <div
-                  key={i}
-                  className="flex flex-col items-center gap-2 w-full max-w-[320px]"
-                >
-                  {card && row ? (
-                    <>
-                      <PsaSlab card={card} grade={row.grade} size="lg" />
-                      <button
-                        type="button"
-                        onClick={() => onUndisplay(i)}
-                        className="w-full h-10 rounded-md bg-white/10 hover:bg-white/15 text-sm text-white font-semibold"
-                      >
-                        꺼내기
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => onPickSlot(i)}
-                      className="w-full aspect-[5/7] rounded-lg border-2 border-dashed border-white/20 bg-white/5 text-zinc-400 hover:text-white hover:border-white/40 transition flex flex-col items-center justify-center gap-2"
-                      style={{ touchAction: "manipulation" }}
-                    >
-                      <span className="text-4xl opacity-70">＋</span>
-                      <span className="text-sm font-semibold">슬랩 전시</span>
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onPickSlot(i)}
+                    className="w-full aspect-[5/7] rounded-lg border-2 border-dashed border-white/20 bg-white/5 text-zinc-400 hover:text-white hover:border-white/40 transition flex flex-col items-center justify-center gap-2"
+                    style={{ touchAction: "manipulation" }}
+                  >
+                    <span className="text-4xl opacity-70">＋</span>
+                    <span className="text-sm font-semibold">슬랩 전시</span>
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
         <button
           type="button"
           onClick={onRemove}
@@ -780,6 +763,325 @@ function GradingPickModal({
                 </button>
               );
             })}
+          </div>
+        )}
+      </div>
+    </ModalShell>
+  );
+}
+
+function BulkShowcaseCreateModal({
+  emptyCells,
+  candidates,
+  points,
+  onClose,
+  onSubmit,
+}: {
+  emptyCells: number;
+  candidates: PsaGrading[];
+  points: number;
+  onClose: () => void;
+  onSubmit: (
+    type: ShowcaseType,
+    gradingIds: string[]
+  ) => Promise<{ ok: boolean; error?: string }>;
+}) {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [selectedType, setSelectedType] = useState<ShowcaseType | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const sortedCandidates = useMemo(
+    () => candidates.slice().sort((a, b) => b.grade - a.grade),
+    [candidates]
+  );
+
+  const spec = selectedType ? SHOWCASES[selectedType] : null;
+  const N = selectedIds.length;
+  const totalCost = spec ? spec.price * N : 0;
+  const afford = points >= totalCost;
+  const maxPick = Math.min(emptyCells, sortedCandidates.length);
+
+  const toggle = (id: string) => {
+    setLocalError(null);
+    setSelectedIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= maxPick) return prev;
+      return [...prev, id];
+    });
+  };
+
+  const goBack = () => {
+    setLocalError(null);
+    if (step === 3) setStep(2);
+    else if (step === 2) {
+      setSelectedIds([]);
+      setStep(1);
+    }
+  };
+
+  const submit = async () => {
+    if (!selectedType || selectedIds.length === 0) return;
+    setSubmitting(true);
+    setLocalError(null);
+    const res = await onSubmit(selectedType, selectedIds);
+    setSubmitting(false);
+    if (!res.ok) setLocalError(res.error ?? "전시에 실패했어요.");
+    // 성공 시 부모가 setBulkOpen(false) 로 닫음.
+  };
+
+  return (
+    <ModalShell
+      title="🚀 일괄 전시"
+      subtitle={
+        step === 1
+          ? `빈 자리 ${emptyCells}칸 · 보관함 종류 선택`
+          : step === 2
+            ? `슬랩 선택 · 최대 ${maxPick}장`
+            : "확인 및 결제"
+      }
+      onClose={onClose}
+    >
+      <div className="p-3 md:p-4 space-y-3">
+        {/* progress dots */}
+        <div className="flex items-center justify-center gap-1.5">
+          {[1, 2, 3].map((s) => (
+            <span
+              key={s}
+              className={clsx(
+                "h-1.5 rounded-full transition-all",
+                s === step
+                  ? "w-6 bg-emerald-400"
+                  : s < step
+                    ? "w-3 bg-emerald-400/60"
+                    : "w-3 bg-white/15"
+              )}
+            />
+          ))}
+        </div>
+
+        {step === 1 && (
+          <div className="space-y-2">
+            <p className="text-[12px] text-zinc-300 text-center">
+              빈 자리 <b className="text-emerald-300">{emptyCells}</b>칸을
+              어떤 보관함으로 채울까요?
+            </p>
+            {SHOWCASE_ORDER.map((t) => {
+              const s = SHOWCASES[t];
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => {
+                    setSelectedType(t);
+                    setStep(2);
+                  }}
+                  style={{ touchAction: "manipulation" }}
+                  className={clsx(
+                    "w-full flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition",
+                    selectedType === t
+                      ? "bg-emerald-500/15 border-emerald-400/60"
+                      : "bg-white/5 border-white/15 hover:bg-white/10 active:scale-[0.98]"
+                  )}
+                >
+                  <span className="text-2xl shrink-0">{s.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-white">{s.name}</p>
+                    <p className="text-[11px] text-zinc-300/90 mt-0.5">
+                      방어 {s.defense}%
+                    </p>
+                    <p className="text-[11px] text-zinc-400 mt-0.5 truncate">
+                      {s.blurb}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-sm font-black text-amber-300 tabular-nums inline-flex items-center gap-1">
+                      <CoinIcon size="xs" />
+                      {s.price.toLocaleString("ko-KR")}
+                    </p>
+                    <p className="text-[10px] text-zinc-500">/ 1칸</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {step === 2 && spec && (
+          <>
+            <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-300">
+              <span>
+                {spec.icon} <b className="text-white">{spec.name}</b> ·{" "}
+                {spec.price.toLocaleString("ko-KR")}p / 칸
+              </span>
+              <button
+                type="button"
+                onClick={goBack}
+                className="text-emerald-300 hover:underline"
+              >
+                ← 보관함 변경
+              </button>
+            </div>
+            {sortedCandidates.length === 0 ? (
+              <p className="py-12 text-center text-sm text-zinc-400">
+                전시할 PCL 9 / 10 슬랩이 없어요.
+                <br />
+                감별 페이지에서 등급 9 또는 10을 받아보세요.
+              </p>
+            ) : (
+              <>
+                <div className="text-[11px] text-zinc-400 text-center">
+                  최대 {maxPick}장 선택 가능 · 펫 슬랩과 도감 등록 슬랩은
+                  목록에 나오지 않아요.
+                </div>
+                <div
+                  className="grid gap-2"
+                  style={{
+                    gridTemplateColumns:
+                      "repeat(auto-fill, minmax(110px, 1fr))",
+                  }}
+                >
+                  {sortedCandidates.map((g) => {
+                    const card = getCard(g.card_id);
+                    if (!card) return null;
+                    const checked = selectedIds.includes(g.id);
+                    const disabled = !checked && selectedIds.length >= maxPick;
+                    return (
+                      <button
+                        key={g.id}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => toggle(g.id)}
+                        className={clsx(
+                          "relative flex flex-col items-center gap-1 p-1 rounded-lg transition",
+                          checked
+                            ? "bg-emerald-500/15 ring-1 ring-emerald-400/60"
+                            : disabled
+                              ? "opacity-40 cursor-not-allowed"
+                              : "hover:bg-white/5 active:scale-[0.97]"
+                        )}
+                        style={{ touchAction: "manipulation" }}
+                      >
+                        <PsaSlab card={card} grade={g.grade} size="sm" />
+                        <div className="flex items-center gap-1 text-[10px] font-bold tabular-nums text-zinc-200">
+                          <span
+                            className={clsx(
+                              "w-3.5 h-3.5 rounded-sm flex items-center justify-center text-[9px]",
+                              checked
+                                ? "bg-emerald-400 text-emerald-950"
+                                : "bg-white/10 border border-white/20"
+                            )}
+                          >
+                            {checked ? "✓" : ""}
+                          </span>
+                          PCL {g.grade}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+            <div className="sticky bottom-0 -mx-3 md:-mx-4 px-3 md:px-4 py-2 bg-zinc-900/95 backdrop-blur border-t border-white/10 flex items-center justify-between gap-2">
+              <div className="text-[12px] text-zinc-300">
+                선택{" "}
+                <b className="text-white tabular-nums">{selectedIds.length}</b>
+                장 · 합계{" "}
+                <b
+                  className={clsx(
+                    "tabular-nums",
+                    afford ? "text-amber-300" : "text-rose-300"
+                  )}
+                >
+                  {totalCost.toLocaleString("ko-KR")}p
+                </b>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStep(3)}
+                disabled={selectedIds.length === 0 || !afford}
+                className={clsx(
+                  "h-9 px-4 rounded-lg font-bold text-xs transition",
+                  selectedIds.length > 0 && afford
+                    ? "bg-gradient-to-r from-emerald-400 to-sky-500 text-zinc-950 hover:scale-[1.02] active:scale-[0.98]"
+                    : "bg-white/5 text-zinc-500 cursor-not-allowed"
+                )}
+              >
+                다음 →
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 3 && spec && (
+          <div className="space-y-3">
+            <div className="rounded-xl bg-white/5 border border-white/10 p-3 space-y-1.5">
+              <p className="text-[12px] text-zinc-400">전시할 보관함</p>
+              <p className="text-base font-black text-white">
+                {spec.icon} {spec.name}{" "}
+                <span className="text-[11px] text-zinc-400 font-normal">
+                  · 방어 {spec.defense}%
+                </span>
+              </p>
+            </div>
+            <div className="rounded-xl bg-white/5 border border-white/10 p-3 space-y-1.5">
+              <div className="flex items-center justify-between text-[12px]">
+                <span className="text-zinc-400">슬랩 수</span>
+                <span className="font-bold text-white tabular-nums">
+                  {N}장
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[12px]">
+                <span className="text-zinc-400">단가</span>
+                <span className="font-bold text-white tabular-nums">
+                  {spec.price.toLocaleString("ko-KR")}p
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm border-t border-white/10 pt-2 mt-2">
+                <span className="text-zinc-200 font-bold">총 결제</span>
+                <span
+                  className={clsx(
+                    "font-black tabular-nums inline-flex items-center gap-1",
+                    afford ? "text-amber-300" : "text-rose-300"
+                  )}
+                >
+                  <CoinIcon size="sm" />
+                  {totalCost.toLocaleString("ko-KR")}p
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-500 mt-1">
+                보유 포인트: {points.toLocaleString("ko-KR")}p
+              </p>
+            </div>
+            {localError && (
+              <p className="text-xs text-rose-200 bg-rose-500/15 border border-rose-500/40 rounded-lg px-3 py-2">
+                {localError}
+              </p>
+            )}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={goBack}
+                disabled={submitting}
+                className="flex-1 h-10 rounded-lg bg-white/10 hover:bg-white/15 text-white text-xs font-semibold disabled:opacity-50"
+              >
+                ← 다시 선택
+              </button>
+              <button
+                type="button"
+                onClick={submit}
+                disabled={submitting || !afford || N === 0}
+                className={clsx(
+                  "flex-1 h-10 rounded-lg font-black text-sm transition",
+                  submitting || !afford || N === 0
+                    ? "bg-white/5 text-zinc-500 cursor-not-allowed"
+                    : "bg-gradient-to-r from-emerald-400 to-sky-500 text-zinc-950 hover:scale-[1.02] active:scale-[0.98]"
+                )}
+              >
+                {submitting ? "전시 중…" : `${N}장 전시하기`}
+              </button>
+            </div>
           </div>
         )}
       </div>

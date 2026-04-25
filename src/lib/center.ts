@@ -6,8 +6,7 @@ export type ShowcaseType =
   | "basic"
   | "glass"
   | "premium"
-  | "legendary"
-  | "vault";
+  | "legendary";
 
 export interface ShowcaseSpec {
   key: ShowcaseType;
@@ -82,20 +81,6 @@ export const SHOWCASES: Record<ShowcaseType, ShowcaseSpec> = {
     blurb: "금장 프레임의 전설의 보관함. 방어 15%.",
     icon: "👑",
   },
-  vault: {
-    key: "vault",
-    name: "통합 보관함",
-    tagline: "GRAND VAULT",
-    price: 2_000_000,
-    capacity: 50,
-    defense: 20,
-    sabotageCost: 200_000,
-    accent:
-      "ring-emerald-300/80 shadow-[0_0_18px_rgba(52,211,153,0.55)]",
-    body: "from-emerald-900 via-zinc-900 to-zinc-950",
-    blurb: "PCL 9·10 슬랩을 한꺼번에 50장까지 박제. 일괄 전시 가능 · 방어 20%.",
-    icon: "📦",
-  },
 };
 
 /** Base sabotage success rate before showcase defense is subtracted. */
@@ -106,7 +91,6 @@ export const SHOWCASE_ORDER: ShowcaseType[] = [
   "glass",
   "premium",
   "legendary",
-  "vault",
 ];
 
 // Grid the UI renders. Server checks slot_x < 8 / slot_y < 12, so we

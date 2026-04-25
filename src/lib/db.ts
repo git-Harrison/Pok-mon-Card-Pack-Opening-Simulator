@@ -642,20 +642,28 @@ export async function undisplayGrading(
   return data as { ok: boolean; error?: string };
 }
 
-export async function bulkDisplayPclSlabs(
+/**
+ * 페이지 단계 일괄 전시 — 사용자가 고른 PCL 9·10 슬랩 N 장을 동일 종류
+ * 보관함 N 개에 묶어 박제한다. 한 트랜잭션 안에서 빈 자리(left→right,
+ * top→bottom)를 자동 할당하고 N × showcase_price 만큼 포인트를 차감한다.
+ */
+export async function bulkCreateShowcases(
   userId: string,
-  showcaseId: string
+  showcaseType: ShowcaseType,
+  gradingIds: string[]
 ) {
-  const { data, error } = await supabase.rpc("bulk_display_pcl_slabs", {
+  const { data, error } = await supabase.rpc("bulk_create_showcases", {
     p_user_id: userId,
-    p_showcase_id: showcaseId,
+    p_showcase_type: showcaseType,
+    p_grading_ids: gradingIds,
   });
   if (error) return { ok: false as const, error: error.message };
   return data as {
     ok: boolean;
     error?: string;
-    displayed_count?: number;
-    remaining_capacity?: number;
+    created_count?: number;
+    total_cost?: number;
+    points?: number;
   };
 }
 
