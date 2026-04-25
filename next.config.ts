@@ -13,6 +13,14 @@ const CSP = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Inline atomic Tailwind CSS into <style> tags instead of <link rel=preload>
+    // → eliminates the "preloaded but not used" console warning users were
+    //   seeing on /wallet, /profile, etc. Trade-off: returning visitors lose
+    //   the separate-stylesheet cache, but our CSS bundle is small (Tailwind
+    //   atomic) so the inlined HTML payload is still compact.
+    inlineCss: true,
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "data1.pokemonkorea.co.kr" },
