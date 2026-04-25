@@ -722,76 +722,446 @@ function IdleCTA({
     () => IDLE_FLAVORS[Math.floor(Math.random() * IDLE_FLAVORS.length)],
     []
   );
+  // Random biome for hero background — locked at mount so the Ken Burns
+  // pan stays consistent during this idle session.
+  const heroBiome = useMemo(() => pickBiome(), []);
+  // 3 random distinct enemies "detected" — picked once at mount.
+  const detected = useMemo(() => {
+    const pool = [...WILD_POOL];
+    const out: WildMon[] = [];
+    for (let i = 0; i < 3 && pool.length > 0; i++) {
+      const idx = Math.floor(Math.random() * pool.length);
+      out.push(pool.splice(idx, 1)[0]);
+    }
+    return out;
+  }, []);
+
   return (
     <motion.div
       initial={reduce ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.32, ease: "easeOut" }}
-      className="rounded-2xl border border-emerald-500/25 overflow-hidden"
-      style={{
-        background:
-          "radial-gradient(140% 80% at 50% 0%, rgba(16,185,129,0.18) 0%, rgba(6,95,70,0.05) 60%, transparent 100%)",
-      }}
+      className={clsx(
+        "relative rounded-2xl overflow-hidden border",
+        heroBiome.border
+      )}
     >
-      <div className="p-4 md:p-8 text-center">
-        <div className="text-5xl md:text-6xl mb-3 motion-safe:animate-bounce">
-          {flavor.icon}
-        </div>
-        <motion.h2
-          className="text-base md:text-xl font-black text-white"
-          initial={reduce ? false : { opacity: 0, filter: "blur(4px)" }}
-          animate={{ opacity: 1, filter: "blur(0px)" }}
-          transition={{ duration: 0.4, delay: 0.08, ease: "easeOut" }}
+      {/* ── Cinematic hero — Ken Burns biome background + vignette + scanlines ── */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: heroBiome.sky }}
+      />
+      {heroBiome.image && (
+        <motion.img
+          aria-hidden
+          src={heroBiome.image}
+          alt=""
+          draggable={false}
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none opacity-70"
+          style={{ imageRendering: "pixelated" }}
+          initial={reduce ? false : { scale: 1.08, x: -10, y: -4 }}
+          animate={
+            reduce
+              ? {}
+              : { scale: [1.08, 1.16, 1.08], x: [-10, 10, -10], y: [-4, 4, -4] }
+          }
+          transition={
+            reduce
+              ? { duration: 0 }
+              : {
+                  duration: 22,
+                  ease: "easeInOut",
+                  repeat: Infinity,
+                  repeatType: "loop",
+                }
+          }
+        />
+      )}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: heroBiome.accent }}
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(120% 80% at 50% 30%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.55) 80%, rgba(0,0,0,0.85) 100%)",
+        }}
+      />
+      {/* Scanline overlay — pure CSS so no asset cost. */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-40"
+        style={{
+          background:
+            "repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 3px)",
+        }}
+      />
+
+      <div className="relative p-4 md:p-8 text-center">
+        {/* Top sub-banner */}
+        <motion.div
+          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/45 border border-white/15 backdrop-blur text-[9px] md:text-[10px] font-mono uppercase tracking-[0.18em] text-emerald-200"
+          initial={reduce ? false : { opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
         >
-          {flavor.title}
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-300 motion-safe:animate-pulse" />
+          <span>{heroBiome.emoji} {heroBiome.name} · scouting</span>
+        </motion.div>
+
+        {/* HERO wordmark — layered gradient + shadow */}
+        <motion.h2
+          className="mt-3 md:mt-4 text-2xl md:text-4xl font-black tracking-tight leading-[1.05]"
+          initial={reduce ? false : { opacity: 0, filter: "blur(8px)", y: 6 }}
+          animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+          transition={{ duration: 0.55, delay: 0.08, ease: "easeOut" }}
+          style={{
+            backgroundImage:
+              "linear-gradient(180deg, #fef9c3 0%, #fbbf24 38%, #f97316 70%, #be123c 100%)",
+            WebkitBackgroundClip: "text",
+            backgroundClip: "text",
+            color: "transparent",
+            textShadow: "0 6px 18px rgba(0,0,0,0.55)",
+            filter: "drop-shadow(0 2px 0 rgba(0,0,0,0.6))",
+          }}
+        >
+          야생 포켓몬과의 조우
         </motion.h2>
-        <p className="mt-1 text-[11px] md:text-xs text-zinc-300">
-          보유한 PCL 슬랩 {count}장으로 야생 포켓몬과 겨룹니다.
+        <motion.div
+          className="mt-1 text-[10px] md:text-[11px] font-mono tracking-[0.32em] text-amber-200/80"
+          initial={reduce ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.25 }}
+        >
+          WILD ENCOUNTER
+        </motion.div>
+
+        {/* Flavor whisper */}
+        <motion.p
+          className="mt-3 text-[12px] md:text-sm text-zinc-200/90 italic"
+          initial={reduce ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.35 }}
+        >
+          {flavor.icon} {flavor.title}
+        </motion.p>
+        <p className="mt-1 text-[11px] md:text-xs text-zinc-300/80">
+          보유한 PCL 슬랩 <b className="text-white tabular-nums">{count}</b>장으로
+          야생을 상대합니다.
         </p>
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center max-w-sm mx-auto">
-          <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-2 py-1.5">
-            <div className="text-[9px] uppercase tracking-wider text-emerald-300/80">
-              포켓몬
-            </div>
-            <div className="text-sm font-black text-emerald-100">36종</div>
+
+        {/* ── 감지된 적 — 3 silhouettes with glitchy reveal ── */}
+        <div className="mt-5 md:mt-6">
+          <div className="text-[9px] md:text-[10px] font-mono uppercase tracking-[0.28em] text-rose-300/85 mb-2">
+            ▍ 감지된 적 · DETECTED
           </div>
-          <div className="rounded-lg bg-amber-400/10 border border-amber-400/30 px-2 py-1.5">
-            <div className="text-[9px] uppercase tracking-wider text-amber-300/80">
-              승리 보상
-            </div>
-            <div className="text-sm font-black text-amber-100 leading-tight">
-              +20,000p
-            </div>
-            <div className="text-[10px] font-bold text-amber-200/80 leading-tight">
-              랭킹 +50
-            </div>
-          </div>
-          <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 px-2 py-1.5">
-            <div className="text-[9px] uppercase tracking-wider text-rose-300/80">
-              배틀 무대
-            </div>
-            <div className="text-sm font-black text-rose-100">18곳</div>
+          <div className="flex items-end justify-center gap-3 md:gap-5 min-h-[88px] md:min-h-[112px]">
+            {detected.map((mon, i) => (
+              <DetectedSilhouette
+                key={mon.dex}
+                mon={mon}
+                delay={0.5 + i * 0.35}
+                reduce={!!reduce}
+              />
+            ))}
           </div>
         </div>
-        <button
+
+        {/* ── HUD stats strip ── */}
+        <div className="mt-5 md:mt-6 grid grid-cols-3 gap-2 text-center max-w-md mx-auto">
+          <HudStat
+            label="포켓몬 종"
+            value={`${WILD_POOL.length}`}
+            sub="SPECIES"
+            tone="emerald"
+            delay={0.75}
+            reduce={!!reduce}
+          />
+          <HudStat
+            label="승리 보상"
+            value="+20,000p"
+            sub="랭킹 +50"
+            tone="amber"
+            delay={0.9}
+            reduce={!!reduce}
+          />
+          <HudStat
+            label="배틀 무대"
+            value={`${BIOMES.length}곳`}
+            sub="BIOMES"
+            tone="rose"
+            delay={1.05}
+            reduce={!!reduce}
+          />
+        </div>
+
+        {/* ── CTA button — bigger, dramatic, shimmer sweep ── */}
+        <motion.button
           onClick={onStart}
           disabled={blocked}
           style={{ touchAction: "manipulation" }}
+          initial={reduce ? false : { opacity: 0, y: 12, scale: 0.96 }}
+          animate={
+            blocked || reduce
+              ? { opacity: 1, y: 0, scale: 1 }
+              : {
+                  opacity: 1,
+                  y: 0,
+                  scale: [1, 1.025, 1],
+                  boxShadow: [
+                    "0 8px 30px rgba(244,63,94,0.35)",
+                    "0 12px 38px rgba(251,146,60,0.55)",
+                    "0 8px 30px rgba(244,63,94,0.35)",
+                  ],
+                }
+          }
+          transition={
+            blocked || reduce
+              ? { duration: 0.4, delay: 1.15 }
+              : {
+                  opacity: { duration: 0.4, delay: 1.15 },
+                  y: { duration: 0.4, delay: 1.15 },
+                  scale: {
+                    duration: 2.4,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: 1.4,
+                  },
+                  boxShadow: {
+                    duration: 2.4,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: 1.4,
+                  },
+                }
+          }
+          whileTap={blocked ? undefined : { scale: 0.94 }}
           className={clsx(
-            "mt-3 md:mt-4 h-11 md:h-12 px-5 md:px-6 rounded-xl font-black text-sm inline-flex items-center gap-2 transition",
+            "relative mt-6 md:mt-7 h-12 md:h-14 px-7 md:px-9 rounded-xl font-black text-base md:text-lg inline-flex items-center justify-center gap-2 overflow-hidden",
             blocked
-              ? "bg-white/10 text-zinc-500"
-              : "bg-gradient-to-r from-emerald-400 to-lime-500 text-zinc-950 hover:scale-[1.03] active:scale-[0.98]"
+              ? "bg-white/10 text-zinc-500 border border-white/10"
+              : "bg-gradient-to-r from-rose-500 via-orange-500 to-amber-400 text-zinc-950 border border-amber-200/40"
           )}
         >
-          {blocked ? `${cooldownLeft}초 뒤 재도전` : "야생 만나러 가기"}
-        </button>
+          <span className="relative z-10 tracking-wide">
+            {blocked
+              ? `⏳ ${cooldownLeft}초 뒤 재도전`
+              : "⚔️ 전투 시작"}
+          </span>
+          {!blocked && !reduce && (
+            <motion.span
+              aria-hidden
+              className="absolute inset-y-0 -left-1/3 w-1/3 pointer-events-none"
+              style={{
+                background:
+                  "linear-gradient(110deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%)",
+                transform: "skewX(-18deg)",
+              }}
+              animate={{ left: ["-33%", "133%"] }}
+              transition={{
+                duration: 1.2,
+                ease: "easeInOut",
+                repeat: Infinity,
+                repeatDelay: 4.8,
+              }}
+            />
+          )}
+        </motion.button>
       </div>
-      {/* Permanent-loss warning — spelled out so no one stumbles into
-          a battle thinking their slab is safe. */}
-      <div className="mx-4 mb-4 md:mx-8 md:mb-8 rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-200 leading-relaxed">
-        ⚠️ <b>지면 사용한 PCL 슬랩이 영원히 삭제</b>돼요. 신중하게 상대의
-        타입을 보고 고르세요.
+
+      {/* ── Permanent-loss warning — slides in 600ms after hero ── */}
+      <motion.div
+        initial={reduce ? false : { opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, delay: 0.6, ease: "easeOut" }}
+        className="relative mx-4 mb-4 md:mx-8 md:mb-8 rounded-xl border border-rose-500/45 bg-rose-950/55 backdrop-blur-sm px-3 py-2 text-[11px] text-rose-200 leading-relaxed flex items-start gap-2"
+      >
+        <span className="text-base leading-none mt-[1px]">⚠️</span>
+        <div className="text-left">
+          <b className="text-rose-100">지면 사용한 PCL 슬랩이 영원히 삭제</b>
+          돼요. 상대 타입을 신중하게 보고 고르세요.
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/** Single "detected enemy" silhouette with glitchy reveal + type chip. */
+function DetectedSilhouette({
+  mon,
+  delay,
+  reduce,
+}: {
+  mon: WildMon;
+  delay: number;
+  reduce: boolean;
+}) {
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    if (reduce) {
+      setRevealed(true);
+      return;
+    }
+    const t = setTimeout(() => setRevealed(true), (delay + 0.35) * 1000);
+    return () => clearTimeout(t);
+  }, [delay, reduce]);
+
+  return (
+    <motion.div
+      initial={reduce ? false : { opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay, ease: "easeOut" }}
+      className="flex flex-col items-center gap-1.5"
+    >
+      <div className="relative w-14 h-14 md:w-20 md:h-20 flex items-end justify-center">
+        {/* Glitch flicker before reveal */}
+        {!reduce && !revealed && (
+          <motion.div
+            aria-hidden
+            className="absolute inset-0 rounded-md"
+            style={{
+              background:
+                "repeating-linear-gradient(90deg, rgba(244,63,94,0.35) 0 2px, transparent 2px 5px)",
+            }}
+            animate={{ opacity: [0.2, 0.7, 0.1, 0.6, 0.25] }}
+            transition={{ duration: 0.5, repeat: Infinity }}
+          />
+        )}
+        <motion.img
+          src={wildSpriteUrl(mon.dex, false)}
+          alt=""
+          draggable={false}
+          className="w-full h-full object-contain"
+          style={{
+            imageRendering: "pixelated",
+            filter: revealed
+              ? "drop-shadow(0 4px 10px rgba(0,0,0,0.6))"
+              : "brightness(0) drop-shadow(0 0 8px rgba(244,63,94,0.6))",
+          }}
+          animate={
+            reduce
+              ? {}
+              : revealed
+              ? { x: 0, opacity: 1 }
+              : { x: [0, -1, 1, -1, 0], opacity: [0.85, 1, 0.7, 1, 0.9] }
+          }
+          transition={
+            reduce
+              ? { duration: 0 }
+              : revealed
+              ? { duration: 0.3 }
+              : { duration: 0.35, repeat: Infinity }
+          }
+        />
+      </div>
+      <span
+        className={clsx(
+          "px-1.5 py-[1px] rounded-full text-[8px] md:text-[9px] font-black",
+          TYPE_STYLE[mon.type].badge
+        )}
+      >
+        {mon.type}
+      </span>
+    </motion.div>
+  );
+}
+
+/** Single HUD stat chip — monospace, scan line, glow pulse on enter. */
+function HudStat({
+  label,
+  value,
+  sub,
+  tone,
+  delay,
+  reduce,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  tone: "emerald" | "amber" | "rose";
+  delay: number;
+  reduce: boolean;
+}) {
+  const palette = {
+    emerald: {
+      box: "border-emerald-400/40 bg-emerald-500/10",
+      label: "text-emerald-200/80",
+      value: "text-emerald-50",
+      glow: "0 0 18px rgba(16,185,129,0.55)",
+    },
+    amber: {
+      box: "border-amber-400/45 bg-amber-400/10",
+      label: "text-amber-200/85",
+      value: "text-amber-50",
+      glow: "0 0 18px rgba(251,191,36,0.6)",
+    },
+    rose: {
+      box: "border-rose-500/45 bg-rose-500/10",
+      label: "text-rose-200/85",
+      value: "text-rose-50",
+      glow: "0 0 18px rgba(244,63,94,0.55)",
+    },
+  }[tone];
+
+  return (
+    <motion.div
+      initial={reduce ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay, ease: "easeOut" }}
+      className={clsx(
+        "relative rounded-lg border px-2 py-1.5 overflow-hidden backdrop-blur-sm",
+        palette.box
+      )}
+    >
+      {/* HUD scan line */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none opacity-30"
+        style={{
+          background:
+            "repeating-linear-gradient(0deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 3px)",
+        }}
+      />
+      <div
+        className={clsx(
+          "relative text-[8px] md:text-[9px] uppercase tracking-[0.2em] font-mono",
+          palette.label
+        )}
+      >
+        {label}
+      </div>
+      <motion.div
+        className={clsx(
+          "relative text-sm md:text-base font-black font-mono leading-tight tabular-nums",
+          palette.value
+        )}
+        initial={reduce ? false : { textShadow: "0 0 0 rgba(0,0,0,0)" }}
+        animate={
+          reduce
+            ? {}
+            : {
+                textShadow: ["0 0 0 rgba(0,0,0,0)", palette.glow, "0 0 0 rgba(0,0,0,0)"],
+              }
+        }
+        transition={
+          reduce
+            ? { duration: 0 }
+            : { duration: 1.6, delay: delay + 0.15, repeat: Infinity, repeatDelay: 2.4 }
+        }
+      >
+        {value}
+      </motion.div>
+      <div
+        className={clsx(
+          "relative text-[9px] md:text-[10px] font-mono opacity-75",
+          palette.label
+        )}
+      >
+        {sub}
       </div>
     </motion.div>
   );
