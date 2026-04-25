@@ -11,7 +11,6 @@ import {
   type AdminUserRow,
 } from "@/lib/db";
 import CoinIcon from "./CoinIcon";
-import PageBackdrop from "./PageBackdrop";
 import UserSelect from "./UserSelect";
 
 const ADMIN_LOGIN = "hun";
@@ -43,7 +42,6 @@ export default function AdminView() {
   if (user && user.user_id !== ADMIN_LOGIN) {
     return (
       <div className="relative max-w-xl mx-auto px-4 py-16 text-center">
-        <PageBackdrop tone="admin" />
         <p className="text-5xl">🔒</p>
         <p className="mt-4 text-lg font-bold text-white">관리자 전용 페이지</p>
         <p className="mt-1 text-sm text-zinc-400">
@@ -117,7 +115,6 @@ export default function AdminView() {
 
   return (
     <div className="relative max-w-2xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
-      <PageBackdrop tone="admin" />
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
           👑 관리자

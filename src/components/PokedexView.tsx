@@ -15,7 +15,6 @@ import {
 import { RARITY_ORDER, RARITY_STYLE, RARITY_LABEL } from "@/lib/rarity";
 import { SETS } from "@/lib/sets";
 import type { Card, Rarity } from "@/lib/types";
-import PageBackdrop from "./PageBackdrop";
 import PageHeader from "./PageHeader";
 import Portal from "./Portal";
 import PokeCard from "./PokeCard";
@@ -120,7 +119,6 @@ export default function PokedexView() {
 
   return (
     <div className="relative max-w-5xl mx-auto px-3 md:px-6 py-3 md:py-6 fade-in">
-      <PageBackdrop tone="parchment" />
       <PageHeader
         title="PCL 도감"
         icon="📔"

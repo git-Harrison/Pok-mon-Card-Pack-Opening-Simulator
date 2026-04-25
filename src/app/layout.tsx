@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import NotificationsOverlay from "@/components/NotificationsOverlay";
+import RouteBackdrop from "@/components/RouteBackdrop";
 import ScrollTopButton from "@/components/ScrollTopButton";
 import { AuthProvider } from "@/lib/auth";
 
@@ -44,7 +45,8 @@ export default function RootLayout({
       <body className="overflow-x-hidden font-sans">
         <AuthProvider>
           <Navbar />
-          <main className="w-full pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+          <main className="relative w-full pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+            <RouteBackdrop />
             {children}
           </main>
           <NotificationsOverlay />

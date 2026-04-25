@@ -26,7 +26,6 @@ import Link from "next/link";
 import PokeCard from "./PokeCard";
 import PsaSlab from "./PsaSlab";
 import CoinIcon from "./CoinIcon";
-import PageBackdrop from "./PageBackdrop";
 import PageHeader from "./PageHeader";
 import Portal from "./Portal";
 import UserSelect from "./UserSelect";
@@ -125,7 +124,6 @@ export default function WalletView() {
 
   return (
     <div className="relative max-w-6xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
-      <PageBackdrop tone="amber" />
       <PageHeader title="내 카드지갑" />
 
       <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
