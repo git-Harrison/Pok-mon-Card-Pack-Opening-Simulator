@@ -15,7 +15,6 @@ import {
   GiftIcon,
   HomeIcon,
   LeafIcon,
-  LogoutIcon,
   MagnifyIcon,
   MuseumIcon,
   TrophyIcon,
@@ -67,7 +66,7 @@ function resolveHeaderTitle(pathname: string): string {
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const isPublic = pathname === "/login" || pathname === "/signup";
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -188,16 +187,6 @@ export default function Navbar() {
                   sections={pageHelp.sections}
                 />
               )}
-              <button
-                type="button"
-                onClick={logout}
-                aria-label="로그아웃"
-                title="로그아웃"
-                className="w-9 h-9 inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-rose-200"
-                style={{ touchAction: "manipulation" }}
-              >
-                <LogoutIcon />
-              </button>
             </div>
           ) : (
             !isPublic && (

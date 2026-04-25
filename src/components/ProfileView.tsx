@@ -31,7 +31,7 @@ import PsaSlab from "./PsaSlab";
 import Portal from "./Portal";
 
 export default function ProfileView() {
-  const { user, refreshMe } = useAuth();
+  const { user, refreshMe, logout } = useAuth();
   const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
   const [psa, setPsa] = useState<PsaGradingWithDisplay[]>([]);
   const [loading, setLoading] = useState(true);
@@ -296,6 +296,19 @@ export default function ProfileView() {
                 노려보세요.
               </p>
             )}
+          </section>
+
+          <section className="mt-10 mb-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm("로그아웃 할까요?")) logout();
+              }}
+              className="text-[11px] text-zinc-500 hover:text-rose-300 underline underline-offset-2"
+              style={{ touchAction: "manipulation" }}
+            >
+              로그아웃
+            </button>
           </section>
         </>
       )}
