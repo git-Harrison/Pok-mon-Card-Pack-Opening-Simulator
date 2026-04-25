@@ -9,7 +9,7 @@ import { fetchUnseenGiftCount } from "@/lib/db";
 import { resolvePageHelp } from "@/lib/page-help";
 import { useRealtimeInbox } from "@/lib/useRealtimeInbox";
 import HelpButton from "./HelpButton";
-import PointsChip from "./PointsChip";
+import WalletPill from "./WalletPill";
 import {
   BookIcon,
   GiftIcon,
@@ -178,7 +178,7 @@ export default function Navbar() {
                   👑
                 </Link>
               )}
-              <PointsChip points={user.points} size="sm" />
+              <WalletPill points={user.points} size="sm" />
               {pageHelp && (
                 <HelpButton
                   iconOnly
