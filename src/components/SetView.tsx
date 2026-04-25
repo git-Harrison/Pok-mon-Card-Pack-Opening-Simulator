@@ -9,7 +9,6 @@ import type { Card, SetInfo } from "@/lib/types";
 import { drawBox } from "@/lib/pack-draw";
 import {
   buyBox,
-  recordPackPull,
   recordPackPullsBatch,
   refundBoxPurchase,
   type BatchPullPack,
@@ -44,40 +43,6 @@ function errorMessage(e: unknown): string {
  * (wallet cap, etc.) bypass the retry and are thrown immediately so
  * the user sees the actual reason.
  */
-async function persistPackWithRetry(
-  userId: string,
-  setCode: SetInfo["code"],
-  cardIds: string[],
-  rarities: string[],
-  autoSellSubAR: boolean,
-  tries = 3
-): Promise<{ sold_count: number; sold_earned: number; points: number }> {
-  let lastErr: unknown;
-  for (let i = 0; i < tries; i++) {
-    try {
-      const res = await recordPackPull(
-        userId,
-        setCode,
-        cardIds,
-        rarities,
-        autoSellSubAR
-      );
-      return {
-        sold_count: res.sold_count ?? 0,
-        sold_earned: res.sold_earned ?? 0,
-        points: res.points ?? 0,
-      };
-    } catch (e) {
-      lastErr = e;
-      if (isIntentionalRejection(e)) throw e;
-      if (i < tries - 1) {
-        await new Promise((r) => setTimeout(r, 500 * (i + 1)));
-      }
-    }
-  }
-  throw lastErr;
-}
-
 async function persistBatchWithRetry(
   userId: string,
   setCode: SetInfo["code"],
@@ -263,90 +228,82 @@ export default function SetView({ set }: { set: SetInfo }) {
       setAutoSellEarned(0);
 
       const allCards: Card[] = [];
+      const batchPulls: BatchPullPack[] = [];
       let spent = 0;
-      let earnedFromAutoSell = 0;
+      let boxesPurchased = 0;
 
-      // Buy + draw + persist each box sequentially so partial failure
-      // surfaces cleanly and we don't overdraw on points.
       for (let i = 0; i < boxCount; i++) {
         const res = await buyBox(user.id, set.code);
         if (!res.ok || typeof res.points !== "number") {
+          for (let r = 0; r < boxesPurchased; r++) {
+            await refundBoxPurchase(user.id, set.code);
+          }
           setError(res.error ?? "박스 구매 실패");
           setPhase("sealed");
           return;
         }
         setPoints(res.points);
         spent += res.price ?? cost;
+        boxesPurchased += 1;
         const drawn = drawBox(set);
-        try {
-          // Sequential: the server holds a per-user advisory lock, so
-          // parallel calls would serialize anyway — better to send one
-          // at a time than tie up 10 Supabase connections.
-          for (const pack of drawn) {
-            const r = await persistPackWithRetry(
-              user.id,
-              set.code,
-              pack.map((c) => c.id),
-              pack.map((c) => c.rarity),
-              autoSellSubAR
-            );
-            earnedFromAutoSell += r.sold_earned;
-            if (typeof r.points === "number" && r.points > 0) {
-              setPoints(r.points);
-            }
-          }
-        } catch (e) {
-          console.error("multi-box persist failed", e);
-          const serverMsg = errorMessage(e);
-          const refund = await refundBoxPurchase(user.id, set.code);
-          const refunded = refund.ok ? refund.refunded ?? cost : 0;
-          if (refund.ok && typeof refund.points === "number") {
-            setPoints(refund.points);
-          }
-          const refundTail = refund.ok
-            ? `${refunded.toLocaleString("ko-KR")}p 환불됐어요.`
-            : "환불은 실패했어요. 관리자에게 문의해주세요.";
-          if (isIntentionalRejection(e) && serverMsg) {
-            setCapError(
-              `${serverMsg}\n(지금까지 ${i}박스는 정상 저장됐고, ${refundTail})`
-            );
-          } else {
-            setError(
-              refund.ok
-                ? `${i + 1}/${boxCount}번째 박스 저장 실패 — ${refunded.toLocaleString("ko-KR")}p 환불. ${i}박스까지는 정상이에요.`
-                : "카드 저장 및 환불에 실패했어요. 관리자에게 문의해주세요."
-            );
-          }
-          // If some earlier boxes did land successfully, at least show
-          // those cards instead of tossing the user back to sealed with
-          // no receipt.
-          if (allCards.length > 0) {
-            allCards.sort(
-              (a, b) => RARITY_STYLE[b.rarity].tier - RARITY_STYLE[a.rarity].tier
-            );
-            setMultiResult({
-              boxCount: i,
-              totalSpent: spent - refunded,
-              cards: allCards,
-            });
-            setPhase("multi-result");
-          } else {
-            setPhase("sealed");
-          }
-          return;
+        for (const pack of drawn) {
+          batchPulls.push({
+            card_ids: pack.map((c) => c.id),
+            rarities: pack.map((c) => c.rarity),
+          });
+          for (const c of pack) allCards.push(c);
         }
-        for (const pack of drawn) for (const c of pack) allCards.push(c);
         setMultiProgress({ done: i + 1, total: boxCount });
       }
 
-      allCards.sort(
-        (a, b) => RARITY_STYLE[b.rarity].tier - RARITY_STYLE[a.rarity].tier
-      );
-      setAutoSellEarned(earnedFromAutoSell);
-      setMultiResult({ boxCount, totalSpent: spent, cards: allCards });
-      setPhase("multi-result");
+      try {
+        const r = await persistBatchWithRetry(
+          user.id,
+          set.code,
+          batchPulls,
+          autoSellSubAR
+        );
+        if (typeof r.points === "number" && r.points > 0) {
+          setPoints(r.points);
+        }
+        allCards.sort(
+          (a, b) => RARITY_STYLE[b.rarity].tier - RARITY_STYLE[a.rarity].tier
+        );
+        setAutoSellEarned(r.total_sold_earned);
+        setMultiResult({ boxCount, totalSpent: spent, cards: allCards });
+        setPhase("multi-result");
+      } catch (e) {
+        console.error("multi-box batch persist failed", e);
+        const serverMsg = errorMessage(e);
+        let refundedTotal = 0;
+        let refundOk = true;
+        for (let r = 0; r < boxesPurchased; r++) {
+          const refund = await refundBoxPurchase(user.id, set.code);
+          if (refund.ok) {
+            refundedTotal += refund.refunded ?? cost;
+            if (typeof refund.points === "number") {
+              setPoints(refund.points);
+            }
+          } else {
+            refundOk = false;
+          }
+        }
+        const refundTail = refundOk
+          ? `${refundedTotal.toLocaleString("ko-KR")}p 환불됐어요.`
+          : "일부 환불에 실패했어요. 관리자에게 문의해주세요.";
+        if (isIntentionalRejection(e) && serverMsg) {
+          setCapError(`${serverMsg}\n(${refundTail})`);
+        } else {
+          setError(
+            refundOk
+              ? `박스 일괄 저장에 실패해 ${refundTail} 잠시 후 다시 시도해주세요.`
+              : "카드 저장 및 환불에 실패했어요. 관리자에게 문의해주세요."
+          );
+        }
+        setPhase("sealed");
+      }
     },
-    [user, phase, set, cost, setPoints, autoSellSubAR]
+    [user, phase, set, cost, setPoints, clearErrors, autoSellSubAR]
   );
 
   const closeMulti = useCallback(() => {
@@ -370,26 +327,19 @@ export default function SetView({ set }: { set: SetInfo }) {
     setOpenedMask(new Array(drawn.length).fill(false));
     setPhase("opening");
     setAutoSellEarned(0);
-    // Persist every pack BEFORE revealing the grid. Keep the user on
-    // the "opening" overlay (which now reads "카드 저장 중…") for the
-    // full duration — no artificial min-animation race, just wait for
-    // the actual saves to finish. Each save has 3 retries with backoff
-    // so transient network blips don't cost the user a box.
     try {
-      // Sequential (server has per-user advisory lock; see multi-box).
-      let earned = 0;
-      for (const pack of drawn) {
-        const r = await persistPackWithRetry(
-          user.id,
-          set.code,
-          pack.map((c) => c.id),
-          pack.map((c) => c.rarity),
-          autoSellSubAR
-        );
-        earned += r.sold_earned;
-        if (typeof r.points === "number" && r.points > 0) setPoints(r.points);
-      }
-      setAutoSellEarned(earned);
+      const batchPulls: BatchPullPack[] = drawn.map((pack) => ({
+        card_ids: pack.map((c) => c.id),
+        rarities: pack.map((c) => c.rarity),
+      }));
+      const r = await persistBatchWithRetry(
+        user.id,
+        set.code,
+        batchPulls,
+        autoSellSubAR
+      );
+      if (typeof r.points === "number" && r.points > 0) setPoints(r.points);
+      setAutoSellEarned(r.total_sold_earned);
       setPhase("grid");
     } catch (e) {
       console.error("box persist failed", e);
@@ -770,6 +720,47 @@ function SealedBox({
           />
         </div>
       </motion.div>
+
+      <label
+        className={clsx(
+          "w-full max-w-[420px] flex items-center justify-between gap-3 cursor-pointer select-none rounded-2xl border px-3.5 py-3 transition",
+          autoSellSubAR
+            ? "border-amber-400/60 bg-amber-400/15 shadow-[0_0_18px_-6px_rgba(251,191,36,0.5)]"
+            : "border-white/10 bg-white/5 hover:bg-white/10"
+        )}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <input
+            type="checkbox"
+            checked={autoSellSubAR}
+            onChange={(e) => onToggleAutoSell(e.target.checked)}
+            className="w-5 h-5 accent-amber-400 shrink-0"
+            style={{ touchAction: "manipulation" }}
+          />
+          <div className="min-w-0">
+            <div className="text-sm font-bold text-white inline-flex items-center gap-1.5 flex-wrap">
+              AR 미만 자동 판매
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-400 text-zinc-900">
+                💡 추천
+              </span>
+            </div>
+            <div className="text-[10px] md:text-[11px] text-zinc-400 mt-0.5">
+              C·U·R·RR 카드는 지갑에 저장 안 하고 일괄판매 단가로 즉시 환산
+            </div>
+          </div>
+        </div>
+        <div
+          className={clsx(
+            "shrink-0 text-[10px] font-black px-2 py-1 rounded-full",
+            autoSellSubAR
+              ? "bg-amber-400 text-zinc-950"
+              : "bg-white/10 text-zinc-400"
+          )}
+        >
+          {autoSellSubAR ? "ON" : "OFF"}
+        </div>
+      </label>
+
       <button
         onClick={onOpen}
         disabled={!canAfford || loading}
@@ -825,20 +816,6 @@ function SealedBox({
           })}
         </div>
       </div>
-
-      {/* Auto-sell toggle — applies to single 박스 열기 AND 여러 박스 한번에 */}
-      <label className="flex items-center gap-2 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={autoSellSubAR}
-          onChange={(e) => onToggleAutoSell(e.target.checked)}
-          className="w-4 h-4 rounded accent-amber-400"
-          style={{ touchAction: "manipulation" }}
-        />
-        <span className="text-xs text-zinc-300">
-          AR 미만(C·U·R·RR) 자동 판매
-        </span>
-      </label>
 
       {!canAfford && !loading && (
         <p className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">
@@ -1119,10 +1096,12 @@ function MultiBuyingOverlay({
       <div className="text-center">
         <div className="w-14 h-14 mx-auto rounded-full border-4 border-white/15 border-t-amber-400 animate-spin" />
         <p className="mt-4 text-base font-black text-white tabular-nums">
-          박스 {done} / {total}
+          {done < total ? `박스 ${done} / ${total} 구매 중` : `${total}박스 일괄 저장 중`}
         </p>
         <p className="mt-1 text-xs text-zinc-400">
-          박스를 열고 카드를 DB에 저장 중… 닫지 말고 잠시만요.
+          {done < total
+            ? "박스를 결제하고 카드를 뽑는 중…"
+            : "모든 카드를 한 번에 DB에 저장 중. 닫지 말고 잠시만요."}
         </p>
         <div className="mt-3 h-1 w-60 mx-auto rounded-full bg-white/10 overflow-hidden">
           <motion.div
