@@ -68,8 +68,3 @@ export const WILD_POOL: WildMon[] = [
   { dex: 146, name: "파이어",    type: "불꽃",   hp: 80,  atk: 21, cry: "파이어가 화염을 휘날린다!" },
   { dex: 149, name: "망나뇽",    type: "드래곤", hp: 90,  atk: 21, cry: "망나뇽이 하늘에서 내려왔다!" },
 ];
-
-/** Pick one at uniform random. */
-export function randomWild(): WildMon {
-  return WILD_POOL[Math.floor(Math.random() * WILD_POOL.length)];
-}

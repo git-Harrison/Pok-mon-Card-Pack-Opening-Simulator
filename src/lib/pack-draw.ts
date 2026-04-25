@@ -34,7 +34,7 @@ function fallbackDown(set: SetInfo, target: Rarity): Card {
   return set.cards[Math.floor(Math.random() * set.cards.length)];
 }
 
-export function drawPack(set: SetInfo): Card[] {
+function drawPack(set: SetInfo): Card[] {
   const result: Card[] = [];
   for (const slot of set.slots) {
     const rarity = pickRarity(slot);
