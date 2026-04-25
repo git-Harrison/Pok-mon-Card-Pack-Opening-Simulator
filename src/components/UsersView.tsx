@@ -13,6 +13,7 @@ import {
   type RankingRow,
   type UserActivityEvent,
 } from "@/lib/db";
+import { notifyRankChange, notifyTaunt } from "@/lib/discord";
 import { usePresence } from "@/lib/usePresence";
 import { getCard } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
@@ -70,6 +71,56 @@ export default function UsersView() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Detect ranking-position changes for the current user across all 3 tabs
+  // and fire a Discord webhook on first observation.
+  useEffect(() => {
+    if (!currentUser || rows.length === 0) return;
+    const sortBy = (
+      m: RankingMode,
+      arr: RankingRow[]
+    ): RankingRow[] =>
+      arr.slice().sort((a, b) => {
+        if (m === "power") {
+          const ap = a.center_power ?? 0;
+          const bp = b.center_power ?? 0;
+          if (ap !== bp) return bp - ap;
+        } else if (m === "pet") {
+          const ap = a.pet_score ?? 0;
+          const bp = b.pet_score ?? 0;
+          if (ap !== bp) return bp - ap;
+        } else if (a.rank_score !== b.rank_score) {
+          return b.rank_score - a.rank_score;
+        }
+        return b.points - a.points;
+      });
+    const findRank = (m: RankingMode) => {
+      const sorted = sortBy(m, rows);
+      const idx = sorted.findIndex((r) => r.id === currentUser.id);
+      return idx < 0 ? 0 : idx + 1;
+    };
+    const tabs: RankingMode[] = ["rank", "power", "pet"];
+    for (const m of tabs) {
+      const next = findRank(m);
+      if (next === 0) continue;
+      const key = `rank-pos:${currentUser.id}:${m}`;
+      const prevRaw =
+        typeof window !== "undefined"
+          ? window.localStorage.getItem(key)
+          : null;
+      const prev = prevRaw ? parseInt(prevRaw, 10) : 0;
+      if (prev > 0 && prev !== next) {
+        notifyRankChange(currentUser.display_name, m, prev, next);
+      }
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(key, String(next));
+        }
+      } catch {
+        // ignore quota
+      }
+    }
+  }, [rows, currentUser]);
 
   const entries = useMemo(
     () =>
@@ -500,9 +551,10 @@ function TauntComposer({
       setError(res.error ?? "전송 실패");
       return;
     }
+    notifyTaunt(user.display_name, target.display_name, text);
     setDone(true);
     setTimeout(onClose, 900);
-  }, [user, msg, sending, target.user_id, onClose]);
+  }, [user, msg, sending, target.user_id, target.display_name, onClose]);
 
   return (
     <Portal>

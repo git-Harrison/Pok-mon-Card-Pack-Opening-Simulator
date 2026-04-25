@@ -22,6 +22,7 @@ import {
   type WalletSnapshot,
 } from "@/lib/db";
 import { fetchProfile } from "@/lib/profile";
+import { notifyGift } from "@/lib/discord";
 import Link from "next/link";
 import PokeCard from "./PokeCard";
 import PsaSlab from "./PsaSlab";
@@ -585,6 +586,13 @@ function SlabGiftComposer({
       setError(res.error ?? "선물 전송 실패");
       return;
     }
+    notifyGift(
+      user.display_name,
+      recipient.trim(),
+      target.card.id,
+      target.grading.grade,
+      price
+    );
     setSuccess(true);
     setTimeout(onSuccess, 900);
   };
