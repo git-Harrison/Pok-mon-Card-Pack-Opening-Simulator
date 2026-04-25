@@ -1,7 +1,5 @@
 "use client";
 
-import type { Card } from "./types";
-
 async function post(body: Record<string, unknown>): Promise<void> {
   try {
     await fetch("/api/discord/share", {
@@ -14,16 +12,6 @@ async function post(body: Record<string, unknown>): Promise<void> {
   }
 }
 
-/**
- * Pack-pull hit notifications were removed — the channel was getting
- * too noisy. Kept as a no-op so existing call sites don't need to
- * conditionally import.
- */
-export function notifyPackHits(_username: string, _cards: Card[]): void {
-  void _username;
-  void _cards;
-}
-
 /** Auto-notify on PSA grade 9 or 10 only. */
 export function notifyPsaGrade(
   username: string,
@@ -32,11 +20,6 @@ export function notifyPsaGrade(
 ): void {
   if (grade < 9) return;
   post({ kind: "psa-success", username, cardId, grade });
-}
-
-/** Auto-notify when PSA grading fails (card destroyed). */
-export function notifyPsaFail(username: string, cardId: string): void {
-  post({ kind: "psa-fail", username, cardId });
 }
 
 /** Auto-notify on center sabotage attempts (success or fail). */

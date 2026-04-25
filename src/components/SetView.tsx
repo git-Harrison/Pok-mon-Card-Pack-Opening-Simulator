@@ -37,7 +37,7 @@ function errorMessage(e: unknown): string {
 }
 
 /**
- * recordPackPull with exponential backoff. Network blips or cold
+ * recordPackPullsBatch with exponential backoff. Network blips or cold
  * Supabase connections shouldn't cost the user a box — retry a few
  * times before surfacing the failure. Intentional server rejections
  * (wallet cap, etc.) bypass the retry and are thrown immediately so
@@ -373,7 +373,7 @@ export default function SetView({ set }: { set: SetInfo }) {
       setActivePack(index);
       setPhase("opening-pack");
       // Pulls were already saved at box-open time; this is now purely
-      // animation state. (Discord pack-hit brag was removed — too noisy.)
+      // animation state.
       setOpenedMask((prev) => {
         const next = [...prev];
         next[index] = true;

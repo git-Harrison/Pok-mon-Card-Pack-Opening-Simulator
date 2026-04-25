@@ -22,27 +22,6 @@ export type WildType =
   | "강철"
   | "페어리";
 
-export const WILD_TYPES: WildType[] = [
-  "노말",
-  "불꽃",
-  "물",
-  "풀",
-  "전기",
-  "얼음",
-  "격투",
-  "독",
-  "땅",
-  "비행",
-  "에스퍼",
-  "벌레",
-  "바위",
-  "고스트",
-  "드래곤",
-  "악",
-  "강철",
-  "페어리",
-];
-
 /** Tailwind tint per type, used on type badges + sprite glow halos. */
 export const TYPE_STYLE: Record<
   WildType,

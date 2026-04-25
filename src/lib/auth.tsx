@@ -171,12 +171,3 @@ export function useAuth(): AuthContextValue {
   if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>");
   return ctx;
 }
-
-export function useRequireAuth(): DbUser | null {
-  const { user, isLoading } = useAuth();
-  const router = useRouter();
-  useEffect(() => {
-    if (!isLoading && !user) router.replace("/login");
-  }, [user, isLoading, router]);
-  return user;
-}

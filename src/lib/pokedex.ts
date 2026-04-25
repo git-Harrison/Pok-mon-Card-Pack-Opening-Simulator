@@ -90,20 +90,6 @@ export async function fetchPokedex(userId: string): Promise<PokedexEntry[]> {
   return (data ?? []) as PokedexEntry[];
 }
 
-export async function registerPokedexEntry(userId: string, gradingId: string) {
-  const { data, error } = await supabase.rpc("register_pokedex_entry", {
-    p_user_id: userId,
-    p_grading_id: gradingId,
-  });
-  if (error) return { ok: false as const, error: error.message };
-  return data as {
-    ok: boolean;
-    error?: string;
-    pokedex_count?: number;
-    power_bonus?: number;
-  };
-}
-
 export async function bulkRegisterPokedex(userId: string) {
   const { data, error } = await supabase.rpc("bulk_register_pokedex_entries", {
     p_user_id: userId,

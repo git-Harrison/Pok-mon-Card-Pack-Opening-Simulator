@@ -39,25 +39,6 @@ export function WalletIcon({ className = "w-6 h-6" }: IconProps) {
   );
 }
 
-export function ShopIcon({ className = "w-6 h-6" }: IconProps) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M3.5 8h17l-1 3.5a3 3 0 0 1-5.8 0 3 3 0 0 1-5.8 0 3 3 0 0 1-5.4-1.2z" />
-      <path d="M5 11.5V20h14v-8.5" />
-      <path d="M10 20v-4h4v4" />
-    </svg>
-  );
-}
-
 export function TrophyIcon({ className = "w-6 h-6" }: IconProps) {
   return (
     <svg
@@ -194,21 +175,3 @@ export function BookIcon({ className = "w-6 h-6" }: IconProps) {
   );
 }
 
-export function LogoutIcon({ className = "w-5 h-5" }: IconProps) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" />
-      <path d="M10 17l-5-5 5-5" />
-      <path d="M5 12h11" />
-    </svg>
-  );
-}

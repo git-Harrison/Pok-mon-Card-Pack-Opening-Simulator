@@ -32,7 +32,7 @@ export default function ScrollTopButton() {
           exit={{ opacity: 0, y: 12, scale: 0.9 }}
           transition={{ duration: 0.18 }}
           style={{ touchAction: "manipulation" }}
-          className="fixed right-4 z-[120] bottom-[calc(4rem+12px+env(safe-area-inset-bottom,0px))] md:bottom-6 w-12 h-12 rounded-full bg-zinc-900/90 backdrop-blur border border-white/15 text-white text-lg font-black shadow-[0_10px_28px_-8px_rgba(0,0,0,0.7)] hover:bg-zinc-800 hover:border-amber-400/50 active:scale-95 transition flex items-center justify-center"
+          className="fixed right-4 z-40 bottom-[calc(4rem+12px+env(safe-area-inset-bottom,0px))] md:bottom-6 w-12 h-12 rounded-full bg-zinc-900/90 backdrop-blur border border-white/15 text-white text-lg font-black shadow-[0_10px_28px_-8px_rgba(0,0,0,0.7)] hover:bg-zinc-800 hover:border-amber-400/50 active:scale-95 transition flex items-center justify-center"
         >
           <span aria-hidden>▲</span>
         </motion.button>

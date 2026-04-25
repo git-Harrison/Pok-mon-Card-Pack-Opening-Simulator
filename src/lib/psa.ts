@@ -39,20 +39,6 @@ export const PSA_LABEL: Record<number, string> = {
 };
 
 /**
- * 감정 확률. 실패 70% + 성공 30% (등급 6~10).
- * 10등급: 0.5% · 9등급: 3.5% · 8등급: 8% · 7등급: 10% · 6등급: 8%
- */
-export const PSA_FAIL_PCT = 70;
-
-export const PSA_DISTRIBUTION = [
-  { grade: 10, pct: 0.5 },
-  { grade: 9, pct: 3.5 },
-  { grade: 8, pct: 8 },
-  { grade: 7, pct: 10 },
-  { grade: 6, pct: 8 },
-];
-
-/**
  * Bulk-sell price per PCL grade. Must mirror `pcl_sell_price()` in
  * supabase/migrations/20260502_wallet_sell_cut_v2.sql.
  */
