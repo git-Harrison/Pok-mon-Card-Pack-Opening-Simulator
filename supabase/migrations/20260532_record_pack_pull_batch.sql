@@ -15,7 +15,7 @@
 --   one element per pack; arrays must be the same length.
 --
 -- Cap check is over the WHOLE batch — if any pack would push the
--- user past 10,000 kept cards, the entire batch is rejected and
+-- user past 15,000 kept cards, the entire batch is rejected and
 -- nothing is written.
 --
 -- record_pack_pull_v4 is kept untouched for the single-pack path.
@@ -98,9 +98,9 @@ begin
     from card_ownership
    where user_id = p_user_id;
 
-  if v_current + v_total_kept > 10000 then
+  if v_current + v_total_kept > 15000 then
     raise exception
-      '지갑 보유 한도 초과 — 현재 %장 / 10,000장. 팔거나 감별/전시로 정리한 뒤 다시 시도하세요.',
+      '지갑 보유 한도 초과 — 현재 %장 / 15,000장. 팔거나 감별/전시로 정리한 뒤 다시 시도하세요.',
       v_current
       using errcode = 'P0001';
   end if;

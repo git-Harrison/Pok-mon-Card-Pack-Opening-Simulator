@@ -355,6 +355,7 @@ export interface BulkGradingResult {
   success_count?: number;
   fail_count?: number;
   skipped_count?: number;
+  cap_skipped_count?: number;
   auto_sold_count?: number;
   auto_sold_earned?: number;
   bonus?: number;

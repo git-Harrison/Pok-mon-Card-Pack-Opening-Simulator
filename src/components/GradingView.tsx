@@ -1171,6 +1171,7 @@ function BulkResults({
   const success = result.success_count ?? 0;
   const fail = result.fail_count ?? 0;
   const skipped = result.skipped_count ?? 0;
+  const capSkipped = result.cap_skipped_count ?? 0;
   const bonus = result.bonus ?? 0;
   const autoSoldCount = result.auto_sold_count ?? 0;
   const autoSoldEarned = result.auto_sold_earned ?? 0;
@@ -1217,6 +1218,11 @@ function BulkResults({
               );
             })}
           </div>
+        )}
+        {capSkipped > 0 && (
+          <p className="mt-2 text-[11px] text-rose-300 text-center font-bold">
+            ⚠️ PCL 한도(10,000장) 초과 — {capSkipped}장은 보유 한도에 막혀 감별 못 받았어요. 카드는 안전하게 지갑에 남아있어요.
+          </p>
         )}
         {skipped > 0 && (
           <p className="mt-2 text-[10px] text-zinc-500 text-center">

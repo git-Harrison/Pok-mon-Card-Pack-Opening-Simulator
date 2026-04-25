@@ -673,6 +673,21 @@ export default function WildView() {
 
 /* ─────────────── sub-components ─────────────── */
 
+const IDLE_FLAVORS: { icon: string; title: string }[] = [
+  { icon: "🌾", title: "풀숲이 흔들린다…" },
+  { icon: "🍃", title: "수풀 너머에서 무언가 다가온다…" },
+  { icon: "🌫️", title: "안개 속에 그림자가 어른거린다…" },
+  { icon: "🌲", title: "숲의 정적이 깨지는 순간!" },
+  { icon: "⚡", title: "정전기가 짜릿하게 튄다…" },
+  { icon: "🔥", title: "용암 위로 그림자가 일렁인다…" },
+  { icon: "❄️", title: "눈보라 사이로 발자국이 찍힌다…" },
+  { icon: "🌊", title: "파도가 거칠게 부서진다…" },
+  { icon: "🪨", title: "바위가 우르릉 굴러 내려온다…" },
+  { icon: "🌌", title: "어둠 속에서 두 개의 눈이 빛난다…" },
+  { icon: "🏛️", title: "고대 유적이 반응한다…" },
+  { icon: "🌸", title: "꽃밭이 살랑인다…" },
+];
+
 function IdleCTA({
   count,
   cooldownLeft,
@@ -683,6 +698,10 @@ function IdleCTA({
   onStart: () => void;
 }) {
   const blocked = cooldownLeft > 0;
+  const flavor = useMemo(
+    () => IDLE_FLAVORS[Math.floor(Math.random() * IDLE_FLAVORS.length)],
+    []
+  );
   return (
     <div
       className="rounded-2xl border border-emerald-500/25 overflow-hidden"
@@ -692,13 +711,35 @@ function IdleCTA({
       }}
     >
       <div className="p-4 md:p-8 text-center">
-        <div className="text-4xl md:text-5xl mb-2 motion-safe:animate-bounce">🌾</div>
+        <div className="text-5xl md:text-6xl mb-3 motion-safe:animate-bounce">
+          {flavor.icon}
+        </div>
         <h2 className="text-base md:text-xl font-black text-white">
-          풀숲이 흔들린다…
+          {flavor.title}
         </h2>
         <p className="mt-1 text-[11px] md:text-xs text-zinc-300">
           보유한 PCL 슬랩 {count}장으로 야생 포켓몬과 겨룹니다.
         </p>
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center max-w-sm mx-auto">
+          <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-2 py-1.5">
+            <div className="text-[9px] uppercase tracking-wider text-emerald-300/80">
+              포켓몬
+            </div>
+            <div className="text-sm font-black text-emerald-100">36종</div>
+          </div>
+          <div className="rounded-lg bg-amber-400/10 border border-amber-400/30 px-2 py-1.5">
+            <div className="text-[9px] uppercase tracking-wider text-amber-300/80">
+              승리 보상
+            </div>
+            <div className="text-sm font-black text-amber-100">+20,000p</div>
+          </div>
+          <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 px-2 py-1.5">
+            <div className="text-[9px] uppercase tracking-wider text-rose-300/80">
+              배틀 무대
+            </div>
+            <div className="text-sm font-black text-rose-100">18곳</div>
+          </div>
+        </div>
         <button
           onClick={onStart}
           disabled={blocked}
