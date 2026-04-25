@@ -17,11 +17,14 @@ export default function PsaSlab({
   grade,
   size = "md",
   highlight = false,
+  compact = false,
 }: {
   card: Card;
   grade: number;
   size?: "sm" | "md" | "lg";
   highlight?: boolean;
+  /** When true, hides the header card-info column and the bottom cert+barcode band. */
+  compact?: boolean;
 }) {
   const tone = psaTone(grade);
   const label = PSA_LABEL[grade] ?? "";
@@ -96,14 +99,17 @@ export default function PsaSlab({
           </span>
         </div>
         {/* Card info column */}
-        <div className="flex-1 min-w-0 px-2 flex flex-col justify-center">
-          <p className="text-[11px] md:text-[12px] font-bold text-white leading-tight truncate">
-            {card.name}
-          </p>
-          <p className="text-[8px] md:text-[9px] uppercase tracking-[0.1em] text-white/70 truncate leading-tight mt-px">
-            #{card.number}
-          </p>
-        </div>
+        {!compact && (
+          <div className="flex-1 min-w-0 px-2 flex flex-col justify-center">
+            <p className="text-[11px] md:text-[12px] font-bold text-white leading-tight truncate">
+              {card.name}
+            </p>
+            <p className="text-[8px] md:text-[9px] uppercase tracking-[0.1em] text-white/70 truncate leading-tight mt-px">
+              #{card.number}
+            </p>
+          </div>
+        )}
+        {compact && <div className="flex-1" />}
         {/* Grade banner */}
         <div
           className={clsx(
@@ -162,12 +168,14 @@ export default function PsaSlab({
       </div>
 
       {/* ── Bottom band: cert + barcode ── */}
-      <div className="relative px-2 pb-1 flex items-center justify-between gap-2">
-        <span className="text-[7px] md:text-[8px] font-mono tracking-wider text-white/50 truncate">
-          {cert}
-        </span>
-        <Barcode />
-      </div>
+      {!compact && (
+        <div className="relative px-2 pb-1 flex items-center justify-between gap-2">
+          <span className="text-[7px] md:text-[8px] font-mono tracking-wider text-white/50 truncate">
+            {cert}
+          </span>
+          <Barcode />
+        </div>
+      )}
     </div>
     </motion.div>
   );

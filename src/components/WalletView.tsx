@@ -209,12 +209,7 @@ function CardsMode({
       {items.length === 0 ? (
         <EmptyState />
       ) : (
-        <div
-          className="mt-5 md:mt-7 grid gap-x-3 gap-y-5 md:gap-x-5 md:gap-y-7"
-          style={{
-            gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))",
-          }}
-        >
+        <div className="mt-4 md:mt-5 grid grid-cols-3 gap-2 md:gap-3">
           {items.map(({ card, count }) => (
             <Link
               key={card.id}
@@ -283,9 +278,7 @@ function PsaMode({
           🏛️ 전시 중 {displayedCount}장
         </div>
       )}
-      <div
-        className="mt-4 grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-5 place-items-stretch"
-      >
+      <div className="mt-4 grid grid-cols-3 gap-2 md:gap-3 place-items-stretch">
         {items.map(({ grading, card }) => {
           const giftable = !grading.displayed && grading.grade >= 6;
           return (
@@ -302,7 +295,7 @@ function PsaMode({
               )}
             >
               <div className="relative w-full">
-                <PsaSlab card={card} grade={grading.grade} size="sm" />
+                <PsaSlab card={card} grade={grading.grade} size="sm" compact />
                 {grading.displayed && (
                   <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-fuchsia-500 text-white text-[9px] font-black shadow-[0_4px_10px_rgba(217,70,239,0.6)] whitespace-nowrap">
                     🏛️
