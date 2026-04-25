@@ -53,7 +53,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const persist = useCallback((u: DbUser | null) => {
-    setUser(u);
+    // Skip the state update if the new value is value-equal to the current
+    // one. The 20s auth ticker would otherwise hand back a fresh object
+    // every poll, breaking referential equality on `user` and forcing every
+    // page that depends on `[user]` (refresh callbacks, useEffects, etc.)
+    // to re-run, even when nothing actually changed.
+    setUser((prev) => {
+      if (prev === u) return prev;
+      if (prev && u) {
+        try {
+          if (JSON.stringify(prev) === JSON.stringify(u)) return prev;
+        } catch {
+          // fall through to overwrite
+        }
+      }
+      return u;
+    });
     try {
       if (u) window.localStorage.setItem(SESSION_KEY, JSON.stringify(u));
       else window.localStorage.removeItem(SESSION_KEY);

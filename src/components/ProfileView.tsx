@@ -53,17 +53,18 @@ export default function ProfileView() {
   const [nameOpen, setNameOpen] = useState(false);
   const [tauntOpen, setTauntOpen] = useState(false);
 
+  const userId = user?.id ?? null;
   const refresh = useCallback(async () => {
-    if (!user) return;
+    if (!userId) return;
     setLoading(true);
     const [p, g] = await Promise.all([
-      fetchProfile(user.id),
-      fetchAllGradingsWithDisplay(user.id),
+      fetchProfile(userId),
+      fetchAllGradingsWithDisplay(userId),
     ]);
     setProfile(p);
     setPsa(g);
     setLoading(false);
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
     refresh();

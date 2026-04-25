@@ -50,18 +50,19 @@ export default function WalletView() {
   const [loading, setLoading] = useState(true);
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>("ALL");
 
+  const userId = user?.id ?? null;
   const refresh = useCallback(async () => {
-    if (!user) return;
+    if (!userId) return;
     const [w, g, p] = await Promise.all([
-      fetchWallet(user.id),
-      fetchAllGradingsWithDisplay(user.id),
-      fetchProfile(user.id),
+      fetchWallet(userId),
+      fetchAllGradingsWithDisplay(userId),
+      fetchProfile(userId),
     ]);
     setSnap(w);
     setPsa(g);
     setPetIds(new Set(p.main_card_ids ?? []));
     setLoading(false);
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
     refresh();
