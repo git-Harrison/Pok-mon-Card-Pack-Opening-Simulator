@@ -20,7 +20,7 @@ import Portal from "./Portal";
 import PokeCard from "./PokeCard";
 import RarityBadge from "./RarityBadge";
 
-const CARDS_PER_PAGE = 24;
+const CARDS_PER_PAGE = 30;
 
 const RARITY_TABS: Rarity[] = RARITY_ORDER;
 
@@ -343,8 +343,8 @@ function Book({
   const reduce = useReducedMotion();
   return (
     <div
-      className="relative rounded-2xl overflow-hidden border border-amber-900/40 bg-[linear-gradient(160deg,#3a2410_0%,#1a0e07_55%,#0a0604_100%)] p-3 md:p-5 perspective-1200"
-      style={{ minHeight: 460 }}
+      className="relative rounded-2xl overflow-hidden border border-amber-900/40 bg-[linear-gradient(160deg,#3a2410_0%,#1a0e07_55%,#0a0604_100%)] p-2 md:p-5 perspective-1200"
+      style={{ minHeight: 380 }}
     >
       <div
         aria-hidden
@@ -384,7 +384,7 @@ function Book({
             style={{ transformOrigin: flipDir === 1 ? "left center" : "right center" }}
           >
             <motion.div
-              className="grid grid-cols-6 sm:grid-cols-6 md:grid-cols-8 gap-1.5 backface-hidden"
+              className="grid grid-cols-6 sm:grid-cols-6 md:grid-cols-10 gap-1 md:gap-1.5 backface-hidden"
               initial="hidden"
               animate="visible"
               variants={{
@@ -476,7 +476,7 @@ const DexCell = memo(function DexCell({
             alt={card.name}
             loading="lazy"
             // Async decode keeps the page-flip animation smooth — without
-            // it, decoding 24 card thumbnails on the main thread caused a
+            // it, decoding 30 card thumbnails on the main thread caused a
             // visible hitch right as the flip transition started.
             decoding="async"
             draggable={false}
