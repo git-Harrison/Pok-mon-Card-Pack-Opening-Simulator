@@ -8,6 +8,8 @@ import { useAuth } from "@/lib/auth";
 import { fetchUserRankings, sendTaunt, type RankingRow } from "@/lib/db";
 import { usePresence } from "@/lib/usePresence";
 import { getCard } from "@/lib/sets";
+import { RARITY_STYLE } from "@/lib/rarity";
+import type { Rarity } from "@/lib/types";
 import PageHeader from "./PageHeader";
 import Portal from "./Portal";
 import { getCharacter } from "@/lib/profile";
@@ -265,32 +267,74 @@ export default function UsersView() {
                       transition={{ duration: 0.2, ease: "easeOut" }}
                       className="overflow-hidden"
                     >
-                      <div className="px-3 md:px-4 pb-3 grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                        <StatChip
-                          icon="⚔️"
-                          label="전투력"
-                          value={e.center_power ?? 0}
-                          accent="text-rose-300"
-                        />
-                        <StatChip
-                          icon="🐾"
-                          label="펫 개수"
-                          value={petCount}
-                          suffix=" / 6"
-                          accent="text-fuchsia-300"
-                        />
-                        <StatChip
-                          icon="📖"
-                          label="도감"
-                          value={e.pokedex_count ?? 0}
-                          accent="text-emerald-300"
-                        />
-                        <StatChip
-                          icon="🏆"
-                          label="PCL10"
-                          value={e.psa_10 ?? 0}
-                          accent="text-amber-300"
-                        />
+                      <div className="px-3 md:px-4 pb-3 grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                        {mode === "rank" && (
+                          <>
+                            <StatChip
+                              icon="🏆"
+                              label="PCL10"
+                              value={e.psa_10 ?? 0}
+                              accent="text-amber-300"
+                            />
+                            <StatChip
+                              icon="💥"
+                              label="부수기 승"
+                              value={e.sabotage_wins ?? 0}
+                              accent="text-rose-300"
+                            />
+                            <StatChip
+                              icon="🛡️"
+                              label="전시 중"
+                              value={e.showcase_count ?? 0}
+                              accent="text-emerald-300"
+                            />
+                          </>
+                        )}
+                        {mode === "power" && (
+                          <>
+                            <StatChip
+                              icon="⚔️"
+                              label="전투력"
+                              value={e.center_power ?? 0}
+                              accent="text-rose-300"
+                            />
+                            <StatChip
+                              icon="📖"
+                              label="도감"
+                              value={e.pokedex_count ?? 0}
+                              accent="text-emerald-300"
+                            />
+                            <StatChip
+                              icon="🛡️"
+                              label="전시 중"
+                              value={e.showcase_count ?? 0}
+                              accent="text-amber-300"
+                            />
+                          </>
+                        )}
+                        {mode === "pet" && (
+                          <>
+                            <StatChip
+                              icon="🐾"
+                              label="펫 점수"
+                              value={e.pet_score ?? 0}
+                              accent="text-fuchsia-300"
+                            />
+                            <StatChip
+                              icon="🃏"
+                              label="펫 슬롯"
+                              value={petCount}
+                              suffix=" / 5"
+                              accent="text-amber-300"
+                            />
+                            <StatChip
+                              icon="🏆"
+                              label="PCL10"
+                              value={e.psa_10 ?? 0}
+                              accent="text-emerald-300"
+                            />
+                          </>
+                        )}
                       </div>
                     </motion.div>
                   )}
@@ -299,26 +343,18 @@ export default function UsersView() {
                 {mode === "pet" && (e.main_cards?.length ?? 0) > 0 && (
                   <div className="px-3 md:px-4 pb-3 -mt-1 flex flex-wrap gap-1.5">
                     {(e.main_cards ?? []).map((mc) => {
-                      const card = getCard(mc.card_id);
+                      const rstyle = RARITY_STYLE[mc.rarity as Rarity];
                       return (
-                        <div
+                        <span
                           key={mc.id}
-                          className="flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-lg bg-fuchsia-500/10 border border-fuchsia-400/30"
-                          title={`${card?.name ?? mc.card_id} · ${mc.rarity} PCL10`}
+                          className={clsx(
+                            "text-[10px] font-black px-2 py-1 rounded-md",
+                            rstyle?.badge ?? "bg-white/10 text-zinc-200"
+                          )}
+                          title={`${mc.rarity} PCL${mc.grade}`}
                         >
-                          <div className="w-6 h-8 rounded overflow-hidden bg-zinc-900 ring-1 ring-white/10">
-                            {card?.imageUrl && (
-                              <img
-                                src={card.imageUrl}
-                                alt=""
-                                className="w-full h-full object-cover"
-                              />
-                            )}
-                          </div>
-                          <span className="text-[10px] font-bold text-fuchsia-200">
-                            {mc.rarity}
-                          </span>
-                        </div>
+                          {mc.rarity}
+                        </span>
                       );
                     })}
                   </div>
