@@ -13,6 +13,7 @@ import {
   fetchWallet,
   type WalletSnapshot,
 } from "@/lib/db";
+import { fetchProfile } from "@/lib/profile";
 import {
   BULK_SELL_PRICE,
   RARITY_LABEL,
@@ -37,6 +38,7 @@ export default function BulkSellView() {
   const { user, setPoints } = useAuth();
   const [snap, setSnap] = useState<WalletSnapshot | null>(null);
   const [gradings, setGradings] = useState<PsaGrading[]>([]);
+  const [petIds, setPetIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [selling, setSelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,12 +50,15 @@ export default function BulkSellView() {
 
   const refresh = useCallback(async () => {
     if (!user) return;
-    const [w, g] = await Promise.all([
+    const [w, g, p] = await Promise.all([
       fetchWallet(user.id),
       fetchPsaGradings(user.id),
+      fetchProfile(user.id),
     ]);
     setSnap(w);
-    setGradings(g);
+    // Exclude pet-registered slabs from sellable list.
+    setGradings(g.filter((x) => !(p.main_card_ids ?? []).includes(x.id)));
+    setPetIds(new Set(p.main_card_ids ?? []));
     setLoading(false);
   }, [user]);
 
