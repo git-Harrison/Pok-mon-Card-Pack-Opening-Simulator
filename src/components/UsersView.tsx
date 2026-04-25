@@ -48,7 +48,12 @@ export default function UsersView() {
   useEffect(() => {
     if (!expandedId) return;
     const key = activityKey(expandedId, mode);
-    if (activityCache[key] || activityLoading[key]) return;
+    // Cache hit — render the cached events without ever toggling
+    // activityLoading, so ActivityFeed skips the skeleton entirely.
+    // Previously we fell through to setActivityLoading(true) which
+    // produced a 200ms+ skeleton flash on every re-expand.
+    if (activityCache[key] !== undefined) return;
+    if (activityLoading[key]) return;
     setActivityLoading((prev) => ({ ...prev, [key]: true }));
     let cancelled = false;
     fetchUserActivity(expandedId, mode)
@@ -130,24 +135,35 @@ export default function UsersView() {
     }
   }, [rows, currentUser]);
 
-  const entries = useMemo(
-    () =>
-      rows.slice().sort((a, b) => {
-        if (mode === "power") {
-          const ap = a.center_power ?? 0;
-          const bp = b.center_power ?? 0;
-          if (ap !== bp) return bp - ap;
-        } else if (mode === "pet") {
-          const ap = a.pet_score ?? 0;
-          const bp = b.pet_score ?? 0;
-          if (ap !== bp) return bp - ap;
-        } else {
-          if (a.rank_score !== b.rank_score) return b.rank_score - a.rank_score;
-        }
-        return b.points - a.points;
-      }),
-    [rows, mode]
-  );
+  // Pre-sort once per `rows` change for all three modes. Switching tabs
+  // now just swaps a reference instead of re-sorting (and recreating)
+  // the array — cheaper and lets React preserve referential equality
+  // across mode switches so motion.li keys with stable ids actually
+  // match prior children.
+  const sortedByMode = useMemo(() => {
+    const rankSort = (a: RankingRow, b: RankingRow) => {
+      if (a.rank_score !== b.rank_score) return b.rank_score - a.rank_score;
+      return b.points - a.points;
+    };
+    const powerSort = (a: RankingRow, b: RankingRow) => {
+      const ap = a.center_power ?? 0;
+      const bp = b.center_power ?? 0;
+      if (ap !== bp) return bp - ap;
+      return b.points - a.points;
+    };
+    const petSort = (a: RankingRow, b: RankingRow) => {
+      const ap = a.pet_score ?? 0;
+      const bp = b.pet_score ?? 0;
+      if (ap !== bp) return bp - ap;
+      return b.points - a.points;
+    };
+    return {
+      rank: rows.slice().sort(rankSort),
+      power: rows.slice().sort(powerSort),
+      pet: rows.slice().sort(petSort),
+    } as Record<RankingMode, RankingRow[]>;
+  }, [rows]);
+  const entries = sortedByMode[mode];
 
   return (
     <div className="relative max-w-3xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
@@ -213,7 +229,12 @@ export default function UsersView() {
           아직 사용자가 없습니다.
         </p>
       ) : (
-        <LayoutGroup id={`rankings-${mode}`}>
+        // Stable LayoutGroup id — previously `rankings-${mode}` so every
+        // tab change rebuilt the layout context and re-mounted every
+        // motion.li with a fresh spring, which is what caused the
+        // "뚝뚝" jank. Stable id lets framer reuse the layout cache and
+        // morph rows in place.
+        <LayoutGroup id="rankings">
         <ul className="mt-6 space-y-2.5">
           {entries.map((e, rank) => {
             const isMe = currentUser?.id === e.id;
@@ -227,16 +248,18 @@ export default function UsersView() {
               <motion.li
                 key={e.id}
                 layout={reduce ? false : "position"}
-                // Cap stagger at 0.025/row and 0.25s total — the previous
-                // 0.03 step pushed long ranking lists past the 0.3s budget
-                // and the bottom rows visibly "rolled in" after the user
-                // had already started scrolling. Reduced motion skips the
-                // initial entry animation entirely.
+                // Cap stagger at 0.015/row and 0.2s total — short enough
+                // that even long ranking lists finish entering before the
+                // user can scroll. The layout transition was a default
+                // bouncy spring (stiffness 380) which compounded with
+                // LayoutGroup remounts to produce the visible jank;
+                // swapping to a fixed 0.18s easeOut keeps row reordering
+                // crisp and predictable on tab switch.
                 initial={reduce ? false : { opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{
-                  delay: reduce ? 0 : Math.min(rank * 0.025, 0.25),
-                  layout: { type: "spring", stiffness: 380, damping: 32 },
+                  delay: reduce ? 0 : Math.min(rank * 0.015, 0.2),
+                  layout: { duration: 0.18, ease: "easeOut" },
                 }}
                 onClick={() =>
                   setExpandedId((cur) => (cur === e.id ? null : e.id))

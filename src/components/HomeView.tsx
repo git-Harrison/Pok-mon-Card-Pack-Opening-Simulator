@@ -37,9 +37,14 @@ const ADMIN_LOGIN = "hun";
 interface HomeStats {
   packsOpened: number;
   cards: number;
+  // Each cell tracks its own loading flag so we can render the
+  // wallet-sourced numbers (packs/cards) the moment fetchWallet resolves
+  // without blocking on slabs/pokedex which come from heavier RPCs.
+  walletLoading: boolean;
   slabs: number;
+  slabsLoading: boolean;
   pokedexCount: number;
-  loading: boolean;
+  pokedexLoading: boolean;
 }
 
 interface ActivityTeasers {
@@ -52,9 +57,11 @@ interface ActivityTeasers {
 const FALLBACK_STATS: HomeStats = {
   packsOpened: 0,
   cards: 0,
+  walletLoading: true,
   slabs: 0,
+  slabsLoading: true,
   pokedexCount: 0,
-  loading: true,
+  pokedexLoading: true,
 };
 
 const FALLBACK_TEASERS: ActivityTeasers = {
@@ -85,85 +92,152 @@ export default function HomeView() {
   const [teasers, setTeasers] = useState<ActivityTeasers>(FALLBACK_TEASERS);
   const [topRankers, setTopRankers] = useState<RankingRow[]>([]);
 
-  // One combined fetch — slabs and pokedex were previously fetched
-  // twice (once for stats, once for teasers). Folding both effects
-  // into a single Promise.all halves the request count and lets the
-  // dashboard settle in a single paint instead of shimmering twice.
+  // Priority-staggered fetch. The previous version awaited
+  // Promise.all([wallet, slabs, pokedex, activity]) — every quick-stats
+  // cell was stuck on "—" until the slowest RPC came back, which on cold
+  // mid-tier mobile pushed first-meaningful-paint past 1.5s. Now we:
+  //   1) await fetchWallet first → packs/cards numbers paint immediately,
+  //   2) defer slabs / pokedex / activity behind requestIdleCallback so
+  //      the hero + pack grid get to first paint without contention,
+  //   3) each cell maintains its own loading flag (skeleton → real value)
+  //      so non-blocking cards no longer hold up the visible ones.
   useEffect(() => {
     if (!user) return;
     let alive = true;
+
+    // --- Phase 1: above-the-fold wallet stats (highest priority) ---
     (async () => {
       try {
-        const [wallet, slabs, pokedex, activity]: [
-          WalletSnapshot,
-          PsaGrading[],
-          PokedexEntry[],
-          UserActivityEvent[],
-        ] = await Promise.all([
-          fetchWallet(user.id),
-          fetchPsaGradings(user.id),
-          fetchPokedex(user.id),
-          fetchUserActivity(user.id, "rank"),
-        ]);
+        const wallet = await fetchWallet(user.id);
         if (!alive) return;
         const packs = Object.values(wallet.packsOpenedBySet).reduce(
           (a, b) => a + b,
           0
         );
-        setStats({
+        setStats((prev) => ({
+          ...prev,
           packsOpened: packs,
           cards: wallet.totalCards,
-          slabs: slabs.length,
-          pokedexCount: pokedex.length,
-          loading: false,
-        });
-        const sortedSlabs = [...slabs].sort((a, b) =>
-          a.graded_at < b.graded_at ? 1 : -1
-        );
-        const top = sortedSlabs[0] ?? null;
-        const wildWin =
-          activity.find(
-            (e) =>
-              e.source === "wild_win" ||
-              /야생/.test(e.label) ||
-              /승리/.test(e.label)
-          ) ?? null;
-        const todayIso = startOfTodayKstISO();
-        const pokedexToday = pokedex.filter(
-          (p) => p.registered_at >= todayIso
-        ).length;
-        setTeasers({
-          latestSlab: top
-            ? {
-                card_id: top.card_id,
-                grade: top.grade,
-                graded_at: top.graded_at,
-              }
-            : null,
-          latestWildWin: wildWin,
-          pokedexToday,
-          loading: false,
-        });
+          walletLoading: false,
+        }));
       } catch {
         if (!alive) return;
-        setStats((prev) => ({ ...prev, loading: false }));
-        setTeasers((prev) => ({ ...prev, loading: false }));
+        setStats((prev) => ({ ...prev, walletLoading: false }));
       }
     })();
+
+    // --- Phase 2: below-the-fold details after first paint ---
+    const idle = (cb: () => void) => {
+      type IdleWindow = Window & {
+        requestIdleCallback?: (cb: () => void) => number;
+      };
+      const w =
+        typeof window !== "undefined" ? (window as IdleWindow) : undefined;
+      if (w?.requestIdleCallback) w.requestIdleCallback(cb);
+      else setTimeout(cb, 50);
+    };
+
+    idle(() => {
+      if (!alive) return;
+      // Slabs (drives PCL count + latest slab teaser)
+      fetchPsaGradings(user.id)
+        .then((slabs) => {
+          if (!alive) return;
+          const sortedSlabs = [...slabs].sort((a, b) =>
+            a.graded_at < b.graded_at ? 1 : -1
+          );
+          const top = sortedSlabs[0] ?? null;
+          setStats((prev) => ({
+            ...prev,
+            slabs: slabs.length,
+            slabsLoading: false,
+          }));
+          setTeasers((prev) => ({
+            ...prev,
+            latestSlab: top
+              ? {
+                  card_id: top.card_id,
+                  grade: top.grade,
+                  graded_at: top.graded_at,
+                }
+              : null,
+          }));
+        })
+        .catch(() => {
+          if (!alive) return;
+          setStats((prev) => ({ ...prev, slabsLoading: false }));
+        });
+
+      // Pokedex (drives pokedex count + today's progress)
+      fetchPokedex(user.id)
+        .then((pokedex) => {
+          if (!alive) return;
+          const todayIso = startOfTodayKstISO();
+          const pokedexToday = pokedex.filter(
+            (p) => p.registered_at >= todayIso
+          ).length;
+          setStats((prev) => ({
+            ...prev,
+            pokedexCount: pokedex.length,
+            pokedexLoading: false,
+          }));
+          setTeasers((prev) => ({ ...prev, pokedexToday }));
+        })
+        .catch(() => {
+          if (!alive) return;
+          setStats((prev) => ({ ...prev, pokedexLoading: false }));
+        });
+
+      // Activity (drives latest wild-win teaser)
+      fetchUserActivity(user.id, "rank")
+        .then((activity) => {
+          if (!alive) return;
+          const wildWin =
+            activity.find(
+              (e) =>
+                e.source === "wild_win" ||
+                /야생/.test(e.label) ||
+                /승리/.test(e.label)
+            ) ?? null;
+          setTeasers((prev) => ({
+            ...prev,
+            latestWildWin: wildWin,
+            loading: false,
+          }));
+        })
+        .catch(() => {
+          if (!alive) return;
+          setTeasers((prev) => ({ ...prev, loading: false }));
+        });
+    });
+
     return () => {
       alive = false;
     };
   }, [user]);
 
   // Top 3 trainers for the "이번 주 강자" mini-leaderboard. Uses the same RPC
-  // as /users so it stays in sync with the canonical ranking source.
+  // as /users so it stays in sync with the canonical ranking source. Deferred
+  // behind requestIdleCallback because it's the heaviest RPC on the page and
+  // sits below the fold — letting the hero paint first is far more important.
   useEffect(() => {
     let alive = true;
-    (async () => {
-      const rows = await fetchUserRankings();
+    type IdleWindow = Window & {
+      requestIdleCallback?: (cb: () => void) => number;
+    };
+    const w =
+      typeof window !== "undefined" ? (window as IdleWindow) : undefined;
+    const run = () => {
       if (!alive) return;
-      setTopRankers(rows.slice(0, 3));
-    })();
+      fetchUserRankings()
+        .then((rows) => {
+          if (!alive) return;
+          setTopRankers(rows.slice(0, 3));
+        })
+        .catch(() => {});
+    };
+    if (w?.requestIdleCallback) w.requestIdleCallback(run);
+    else setTimeout(run, 80);
     return () => {
       alive = false;
     };
@@ -256,7 +330,7 @@ export default function HomeView() {
                 title="최신 PCL 슬랩"
                 emoji="💎"
                 body={
-                  teasers.loading ? (
+                  stats.slabsLoading ? (
                     <SkeletonLine />
                   ) : teasers.latestSlab ? (
                     <span>
@@ -311,7 +385,7 @@ export default function HomeView() {
                 title="오늘의 도감 진척"
                 emoji="📔"
                 body={
-                  teasers.loading ? (
+                  stats.pokedexLoading ? (
                     <SkeletonLine />
                   ) : (
                     <span>
@@ -517,9 +591,21 @@ function QuickStats({
 }) {
   const items = [
     { label: "지갑 포인트", value: formatKoreanPoints(points), tone: "amber" },
-    { label: "개봉한 팩", value: stats.loading ? "—" : fmtNumber(stats.packsOpened), tone: "fuchsia" },
-    { label: "보유 카드", value: stats.loading ? "—" : fmtNumber(stats.cards) + "장", tone: "cyan" },
-    { label: "PCL 슬랩", value: stats.loading ? "—" : fmtNumber(stats.slabs) + "장", tone: "emerald" },
+    {
+      label: "개봉한 팩",
+      value: stats.walletLoading ? "—" : fmtNumber(stats.packsOpened),
+      tone: "fuchsia",
+    },
+    {
+      label: "보유 카드",
+      value: stats.walletLoading ? "—" : fmtNumber(stats.cards) + "장",
+      tone: "cyan",
+    },
+    {
+      label: "PCL 슬랩",
+      value: stats.slabsLoading ? "—" : fmtNumber(stats.slabs) + "장",
+      tone: "emerald",
+    },
   ] as const;
   return (
     <motion.div
@@ -571,18 +657,15 @@ const PackTile = memo(function PackTile({ code }: { code: SetCode }) {
         boxShadow: `0 18px 50px -22px ${set.primaryColor}99`,
       }}
     >
+      {/* Single combined overlay — radial accent at rest, lightens on hover.
+          Previously two stacked absolute layers (radial + linear holographic)
+          per tile × 6 tiles = 12 compositor layers + 6 transition watchers
+          firing on every hover. Folding them halves the paint cost and
+          keeps the same look at rest where users actually see it. */}
       <div
         className="absolute inset-0 opacity-50 group-hover:opacity-90 transition-opacity pointer-events-none"
         style={{
           background: `radial-gradient(120% 80% at 50% 0%, ${set.primaryColor}66 0%, transparent 65%)`,
-        }}
-      />
-      {/* Holographic sweep overlay on hover */}
-      <div
-        className="absolute inset-0 opacity-0 group-hover:opacity-60 transition-opacity duration-500 pointer-events-none mix-blend-screen"
-        style={{
-          background:
-            "linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.18) 45%, transparent 60%)",
         }}
       />
 
