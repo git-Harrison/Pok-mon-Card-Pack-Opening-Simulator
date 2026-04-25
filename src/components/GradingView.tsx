@@ -17,6 +17,7 @@ import { getCard } from "@/lib/sets";
 import { isPsaEligible, PSA_LABEL, psaTone } from "@/lib/psa";
 import { compareRarity } from "@/lib/rarity";
 import { notifyPsaGrade } from "@/lib/discord";
+import PageBackdrop from "./PageBackdrop";
 import Portal from "./Portal";
 
 const OAK_SPRITE =
@@ -64,7 +65,8 @@ export default function GradingView() {
   }, [wallet]);
 
   return (
-    <div className="max-w-3xl mx-auto px-3 md:px-6 py-3 md:py-6 fade-in">
+    <div className="relative max-w-3xl mx-auto px-3 md:px-6 py-3 md:py-6 fade-in">
+      <PageBackdrop tone="lab" />
       {/* Lab hero — large NPC + speech bubble */}
       <LabHero busy={bulkOpen} />
 

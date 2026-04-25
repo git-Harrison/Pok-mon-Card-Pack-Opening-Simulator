@@ -37,6 +37,7 @@ import { getCard, SETS } from "@/lib/sets";
 import { getAllCatalogCards } from "@/lib/pokedex";
 import { RARITY_STYLE } from "@/lib/rarity";
 import PageHeader from "./PageHeader";
+import PageBackdrop from "./PageBackdrop";
 import PsaSlab from "./PsaSlab";
 import Portal from "./Portal";
 
@@ -161,6 +162,7 @@ export default function ProfileView() {
 
   return (
     <div className="relative max-w-3xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
+      <PageBackdrop tone="sky" />
       <PageHeader
         title="내 프로필"
         subtitle="트레이너 캐릭터를 고르고 자랑할 슬랩을 펫으로 등록하세요"

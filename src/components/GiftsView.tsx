@@ -19,6 +19,7 @@ import type { GiftStatus } from "@/lib/types";
 import RarityBadge from "./RarityBadge";
 import PsaSlab from "./PsaSlab";
 import CoinIcon from "./CoinIcon";
+import PageBackdrop from "./PageBackdrop";
 import PageHeader from "./PageHeader";
 
 type Tab = "received" | "sent";
@@ -130,7 +131,8 @@ export default function GiftsView() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
+    <div className="relative max-w-4xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
+      <PageBackdrop tone="meadow" />
       <PageHeader
         title="선물함"
         stats={

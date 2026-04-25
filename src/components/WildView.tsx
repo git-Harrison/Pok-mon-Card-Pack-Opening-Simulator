@@ -20,6 +20,7 @@ import { WILD_POOL, wildSpriteUrl, type WildMon } from "@/lib/wild/pool";
 import { effectiveness, effectivenessLabel } from "@/lib/wild/typechart";
 import { computeDamage, slabStats, winReward } from "@/lib/wild/stats";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
+import PageBackdrop from "./PageBackdrop";
 import PageHeader from "./PageHeader";
 import CoinIcon from "./CoinIcon";
 
@@ -586,7 +587,8 @@ export default function WildView() {
   }
   if (eligibleSlabs.length === 0) {
     return (
-      <div className="max-w-2xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
+      <div className="relative max-w-2xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
+        <PageBackdrop tone="forest" />
         <PageHeader title="🌿 야생" />
         <div className="mt-8 rounded-2xl border border-dashed border-white/10 bg-white/5 py-14 flex flex-col items-center gap-3 text-center px-4">
           <span className="text-5xl">🌾</span>
@@ -608,7 +610,8 @@ export default function WildView() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-3 md:px-6 py-3 md:py-6 fade-in">
+    <div className="relative max-w-2xl mx-auto px-3 md:px-6 py-3 md:py-6 fade-in">
+      {phase === "idle" && <PageBackdrop tone="forest" />}
       <PageHeader title="🌿 야생" />
 
       {phase === "idle" && (
