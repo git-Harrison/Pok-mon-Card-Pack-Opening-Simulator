@@ -170,6 +170,24 @@ export default function CenterView() {
     [user, pickTarget, refresh]
   );
 
+  const handleBulkDisplay = useCallback(
+    async (showcaseId: string) => {
+      if (!user) return;
+      setError(null);
+      const res = await bulkDisplayPclSlabs(user.id, showcaseId);
+      if (!res.ok) {
+        setError(res.error ?? "일괄 전시 실패");
+        return;
+      }
+      const n = res.displayed_count ?? 0;
+      if (n === 0) {
+        setError("전시 가능한 PCL 9·10 슬랩이 없거나 보관함이 가득 찼어요.");
+      }
+      await refresh();
+    },
+    [user, refresh]
+  );
+
   const inviteUrl = useMemo(() => {
     if (!user || typeof window === "undefined") return "";
     return `${window.location.origin}/center/${encodeURIComponent(user.user_id)}`;
@@ -300,6 +318,7 @@ export default function CenterView() {
               handleUndisplay(manageShowcase.id, slotIndex)
             }
             onRemove={handleRemoveShowcase}
+            onBulkDisplay={() => handleBulkDisplay(manageShowcase.id)}
           />
         )}
         {pickTarget && (
@@ -419,8 +438,10 @@ function ShowcaseCell({
 }) {
   const spec = SHOWCASES[showcase.showcase_type];
   const filled = showcase.cards.length;
+  const isVault = showcase.showcase_type === "vault";
   const isButton = Boolean(onClick);
   const Root: "button" | "div" = isButton ? "button" : "div";
+  const previewCards = isVault ? showcase.cards.slice(0, 4) : showcase.cards;
   return (
     <Root
       {...(isButton ? { type: "button" as const, onClick } : {})}
@@ -433,7 +454,6 @@ function ShowcaseCell({
       )}
       style={{ touchAction: "manipulation" }}
     >
-      {/* Case name banner */}
       <div className="absolute top-0 inset-x-0 px-1.5 py-1 bg-black/50 backdrop-blur-sm flex items-center justify-between gap-1">
         <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] text-white/90 truncate">
           {spec.icon} {spec.name}
@@ -442,46 +462,80 @@ function ShowcaseCell({
           {filled}/{spec.capacity}
         </span>
       </div>
-      {/* Card mini-thumbnails */}
-      <div className="absolute inset-x-1 bottom-1 top-5 flex items-center justify-center gap-[2px]">
-        {Array.from({ length: spec.capacity }).map((_, i) => {
-          const cardRow = showcase.cards.find((c) => c.slot_index === i);
-          const card = cardRow ? getCard(cardRow.card_id) : null;
-          return (
-            <div
-              key={i}
-              className={clsx(
-                "relative flex-1 h-full rounded-sm overflow-hidden",
-                card
-                  ? "bg-zinc-950 ring-1 ring-white/20"
-                  : "bg-black/35 ring-1 ring-white/10"
-              )}
-            >
-              {card?.imageUrl ? (
-                <img
-                  src={card.imageUrl}
-                  alt=""
-                  draggable={false}
-                  loading="lazy"
-                  className="w-full h-full object-contain pointer-events-none"
-                />
-              ) : null}
-              {cardRow && (
-                <span
+      {isVault ? (
+        <div className="absolute inset-x-1 bottom-1 top-5 flex flex-col items-center justify-center gap-1">
+          <div className="grid grid-cols-2 gap-[2px] w-[78%]">
+            {Array.from({ length: 4 }).map((_, i) => {
+              const cardRow = previewCards[i];
+              const card = cardRow ? getCard(cardRow.card_id) : null;
+              return (
+                <div
+                  key={i}
                   className={clsx(
-                    "absolute top-0 right-0 px-[3px] text-[8px] font-black tabular-nums leading-tight",
-                    cardRow.grade === 10
-                      ? "bg-amber-400 text-zinc-950"
-                      : "bg-slate-200 text-zinc-900"
+                    "relative aspect-[5/7] rounded-sm overflow-hidden",
+                    card
+                      ? "bg-zinc-950 ring-1 ring-white/20"
+                      : "bg-black/40 ring-1 ring-white/10"
                   )}
                 >
-                  {cardRow.grade}
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                  {card?.imageUrl && (
+                    <img
+                      src={card.imageUrl}
+                      alt=""
+                      draggable={false}
+                      loading="lazy"
+                      className="w-full h-full object-contain pointer-events-none"
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <span className="px-1.5 py-0.5 rounded-full bg-emerald-400 text-emerald-950 text-[9px] font-black tabular-nums">
+            {filled}장 전시 중
+          </span>
+        </div>
+      ) : (
+        <div className="absolute inset-x-1 bottom-1 top-5 flex items-center justify-center gap-[2px]">
+          {Array.from({ length: spec.capacity }).map((_, i) => {
+            const cardRow = showcase.cards.find((c) => c.slot_index === i);
+            const card = cardRow ? getCard(cardRow.card_id) : null;
+            return (
+              <div
+                key={i}
+                className={clsx(
+                  "relative flex-1 h-full rounded-sm overflow-hidden",
+                  card
+                    ? "bg-zinc-950 ring-1 ring-white/20"
+                    : "bg-black/35 ring-1 ring-white/10"
+                )}
+              >
+                {card?.imageUrl ? (
+                  <img
+                    src={card.imageUrl}
+                    alt=""
+                    draggable={false}
+                    loading="lazy"
+                    className="w-full h-full object-contain pointer-events-none"
+                  />
+                ) : null}
+                {cardRow && (
+                  <span
+                    className={clsx(
+                      "absolute top-0 right-0 px-[3px] text-[8px] font-black tabular-nums leading-tight",
+                      cardRow.grade === 10
+                        ? "bg-amber-400 text-zinc-950"
+                        : "bg-slate-200 text-zinc-900"
+                    )}
+                  >
+                    {cardRow.grade}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </Root>
   );
 }
@@ -550,56 +604,113 @@ function ManageModal({
   onPickSlot,
   onUndisplay,
   onRemove,
+  onBulkDisplay,
 }: {
   showcase: CenterShowcase;
   onClose: () => void;
   onPickSlot: (slotIndex: number) => void;
   onUndisplay: (slotIndex: number) => void;
   onRemove: () => void;
+  onBulkDisplay: () => void;
 }) {
   const spec = SHOWCASES[showcase.showcase_type];
+  const isVault = showcase.showcase_type === "vault";
+  const filled = showcase.cards.length;
+  const remaining = Math.max(0, spec.capacity - filled);
+  const sortedCards = useMemo(
+    () => showcase.cards.slice().sort((a, b) => a.slot_index - b.slot_index),
+    [showcase.cards]
+  );
   return (
     <ModalShell
       title={`${spec.icon} ${spec.name}`}
-      subtitle={`${showcase.cards.length}/${spec.capacity}칸 전시 중`}
+      subtitle={`${filled}/${spec.capacity}칸 전시 중`}
       onClose={onClose}
     >
       <div className="p-3 md:p-5 space-y-3">
-        <div className="flex justify-center">
-          {Array.from({ length: spec.capacity }).map((_, i) => {
-            const row = showcase.cards.find((c) => c.slot_index === i);
-            const card = row ? getCard(row.card_id) : null;
-            return (
-              <div
-                key={i}
-                className="flex flex-col items-center gap-2 w-full max-w-[320px]"
-              >
-                {card && row ? (
-                  <>
-                    <PsaSlab card={card} grade={row.grade} size="lg" />
+        {isVault ? (
+          <>
+            <button
+              type="button"
+              onClick={onBulkDisplay}
+              disabled={remaining === 0}
+              style={{ touchAction: "manipulation" }}
+              className={clsx(
+                "w-full h-12 rounded-xl font-black text-sm transition inline-flex items-center justify-center gap-2",
+                remaining === 0
+                  ? "bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed"
+                  : "bg-gradient-to-r from-emerald-400 to-sky-500 text-zinc-950 hover:scale-[1.01] active:scale-[0.98] shadow-[0_10px_30px_-10px_rgba(52,211,153,0.7)]"
+              )}
+            >
+              📦 일괄 전시 ({remaining}칸 비어있음)
+            </button>
+            <p className="text-[11px] text-zinc-400 text-center">
+              보유한 PCL 9·10 슬랩이 빈 칸을 채울 때까지 자동으로 박제돼요.
+            </p>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+              {sortedCards.map((row) => {
+                const card = getCard(row.card_id);
+                if (!card) return null;
+                return (
+                  <div
+                    key={row.slot_index}
+                    className="flex flex-col items-center gap-1"
+                  >
+                    <PsaSlab card={card} grade={row.grade} size="sm" />
                     <button
                       type="button"
-                      onClick={() => onUndisplay(i)}
-                      className="w-full h-10 rounded-md bg-white/10 hover:bg-white/15 text-sm text-white font-semibold"
+                      onClick={() => onUndisplay(row.slot_index)}
+                      className="w-full h-7 rounded-md bg-white/10 hover:bg-white/15 text-[10px] text-white font-semibold"
                     >
                       꺼내기
                     </button>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => onPickSlot(i)}
-                    className="w-full aspect-[5/7] rounded-lg border-2 border-dashed border-white/20 bg-white/5 text-zinc-400 hover:text-white hover:border-white/40 transition flex flex-col items-center justify-center gap-2"
-                    style={{ touchAction: "manipulation" }}
-                  >
-                    <span className="text-4xl opacity-70">＋</span>
-                    <span className="text-sm font-semibold">슬랩 전시</span>
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                  </div>
+                );
+              })}
+              {filled === 0 && (
+                <p className="col-span-full py-8 text-center text-sm text-zinc-400">
+                  아직 전시된 슬랩이 없어요.
+                </p>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="flex justify-center">
+            {Array.from({ length: spec.capacity }).map((_, i) => {
+              const row = showcase.cards.find((c) => c.slot_index === i);
+              const card = row ? getCard(row.card_id) : null;
+              return (
+                <div
+                  key={i}
+                  className="flex flex-col items-center gap-2 w-full max-w-[320px]"
+                >
+                  {card && row ? (
+                    <>
+                      <PsaSlab card={card} grade={row.grade} size="lg" />
+                      <button
+                        type="button"
+                        onClick={() => onUndisplay(i)}
+                        className="w-full h-10 rounded-md bg-white/10 hover:bg-white/15 text-sm text-white font-semibold"
+                      >
+                        꺼내기
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onPickSlot(i)}
+                      className="w-full aspect-[5/7] rounded-lg border-2 border-dashed border-white/20 bg-white/5 text-zinc-400 hover:text-white hover:border-white/40 transition flex flex-col items-center justify-center gap-2"
+                      style={{ touchAction: "manipulation" }}
+                    >
+                      <span className="text-4xl opacity-70">＋</span>
+                      <span className="text-sm font-semibold">슬랩 전시</span>
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
         <button
           type="button"
           onClick={onRemove}
