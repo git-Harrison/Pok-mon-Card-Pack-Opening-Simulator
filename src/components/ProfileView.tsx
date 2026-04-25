@@ -483,9 +483,6 @@ function ProfileBanner({
               {" "}/ {MAX_MAIN_CARDS}
             </span>
           </div>
-          <div className="text-[9px] text-amber-300/60 tabular-nums">
-            점수 <CountUp value={petScore} />
-          </div>
         </div>
       </div>
       <div className="mt-1.5 h-1 rounded-full bg-white/5 overflow-hidden">

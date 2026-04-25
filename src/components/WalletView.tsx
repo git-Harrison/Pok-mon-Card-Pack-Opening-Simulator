@@ -80,16 +80,26 @@ export default function WalletView() {
 
   const psaItems = useMemo(() => {
     return psa
-      .filter((g) => !g.displayed && !petIds.has(g.id))
       .map((g) => {
         const card = getCard(g.card_id);
         if (!card) return null;
-        return { grading: g, card };
+        const isPet = petIds.has(g.id);
+        return { grading: g, card, isPet, isDisplayed: g.displayed };
       })
       .filter(
-        (v): v is { grading: PsaGradingWithDisplay; card: Card } => v !== null
+        (v): v is {
+          grading: PsaGradingWithDisplay;
+          card: Card;
+          isPet: boolean;
+          isDisplayed: boolean;
+        } => v !== null
       )
-      .sort((a, b) => b.grading.grade - a.grading.grade);
+      .sort((a, b) => {
+        const ar = a.isDisplayed || a.isPet ? 1 : 0;
+        const br = b.isDisplayed || b.isPet ? 1 : 0;
+        if (ar !== br) return ar - br;
+        return b.grading.grade - a.grading.grade;
+      });
   }, [psa, petIds]);
 
   const rarityCounts = useMemo(() => {
@@ -290,10 +300,19 @@ function PsaMode({
   items,
   onAfterGift,
 }: {
-  items: { grading: PsaGradingWithDisplay; card: Card }[];
+  items: {
+    grading: PsaGradingWithDisplay;
+    card: Card;
+    isPet: boolean;
+    isDisplayed: boolean;
+  }[];
   onAfterGift: () => void | Promise<void>;
 }) {
   const reduce = useReducedMotion();
+  const [previewTarget, setPreviewTarget] = useState<{
+    grading: PsaGradingWithDisplay;
+    card: Card;
+  } | null>(null);
   const [giftTarget, setGiftTarget] = useState<{
     grading: PsaGradingWithDisplay;
     card: Card;
@@ -334,14 +353,22 @@ function PsaMode({
           },
         }}
       >
-        {items.map(({ grading, card }) => {
-          const giftable = grading.grade >= 6;
+        {items.map(({ grading, card, isPet, isDisplayed }) => {
+          const locked = isPet || isDisplayed;
+          const giftable = !locked && grading.grade >= 6;
+          const badge = isDisplayed
+            ? { text: "🏛️ 전시 중", cls: "bg-fuchsia-500 text-white" }
+            : isPet
+            ? { text: "🐾 펫", cls: "bg-amber-400 text-zinc-950" }
+            : null;
           return (
             <motion.button
               key={grading.id}
               type="button"
-              onClick={() => setGiftTarget({ grading, card })}
-              disabled={!giftable}
+              onClick={() =>
+                !locked && giftable && setPreviewTarget({ grading, card })
+              }
+              disabled={locked || !giftable}
               style={{ touchAction: "manipulation" }}
               variants={{
                 hidden: reduce
@@ -356,11 +383,22 @@ function PsaMode({
               }}
               className={clsx(
                 "relative flex flex-col items-center gap-1 w-full text-left active:scale-[0.98] transition",
-                !giftable && "cursor-not-allowed"
+                locked && "opacity-70 cursor-not-allowed",
+                !locked && !giftable && "cursor-not-allowed"
               )}
             >
               <div className="relative w-full">
                 <PsaSlab card={card} grade={grading.grade} size="sm" compact />
+                {badge && (
+                  <span
+                    className={clsx(
+                      "absolute -top-1.5 left-1/2 -translate-x-1/2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black shadow-md whitespace-nowrap",
+                      badge.cls
+                    )}
+                  >
+                    {badge.text}
+                  </span>
+                )}
               </div>
               <p className="w-full text-center text-[10px] text-zinc-300 leading-tight line-clamp-1 px-0.5">
                 {card.name}
@@ -369,6 +407,17 @@ function PsaMode({
           );
         })}
       </motion.div>
+
+      <SlabPreview
+        target={previewTarget}
+        onClose={() => setPreviewTarget(null)}
+        onGift={() => {
+          if (previewTarget) {
+            setGiftTarget(previewTarget);
+            setPreviewTarget(null);
+          }
+        }}
+      />
 
       <SlabGiftComposer
         target={giftTarget}
@@ -379,6 +428,97 @@ function PsaMode({
         }}
       />
     </>
+  );
+}
+
+function SlabPreview({
+  target,
+  onClose,
+  onGift,
+}: {
+  target: { grading: PsaGradingWithDisplay; card: Card } | null;
+  onClose: () => void;
+  onGift: () => void;
+}) {
+  useEffect(() => {
+    if (!target) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [target, onClose]);
+
+  return (
+    <AnimatePresence>
+      {target && (
+        <Portal>
+          <motion.div
+            key="preview-backdrop"
+            className="fixed inset-0 z-[145] bg-black/85 backdrop-blur-md flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            style={{
+              paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+              paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+              paddingLeft: 12,
+              paddingRight: 12,
+            }}
+          >
+            <motion.div
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-xs bg-zinc-950 border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+              initial={{ scale: 0.94, opacity: 0, y: 12 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.94, opacity: 0, y: 12 }}
+              transition={{ type: "spring", stiffness: 240, damping: 26 }}
+            >
+              <button
+                onClick={onClose}
+                aria-label="닫기"
+                className="absolute top-2 right-2 z-10 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+                style={{ touchAction: "manipulation" }}
+              >
+                ✕
+              </button>
+              <div className="px-4 pt-5 pb-4 flex flex-col items-center gap-3">
+                <PsaSlab
+                  card={target.card}
+                  grade={target.grading.grade}
+                  size="sm"
+                />
+                <div className="w-full text-center">
+                  <h3 className="text-base font-black text-white">
+                    {target.card.name}
+                  </h3>
+                  <p className="mt-0.5 text-[11px] text-zinc-400">
+                    {SETS[target.card.setCode]?.name ?? target.card.setCode} · #
+                    {target.card.number}
+                  </p>
+                  <p className="mt-1 text-[11px] font-bold text-fuchsia-200">
+                    PCL {target.grading.grade} · {target.card.rarity}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onGift}
+                  style={{ touchAction: "manipulation" }}
+                  className="w-full h-11 rounded-xl bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-black text-sm hover:scale-[1.02] active:scale-[0.98] transition"
+                >
+                  🎁 선물하기
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        </Portal>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -468,43 +608,30 @@ function SlabGiftComposer({
           >
           <motion.div
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full md:max-w-2xl bg-zinc-950/95 border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            className="relative w-full max-w-md bg-zinc-950/95 border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
             style={{ maxHeight: "calc(100dvh - 24px)", height: "auto" }}
             initial={{ scale: 0.94, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.94, opacity: 0 }}
             transition={{ type: "tween", ease: [0.2, 0.8, 0.2, 1], duration: 0.22 }}
           >
-            <button
-              onClick={onClose}
-              aria-label="닫기"
-              className="absolute top-2 right-2 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
-              style={{ touchAction: "manipulation" }}
-            >
-              ✕
-            </button>
-
-            <div className="flex-1 overflow-y-auto overscroll-contain min-h-0 p-5 md:p-6">
-              <h2 className="text-lg md:text-xl font-black text-white">
-                🎁 PCL 슬랩 선물 보내기
+            <div className="flex items-center justify-between gap-2 px-4 h-12 border-b border-white/10 shrink-0">
+              <h2 className="text-sm font-black text-white truncate">
+                🎁 {target.card.name} 선물
               </h2>
-              <p className="mt-1 text-xs text-zinc-400">
-                선택한 슬랩을 친구에게 보내요. 받는 사람이 수락하면 슬랩
-                소유권이 그대로 이전돼요.
-              </p>
+              <button
+                onClick={onClose}
+                aria-label="닫기"
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center shrink-0"
+                style={{ touchAction: "manipulation" }}
+              >
+                ✕
+              </button>
+            </div>
 
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex justify-center">
-                  <PsaSlab
-                    card={target.card}
-                    grade={target.grading.grade}
-                    size="md"
-                  />
-                </div>
-
-                <div className="flex flex-col">
+            <div className="flex-1 overflow-y-auto overscroll-contain min-h-0 p-4 space-y-3">
                   <label className="block">
-                    <span className="text-xs text-zinc-300 mb-2 block">
+                    <span className="text-xs text-zinc-300 mb-1.5 block">
                       받는 사람
                     </span>
                     <UserSelect
@@ -515,31 +642,25 @@ function SlabGiftComposer({
                     />
                   </label>
 
-                  <label className="block mt-3">
-                    <span className="text-xs text-zinc-300 mb-2 block">
+                  <label className="block">
+                    <span className="text-xs text-zinc-300 mb-1.5 block">
                       받는 사람이 지불할 포인트
                     </span>
-                    <div className="flex items-stretch gap-1.5">
-                      <input
-                        value={priceRaw}
-                        onChange={(e) =>
-                          setPriceRaw(e.target.value.replace(/[^0-9]/g, ""))
-                        }
-                        inputMode="numeric"
-                        style={{ fontSize: "16px" }}
-                        className="flex-1 h-12 px-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400/60"
-                        placeholder="0"
-                      />
-                      <span className="inline-flex items-center gap-1.5 px-3 rounded-lg bg-white/5 border border-white/10 text-xs text-zinc-300">
-                        <CoinIcon size="xs" /> 포인트
-                      </span>
-                    </div>
+                    <input
+                      value={priceRaw}
+                      onChange={(e) =>
+                        setPriceRaw(e.target.value.replace(/[^0-9]/g, ""))
+                      }
+                      inputMode="numeric"
+                      style={{ fontSize: "16px" }}
+                      className="w-full h-11 px-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400/60 tabular-nums"
+                      placeholder="0"
+                    />
                   </label>
 
-                  <label className="block mt-3">
-                    <span className="text-xs text-zinc-300 mb-2 block">
-                      선물 메시지{" "}
-                      <span className="text-zinc-500">(선택)</span>
+                  <label className="block">
+                    <span className="text-xs text-zinc-300 mb-1.5 block">
+                      메시지 <span className="text-zinc-500">(선택)</span>
                     </span>
                     <textarea
                       value={message}
@@ -548,31 +669,30 @@ function SlabGiftComposer({
                       }
                       rows={2}
                       maxLength={140}
-                      placeholder="짧은 메시지를 남겨보세요"
+                      placeholder="짧은 메시지"
                       style={{ fontSize: "16px" }}
                       className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400/60 resize-none"
                     />
-                    <div className="mt-1 text-right text-[10px] text-zinc-500 tabular-nums">
+                    <div className="mt-0.5 text-right text-[10px] text-zinc-500 tabular-nums">
                       {message.length} / 140
                     </div>
                   </label>
 
-                  <p className="mt-1 text-[11px] text-zinc-500 leading-snug">
-                    24시간 내에 수락해야 해요. 미수락·거절 시 슬랩은 그대로
-                    내 지갑에 남아요.
+                  <p className="text-[11px] text-zinc-500 leading-snug">
+                    24시간 내 수락 안 하면 슬랩은 내 지갑에 남아요.
                     {quota && (
-                      <span className="block mt-0.5 text-zinc-400">
-                        오늘 선물 {quota.used}/{quota.limit} 사용 (남은{" "}
-                        {quota.remaining}회)
+                      <span className="block text-zinc-400">
+                        오늘 {quota.used}/{quota.limit} 사용 · 남은{" "}
+                        {quota.remaining}회
                       </span>
                     )}
                   </p>
 
                   {error && (
-                    <p className="mt-2 text-xs text-rose-400">{error}</p>
+                    <p className="text-xs text-rose-400">{error}</p>
                   )}
                   {success && (
-                    <p className="mt-2 text-xs text-emerald-300">
+                    <p className="text-xs text-emerald-300">
                       선물이 전송되었어요!
                     </p>
                   )}
@@ -601,8 +721,6 @@ function SlabGiftComposer({
                       취소
                     </button>
                   </div>
-                </div>
-              </div>
             </div>
           </motion.div>
           </motion.div>
