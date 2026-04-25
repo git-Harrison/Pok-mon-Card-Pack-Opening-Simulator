@@ -110,7 +110,7 @@ const HOME_SECTIONS: HelpSection[] = [
         "li",
         { key: 7 },
         h("b", null, "프로필"),
-        " · 캐릭터 선택, 닉네임, 펫(메인 카드 5장)"
+        " · 캐릭터 선택, 닉네임, 펫(메인 카드 10장)"
       )
     ),
   },
@@ -236,7 +236,7 @@ const WALLET_SECTIONS: HelpSection[] = [
       h("li", { key: 1 }, h("b", null, "센터 전시"), " · 시간당 거래 포인트 + 랭킹 점수"),
       h("li", { key: 2 }, h("b", null, "야생 배틀"), " · 1:1 전투 (패배 시 영구 삭제)"),
       h("li", { key: 3 }, h("b", null, "도감 박제"), " · PCL10 한정 영구 등록"),
-      h("li", { key: 4 }, h("b", null, "프로필 펫"), " · PCL10 5장까지 메인 카드로 등록"),
+      h("li", { key: 4 }, h("b", null, "프로필 펫"), " · PCL10 10장까지 메인 카드로 등록"),
       h("li", { key: 5 }, h("b", null, "선물"), " · 그레이드 6 이상만 가능 · 일일 5회"),
       h("li", { key: 6 }, h("b", null, "일괄 판매"), " · PCL10 20k / 9 10k / 8 2k / 6·7 1k")
     ),
@@ -564,7 +564,7 @@ const VISIT_CENTER_SECTIONS: HelpSection[] = [
     body: h(
       "ul",
       null,
-      h("li", { key: 1 }, h("b", null, "펫 점수"), " · 등록한 PCL10 펫 5장 합산 (최대 500)"),
+      h("li", { key: 1 }, h("b", null, "펫 점수"), " · 등록한 PCL10 펫 10장 합산 (최대 1,000)"),
       h("li", { key: 2 }, h("b", null, "시간당 거래 수익"), " · 전시 슬랩 합산 시간당 p"),
       h("li", { key: 3 }, h("b", null, "시간당 랭킹 적립"), " · 전시 수익의 1/200"),
       h("li", { key: 4 }, h("b", null, "누적 전시 랭킹 점수"), " · 전시로 쌓아온 누적치")
@@ -718,7 +718,7 @@ const USERS_SECTIONS: HelpSection[] = [
           "li",
           { key: 3 },
           h("b", { className: "text-fuchsia-300" }, "🐾 펫 랭킹"),
-          " · 프로필에 등록한 펫(최대 5장) 점수 합산"
+          " · 프로필에 등록한 펫(최대 10장) 점수 합산"
         )
       )
     ),
@@ -802,7 +802,7 @@ const USERS_SECTIONS: HelpSection[] = [
       ),
       "에서 ",
       h("b", null, "PCL10 슬랩"),
-      "을 최대 5장까지 펫으로 등록. 펫 한 장당:",
+      "을 최대 10장까지 펫으로 등록. 펫 한 장당:",
       h(
         "p",
         { className: "mt-1" },
@@ -811,8 +811,8 @@ const USERS_SECTIONS: HelpSection[] = [
       h(
         "p",
         { className: "mt-1.5 text-zinc-400" },
-        "MUR PCL10 5장 = ",
-        h("b", { className: "text-fuchsia-300" }, "MAX 500점"),
+        "MUR PCL10 10장 = ",
+        h("b", { className: "text-fuchsia-300" }, "MAX 1,000점"),
         ". 펫 슬랩이 부서지면 점수에서 빠져요."
       )
     ),
@@ -884,7 +884,7 @@ const PROFILE_SECTIONS: HelpSection[] = [
       "div",
       null,
       "가장 자랑하고 싶은 슬랩을 ",
-      h("b", null, "최대 5장"),
+      h("b", null, "최대 10장"),
       "까지 메인 카드(펫)로 등록할 수 있어요. 슬롯을 누르면 등록 가능한 슬랩 목록이 떠요. 등록·해제 모두 즉시 반영."
     ),
   },
@@ -926,8 +926,8 @@ const PROFILE_SECTIONS: HelpSection[] = [
       h(
         "p",
         { className: "mt-2 text-zinc-400" },
-        "MUR PCL10 5장 등록 시 ",
-        h("b", { className: "text-white" }, "MAX 500점"),
+        "MUR PCL10 10장 등록 시 ",
+        h("b", { className: "text-white" }, "MAX 1,000점"),
         ". 펫 점수는 사용자 랭킹 ",
         h("b", null, "🐾 펫 랭킹"),
         " 탭에 그대로 반영돼요."

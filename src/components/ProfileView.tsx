@@ -300,7 +300,7 @@ export default function ProfileView() {
             </div>
 
             <LayoutGroup>
-              <div className="mt-3 grid grid-cols-5 gap-1.5 md:gap-2">
+              <div className="mt-3 grid grid-cols-5 md:grid-cols-10 gap-1.5 md:gap-2">
                 {filledSlots.map((slot, i) => (
                   <PetSlot
                     key={slot ? slot.id : `empty-${i}`}
