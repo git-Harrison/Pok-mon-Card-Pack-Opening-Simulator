@@ -379,17 +379,20 @@ function SabotageConfirmModal({
           </div>
         )}
 
-        <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 px-3 py-2 text-[11px] text-rose-200 leading-relaxed">
-          성공 시 <b>보관함과 전시 슬랩이 영원히 소멸</b>하고,{" "}
-          <b className="text-amber-200">
-            +{Math.floor(spec.price * 0.8).toLocaleString("ko-KR")}p
-          </b>{" "}
-          전리품 + <b className="text-amber-200">랭킹 +100점</b>을 획득해요.
-          상대는 그 카드로 얻었던 PCL 점수를 잃습니다. 실패해도 비용은 돌아오지
-          않고, 이 <b className="text-sky-200">{spec.name}</b>은 방어{" "}
-          <b>{spec.defense}%</b>라 성공률{" "}
-          <b className="text-rose-100">{effectiveRate}%</b>. 부수기 시도는
-          디스코드에 자동 공지됩니다.
+        <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 px-3 py-2 text-[11px] text-rose-200 leading-relaxed space-y-1">
+          <p>
+            <b className="text-rose-100">성공률 {effectiveRate}%</b> ·{" "}
+            <span className="text-sky-200">{spec.name}</span> 방어{" "}
+            {spec.defense}%
+          </p>
+          <p>
+            <b>성공</b> → 슬랩 소멸 +{" "}
+            <b className="text-amber-200">
+              +{Math.floor(spec.price * 0.8).toLocaleString("ko-KR")}p
+            </b>{" "}
+            + <b className="text-amber-200">랭킹 +100</b>
+          </p>
+          <p className="text-rose-300/80">실패 시 비용 환불 X · 디스코드 공지</p>
         </div>
 
         <div className="flex items-center gap-2">

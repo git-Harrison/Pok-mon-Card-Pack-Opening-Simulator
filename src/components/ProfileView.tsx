@@ -26,6 +26,7 @@ import {
   type ProfileSnapshot,
 } from "@/lib/profile";
 import { getCard, SETS } from "@/lib/sets";
+import { getAllCatalogCards } from "@/lib/pokedex";
 import { RARITY_STYLE } from "@/lib/rarity";
 import PageHeader from "./PageHeader";
 import PsaSlab from "./PsaSlab";
@@ -410,7 +411,7 @@ function ProfileBanner({
           <div className="mt-0.5 text-sm md:text-base font-black tabular-nums text-emerald-200 leading-tight">
             {pokedexCount.toLocaleString("ko-KR")}
             <span className="text-[9px] text-emerald-300/60 font-semibold">
-              {" "}장
+              {" "}/ {getAllCatalogCards().length.toLocaleString("ko-KR")}
             </span>
           </div>
         </div>
