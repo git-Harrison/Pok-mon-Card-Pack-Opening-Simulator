@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
 import { fetchUnseenGiftCount } from "@/lib/db";
+import { getCharacter } from "@/lib/profile";
+import { CharacterAvatar } from "./ProfileView";
 import PointsChip from "./PointsChip";
 import {
   GiftIcon,
@@ -14,8 +16,8 @@ import {
   LogoutIcon,
   MagnifyIcon,
   MuseumIcon,
-  ShopIcon,
   TrophyIcon,
+  UserIcon,
   WalletIcon,
 } from "./icons/NavIcons";
 
@@ -24,9 +26,9 @@ const NAV_ITEMS = [
   { href: "/wallet", label: "지갑", Icon: WalletIcon },
   { href: "/center", label: "센터", Icon: MuseumIcon },
   { href: "/wild", label: "야생", Icon: LeafIcon },
-  { href: "/merchant", label: "상인", Icon: ShopIcon },
   { href: "/grading", label: "등급", Icon: MagnifyIcon },
   { href: "/users", label: "랭킹", Icon: TrophyIcon },
+  { href: "/profile", label: "프로필", Icon: UserIcon },
   { href: "/gifts", label: "선물함", Icon: GiftIcon },
 ];
 
@@ -89,8 +91,6 @@ export default function Navbar() {
                   >
                     {label === "지갑"
                       ? "내 카드지갑"
-                      : label === "상인"
-                      ? "카드 상인"
                       : label === "등급"
                       ? "등급 감별"
                       : label === "랭킹"
@@ -99,6 +99,8 @@ export default function Navbar() {
                       ? "내 포켓몬센터"
                       : label === "야생"
                       ? "야생 배틀"
+                      : label === "프로필"
+                      ? "내 프로필"
                       : label}
                     {showBadge && (
                       <span className="absolute -top-0.5 -right-1 min-w-[18px] h-[18px] rounded-full bg-rose-500 text-white text-[10px] font-black px-1 inline-flex items-center justify-center ring-2 ring-black/40">
@@ -125,6 +127,18 @@ export default function Navbar() {
                 </Link>
               )}
               <PointsChip points={user.points} size="sm" />
+              {(() => {
+                const def = getCharacter(user.character);
+                return def ? (
+                  <Link
+                    href="/profile"
+                    aria-label="내 프로필"
+                    className="hidden sm:inline-flex items-center"
+                  >
+                    <CharacterAvatar def={def} size="xs" />
+                  </Link>
+                ) : null;
+              })()}
               <span className="hidden sm:inline text-xs text-zinc-400">
                 <span className="text-zinc-200 font-semibold">{user.display_name}</span>
               </span>

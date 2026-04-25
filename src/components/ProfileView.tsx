@@ -1,0 +1,657 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import clsx from "clsx";
+import { useAuth } from "@/lib/auth";
+import {
+  fetchAllGradingsWithDisplay,
+  type PsaGradingWithDisplay,
+} from "@/lib/db";
+import {
+  CHARACTERS,
+  fetchProfile,
+  getCharacter,
+  MAX_MAIN_CARDS,
+  MAX_PET_SCORE,
+  setCharacter as rpcSetCharacter,
+  setMainCards as rpcSetMainCards,
+  type CharacterDef,
+  type ProfileMainCard,
+  type ProfileSnapshot,
+} from "@/lib/profile";
+import { getCard, SETS } from "@/lib/sets";
+import PageHeader from "./PageHeader";
+import HelpButton, { type HelpSection } from "./HelpButton";
+import PsaSlab from "./PsaSlab";
+import Portal from "./Portal";
+
+const HELP_SECTIONS: HelpSection[] = [
+  {
+    heading: "캐릭터 선택",
+    icon: "🎭",
+    body: (
+      <>
+        포켓몬 본가 시리즈의 6명 주인공 중 한 명을 선택해 자신의 트레이너로
+        쓸 수 있어요.
+        <ul className="mt-1.5">
+          <li>
+            <b className="text-rose-300">레드 / 리프</b> · 관동 지방
+          </li>
+          <li>
+            <b className="text-amber-300">골드 / 코토네</b> · 성도 지방
+          </li>
+          <li>
+            <b className="text-sky-300">쿠로 / 토우코</b> · 하나 지방
+          </li>
+        </ul>
+        <p className="mt-2 text-zinc-400">
+          캐릭터는 언제든 변경할 수 있지만 신중하게 골라주세요. 선택을
+          누르면 한 번 더 확인해요.
+        </p>
+      </>
+    ),
+  },
+  {
+    heading: "펫 시스템",
+    icon: "🐾",
+    body: (
+      <>
+        가장 자랑하고 싶은 슬랩 5장을 <b>메인 카드</b>(펫)로 등록할 수
+        있어요. 슬롯을 누르면 등록 가능한 슬랩 목록이 떠요. 등록한 슬랩은
+        프로필 점수와 펫 점수에 즉시 반영돼요.
+      </>
+    ),
+  },
+  {
+    heading: "PCL10 한정",
+    icon: "💎",
+    body: (
+      <>
+        펫으로 등록할 수 있는 슬랩은 <b className="text-amber-300">PCL10 GEM
+        MINT</b> 슬랩에 한정돼요. 9등급 이하 슬랩은 펫이 될 수 없으니
+        감별을 더 도전해보세요.
+      </>
+    ),
+  },
+  {
+    heading: "점수 산정",
+    icon: "📈",
+    body: (
+      <>
+        펫 점수 = (희귀도 점수 × 10) 의 합산.
+        <ul className="mt-1.5">
+          <li>SR · ×10 = 50</li>
+          <li>MA · ×10 = 60</li>
+          <li>SAR · ×10 = 70</li>
+          <li>UR · ×10 = 80</li>
+          <li>
+            <b className="text-amber-300">MUR · ×10 = 100</b>
+          </li>
+        </ul>
+        <p className="mt-2 text-zinc-400">
+          최대치는 MUR PCL10 5장 등록 시 <b className="text-white">500점</b>.
+          전당 입성을 노려보세요.
+        </p>
+      </>
+    ),
+  },
+];
+
+export default function ProfileView() {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
+  const [psa, setPsa] = useState<PsaGradingWithDisplay[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [savingChar, setSavingChar] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [pickerSlot, setPickerSlot] = useState<number | null>(null);
+
+  const refresh = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    const [p, g] = await Promise.all([
+      fetchProfile(user.id),
+      fetchAllGradingsWithDisplay(user.id),
+    ]);
+    setProfile(p);
+    setPsa(g);
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const characterDef = useMemo(
+    () => getCharacter(profile?.character ?? null),
+    [profile?.character]
+  );
+
+  const filledSlots: (ProfileMainCard | null)[] = useMemo(() => {
+    const ids = profile?.main_card_ids ?? [];
+    const cards = profile?.main_cards ?? [];
+    const byId = new Map(cards.map((c) => [c.id, c]));
+    const out: (ProfileMainCard | null)[] = [];
+    for (let i = 0; i < MAX_MAIN_CARDS; i++) {
+      out.push(i < ids.length ? byId.get(ids[i]) ?? null : null);
+    }
+    return out;
+  }, [profile]);
+
+  const eligibleSlabs = useMemo(
+    () => psa.filter((g) => g.grade === 10),
+    [psa]
+  );
+
+  const onPickCharacter = useCallback(
+    async (def: CharacterDef) => {
+      if (!user || savingChar) return;
+      const current = profile?.character;
+      if (current === def.key) return;
+      const ok = window.confirm(
+        current
+          ? `캐릭터를 "${def.name}"(으)로 변경할까요?`
+          : `${def.name}(으)로 시작할까요?`
+      );
+      if (!ok) return;
+      setSavingChar(true);
+      setError(null);
+      const res = await rpcSetCharacter(user.id, def.key);
+      setSavingChar(false);
+      if (!res.ok) {
+        setError(res.error ?? "캐릭터를 저장하지 못했어요.");
+        return;
+      }
+      await refresh();
+    },
+    [user, profile?.character, refresh, savingChar]
+  );
+
+  const onSelectSlab = useCallback(
+    async (slot: number, gradingId: string) => {
+      if (!user || !profile) return;
+      const ids = [...profile.main_card_ids];
+      if (ids.includes(gradingId) && ids[slot] !== gradingId) {
+        setError("이미 다른 슬롯에 등록된 슬랩이에요.");
+        return;
+      }
+      while (ids.length < slot) ids.push("");
+      ids[slot] = gradingId;
+      const cleaned = ids.filter((x) => x);
+      setError(null);
+      const res = await rpcSetMainCards(user.id, cleaned);
+      if (!res.ok) {
+        setError(res.error ?? "펫을 등록하지 못했어요.");
+        return;
+      }
+      setPickerSlot(null);
+      await refresh();
+    },
+    [user, profile, refresh]
+  );
+
+  const onRemoveSlot = useCallback(
+    async (slot: number) => {
+      if (!user || !profile) return;
+      const ids = [...profile.main_card_ids];
+      if (slot >= ids.length) return;
+      const ok = window.confirm("이 펫을 슬롯에서 빼시겠어요?");
+      if (!ok) return;
+      ids.splice(slot, 1);
+      setError(null);
+      const res = await rpcSetMainCards(user.id, ids);
+      if (!res.ok) {
+        setError(res.error ?? "펫을 해제하지 못했어요.");
+        return;
+      }
+      await refresh();
+    },
+    [user, profile, refresh]
+  );
+
+  const petScore = profile?.pet_score ?? 0;
+  const scorePct = Math.min(100, (petScore / MAX_PET_SCORE) * 100);
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
+      <PageHeader
+        title="내 프로필"
+        subtitle="트레이너 캐릭터를 고르고 자랑할 슬랩을 펫으로 등록하세요"
+        stats={
+          <HelpButton size="sm" title="내 프로필" sections={HELP_SECTIONS} />
+        }
+      />
+
+      {loading ? (
+        <div className="mt-16 flex justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+        </div>
+      ) : (
+        <>
+          <ProfileBanner
+            character={characterDef}
+            displayName={user?.display_name ?? ""}
+            petScore={petScore}
+            scorePct={scorePct}
+            slotsUsed={filledSlots.filter(Boolean).length}
+          />
+
+          {error && (
+            <div className="mt-4 px-3 py-2 rounded-lg bg-rose-500/10 border border-rose-500/40 text-rose-200 text-xs">
+              {error}
+            </div>
+          )}
+
+          <section className="mt-7">
+            <h2 className="text-sm font-bold text-white inline-flex items-center gap-1.5">
+              <span aria-hidden>🎭</span>캐릭터 선택
+            </h2>
+            <p className="mt-1 text-[11px] text-zinc-400">
+              포켓몬 본가의 6명 주인공 중 한 명을 골라요.
+            </p>
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {CHARACTERS.map((def) => {
+                const active = profile?.character === def.key;
+                return (
+                  <button
+                    key={def.key}
+                    type="button"
+                    onClick={() => onPickCharacter(def)}
+                    disabled={savingChar}
+                    style={{ touchAction: "manipulation" }}
+                    className={clsx(
+                      "relative rounded-2xl p-3 border transition text-left",
+                      active
+                        ? "bg-white text-zinc-900 border-white shadow-[0_0_28px_-6px_rgba(255,255,255,0.55)]"
+                        : "bg-white/5 border-white/10 text-zinc-200 hover:bg-white/10"
+                    )}
+                  >
+                    <CharacterAvatar def={def} size="md" />
+                    <div className="mt-2 flex items-center justify-between gap-1">
+                      <span className="text-sm font-bold">{def.name}</span>
+                      <span
+                        className={clsx(
+                          "text-[10px] font-semibold px-1.5 py-0.5 rounded",
+                          active
+                            ? "bg-zinc-900 text-white"
+                            : "bg-white/10 text-zinc-300"
+                        )}
+                      >
+                        {def.gender}
+                      </span>
+                    </div>
+                    <p
+                      className={clsx(
+                        "text-[10px] mt-0.5",
+                        active ? "text-zinc-600" : "text-zinc-400"
+                      )}
+                    >
+                      {def.region} 지방
+                    </p>
+                    {active && (
+                      <span className="absolute top-1.5 right-1.5 text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-400 text-zinc-900">
+                        ✓ 선택됨
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="mt-8">
+            <div className="flex items-end justify-between gap-2 flex-wrap">
+              <div>
+                <h2 className="text-sm font-bold text-white inline-flex items-center gap-1.5">
+                  <span aria-hidden>🐾</span>내 펫 슬롯
+                </h2>
+                <p className="mt-1 text-[11px] text-zinc-400">
+                  PCL10 슬랩만 등록할 수 있어요. 슬롯을 눌러 변경하세요.
+                </p>
+              </div>
+              <span className="text-[11px] text-zinc-400 tabular-nums">
+                {filledSlots.filter(Boolean).length} / {MAX_MAIN_CARDS} 슬롯
+              </span>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+              {filledSlots.map((slot, i) => (
+                <PetSlot
+                  key={i}
+                  index={i}
+                  card={slot}
+                  onPick={() => setPickerSlot(i)}
+                  onRemove={() => onRemoveSlot(i)}
+                />
+              ))}
+            </div>
+
+            {eligibleSlabs.length === 0 && (
+              <p className="mt-3 text-[11px] text-amber-200/80">
+                아직 등록 가능한 PCL10 슬랩이 없어요. 감별에서 10등급을
+                노려보세요.
+              </p>
+            )}
+          </section>
+        </>
+      )}
+
+      <AnimatePresence>
+        {pickerSlot !== null && profile && (
+          <SlabPicker
+            slabs={eligibleSlabs}
+            disabledIds={new Set(profile.main_card_ids)}
+            slotIndex={pickerSlot}
+            onClose={() => setPickerSlot(null)}
+            onPick={(id) => onSelectSlab(pickerSlot, id)}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function ProfileBanner({
+  character,
+  displayName,
+  petScore,
+  scorePct,
+  slotsUsed,
+}: {
+  character: CharacterDef | null;
+  displayName: string;
+  petScore: number;
+  scorePct: number;
+  slotsUsed: number;
+}) {
+  return (
+    <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 via-white/[0.02] to-transparent p-4 md:p-5 flex items-center gap-4">
+      {character ? (
+        <CharacterAvatar def={character} size="lg" />
+      ) : (
+        <div className="shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white/5 border border-dashed border-white/20 flex items-center justify-center text-3xl">
+          ❓
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h2 className="text-lg md:text-xl font-black text-white truncate">
+            {displayName || "이름 없음"}
+          </h2>
+          {character && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-400 text-zinc-900">
+              {character.name}
+            </span>
+          )}
+        </div>
+        <p className="mt-1 text-[11px] text-zinc-400">
+          {character
+            ? `${character.region} 지방 출신 트레이너`
+            : "캐릭터를 선택해주세요"}
+        </p>
+
+        <div className="mt-3">
+          <div className="flex items-end justify-between gap-2">
+            <div className="flex items-baseline gap-1.5">
+              <span aria-hidden className="text-amber-300">🐾</span>
+              <span className="text-2xl md:text-3xl font-black tabular-nums text-amber-300 leading-none">
+                {petScore.toLocaleString("ko-KR")}
+              </span>
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+                / {MAX_PET_SCORE}
+              </span>
+            </div>
+            <span className="text-[10px] text-zinc-400 tabular-nums">
+              슬롯 {slotsUsed}/5
+            </span>
+          </div>
+          <div className="mt-1.5 h-2 rounded-full bg-white/5 overflow-hidden border border-white/5">
+            <div
+              className="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500"
+              style={{ width: `${scorePct}%` }}
+            />
+          </div>
+          <p className="mt-1 text-[10px] uppercase tracking-wider text-zinc-500">
+            펫 점수
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function CharacterAvatar({
+  def,
+  size = "md",
+}: {
+  def: CharacterDef;
+  size?: "xs" | "sm" | "md" | "lg";
+}) {
+  const dim =
+    size === "xs"
+      ? "w-7 h-7"
+      : size === "sm"
+      ? "w-10 h-10"
+      : size === "lg"
+      ? "w-20 h-20 md:w-24 md:h-24"
+      : "w-16 h-16";
+  const [broken, setBroken] = useState(false);
+  return (
+    <div
+      className={clsx(
+        "shrink-0 rounded-2xl overflow-hidden ring-2 relative",
+        def.ring,
+        "bg-gradient-to-br",
+        def.gradient,
+        dim
+      )}
+    >
+      {!broken ? (
+        <img
+          src={def.spriteUrl}
+          alt={def.name}
+          loading="lazy"
+          draggable={false}
+          onError={() => setBroken(true)}
+          style={{ imageRendering: "pixelated" }}
+          className="absolute inset-0 w-full h-full object-contain p-1.5 select-none pointer-events-none"
+        />
+      ) : (
+        <div
+          className="absolute inset-0 flex items-center justify-center text-2xl"
+          aria-hidden
+        >
+          {def.emoji}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PetSlot({
+  index,
+  card,
+  onPick,
+  onRemove,
+}: {
+  index: number;
+  card: ProfileMainCard | null;
+  onPick: () => void;
+  onRemove: () => void;
+}) {
+  if (!card) {
+    return (
+      <button
+        type="button"
+        onClick={onPick}
+        style={{ touchAction: "manipulation" }}
+        className="relative aspect-[5/7] rounded-2xl border-2 border-dashed border-white/15 bg-white/[0.02] hover:bg-white/5 hover:border-amber-300/50 transition flex flex-col items-center justify-center gap-1 p-2 text-zinc-400 hover:text-amber-200"
+      >
+        <span className="text-2xl" aria-hidden>+</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider">
+          슬롯 {index + 1}
+        </span>
+        <span className="text-[10px] text-zinc-500">PCL10 추가</span>
+      </button>
+    );
+  }
+  const cardDef = getCard(card.card_id);
+  if (!cardDef) {
+    return (
+      <button
+        type="button"
+        onClick={onRemove}
+        className="aspect-[5/7] rounded-2xl bg-rose-500/10 border border-rose-500/40 text-rose-200 text-xs p-2"
+      >
+        카드 정보 없음 — 눌러서 해제
+      </button>
+    );
+  }
+  return (
+    <div className="relative group">
+      <button
+        type="button"
+        onClick={onPick}
+        className="block w-full text-left"
+        aria-label={`${cardDef.name} 펫 변경`}
+        style={{ touchAction: "manipulation" }}
+      >
+        <PsaSlab card={cardDef} grade={card.grade} size="sm" />
+      </button>
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label="해제"
+        className="absolute -top-1.5 -right-1.5 w-7 h-7 rounded-full bg-rose-500 hover:bg-rose-400 text-white text-xs font-black shadow-lg flex items-center justify-center ring-2 ring-zinc-950"
+        style={{ touchAction: "manipulation" }}
+      >
+        ✕
+      </button>
+      <p className="mt-1 text-center text-[10px] uppercase tracking-wider text-zinc-500">
+        슬롯 {index + 1}
+      </p>
+    </div>
+  );
+}
+
+function SlabPicker({
+  slabs,
+  disabledIds,
+  slotIndex,
+  onClose,
+  onPick,
+}: {
+  slabs: PsaGradingWithDisplay[];
+  disabledIds: Set<string>;
+  slotIndex: number;
+  onClose: () => void;
+  onPick: (id: string) => void;
+}) {
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  return (
+    <Portal>
+      <motion.div
+        className="fixed inset-0 z-[160] bg-black/85 backdrop-blur-md flex items-end md:items-center justify-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{
+          paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+          paddingLeft: 12,
+          paddingRight: 12,
+        }}
+      >
+        <motion.div
+          className="relative w-full max-w-lg bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+          style={{ maxHeight: "calc(100dvh - 24px)" }}
+          initial={{ y: 32, opacity: 0, scale: 0.97 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: 32, opacity: 0, scale: 0.97 }}
+          transition={{ type: "spring", stiffness: 220, damping: 24 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="shrink-0 flex items-center justify-between gap-3 px-4 h-12 border-b border-white/10 bg-gradient-to-r from-amber-500/10 via-fuchsia-500/10 to-indigo-500/10">
+            <h2 className="text-sm font-bold text-white inline-flex items-center gap-1.5">
+              <span aria-hidden>🐾</span>
+              슬롯 {slotIndex + 1} 펫 선택
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="닫기"
+              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white inline-flex items-center justify-center"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
+            {slabs.length === 0 ? (
+              <p className="px-2 py-10 text-center text-sm text-zinc-400">
+                등록 가능한 PCL10 슬랩이 없어요.
+                <br />
+                감별 페이지에서 도전해보세요.
+              </p>
+            ) : (
+              <ul className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {slabs.map((g) => {
+                  const card = getCard(g.card_id);
+                  if (!card) return null;
+                  const taken = disabledIds.has(g.id);
+                  return (
+                    <li key={g.id}>
+                      <button
+                        type="button"
+                        disabled={taken}
+                        onClick={() => onPick(g.id)}
+                        style={{ touchAction: "manipulation" }}
+                        className={clsx(
+                          "relative block w-full text-left rounded-xl p-1 transition",
+                          taken
+                            ? "opacity-40 cursor-not-allowed"
+                            : "hover:bg-white/5 active:scale-[0.98]"
+                        )}
+                      >
+                        <PsaSlab card={card} grade={g.grade} size="sm" />
+                        <p className="mt-1 px-1 text-[10px] text-zinc-400 truncate">
+                          {SETS[card.setCode].name} · #{card.number}
+                        </p>
+                        {taken && (
+                          <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-300 ring-1 ring-white/10">
+                            등록됨
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
+          <div className="shrink-0 border-t border-white/10 p-3 bg-black/40">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full h-11 rounded-xl bg-white text-zinc-900 font-bold text-sm active:scale-[0.98]"
+              style={{ touchAction: "manipulation" }}
+            >
+              닫기
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </Portal>
+  );
+}

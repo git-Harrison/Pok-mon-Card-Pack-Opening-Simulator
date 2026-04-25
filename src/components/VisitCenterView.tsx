@@ -7,23 +7,29 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import {
   fetchCenterByLogin,
+  fetchCenterVisitStats,
   sabotageCard,
   type CenterShowcase,
+  type CenterVisitStats,
   type VisitCenter,
 } from "@/lib/db";
 import { notifySabotage } from "@/lib/discord";
 import { SABOTAGE_BASE_RATE, SHOWCASES, type ShowcaseType } from "@/lib/center";
 import { getCard } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
+import { getCharacter } from "@/lib/profile";
 import PointsChip from "./PointsChip";
 import CoinIcon from "./CoinIcon";
 import PsaSlab from "./PsaSlab";
 import { CenterBackdrop, CenterGrid, ModalShell } from "./CenterView";
 import PageHeader from "./PageHeader";
+import HelpButton, { type HelpSection } from "./HelpButton";
+import { CharacterAvatar } from "./ProfileView";
 
 export default function VisitCenterView({ loginId }: { loginId: string }) {
   const { user, setPoints } = useAuth();
   const [data, setData] = useState<VisitCenter | null>(null);
+  const [stats, setStats] = useState<CenterVisitStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
@@ -43,8 +49,12 @@ export default function VisitCenterView({ loginId }: { loginId: string }) {
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const res = await fetchCenterByLogin(loginId);
+    const [res, statsRes] = await Promise.all([
+      fetchCenterByLogin(loginId),
+      fetchCenterVisitStats(loginId),
+    ]);
     setData(res);
+    setStats(statsRes.ok ? statsRes : null);
     setLoading(false);
   }, [loginId]);
 
@@ -142,19 +152,22 @@ export default function VisitCenterView({ loginId }: { loginId: string }) {
         </Link>
         <PageHeader
           title={`${data.display_name}님의 센터`}
-          subtitle={
-            isOwn
-              ? "자기 센터는 부술 수 없어요."
-              : "전시 카드를 눌러 부수기 시도 · 성공 시 보관함가의 50% 획득"
-          }
+          subtitle={isOwn ? "자기 센터는 부술 수 없어요." : undefined}
           stats={
             <>
               {user && <PointsChip points={user.points} size="sm" />}
               <Kpi label="보관함" value={`${showcases.length}`} />
               <Kpi label="전시" value={`${totalCards}`} highlight />
+              <HelpButton
+                size="sm"
+                title="다른 유저 센터"
+                sections={VISIT_HELP_SECTIONS}
+              />
             </>
           }
         />
+
+        {stats && <VisitStatsPanel stats={stats} />}
 
         {error && (
           <div className="mt-3 text-xs text-rose-200 bg-rose-500/15 border border-rose-500/40 rounded-lg px-3 py-2">
@@ -464,6 +477,113 @@ function SabotageResultModal({
         </button>
       </div>
     </ModalShell>
+  );
+}
+
+const VISIT_HELP_SECTIONS: HelpSection[] = [
+  {
+    heading: "여긴 어디?",
+    icon: "🏛️",
+    body: (
+      <>
+        다른 유저의 포켓몬센터를 둘러보는 페이지예요. 전시된 슬랩을 감상하거나,
+        부수기를 시도하거나, 조롱 메시지를 보낼 수 있어요.
+      </>
+    ),
+  },
+  {
+    heading: "부수기",
+    icon: "💥",
+    body: (
+      <>
+        보관함 위 슬랩을 눌러 시도. 성공 확률 = 30% − 보관함 방어(3/5/10/15%).
+        비용은 보관함 가격의 10%.
+        <ul className="mt-1.5">
+          <li>
+            성공 → 보관함·슬랩 영구 삭제 +{" "}
+            <b className="text-amber-200">보관함가 80%</b> 전리품 + 랭킹
+            +3,000점
+          </li>
+          <li>실패 → 비용 환불 없음. 단, 시도 사실은 디스코드에 자동 공지</li>
+          <li>
+            주인은 시도 결과와 무관하게{" "}
+            <b className="text-emerald-200">비용의 50%</b>를 자동 적립
+          </li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    heading: "조롱하기",
+    icon: "🔥",
+    body: (
+      <>
+        우측 상단 🔥 버튼으로 200자 이내 메시지를 보낼 수 있어요. 받은 사람의
+        화면에 강제 팝업으로 떠요.
+      </>
+    ),
+  },
+];
+
+function VisitStatsPanel({ stats }: { stats: CenterVisitStats }) {
+  const character = getCharacter(stats.character ?? null);
+  const trade = stats.income_per_hour_trade ?? 0;
+  const rankPerHr = stats.income_per_hour_rank ?? 0;
+  const rankPts = stats.showcase_rank_pts ?? 0;
+  const pos = stats.income_rank_position ?? 0;
+  const total = stats.income_rank_total ?? 0;
+  const pet = stats.pet_score ?? 0;
+  return (
+    <div className="mt-3 -mx-4 md:mx-0 px-4 md:px-0 overflow-x-auto">
+      <div className="flex items-center gap-2 min-w-max md:min-w-0 md:flex-wrap">
+        {character && (
+          <div className="shrink-0">
+            <CharacterAvatar def={character} size="sm" />
+          </div>
+        )}
+        {pet > 0 && (
+          <div className="shrink-0 rounded-lg border border-amber-400/40 bg-amber-400/10 px-2.5 py-1">
+            <div className="text-[9px] uppercase tracking-wider text-amber-200/80">
+              펫 점수
+            </div>
+            <div className="text-xs font-bold tabular-nums text-amber-200 inline-flex items-center gap-1">
+              <span aria-hidden>🐾</span>
+              {pet.toLocaleString("ko-KR")}
+            </div>
+          </div>
+        )}
+        <div className="shrink-0 rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1">
+          <div className="text-[9px] uppercase tracking-wider text-emerald-200/80">
+            시간당 거래 수익
+          </div>
+          <div className="text-xs font-bold tabular-nums text-emerald-100 inline-flex items-center gap-1">
+            <CoinIcon size="xs" />
+            {trade.toLocaleString("ko-KR")}p/h
+          </div>
+        </div>
+        {total > 0 && (
+          <div className="shrink-0 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-white tabular-nums">
+            랭킹 {pos > 0 ? `${pos}위` : "—"} / 전체 {total}명
+          </div>
+        )}
+        <div className="shrink-0 rounded-lg border border-sky-400/40 bg-sky-400/10 px-2.5 py-1">
+          <div className="text-[9px] uppercase tracking-wider text-sky-200/80">
+            시간당 랭킹 적립
+          </div>
+          <div className="text-xs font-bold tabular-nums text-sky-100">
+            +{rankPerHr.toLocaleString("ko-KR")} pts/h
+          </div>
+        </div>
+        <div className="shrink-0 rounded-lg border border-fuchsia-400/40 bg-fuchsia-400/10 px-2.5 py-1">
+          <div className="text-[9px] uppercase tracking-wider text-fuchsia-200/80">
+            누적 전시 랭킹 점수
+          </div>
+          <div className="text-xs font-bold tabular-nums text-fuchsia-100">
+            {rankPts.toLocaleString("ko-KR")}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -38,8 +38,8 @@ export default function NotificationsOverlay() {
   }, [refresh, pathname]);
 
   // Background polling — keeps the popup timely for users who stay on
-  // one page. 15s strikes a reasonable balance between latency and
-  // RPC load. Pauses when the tab is hidden to avoid background churn.
+  // one page. 3s feels effectively real-time for taunts; pauses when
+  // the tab is hidden so background tabs don't burn RPC quota.
   useEffect(() => {
     if (!user) return;
     let alive = true;
@@ -48,7 +48,7 @@ export default function NotificationsOverlay() {
       if (typeof document !== "undefined" && document.hidden) return;
       refresh();
     };
-    const id = setInterval(tick, 15_000);
+    const id = setInterval(tick, 3_000);
     // Also refresh immediately on tab focus after being hidden.
     const onVis = () => {
       if (typeof document !== "undefined" && !document.hidden) refresh();

@@ -15,8 +15,6 @@ import {
 import { getCard } from "@/lib/sets";
 import { RARITY_STYLE, compareRarity } from "@/lib/rarity";
 import {
-  PSA_DISTRIBUTION,
-  PSA_ELIGIBLE_RARITIES,
   PSA_LABEL,
   isPsaEligible,
   psaTone,
@@ -29,6 +27,91 @@ import CoinIcon from "./CoinIcon";
 import Portal from "./Portal";
 import NpcDialog, { type NpcMood } from "./NpcDialog";
 import PageHeader from "./PageHeader";
+import HelpButton, { type HelpSection } from "./HelpButton";
+
+const HELP_SECTIONS: HelpSection[] = [
+  {
+    heading: "PCL 감별이란",
+    icon: "🔎",
+    body: (
+      <>
+        SR / MA / SAR / UR / MUR 등급의 카드를 PCL 슬랩으로 감별하는
+        시스템이에요. 슬랩은 일반 카드보다 가치가 훨씬 높고,{" "}
+        <b>센터 전시</b>·<b>야생 배틀</b>·<b>랭킹 점수</b>의 핵심 자원이에요.
+      </>
+    ),
+  },
+  {
+    heading: "성공 확률",
+    icon: "🎲",
+    body: (
+      <>
+        <ul>
+          <li>실패 (슬랩 안 만들어짐) · <b>70%</b></li>
+          <li>PCL 6 · 8%</li>
+          <li>PCL 7 · 10%</li>
+          <li>PCL 8 · 8%</li>
+          <li>PCL 9 · 3.5%</li>
+          <li>PCL 10 · 0.5%</li>
+        </ul>
+        <p className="mt-1.5 text-zinc-400">실패해도 카드는 사라져요. 신중하게.</p>
+      </>
+    ),
+  },
+  {
+    heading: "지갑 보너스",
+    icon: "🪙",
+    body: (
+      <>
+        감별 성공 시 등급별 즉시 입금:
+        <ul className="mt-1.5">
+          <li>PCL 10 · <b className="text-amber-300">+50,000p</b></li>
+          <li>PCL 9 · +30,000p</li>
+          <li>PCL 8 · +10,000p</li>
+          <li>PCL 6·7 · +3,000p</li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    heading: "랭킹 점수",
+    icon: "🏆",
+    body: (
+      <>
+        <b className="text-amber-300">PCL 10 성공만</b> 랭킹 점수 +500점
+        (누적). 슬랩이 부서지거나 팔려도 점수는 안 빠져요. PCL 6~9는 랭킹
+        점수에 들어가지 않지만 <b>전시 수익</b>과 <b>야생 배틀</b>에서는
+        활약해요.
+      </>
+    ),
+  },
+  {
+    heading: "일괄 감별",
+    icon: "📚",
+    body: (
+      <>
+        여러 장을 한 번에 감별하면 빠르고,{" "}
+        <b>&quot;PCL N 미만 자동 판매&quot;</b> 옵션을 켜두면 낮은 등급은
+        슬랩으로 만들지 않고 즉시 환산돼요. 슬랩 한도 500장에 가까울 때
+        유용해요.
+      </>
+    ),
+  },
+  {
+    heading: "한도와 주의",
+    icon: "⚠️",
+    body: (
+      <>
+        <ul>
+          <li>PCL 슬랩 보유 한도 <b>500장</b></li>
+          <li>한 번 감별한 카드는 결과와 무관하게 지갑에서 사라져요</li>
+          <li>슬랩은 <b>야생에서 패배</b>하면 영구 삭제</li>
+          <li>슬랩은 <b>센터 부수기 성공</b>으로도 영구 삭제</li>
+        </ul>
+      </>
+    ),
+  },
+];
 
 type Phase = "idle" | "animating" | "failing" | "revealed" | "failed";
 
@@ -145,11 +228,14 @@ export default function GradingView() {
             Card Authentication Lab
           </p>
         </div>
-        <div className="text-right">
-          <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
-            접수 번호
+        <div className="flex items-center gap-2">
+          <div className="text-right">
+            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
+              접수 번호
+            </div>
+            <div className="text-xs font-mono text-fuchsia-200">{caseId}</div>
           </div>
-          <div className="text-xs font-mono text-fuchsia-200">{caseId}</div>
+          <HelpButton size="sm" title="PCL 감별" sections={HELP_SECTIONS} />
         </div>
       </div>
 
@@ -347,45 +433,7 @@ export default function GradingView() {
         )}
       >
         📚 일괄 감별
-        <span className="text-[11px] font-semibold opacity-80">
-          · 여러 장 한번에, 애니메이션 없이 결과만
-        </span>
       </button>
-
-      {/* Odds strip */}
-      <div className="mt-3 rounded-xl bg-white/5 border border-white/10 p-3">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-400 mb-2">
-          판정 확률 (보상)
-        </p>
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-1.5 text-[11px]">
-          <div className="flex items-center justify-between rounded-md bg-rose-500/10 border border-rose-500/30 px-2 py-1">
-            <span className="font-bold text-rose-200">실패</span>
-            <span className="text-rose-300 tabular-nums font-semibold">70%</span>
-          </div>
-          {PSA_DISTRIBUTION.map((d) => (
-            <div
-              key={d.grade}
-              className="flex items-center justify-between rounded-md bg-black/30 border border-white/5 px-2 py-1"
-            >
-              <span className={clsx("font-bold", psaTone(d.grade).text)}>
-                PCL {d.grade}
-              </span>
-              <span className="text-zinc-300 tabular-nums font-semibold">
-                {d.pct}%
-              </span>
-            </div>
-          ))}
-        </div>
-        <p className="mt-2 text-[10px] text-zinc-500 text-center">
-          감정 대상 등급:{" "}
-          {PSA_ELIGIBLE_RARITIES.map((r) => (
-            <span key={r} className="mx-0.5 font-bold text-zinc-300">
-              {r}
-            </span>
-          ))}
-          · 실패 시 카드 소실
-        </p>
-      </div>
 
       <AnimatePresence>
         {picking && wallet && (
@@ -935,6 +983,8 @@ function BulkGradingModal({
   const [phase, setPhase] = useState<BulkPhase>("picking");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<BulkGradingResult | null>(null);
+  // null = 미사용. 7/8/9/10 = 해당 등급 미만은 자동 판매.
+  const [autoSellBelow, setAutoSellBelow] = useState<number | null>(null);
 
   const totalSelected = useMemo(
     () => Object.values(counts).reduce((s, n) => s + n, 0),
@@ -981,7 +1031,12 @@ function BulkGradingModal({
         rarities.push(rarity);
       }
     }
-    const res = await bulkSubmitPsaGrading(userId, cardIds, rarities);
+    const res = await bulkSubmitPsaGrading(
+      userId,
+      cardIds,
+      rarities,
+      autoSellBelow
+    );
     if (!res.ok) {
       setError(res.error ?? "일괄 감별에 실패했어요.");
       setPhase("picking");
@@ -997,7 +1052,16 @@ function BulkGradingModal({
     }
     setResult(res);
     setPhase("done");
-  }, [totalSelected, phase, counts, userId, username, onPointsChange]);
+  }, [
+    totalSelected,
+    phase,
+    counts,
+    userId,
+    username,
+    onPointsChange,
+    autoSellBelow,
+    eligible,
+  ]);
 
   return (
     <Portal>
@@ -1093,7 +1157,12 @@ function BulkGradingModal({
                 </div>
               )}
 
-              <div className="shrink-0 border-t border-white/10 p-3 bg-black/40">
+              <div className="shrink-0 border-t border-white/10 p-3 bg-black/40 space-y-2.5">
+                <AutoSellThresholdPicker
+                  value={autoSellBelow}
+                  disabled={phase === "submitting"}
+                  onChange={setAutoSellBelow}
+                />
                 <button
                   type="button"
                   onClick={submit}
@@ -1123,6 +1192,59 @@ function BulkGradingModal({
         </motion.div>
       </motion.div>
     </Portal>
+  );
+}
+
+function AutoSellThresholdPicker({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: number | null;
+  disabled: boolean;
+  onChange: (v: number | null) => void;
+}) {
+  const enabled = value !== null;
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={enabled}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.checked ? 9 : null)}
+          className="w-4 h-4 rounded accent-amber-400"
+          style={{ touchAction: "manipulation" }}
+        />
+        <span className="text-xs font-semibold text-zinc-200">
+          PCL 자동 판매
+        </span>
+        <span className="text-[10px] text-zinc-500">
+          선택한 등급 미만은 슬랩 저장 없이 즉시 환산
+        </span>
+      </label>
+      {enabled && (
+        <div className="mt-2 flex items-center gap-1.5">
+          {[7, 8, 9, 10].map((g) => (
+            <button
+              key={g}
+              type="button"
+              onClick={() => onChange(g)}
+              disabled={disabled}
+              className={clsx(
+                "h-7 px-2.5 rounded-md text-[11px] font-bold border transition",
+                value === g
+                  ? "bg-amber-400 text-zinc-950 border-amber-400"
+                  : "bg-white/5 text-zinc-300 border-white/10 hover:bg-white/10"
+              )}
+              style={{ touchAction: "manipulation" }}
+            >
+              {g} 미만
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1224,6 +1346,8 @@ function BulkResults({
   const fail = result.fail_count ?? 0;
   const skipped = result.skipped_count ?? 0;
   const bonus = result.bonus ?? 0;
+  const autoSoldCount = result.auto_sold_count ?? 0;
+  const autoSoldEarned = result.auto_sold_earned ?? 0;
 
   // Group by grade for quick scanning.
   const gradeBreakdown = useMemo(() => {
@@ -1271,6 +1395,12 @@ function BulkResults({
         {skipped > 0 && (
           <p className="mt-2 text-[10px] text-zinc-500 text-center">
             보유하지 않은 카드 {skipped}장은 건너뛰었어요.
+          </p>
+        )}
+        {autoSoldCount > 0 && (
+          <p className="mt-2 text-[10px] text-emerald-300 text-center">
+            자동 판매 {autoSoldCount}장 · +
+            {autoSoldEarned.toLocaleString("ko-KR")}p
           </p>
         )}
       </div>

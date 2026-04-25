@@ -48,16 +48,6 @@ export interface SetInfo {
   cards: Card[];
 }
 
-export interface MerchantState {
-  card_id: string | null;
-  price: number;
-  refreshes_remaining: number;
-  next_refresh_at: string;
-  sells_this_hour: number;
-  sells_limit: number;
-  sells_hour_start: string;
-}
-
 export type GiftStatus = "pending" | "accepted" | "expired" | "declined";
 
 export interface GiftQuota {

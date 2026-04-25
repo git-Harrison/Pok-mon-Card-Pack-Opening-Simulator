@@ -21,7 +21,6 @@ import type { PsaGrading } from "@/lib/types";
 import {
   CENTER_GRID_COLS,
   CENTER_GRID_ROWS,
-  SABOTAGE_BASE_RATE,
   SHOWCASES,
   SHOWCASE_ORDER,
   type ShowcaseType,
@@ -35,6 +34,7 @@ import RarityBadge from "./RarityBadge";
 import PsaSlab from "./PsaSlab";
 import Portal from "./Portal";
 import PageHeader from "./PageHeader";
+import HelpButton, { type HelpSection } from "./HelpButton";
 
 export default function CenterView() {
   const { user, setPoints } = useAuth();
@@ -57,7 +57,6 @@ export default function CenterView() {
   const [logOpen, setLogOpen] = useState(false);
   const [logs, setLogs] = useState<SabotageLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
-  const [infoOpen, setInfoOpen] = useState(false);
 
   const openLogs = useCallback(async () => {
     if (!user) return;
@@ -84,10 +83,14 @@ export default function CenterView() {
     (async () => {
       if (!user) return;
       const res = await claimShowcaseIncome(user.id);
-      if (res.ok && res.earned && res.earned > 0) {
-        setClaimNotice(
-          `전시 수익 +${res.earned.toLocaleString("ko-KR")}p`
-        );
+      if (res.ok && ((res.earned && res.earned > 0) || (res.earned_rank && res.earned_rank > 0))) {
+        const earned = res.earned ?? 0;
+        const earnedRank = res.earned_rank ?? 0;
+        const parts = [`전시 수익 +${earned.toLocaleString("ko-KR")}p`];
+        if (earnedRank > 0) {
+          parts.push(`랭킹 +${earnedRank.toLocaleString("ko-KR")}점`);
+        }
+        setClaimNotice(parts.join(" · "));
         if (typeof res.points === "number") setPoints(res.points);
         setTimeout(() => setClaimNotice(null), 5000);
       }
@@ -204,12 +207,16 @@ export default function CenterView() {
       <div className="relative z-10 max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
         <PageHeader
           title="내 포켓몬센터"
-          subtitle="PCL 슬랩을 전시해 수익을 얻고 랭킹을 올리세요"
           stats={
             <>
               {user && <PointsChip points={user.points} size="sm" />}
               <Kpi label="보관함" value={`${showcases.length}`} />
               <Kpi label="전시" value={`${totalCards}`} highlight />
+              <HelpButton
+                size="sm"
+                title="포켓몬센터"
+                sections={CENTER_HELP_SECTIONS}
+              />
             </>
           }
         />
@@ -227,17 +234,6 @@ export default function CenterView() {
           >
             📜 방문 기록
           </button>
-          <button
-            onClick={() => setInfoOpen(true)}
-            className="h-9 px-3 rounded-full bg-white/10 hover:bg-white/15 text-white font-bold text-xs border border-white/15 transition inline-flex items-center gap-1.5"
-          >
-            ℹ️ 정보
-          </button>
-          <p className="text-[11px] text-zinc-400">
-            친구가 링크를 누르면 내 센터를 구경하고, 보관함 등급별 비용으로{" "}
-            <b className="text-rose-300">부수기(최대 30%)</b>를 시도할 수
-            있어요.
-          </p>
         </div>
 
         {claimNotice && (
@@ -312,7 +308,6 @@ export default function CenterView() {
             onClose={() => setLogOpen(false)}
           />
         )}
-        {infoOpen && <InfoModal onClose={() => setInfoOpen(false)} />}
       </AnimatePresence>
     </div>
   );
@@ -817,310 +812,104 @@ function SabotageLogModal({
   );
 }
 
-type InfoTab = "storage" | "income" | "sabotage" | "rank";
-
-const INFO_TABS: { key: InfoTab; label: string; icon: string }[] = [
-  { key: "storage", label: "보관함", icon: "🗄️" },
-  { key: "income", label: "전시·수익", icon: "💰" },
-  { key: "sabotage", label: "부수기", icon: "💥" },
-  { key: "rank", label: "랭킹", icon: "🏆" },
+const CENTER_HELP_SECTIONS: HelpSection[] = [
+  {
+    heading: "보관함 4종",
+    icon: "🏛️",
+    body: (
+      <>
+        슬랩 한 장을 전시하는 진열대예요. 등급이 높을수록 비싸지만 부수기
+        방어율이 높아 안전해요.
+        <ul className="mt-1.5">
+          <li>🪵 <b>기본</b> · 10,000p · 방어 3%</li>
+          <li>🔷 <b>유리</b> · 100,000p · 방어 5%</li>
+          <li>💠 <b>프리미엄</b> · 300,000p · 방어 10%</li>
+          <li>👑 <b>레전더리</b> · 1,000,000p · 방어 15%</li>
+        </ul>
+        <p className="mt-1.5">한 보관함에 슬랩 1장. 그리드 6×6에 자유 배치.</p>
+      </>
+    ),
+  },
+  {
+    heading: "전시 수익",
+    icon: "💰",
+    body: (
+      <>
+        전시 중인 슬랩은 <b>희귀도 × PCL 등급</b>에 따라 시간당 거래 포인트와
+        랭킹 점수가 동시에 자동 적립돼요. 센터에 접속할 때마다 자동 수령.
+        <ul className="mt-1.5">
+          <li>
+            <b className="text-amber-300">MUR PCL10</b> · 100,000p · 랭킹 +500점/hr
+          </li>
+          <li>
+            <b className="text-fuchsia-300">UR PCL10</b> · 60,000p · 랭킹 +300점/hr
+          </li>
+          <li>
+            <b className="text-rose-300">SAR PCL10</b> · 40,000p · 랭킹 +200점/hr
+          </li>
+          <li>
+            <b className="text-sky-300">MA PCL10</b> · 30,000p · 랭킹 +150점/hr
+          </li>
+          <li>
+            <b className="text-emerald-300">SR PCL10</b> · 20,000p · 랭킹 +100점/hr
+          </li>
+        </ul>
+        <p className="mt-1.5 text-zinc-400">
+          PCL 등급이 1단계 내려갈 때마다 보상은 절반(±) 수준으로 줄어들고,
+          PCL6까지 보상이 들어와요. 랭킹 점수는 거래 포인트의 1/200.
+        </p>
+      </>
+    ),
+  },
+  {
+    heading: "부수기",
+    icon: "💥",
+    body: (
+      <>
+        다른 유저의 보관함을 깨면 보관함과 슬랩이 영구 소멸하고 공격자가
+        보관함가의 80%를 전리품으로 가져가요.
+        <ul className="mt-1.5">
+          <li>
+            <b>기본 성공률 30%</b> − 보관함 방어 = 실제 확률
+          </li>
+          <li>
+            <b>부수기 비용 = 보관함 가격의 10%</b> (1k / 10k / 30k / 100k)
+          </li>
+          <li>
+            시도 결과와 무관하게{" "}
+            <b className="text-emerald-200">주인은 비용의 50%</b> 즉시 적립
+          </li>
+          <li>실패해도 공격 비용은 돌아오지 않아요</li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    heading: "랭킹 점수",
+    icon: "🏆",
+    body: (
+      <ul>
+        <li>
+          <b className="text-amber-300">PCL 10 감별 성공</b> · +500점 (누적,
+          슬랩 잃어도 안 빠져요)
+        </li>
+        <li>
+          <b className="text-rose-300">남의 보관함 부수기 성공</b> · +3,000점
+        </li>
+        <li>
+          <b className="text-emerald-300">내 보관함 부수기 방어</b> · +50점
+        </li>
+        <li>
+          <b className="text-sky-300">야생 승리</b> · +50점
+        </li>
+        <li>
+          <b className="text-violet-300">전시 수익 적립</b> · 슬랩 희귀도×PCL
+          시간당 (최대 +500점/hr · MUR PCL10)
+        </li>
+      </ul>
+    ),
+  },
 ];
-
-// Numbers here mirror supabase/migrations/20260428_showcase_income_by_rarity.sql
-// — the server is authoritative; this table is a read-only reference.
-const RARITY_BASE: { key: string; hourly: number }[] = [
-  { key: "SR", hourly: 1_000 },
-  { key: "MA", hourly: 1_500 },
-  { key: "SAR", hourly: 3_000 },
-  { key: "UR", hourly: 5_000 },
-  { key: "MUR", hourly: 7_000 },
-];
-const GRADE_BONUS: { grade: 9 | 10; bonus: number }[] = [
-  { grade: 9, bonus: 2_000 },
-  { grade: 10, bonus: 5_000 },
-];
-
-function InfoModal({ onClose }: { onClose: () => void }) {
-  const [tab, setTab] = useState<InfoTab>("storage");
-  return (
-    <ModalShell
-      title="ℹ️ 포켓몬센터 안내"
-      subtitle="보관함 · 수익 · 부수기 · 랭킹"
-      onClose={onClose}
-    >
-      <div className="sticky top-0 z-10 bg-zinc-900/95 backdrop-blur border-b border-white/10 px-2 pt-2">
-        <div className="grid grid-cols-4 gap-1">
-          {INFO_TABS.map((t) => {
-            const active = t.key === tab;
-            return (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setTab(t.key)}
-                style={{ touchAction: "manipulation" }}
-                className={clsx(
-                  "h-9 rounded-lg text-[11px] font-bold transition inline-flex items-center justify-center gap-1",
-                  active
-                    ? "bg-white/15 text-white ring-1 ring-white/25"
-                    : "text-zinc-400 hover:text-white hover:bg-white/5"
-                )}
-              >
-                <span>{t.icon}</span>
-                <span>{t.label}</span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="h-2" />
-      </div>
-      <div className="p-3 md:p-4 space-y-3 text-zinc-200">
-        {tab === "storage" && <InfoStorageTab />}
-        {tab === "income" && <InfoIncomeTab />}
-        {tab === "sabotage" && <InfoSabotageTab />}
-        {tab === "rank" && <InfoRankTab />}
-      </div>
-    </ModalShell>
-  );
-}
-
-function InfoSectionTitle({ icon, children }: { icon: string; children: React.ReactNode }) {
-  return (
-    <h4 className="text-xs font-bold text-white inline-flex items-center gap-1.5">
-      <span>{icon}</span>
-      <span>{children}</span>
-    </h4>
-  );
-}
-
-function InfoNote({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-[11px] leading-relaxed text-zinc-400">{children}</p>
-  );
-}
-
-function InfoStorageTab() {
-  return (
-    <>
-      <InfoSectionTitle icon="🗄️">4단계 보관함 (모두 1칸)</InfoSectionTitle>
-      <div className="rounded-xl border border-white/10 overflow-hidden">
-        <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-0 text-[11px]">
-          <div className="contents text-[10px] uppercase tracking-wider text-zinc-500 font-bold">
-            <div className="px-3 py-1.5 bg-white/[0.03]">보관함</div>
-            <div className="px-3 py-1.5 bg-white/[0.03] text-right">가격</div>
-            <div className="px-3 py-1.5 bg-white/[0.03] text-right">방어</div>
-          </div>
-          {SHOWCASE_ORDER.map((t, i) => {
-            const s = SHOWCASES[t];
-            return (
-              <div
-                key={t}
-                className={clsx(
-                  "contents",
-                  i % 2 === 0 ? "" : "[&>div]:bg-white/[0.02]"
-                )}
-              >
-                <div className="px-3 py-2 flex items-center gap-2 border-t border-white/5">
-                  <span className="text-base">{s.icon}</span>
-                  <span className="text-white font-semibold">{s.name}</span>
-                </div>
-                <div className="px-3 py-2 text-right tabular-nums text-amber-200 font-bold border-t border-white/5">
-                  {s.price.toLocaleString("ko-KR")}p
-                </div>
-                <div className="px-3 py-2 text-right tabular-nums text-sky-200 font-bold border-t border-white/5">
-                  {s.defense}%
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <InfoNote>
-        모든 보관함은 슬랩 <b className="text-white">1칸</b>짜리예요. 등급이
-        올라갈수록 <b className="text-sky-200">방어율</b>이 높아 부수기에 강해져요.
-      </InfoNote>
-    </>
-  );
-}
-
-function InfoIncomeTab() {
-  return (
-    <>
-      <InfoSectionTitle icon="💰">시간당 수익 공식</InfoSectionTitle>
-      <div className="rounded-lg bg-white/[0.04] border border-white/10 px-3 py-2 text-[11px] leading-relaxed">
-        <p className="text-zinc-300">
-          <b className="text-white">시간당 수익 = 희귀도 기본값 + PCL 보너스</b>
-        </p>
-        <p className="text-zinc-400 mt-1">
-          PCL 9·10 슬랩만 전시 가능하며, 접속하지 않아도 자동 누적돼요.
-        </p>
-      </div>
-
-      <InfoSectionTitle icon="🎴">희귀도 기본값</InfoSectionTitle>
-      <div className="grid grid-cols-2 gap-1.5">
-        {RARITY_BASE.map((r) => (
-          <div
-            key={r.key}
-            className="flex items-center justify-between rounded-md bg-white/[0.04] border border-white/10 px-2.5 py-1.5"
-          >
-            <span className="text-[11px] font-bold text-white">{r.key}</span>
-            <span className="text-[11px] tabular-nums text-amber-200 font-semibold">
-              {r.hourly.toLocaleString("ko-KR")}p
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <InfoSectionTitle icon="✨">PCL 보너스</InfoSectionTitle>
-      <div className="grid grid-cols-2 gap-1.5">
-        {GRADE_BONUS.map((g) => (
-          <div
-            key={g.grade}
-            className={clsx(
-              "flex items-center justify-between rounded-md border px-2.5 py-1.5",
-              g.grade === 10
-                ? "bg-amber-400/10 border-amber-400/40"
-                : "bg-slate-300/10 border-slate-300/30"
-            )}
-          >
-            <span
-              className={clsx(
-                "text-[11px] font-bold",
-                g.grade === 10 ? "text-amber-200" : "text-slate-100"
-              )}
-            >
-              PCL {g.grade}
-            </span>
-            <span className="text-[11px] tabular-nums text-amber-200 font-semibold">
-              +{g.bonus.toLocaleString("ko-KR")}p
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <InfoSectionTitle icon="🧮">희귀도 × 등급 합산 수익 (시간당)</InfoSectionTitle>
-      <div className="rounded-xl border border-white/10 overflow-hidden">
-        <div className="grid grid-cols-[1fr_auto_auto] text-[11px]">
-          <div className="contents text-[10px] uppercase tracking-wider text-zinc-500 font-bold">
-            <div className="px-3 py-1.5 bg-white/[0.03]">희귀도</div>
-            <div className="px-3 py-1.5 bg-white/[0.03] text-right">PCL 9</div>
-            <div className="px-3 py-1.5 bg-white/[0.03] text-right">PCL 10</div>
-          </div>
-          {RARITY_BASE.map((r) => (
-            <div key={r.key} className="contents">
-              <div className="px-3 py-2 border-t border-white/5 text-white font-semibold">
-                {r.key}
-              </div>
-              <div className="px-3 py-2 border-t border-white/5 text-right tabular-nums text-slate-100">
-                {(r.hourly + 2_000).toLocaleString("ko-KR")}p
-              </div>
-              <div className="px-3 py-2 border-t border-white/5 text-right tabular-nums text-amber-200 font-bold">
-                {(r.hourly + 5_000).toLocaleString("ko-KR")}p
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <InfoNote>
-        서버가 누적 시간을 계산해 자동 정산해요. 페이지 진입 시 대기 중인
-        수익이 자동으로 지급됩니다.
-      </InfoNote>
-    </>
-  );
-}
-
-function InfoSabotageTab() {
-  return (
-    <>
-      <InfoSectionTitle icon="💥">부수기 규칙</InfoSectionTitle>
-      <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 px-3 py-2 text-[11px] leading-relaxed text-rose-100">
-        <p>
-          <b>기본 성공률 {SABOTAGE_BASE_RATE}%</b>에서 보관함 방어율을 뺀 값이
-          실제 확률이에요.
-        </p>
-        <p className="mt-1 text-rose-200/90">
-          성공 → 보관함 + 슬랩 영구 소멸, 공격자는{" "}
-          <b className="text-amber-200">보관함가의 80%</b>를 전리품으로 획득.
-          <br />
-          실패 → 지불한 비용은 돌아오지 않아요.
-        </p>
-      </div>
-
-      <InfoSectionTitle icon="📊">보관함별 비용·성공률</InfoSectionTitle>
-      <div className="rounded-xl border border-white/10 overflow-hidden">
-        <div className="grid grid-cols-[1fr_auto_auto_auto] text-[11px]">
-          <div className="contents text-[10px] uppercase tracking-wider text-zinc-500 font-bold">
-            <div className="px-3 py-1.5 bg-white/[0.03]">보관함</div>
-            <div className="px-3 py-1.5 bg-white/[0.03] text-right">비용</div>
-            <div className="px-3 py-1.5 bg-white/[0.03] text-right">방어</div>
-            <div className="px-3 py-1.5 bg-white/[0.03] text-right">성공률</div>
-          </div>
-          {SHOWCASE_ORDER.map((t) => {
-            const s = SHOWCASES[t];
-            const rate = Math.max(0, SABOTAGE_BASE_RATE - s.defense);
-            return (
-              <div key={t} className="contents">
-                <div className="px-3 py-2 border-t border-white/5 flex items-center gap-2">
-                  <span>{s.icon}</span>
-                  <span className="text-white font-semibold">{s.name}</span>
-                </div>
-                <div className="px-3 py-2 border-t border-white/5 text-right tabular-nums text-rose-200 font-bold">
-                  {s.sabotageCost.toLocaleString("ko-KR")}p
-                </div>
-                <div className="px-3 py-2 border-t border-white/5 text-right tabular-nums text-sky-200">
-                  {s.defense}%
-                </div>
-                <div className="px-3 py-2 border-t border-white/5 text-right tabular-nums text-amber-200 font-bold">
-                  {rate}%
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <InfoNote>
-        공격 성공 시 <b className="text-amber-200">랭킹 +100점</b>, 피해자는 그
-        슬랩으로 얻었던 PCL 랭킹 점수를 잃어요(감별 이력이 삭제됩니다).
-      </InfoNote>
-    </>
-  );
-}
-
-function InfoRankTab() {
-  const rows: { label: string; value: string; highlight?: boolean }[] = [
-    { label: "PCL 6·7 감별 성공", value: "+100점" },
-    { label: "PCL 8 감별 성공", value: "+150점" },
-    { label: "PCL 9 감별 성공", value: "+350점" },
-    { label: "PCL 10 감별 성공", value: "+500점", highlight: true },
-    { label: "부수기 성공", value: "+5,000점", highlight: true },
-  ];
-  return (
-    <>
-      <InfoSectionTitle icon="🏆">랭킹 점수 요약</InfoSectionTitle>
-      <div className="rounded-xl border border-white/10 overflow-hidden divide-y divide-white/5">
-        {rows.map((r) => (
-          <div
-            key={r.label}
-            className="flex items-center justify-between px-3 py-2 text-[11px]"
-          >
-            <span className="text-zinc-200">{r.label}</span>
-            <span
-              className={clsx(
-                "tabular-nums font-bold",
-                r.highlight ? "text-amber-200" : "text-white"
-              )}
-            >
-              {r.value}
-            </span>
-          </div>
-        ))}
-      </div>
-      <InfoNote>
-        자세한 랭킹 로직은 <b className="text-white">/users</b> 페이지의 도움말
-        토글에서 확인할 수 있어요.
-      </InfoNote>
-    </>
-  );
-}
 
 function Kpi({
   label,

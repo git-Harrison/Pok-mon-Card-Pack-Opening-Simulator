@@ -89,16 +89,6 @@ export default function LoginPage() {
             회원가입 →
           </Link>
         </div>
-
-        <details className="mt-8 text-xs text-zinc-500 group">
-          <summary className="cursor-pointer select-none hover:text-zinc-300">
-            데모 계정 보기
-          </summary>
-          <ul className="mt-2 space-y-1 font-mono bg-white/5 rounded-lg px-3 py-2">
-            <li>hun / hun94!@#</li>
-            <li>min / min94!@#</li>
-          </ul>
-        </details>
       </div>
     </div>
   );

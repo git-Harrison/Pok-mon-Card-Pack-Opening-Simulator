@@ -42,13 +42,25 @@ async function persistPackWithRetry(
   userId: string,
   setCode: SetInfo["code"],
   cardIds: string[],
+  rarities: string[],
+  autoSellSubAR: boolean,
   tries = 3
-): Promise<void> {
+): Promise<{ sold_count: number; sold_earned: number; points: number }> {
   let lastErr: unknown;
   for (let i = 0; i < tries; i++) {
     try {
-      await recordPackPull(userId, setCode, cardIds);
-      return;
+      const res = await recordPackPull(
+        userId,
+        setCode,
+        cardIds,
+        rarities,
+        autoSellSubAR
+      );
+      return {
+        sold_count: res.sold_count ?? 0,
+        sold_earned: res.sold_earned ?? 0,
+        points: res.points ?? 0,
+      };
     } catch (e) {
       lastErr = e;
       if (isIntentionalRejection(e)) throw e;
@@ -65,6 +77,7 @@ import PackOpeningStage from "./PackOpeningStage";
 import RarityBadge from "./RarityBadge";
 import PointsChip from "./PointsChip";
 import CoinIcon from "./CoinIcon";
+import HelpButton from "./HelpButton";
 
 // Persist an in-progress box across navigations so that pressing the
 // browser back button (e.g. from wallet → back to set) doesn't nuke
@@ -110,9 +123,24 @@ export default function SetView({ set }: { set: SetInfo }) {
   // Separate channel for "wallet is full" so the UI can show a bigger
   // banner with a direct link to 일괄 판매 instead of a tiny tooltip.
   const [capError, setCapError] = useState<string | null>(null);
+  const [autoSellSubAR, setAutoSellSubAR] = useState(false);
+  const [autoSellEarned, setAutoSellEarned] = useState(0);
   // Guard so the initial restore doesn't write back over itself before
   // the user makes any change.
   const hydratedRef = useRef(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const v = window.localStorage.getItem("box-auto-sell-sub-ar");
+    if (v === "1") setAutoSellSubAR(true);
+  }, []);
+
+  const toggleAutoSell = useCallback((next: boolean) => {
+    setAutoSellSubAR(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("box-auto-sell-sub-ar", next ? "1" : "0");
+    }
+  }, []);
 
   // Clear both channels on any new attempt.
   const clearErrors = useCallback(() => {
@@ -189,9 +217,11 @@ export default function SetView({ set }: { set: SetInfo }) {
       clearErrors();
       setPhase("multi-buying");
       setMultiProgress({ done: 0, total: boxCount });
+      setAutoSellEarned(0);
 
       const allCards: Card[] = [];
       let spent = 0;
+      let earnedFromAutoSell = 0;
 
       // Buy + draw + persist each box sequentially so partial failure
       // surfaces cleanly and we don't overdraw on points.
@@ -210,11 +240,17 @@ export default function SetView({ set }: { set: SetInfo }) {
           // parallel calls would serialize anyway — better to send one
           // at a time than tie up 10 Supabase connections.
           for (const pack of drawn) {
-            await persistPackWithRetry(
+            const r = await persistPackWithRetry(
               user.id,
               set.code,
-              pack.map((c) => c.id)
+              pack.map((c) => c.id),
+              pack.map((c) => c.rarity),
+              autoSellSubAR
             );
+            earnedFromAutoSell += r.sold_earned;
+            if (typeof r.points === "number" && r.points > 0) {
+              setPoints(r.points);
+            }
           }
         } catch (e) {
           console.error("multi-box persist failed", e);
@@ -263,10 +299,11 @@ export default function SetView({ set }: { set: SetInfo }) {
       allCards.sort(
         (a, b) => RARITY_STYLE[b.rarity].tier - RARITY_STYLE[a.rarity].tier
       );
+      setAutoSellEarned(earnedFromAutoSell);
       setMultiResult({ boxCount, totalSpent: spent, cards: allCards });
       setPhase("multi-result");
     },
-    [user, phase, set, cost, setPoints]
+    [user, phase, set, cost, setPoints, autoSellSubAR]
   );
 
   const closeMulti = useCallback(() => {
@@ -289,6 +326,7 @@ export default function SetView({ set }: { set: SetInfo }) {
     setPacks(drawn);
     setOpenedMask(new Array(drawn.length).fill(false));
     setPhase("opening");
+    setAutoSellEarned(0);
     // Persist every pack BEFORE revealing the grid. Keep the user on
     // the "opening" overlay (which now reads "카드 저장 중…") for the
     // full duration — no artificial min-animation race, just wait for
@@ -296,13 +334,19 @@ export default function SetView({ set }: { set: SetInfo }) {
     // so transient network blips don't cost the user a box.
     try {
       // Sequential (server has per-user advisory lock; see multi-box).
+      let earned = 0;
       for (const pack of drawn) {
-        await persistPackWithRetry(
+        const r = await persistPackWithRetry(
           user.id,
           set.code,
-          pack.map((c) => c.id)
+          pack.map((c) => c.id),
+          pack.map((c) => c.rarity),
+          autoSellSubAR
         );
+        earned += r.sold_earned;
+        if (typeof r.points === "number" && r.points > 0) setPoints(r.points);
       }
+      setAutoSellEarned(earned);
       setPhase("grid");
     } catch (e) {
       console.error("box persist failed", e);
@@ -328,7 +372,7 @@ export default function SetView({ set }: { set: SetInfo }) {
       setOpenedMask([]);
       setPhase("sealed");
     }
-  }, [user, phase, set, cost, setPoints, clearErrors]);
+  }, [user, phase, set, cost, setPoints, clearErrors, autoSellSubAR]);
 
   const choosePack = useCallback(
     (index: number) => {
@@ -411,6 +455,88 @@ export default function SetView({ set }: { set: SetInfo }) {
             value={`${openedCount} / ${set.packsPerBox}`}
             highlight
           />
+          <HelpButton
+            size="sm"
+            title="박스 개봉"
+            sections={[
+              {
+                heading: "박스 vs 팩",
+                icon: "📦",
+                body: (
+                  <>
+                    박스를 열면 그 안에서 <b>5팩</b>이 나와요. 각 팩에는{" "}
+                    <b>5장</b>의 카드가 들어 있고, 슬롯별로 등급 가중치가 달라
+                    마지막 슬롯은 보통 RR/AR/SR 이상 보장이에요.
+                  </>
+                ),
+              },
+              {
+                heading: "한 박스 가격",
+                icon: "🪙",
+                body: (
+                  <>
+                    세트마다 박스 가격이 다르게 책정돼요. 우측 상단에 보이는{" "}
+                    <b>박스당</b> 슬롯 표기와 같이, 자세한 단가는 박스 구매 버튼
+                    위 가격 칩에서 확인하세요.
+                  </>
+                ),
+              },
+              {
+                heading: "AR 미만 자동 판매",
+                icon: "💸",
+                body: (
+                  <>
+                    체크하면 C · U · R · RR 카드는 지갑에 저장하지 않고
+                    일괄판매 단가로 즉시 포인트로 환산돼요.
+                    <ul className="mt-1.5">
+                      <li>지갑 한도(10,000장)에 잘 안 닿게 해줘요</li>
+                      <li>박스 한 판 / 여러 박스 한번에 모두 적용</li>
+                      <li>설정은 자동 저장 (다음 박스 열 때도 유지)</li>
+                    </ul>
+                  </>
+                ),
+              },
+              {
+                heading: "여러 박스 한번에",
+                icon: "🚀",
+                body: (
+                  <>
+                    3 / 5 / 10박스를 한 번에 자동 개봉할 수 있어요. 결과 화면에
+                    모든 카드와 자동판매 수익이 합산돼서 표시돼요. 한 박스라도
+                    저장 실패 시 그 박스 비용만 환불, 그 전까지는 정상 저장.
+                  </>
+                ),
+              },
+              {
+                heading: "지갑이 가득 찰 때",
+                icon: "💼",
+                body: (
+                  <>
+                    일반 카드 <b>10,000장</b>을 넘기면 박스가 거부되고 비용이
+                    자동 환불돼요. 이럴 땐 자동 판매 옵션을 켜거나,{" "}
+                    <b>일괄 판매</b>로 잡카드를 정리한 뒤 다시 시도하세요.
+                  </>
+                ),
+              },
+              {
+                heading: "팁",
+                icon: "💡",
+                body: (
+                  <ul>
+                    <li>
+                      SR / MA / SAR / UR / MUR이 나오면 <b>감별</b>해서 슬랩으로
+                      만드세요 — 일괄 판매보다 보너스가 훨씬 커요.
+                    </li>
+                    <li>감별 실패 시 카드가 사라지니 신중히 (실패 70%).</li>
+                    <li>
+                      박스 도중 페이지를 떠나도 깐 카드는 24시간 동안 자동
+                      복원돼요.
+                    </li>
+                  </ul>
+                ),
+              },
+            ]}
+          />
         </div>
       </div>
 
@@ -425,6 +551,8 @@ export default function SetView({ set }: { set: SetInfo }) {
             loading={phase === "buying"}
             error={error}
             capError={capError}
+            autoSellSubAR={autoSellSubAR}
+            onToggleAutoSell={toggleAutoSell}
             onOpen={openBox}
             onOpenMulti={openMulti}
           />
@@ -509,6 +637,7 @@ export default function SetView({ set }: { set: SetInfo }) {
             boxCount={multiResult.boxCount}
             totalSpent={multiResult.totalSpent}
             cards={multiResult.cards}
+            autoSellEarned={autoSellEarned}
             onClose={closeMulti}
           />
         )}
@@ -551,6 +680,8 @@ function SealedBox({
   loading,
   error,
   capError,
+  autoSellSubAR,
+  onToggleAutoSell,
   onOpen,
   onOpenMulti,
 }: {
@@ -561,6 +692,8 @@ function SealedBox({
   loading: boolean;
   error: string | null;
   capError: string | null;
+  autoSellSubAR: boolean;
+  onToggleAutoSell: (next: boolean) => void;
   onOpen: () => void;
   onOpenMulti: (n: number) => void;
 }) {
@@ -650,9 +783,24 @@ function SealedBox({
           })}
         </div>
       </div>
+
+      {/* Auto-sell toggle — applies to single 박스 열기 AND 여러 박스 한번에 */}
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={autoSellSubAR}
+          onChange={(e) => onToggleAutoSell(e.target.checked)}
+          className="w-4 h-4 rounded accent-amber-400"
+          style={{ touchAction: "manipulation" }}
+        />
+        <span className="text-xs text-zinc-300">
+          AR 미만(C·U·R·RR) 자동 판매
+        </span>
+      </label>
+
       {!canAfford && !loading && (
         <p className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">
-          포인트가 부족해요. 상인에게 카드를 팔거나 선물로 모아보세요.
+          포인트가 부족해요. 일괄판매·감별·전시 수익으로 채워보세요.
         </p>
       )}
       {capError && (
@@ -952,12 +1100,14 @@ function MultiResultOverlay({
   boxCount,
   totalSpent,
   cards,
+  autoSellEarned,
   onClose,
 }: {
   setName: string;
   boxCount: number;
   totalSpent: number;
   cards: Card[];
+  autoSellEarned: number;
   onClose: () => void;
 }) {
   const byRarity = cards.reduce<Record<string, number>>((acc, c) => {
@@ -992,8 +1142,13 @@ function MultiResultOverlay({
       </div>
       <div className="shrink-0 bg-black/70 border-b border-white/5 px-3 md:px-6 py-2">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-3 flex-wrap">
-          <div className="text-[11px] text-zinc-400 tabular-nums">
-            소비 {totalSpent.toLocaleString("ko-KR")}p
+          <div className="text-[11px] text-zinc-400 tabular-nums flex items-center gap-2">
+            <span>소비 {totalSpent.toLocaleString("ko-KR")}p</span>
+            {autoSellEarned > 0 && (
+              <span className="text-emerald-300">
+                · 자동판매 +{autoSellEarned.toLocaleString("ko-KR")}p
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             {topHits.length === 0 && (

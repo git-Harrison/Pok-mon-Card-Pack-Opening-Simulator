@@ -113,26 +113,7 @@ export function cardFxClass(r: Rarity): "fx-mur" | "fx-sar" | null {
   return null;
 }
 
-// Points the merchant pays when buying a card of this rarity.
-// 상인 단가표 (경제 리밸런스 후):
-//   MUR 1,000,000 · UR 600,000 · SAR 600,000 · SR 400,000
-//   MA 200,000 · AR 200,000 · RR 100,000 · 그 외 50,000
-export const MERCHANT_PRICE: Record<Rarity, number> = {
-  C: 50_000,
-  U: 50_000,
-  R: 50_000,
-  RR: 100_000,
-  AR: 200_000,
-  MA: 200_000,
-  SR: 400_000,
-  SAR: 600_000,
-  UR: 600_000,
-  MUR: 1_000_000,
-};
-
-// Bulk-sell payout (지갑 → 일괄판매). 상인 단가 대비 약 1/40. 속도만
-// 장점 — 상인 · 선물 · 센터 전시가 훨씬 이득이고, 일괄판매는 정말
-// 정리용.
+// Bulk-sell payout (지갑 → 일괄판매). 정리용 단가.
 export const BULK_SELL_PRICE: Record<Rarity, number> = {
   C: 25,
   U: 50,

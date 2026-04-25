@@ -22,6 +22,90 @@ import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 import PageHeader from "./PageHeader";
 import PointsChip from "./PointsChip";
 import CoinIcon from "./CoinIcon";
+import HelpButton, { type HelpSection } from "./HelpButton";
+
+const WILD_HELP_SECTIONS: HelpSection[] = [
+  {
+    heading: "야생 배틀이란",
+    icon: "🌿",
+    body: (
+      <>
+        내 PCL 슬랩 한 장으로 야생 포켓몬과 1:1 턴제 배틀이에요. 이기면 보상이
+        들어오지만, <b className="text-rose-300">지면 그 슬랩은 영구 삭제</b>
+        돼요.
+      </>
+    ),
+  },
+  {
+    heading: "스탯 계산",
+    icon: "📊",
+    body: (
+      <>
+        슬랩의 (희귀도 + PCL 등급)에 따라 HP·공격력이 결정돼요.
+        <ul className="mt-1.5">
+          <li>희귀도 베이스 · C 30 ↗ MUR 95 (HP), C 8 ↗ MUR 24 (ATK)</li>
+          <li>등급 배수 · 6→1.0 / 7→1.1 / 8→1.3 / 9→1.6 / 10→2.0</li>
+        </ul>
+        <p className="mt-1.5 text-zinc-400">즉, MUR PCL10 슬랩이 단연 최강.</p>
+      </>
+    ),
+  },
+  {
+    heading: "타입 상성",
+    icon: "⚔️",
+    body: (
+      <>
+        슬랩 ↔ 야생의 타입 상성에 따라 공격 효과가 달라져요.
+        <ul className="mt-1.5">
+          <li>
+            <b className="text-emerald-300">2배</b> 효과는 <b>발군이다!</b>
+          </li>
+          <li>
+            <b className="text-zinc-400">0.5배</b>는 <b>효과가 별로다…</b>
+          </li>
+          <li>
+            <b className="text-zinc-500">0배</b>는 <b>효과가 없는 것 같다…</b>
+          </li>
+        </ul>
+        <p className="mt-1.5 text-zinc-400">
+          게임 화면 아래 &quot;타입 상성표&quot;를 펼쳐 미리 확인하세요.
+        </p>
+      </>
+    ),
+  },
+  {
+    heading: "보상",
+    icon: "🪙",
+    body: (
+      <ul>
+        <li>
+          승리 · <b className="text-amber-300">+20,000p</b> · 랭킹{" "}
+          <b className="text-amber-300">+50점</b>
+        </li>
+        <li>도망 · 비용·페널티 없음. 다음 카드 고를 때 유용</li>
+        <li>
+          패배 · 슬랩 영구 삭제 + <b>30초 쿨다운</b>
+        </li>
+      </ul>
+    ),
+  },
+  {
+    heading: "팁",
+    icon: "💡",
+    body: (
+      <ul>
+        <li>야생의 타입을 보고 상성 좋은 슬랩을 골라야 한 방에 끝나요.</li>
+        <li>
+          PCL 6~7 슬랩은 어차피 랭킹 점수에 안 들어가니 야생 출전 후보로 좋아요.
+        </li>
+        <li>
+          PCL 10이나 MUR 슬랩은 가능하면 안전하게 센터 전시로 보존하세요 —
+          부수기로도 잃을 수 있으니 분산이 중요해요.
+        </li>
+      </ul>
+    ),
+  },
+];
 
 type Phase =
   | "idle"
@@ -403,7 +487,13 @@ export default function WildView() {
       <div className="max-w-2xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
         <PageHeader
           title="🌿 야생"
-          subtitle="PCL 감별 슬랩으로 야생 포켓몬과 배틀"
+          stats={
+            <HelpButton
+              size="sm"
+              title="야생 배틀"
+              sections={WILD_HELP_SECTIONS}
+            />
+          }
         />
         <div className="mt-8 rounded-2xl border border-dashed border-white/10 bg-white/5 py-14 flex flex-col items-center gap-3 text-center px-4">
           <span className="text-5xl">🌾</span>
@@ -428,8 +518,16 @@ export default function WildView() {
     <div className="max-w-2xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
       <PageHeader
         title="🌿 야생"
-        subtitle="PCL 슬랩으로 야생 포켓몬과 대결 · 승리 시 포인트 획득"
-        stats={user ? <PointsChip points={user.points} size="sm" /> : null}
+        stats={
+          <>
+            {user && <PointsChip points={user.points} size="sm" />}
+            <HelpButton
+              size="sm"
+              title="야생 배틀"
+              sections={WILD_HELP_SECTIONS}
+            />
+          </>
+        }
       />
 
       {phase === "idle" && (
@@ -611,33 +709,33 @@ function BattleScene({
   const wildBubble = bubble?.side === "wild" ? bubble.text : "";
   const playerBubble = bubble?.side === "player" ? bubble.text : "";
   return (
-    <div
-      className={clsx(
-        "relative mt-4 rounded-2xl overflow-hidden border",
-        biome.border
-      )}
-      style={{
-        aspectRatio: "4 / 5",
-        background: biome.sky,
-      }}
+    <section
+      className="relative mt-4 overflow-visible"
+      style={{ aspectRatio: "4 / 5" }}
     >
-      {/* Biome accent glow (upper corner) */}
       <div
         aria-hidden
-        className="absolute inset-0 pointer-events-none"
-        style={{ background: biome.accent }}
-      />
-      {/* Biome name tag (top-left) */}
+        className={clsx(
+          "absolute inset-0 rounded-2xl overflow-hidden border pointer-events-none",
+          biome.border
+        )}
+        style={{ background: biome.sky }}
+      >
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: biome.accent }}
+        />
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-1/3 pointer-events-none"
+          style={{ background: biome.ground }}
+        />
+      </div>
       <div className="absolute top-2 left-2 md:top-3 md:left-3 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur text-[10px] md:text-[11px] text-white/90 border border-white/10 inline-flex items-center gap-1 pointer-events-none z-10">
         <span>{biome.emoji}</span>
         <span className="font-semibold">{biome.name}</span>
       </div>
-      {/* Biome ground glow */}
-      <div
-        aria-hidden
-        className="absolute inset-x-0 bottom-0 h-1/3 pointer-events-none"
-        style={{ background: biome.ground }}
-      />
 
       {/* Enemy (top-right): bubble on the LEFT of the sprite */}
       <div className="absolute top-3 right-3 md:top-6 md:right-6 flex flex-col items-end">
@@ -767,12 +865,18 @@ function BattleScene({
           <span className="text-5xl">❗</span>
         </motion.div>
       )}
-    </div>
+    </section>
   );
 }
 
 function WildSprite({ dex, hit }: { dex: number; hit: boolean }) {
   const [src, setSrc] = useState(wildSpriteUrl(dex, true));
+  // Without this, the local `src` state stays pinned to whichever dex
+  // we mounted with — so 한번 더 swaps the name/text but leaves the
+  // sprite frozen on the previous Pokémon.
+  useEffect(() => {
+    setSrc(wildSpriteUrl(dex, true));
+  }, [dex]);
   return (
     <div
       className="relative w-28 h-28 md:w-36 md:h-36 flex items-end justify-center"

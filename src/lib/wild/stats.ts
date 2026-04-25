@@ -52,8 +52,7 @@ export function computeDamage(
   return Math.max(1, Math.round(atk * effectivenessMult * jitter));
 }
 
-/** Reward scale per win — bigger wild mons pay more. */
-export function winReward(wildHp: number): number {
-  // 50 HP wild → ~5,000p, 95 HP wild → ~9,500p
-  return Math.round(wildHp * 100);
+/** Reward per win — flat 20,000p (server also grants +50 rank points). */
+export function winReward(_wildHp: number): number {
+  return 20_000;
 }

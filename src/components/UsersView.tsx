@@ -10,30 +10,9 @@ import { getCard, SETS } from "@/lib/sets";
 import PointsChip from "./PointsChip";
 import PageHeader from "./PageHeader";
 import Portal from "./Portal";
-
-/**
- * Ranking is driven entirely by PSA success points. Card ownership
- * (even an MUR) doesn't affect rank by itself — users must successfully
- * PSA-grade cards to climb.
- */
-const PSA_TIER_POINTS: Record<number, number> = {
-  10: 500,
-  9: 350,
-  8: 150,
-  7: 100,
-  6: 100,
-};
-
-const PSA_TIER_BONUS: Record<number, number> = {
-  10: 50000,
-  9: 30000,
-  8: 10000,
-  7: 3000,
-  6: 3000,
-};
-
-/** Rank points awarded to the attacker per successful sabotage. */
-const SABOTAGE_WIN_POINTS = 100;
+import HelpButton from "./HelpButton";
+import { getCharacter } from "@/lib/profile";
+import { CharacterAvatar } from "./ProfileView";
 
 const GRADE_COLOR: Record<number, string> = {
   10: "text-amber-300",
@@ -51,7 +30,7 @@ const GRADE_RING: Record<number, string> = {
   6: "border-indigo-400/40 bg-indigo-500/10",
 };
 
-type RankingMode = "rank" | "power";
+type RankingMode = "rank" | "power" | "pet";
 
 export default function UsersView() {
   const { user: currentUser } = useAuth();
@@ -59,7 +38,6 @@ export default function UsersView() {
   const [loading, setLoading] = useState(true);
   // { userId: grade } — which grade accordion is expanded for which user
   const [expanded, setExpanded] = useState<Record<string, number | null>>({});
-  const [helpOpen, setHelpOpen] = useState(false);
   const [mode, setMode] = useState<RankingMode>("rank");
   const [tauntTarget, setTauntTarget] = useState<RankingRow | null>(null);
 
@@ -80,6 +58,10 @@ export default function UsersView() {
         if (mode === "power") {
           const ap = a.center_power ?? 0;
           const bp = b.center_power ?? 0;
+          if (ap !== bp) return bp - ap;
+        } else if (mode === "pet") {
+          const ap = a.pet_score ?? 0;
+          const bp = b.pet_score ?? 0;
           if (ap !== bp) return bp - ap;
         } else {
           if (a.rank_score !== b.rank_score) return b.rank_score - a.rank_score;
@@ -102,63 +84,123 @@ export default function UsersView() {
         title="사용자 랭킹"
         subtitle="PCL 감별 성공 + 센터 전시로 점수를 쌓아 올라가세요"
         stats={
-          <button
-            onClick={() => setHelpOpen((v) => !v)}
-            className="h-7 px-2.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-semibold text-zinc-300 hover:bg-white/10"
-          >
-            {helpOpen ? "도움말 ▲" : "도움말 ▼"}
-          </button>
+          <HelpButton
+            size="sm"
+            title="사용자 랭킹"
+            sections={[
+              {
+                heading: "세 가지 랭킹",
+                icon: "🏆",
+                body: (
+                  <>
+                    상단 탭에서 세 가지 모드를 전환할 수 있어요.
+                    <ul className="mt-1.5">
+                      <li>
+                        <b className="text-amber-300">🏆 랭킹 점수</b> · 누적 점수 경쟁. PCL10 감별, 부수기 성공/방어로 적립
+                      </li>
+                      <li>
+                        <b className="text-rose-300">⚔️ 전투력</b> · 지금 센터에 전시된 슬랩들의 합산 화력
+                      </li>
+                      <li>
+                        <b className="text-fuchsia-300">🐾 펫 랭킹</b> · 프로필에 등록한 펫(최대 5장) 의 펫 점수 합산
+                      </li>
+                    </ul>
+                  </>
+                ),
+              },
+              {
+                heading: "랭킹 점수 산정",
+                icon: "📈",
+                body: (
+                  <>
+                    <ul>
+                      <li>
+                        <b className="text-amber-300">PCL 10 감별 성공</b> · +500점 (누적, 슬랩 잃어도 그대로 유지)
+                      </li>
+                      <li>
+                        <b className="text-rose-300">남의 보관함 부수기 성공</b> · +3,000점
+                      </li>
+                      <li>
+                        <b className="text-emerald-300">내 보관함 부수기 방어</b> · +50점 (상대가 실패할 때마다)
+                      </li>
+                      <li>
+                        <b className="text-sky-300">야생 승리</b> · +50점
+                      </li>
+                    </ul>
+                    <p className="mt-1.5 text-zinc-400">
+                      PCL 6~9 슬랩, 전시, 카드 보유는 랭킹 점수에 들어가지 않아요.
+                    </p>
+                  </>
+                ),
+              },
+              {
+                heading: "전투력 산정",
+                icon: "⚔️",
+                body: (
+                  <>
+                    센터에 전시 중인 슬랩 한 장당:
+                    <p className="mt-1">
+                      희귀도 점수 (SR 5 · MA 6 · SAR 7 · UR 8 · MUR 10) × PCL 점수 (9 → 9 · 10 → 10)
+                    </p>
+                    <p className="mt-1.5 text-zinc-400">
+                      예: MUR PCL10 = 100. 슬랩이 부서지면 즉시 빠져요. 전투력은 누적이 아니라 &quot;지금&quot;의 지표.
+                    </p>
+                  </>
+                ),
+              },
+              {
+                heading: "펫 랭킹 산정",
+                icon: "🐾",
+                body: (
+                  <>
+                    프로필에서 PCL10 슬랩을 최대 5장까지 펫으로 등록할 수 있어요. 펫 한 장당:
+                    <p className="mt-1">
+                      희귀도 점수 (SR 5 · MA 6 · SAR 7 · UR 8 · MUR 10) × 10
+                    </p>
+                    <p className="mt-1.5 text-zinc-400">
+                      예: MUR PCL10 펫 = 100점. 5장 모두 MUR PCL10 이면{" "}
+                      <b className="text-fuchsia-300">최대 500점</b>. 펫 슬랩이 부서지면 점수에서 빠져요.
+                    </p>
+                  </>
+                ),
+              },
+              {
+                heading: "행 안의 칩",
+                icon: "🎫",
+                body: (
+                  <>
+                    각 사용자 행의 PCL 등급 칩(<b>PCL 10 ×N</b>)을 누르면 그 등급 슬랩 목록이 펼쳐져요. 어떤 카드를 모았는지 미리 볼 수 있어요.
+                  </>
+                ),
+              },
+              {
+                heading: "조롱하기 🔥",
+                icon: "🔥",
+                body: (
+                  <>
+                    전투력 모드에서 다른 유저 옆 🔥 버튼으로 200자 메시지를 던질 수 있어요. 받은 사람 화면에 강제 팝업으로 떠요. 자기 자신에게는 못 보내요.
+                  </>
+                ),
+              },
+              {
+                heading: "지갑 보너스 (참고)",
+                icon: "🪙",
+                body: (
+                  <>
+                    감별 성공 즉시 지급되는 지갑 보너스 (랭킹 점수와는 별개):
+                    <ul className="mt-1.5">
+                      <li>PCL 10 · +50,000p</li>
+                      <li>PCL 9 · +30,000p</li>
+                      <li>PCL 8 · +10,000p</li>
+                      <li>PCL 6·7 · +3,000p</li>
+                    </ul>
+                  </>
+                ),
+              },
+            ]}
+          />
         }
       />
-
-      <AnimatePresence initial={false}>
-        {helpOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="rounded-xl bg-white/5 border border-white/10 p-3 mb-3">
-              <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-2">
-                PCL 등급 → 랭킹 점수 · 지갑 보너스
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
-                {[10, 9, 8, 7, 6].map((g) => (
-                  <div
-                    key={g}
-                    className="rounded-lg bg-black/30 border border-white/5 px-2.5 py-1.5"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className={clsx("font-bold", GRADE_COLOR[g])}>
-                        PCL {g}
-                      </span>
-                      <span className="text-zinc-200 tabular-nums font-semibold">
-                        +{PSA_TIER_POINTS[g]}점
-                      </span>
-                    </div>
-                    <p className="mt-0.5 text-[10px] text-zinc-500 tabular-nums text-right">
-                      🪙 +{PSA_TIER_BONUS[g].toLocaleString("ko-KR")}p
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-2 text-[10px] text-zinc-400 leading-snug">
-                <Link
-                  href="/grading"
-                  className="underline underline-offset-2 text-amber-300 hover:text-amber-200"
-                >
-                  PCL 감별
-                </Link>{" "}
-                성공 시 등급별 점수 획득. 전시는 랭킹 가산 없음. 전시 중에
-                상대에게 부서지면 그 카드로 얻은 점수가 사라지고, 남의 카드를
-                부수면 <b className="text-rose-300">+{SABOTAGE_WIN_POINTS}점</b>
-                {" "}획득.
-              </p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Tab switcher: 랭킹 점수 / 전투력 */}
       <div className="mt-3 inline-flex items-stretch rounded-xl bg-white/5 border border-white/10 p-1">
@@ -186,6 +228,18 @@ export default function UsersView() {
         >
           ⚔️ 전투력
         </button>
+        <button
+          type="button"
+          onClick={() => setMode("pet")}
+          className={clsx(
+            "px-4 py-1.5 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1",
+            mode === "pet"
+              ? "bg-gradient-to-r from-fuchsia-500 to-violet-500 text-white"
+              : "text-zinc-300 hover:text-white"
+          )}
+        >
+          🐾 펫 랭킹
+        </button>
       </div>
       {mode === "power" && (
         <p className="mt-2 text-[11px] text-zinc-400 leading-snug">
@@ -193,6 +247,14 @@ export default function UsersView() {
           <b className="text-zinc-200">희귀도 점수</b>(SR 5·MA 6·SAR 7·UR 8·MUR
           10) × <b className="text-zinc-200">PCL 점수</b>(9→9, 10→10) 를 모두
           합산.
+        </p>
+      )}
+      {mode === "pet" && (
+        <p className="mt-2 text-[11px] text-zinc-400 leading-snug">
+          펫 점수 = 등록한 PCL10 펫 슬랩 (최대 5장) 의{" "}
+          <b className="text-zinc-200">희귀도 점수</b>(SR 5·MA 6·SAR 7·UR 8·MUR
+          10) × 10 합산. 최대{" "}
+          <b className="text-fuchsia-300">500</b>점.
         </p>
       )}
 
@@ -246,6 +308,12 @@ export default function UsersView() {
                   >
                     {rank + 1}
                   </div>
+                  {(() => {
+                    const def = getCharacter(e.character);
+                    return def ? (
+                      <CharacterAvatar def={def} size="sm" />
+                    ) : null;
+                  })()}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h2 className="text-base md:text-lg font-bold text-white">
@@ -275,8 +343,16 @@ export default function UsersView() {
                       )}
                     </div>
                     <p className="text-[11px] md:text-xs text-zinc-400 mt-0.5">
-                      감별 {e.psa_count}회 · 전시 {e.showcase_count ?? 0}장 ·
-                      부수기 {e.sabotage_wins ?? 0}승
+                      전시 {e.showcase_count ?? 0}장 · 부수기 성공{" "}
+                      {e.sabotage_wins ?? 0}회
+                      {(e.pet_score ?? 0) > 0 && (
+                        <>
+                          {" · "}
+                          <span className="text-amber-300 font-semibold">
+                            🐾 {e.pet_score}
+                          </span>
+                        </>
+                      )}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
@@ -288,6 +364,19 @@ export default function UsersView() {
                         </div>
                         <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
                           전투력
+                        </div>
+                        <div className="mt-1 text-[10px] text-zinc-400 tabular-nums">
+                          랭킹 {e.rank_score.toLocaleString("ko-KR")}
+                        </div>
+                      </>
+                    ) : mode === "pet" ? (
+                      <>
+                        <div className="text-2xl md:text-3xl font-black text-fuchsia-300 tabular-nums leading-none inline-flex items-center gap-1">
+                          <span aria-hidden>🐾</span>
+                          {(e.pet_score ?? 0).toLocaleString("ko-KR")}
+                        </div>
+                        <div className="mt-1 text-[10px] text-fuchsia-300/70 uppercase tracking-wider">
+                          MAX 500
                         </div>
                         <div className="mt-1 text-[10px] text-zinc-400 tabular-nums">
                           랭킹 {e.rank_score.toLocaleString("ko-KR")}
@@ -308,6 +397,34 @@ export default function UsersView() {
                     )}
                   </div>
                 </div>
+
+                {mode === "pet" && (e.main_cards?.length ?? 0) > 0 && (
+                  <div className="px-3 md:px-4 pb-3 -mt-1 flex flex-wrap gap-1.5">
+                    {(e.main_cards ?? []).map((mc) => {
+                      const card = getCard(mc.card_id);
+                      return (
+                        <div
+                          key={mc.id}
+                          className="flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-lg bg-fuchsia-500/10 border border-fuchsia-400/30"
+                          title={`${card?.name ?? mc.card_id} · ${mc.rarity} PCL10`}
+                        >
+                          <div className="w-6 h-8 rounded overflow-hidden bg-zinc-900 ring-1 ring-white/10">
+                            {card?.imageUrl && (
+                              <img
+                                src={card.imageUrl}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                          </div>
+                          <span className="text-[10px] font-bold text-fuchsia-200">
+                            {mc.rarity}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* Grade chips row — click to expand */}
                 {gradeCounts.length > 0 && (

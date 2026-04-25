@@ -5,7 +5,6 @@ import type {
   Card,
   GiftQuota,
   GiftStatus,
-  MerchantState,
   PsaGrading,
   SetCode,
 } from "./types";
@@ -19,6 +18,8 @@ export interface DbUser {
   display_name: string;
   age: number;
   points: number;
+  character?: string | null;
+  pet_score?: number;
 }
 
 export interface WalletItem {
@@ -37,7 +38,9 @@ export interface GiftRow {
   id: string;
   from_user_id: string;
   to_user_id: string;
-  card_id: string;
+  grading_id: string | null;
+  card_id: string | null;
+  grade: number | null;
   status: GiftStatus;
   price_points: number;
   expires_at: string;
@@ -99,7 +102,7 @@ export async function rpcSignup(
 export async function fetchMe(userId: string): Promise<DbUser | null> {
   const { data, error } = await supabase
     .from("users")
-    .select("id, user_id, display_name, age, points")
+    .select("id, user_id, display_name, age, points, character, pet_score")
     .eq("id", userId)
     .single();
   if (error || !data) return null;
@@ -147,15 +150,26 @@ export async function fetchWallet(userId: string): Promise<WalletSnapshot> {
 export async function recordPackPull(
   userId: string,
   setCode: SetCode,
-  cardIds: string[]
+  cardIds: string[],
+  rarities: string[],
+  autoSellSubAR: boolean
 ) {
-  const { data, error } = await supabase.rpc("record_pack_pull", {
+  const { data, error } = await supabase.rpc("record_pack_pull_v4", {
     p_user_id: userId,
     p_set_code: setCode,
     p_card_ids: cardIds,
+    p_rarities: rarities,
+    p_auto_sell_sub_ar: autoSellSubAR,
   });
   if (error) throw error;
-  return data as { ok: boolean; pack_open_id: string };
+  return data as {
+    ok: boolean;
+    pack_open_id: string;
+    sold_count: number;
+    sold_earned: number;
+    kept_count: number;
+    points: number;
+  };
 }
 
 // ---------- Box purchase ----------
@@ -187,59 +201,19 @@ export async function buyBox(userId: string, setCode: SetCode) {
   };
 }
 
-// ---------- Merchant ----------
-
-export async function getMerchantState(userId: string): Promise<MerchantState> {
-  const { data, error } = await supabase.rpc("get_merchant_state", {
-    p_user_id: userId,
-  });
-  if (error) throw error;
-  return data as MerchantState;
-}
-
-export async function refreshMerchantRPC(
-  userId: string,
-  newCardId: string,
-  price: number
-) {
-  const { data, error } = await supabase.rpc("refresh_merchant", {
-    p_user_id: userId,
-    p_new_card_id: newCardId,
-    p_price: price,
-  });
-  if (error) return { ok: false as const, error: error.message };
-  return data as {
-    ok: boolean;
-    error?: string;
-    card_id?: string;
-    price?: number;
-    refreshes_remaining?: number;
-    next_refresh_at?: string;
-  };
-}
-
-export async function sellToMerchant(userId: string, cardId: string) {
-  const { data, error } = await supabase.rpc("sell_to_merchant", {
-    p_user_id: userId,
-    p_card_id: cardId,
-  });
-  if (error) return { ok: false as const, error: error.message };
-  return data as { ok: boolean; error?: string; earned?: number; points?: number };
-}
-
 // ---------- Gifts ----------
 
 export async function createGift(
   fromUserId: string,
   toNickname: string,
-  cardId: string,
+  gradingId: string,
   pricePoints: number,
   message?: string
 ) {
   const { data, error } = await supabase.rpc("create_gift", {
     p_from_id: fromUserId,
     p_to_user_id: toNickname,
-    p_card_id: cardId,
+    p_grading_id: gradingId,
     p_price_points: pricePoints,
     p_message: message ?? null,
   });
@@ -251,6 +225,15 @@ export async function createGift(
     daily_used?: number;
     daily_limit?: number;
   };
+}
+
+export async function cancelGift(giftId: string, userId: string) {
+  const { data, error } = await supabase.rpc("cancel_gift", {
+    p_gift_id: giftId,
+    p_user_id: userId,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as { ok: boolean; error?: string };
 }
 
 export async function fetchGiftQuota(userId: string): Promise<GiftQuota> {
@@ -312,6 +295,8 @@ export interface BulkGradingResultItem {
   failed?: boolean;
   grade?: number;
   bonus?: number;
+  auto_sold?: boolean;
+  sell_payout?: number;
   error?: string;
 }
 
@@ -322,6 +307,8 @@ export interface BulkGradingResult {
   success_count?: number;
   fail_count?: number;
   skipped_count?: number;
+  auto_sold_count?: number;
+  auto_sold_earned?: number;
   bonus?: number;
   points?: number;
 }
@@ -329,12 +316,14 @@ export interface BulkGradingResult {
 export async function bulkSubmitPsaGrading(
   userId: string,
   cardIds: string[],
-  rarities: string[]
+  rarities: string[],
+  autoSellBelowGrade: number | null = null
 ): Promise<BulkGradingResult> {
   const { data, error } = await supabase.rpc("bulk_submit_psa_grading", {
     p_user_id: userId,
     p_card_ids: cardIds,
     p_rarities: rarities,
+    p_auto_sell_below_grade: autoSellBelowGrade,
   });
   if (error) return { ok: false, error: error.message };
   return data as BulkGradingResult;
@@ -345,6 +334,13 @@ export interface RankingPsaGrading {
   card_id: string;
   grade: number;
   graded_at: string;
+}
+
+export interface RankingMainCard {
+  id: string;
+  card_id: string;
+  grade: number;
+  rarity: string;
 }
 
 export interface RankingRow {
@@ -365,6 +361,14 @@ export interface RankingRow {
   sabotage_wins: number;
   /** Σ rarity_power × pcl_power across currently-displayed slabs. */
   center_power: number;
+  /** Selected trainer character key, or null if unset. */
+  character: string | null;
+  /** Σ rarity_score × 10 across registered pet slabs. Max 500. */
+  pet_score: number;
+  /** Pet slot order — uuid[] of psa_gradings.id. */
+  main_card_ids?: string[];
+  /** Pet slabs (PCL10) in slot order, with rarity for thumbnails. */
+  main_cards?: RankingMainCard[];
   gradings: RankingPsaGrading[];
 }
 
@@ -675,6 +679,7 @@ export async function claimShowcaseIncome(userId: string) {
     ok: boolean;
     error?: string;
     earned?: number;
+    earned_rank?: number;
     card_count?: number;
     points?: number;
   };
@@ -686,6 +691,32 @@ export async function fetchCenterByLogin(loginId: string): Promise<VisitCenter> 
   });
   if (error) return { ok: false, error: error.message };
   return data as VisitCenter;
+}
+
+export interface CenterVisitStats {
+  ok: boolean;
+  error?: string;
+  user_id?: string;
+  login_id?: string;
+  display_name?: string;
+  character?: string | null;
+  pet_score?: number;
+  showcase_count?: number;
+  income_per_hour_trade?: number;
+  income_per_hour_rank?: number;
+  showcase_rank_pts?: number;
+  income_rank_position?: number;
+  income_rank_total?: number;
+}
+
+export async function fetchCenterVisitStats(
+  loginId: string
+): Promise<CenterVisitStats> {
+  const { data, error } = await supabase.rpc("get_center_visit_stats", {
+    p_login_id: loginId,
+  });
+  if (error) return { ok: false, error: error.message };
+  return (data ?? { ok: false }) as CenterVisitStats;
 }
 
 export interface SabotageLog {
@@ -744,7 +775,7 @@ export async function fetchGifts(userId: string): Promise<{
   await expirePendingGifts();
 
   const select =
-    "id, from_user_id, to_user_id, card_id, status, price_points, expires_at, accepted_at, settled_at, created_at, message, from:users!from_user_id(user_id, display_name), to:users!to_user_id(user_id, display_name)";
+    "id, from_user_id, to_user_id, grading_id, card_id, status, price_points, expires_at, accepted_at, settled_at, created_at, message, grading:psa_gradings!grading_id(grade, card_id), from:users!from_user_id(user_id, display_name), to:users!to_user_id(user_id, display_name)";
 
   const [recv, sent] = await Promise.all([
     supabase
@@ -764,22 +795,30 @@ export async function fetchGifts(userId: string): Promise<{
   if (sent.error) throw sent.error;
 
   const shape = (rows: unknown[]): GiftRow[] =>
-    (rows as Record<string, unknown>[]).map((r) => ({
-      id: r.id as string,
-      from_user_id: r.from_user_id as string,
-      to_user_id: r.to_user_id as string,
-      card_id: r.card_id as string,
-      status: r.status as GiftStatus,
-      price_points: (r.price_points as number) ?? 0,
-      expires_at: r.expires_at as string,
-      accepted_at: (r.accepted_at as string | null) ?? null,
-      settled_at: (r.settled_at as string | null) ?? null,
-      created_at: r.created_at as string,
-      message: (r.message as string | null) ?? null,
-      from_login: (r.from as { user_id?: string } | null)?.user_id,
-      to_login: (r.to as { user_id?: string } | null)?.user_id,
-      from_nickname: (r.from as { display_name?: string } | null)?.display_name,
-      to_nickname: (r.to as { display_name?: string } | null)?.display_name,
-    }));
+    (rows as Record<string, unknown>[]).map((r) => {
+      const grading = r.grading as
+        | { grade?: number; card_id?: string }
+        | null;
+      return {
+        id: r.id as string,
+        from_user_id: r.from_user_id as string,
+        to_user_id: r.to_user_id as string,
+        grading_id: (r.grading_id as string | null) ?? null,
+        card_id: (grading?.card_id ?? (r.card_id as string | null)) ?? null,
+        grade: (grading?.grade as number | undefined) ?? null,
+        status: r.status as GiftStatus,
+        price_points: (r.price_points as number) ?? 0,
+        expires_at: r.expires_at as string,
+        accepted_at: (r.accepted_at as string | null) ?? null,
+        settled_at: (r.settled_at as string | null) ?? null,
+        created_at: r.created_at as string,
+        message: (r.message as string | null) ?? null,
+        from_login: (r.from as { user_id?: string } | null)?.user_id,
+        to_login: (r.to as { user_id?: string } | null)?.user_id,
+        from_nickname: (r.from as { display_name?: string } | null)
+          ?.display_name,
+        to_nickname: (r.to as { display_name?: string } | null)?.display_name,
+      };
+    });
   return { received: shape(recv.data ?? []), sent: shape(sent.data ?? []) };
 }

@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
 import {
   acceptGift,
+  cancelGift,
   declineGift,
   fetchGifts,
   markGiftsViewed,
@@ -15,8 +16,10 @@ import {
 import { getCard, SETS } from "@/lib/sets";
 import type { GiftStatus } from "@/lib/types";
 import RarityBadge from "./RarityBadge";
+import PsaSlab from "./PsaSlab";
 import CoinIcon from "./CoinIcon";
 import PageHeader from "./PageHeader";
+import HelpButton from "./HelpButton";
 
 type Tab = "received" | "sent";
 
@@ -113,18 +116,80 @@ export default function GiftsView() {
     await refresh();
   };
 
+  const handleCancel = async (g: GiftRow) => {
+    if (!user) return;
+    setError(null);
+    setBusyId(g.id);
+    const res = await cancelGift(g.id, user.id);
+    setBusyId(null);
+    if (!res.ok) {
+      setError(res.error ?? "회수 실패");
+      return;
+    }
+    await refresh();
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
       <PageHeader
         title="선물함"
-        subtitle="24시간 안에 수락 · 미수락 시 보낸이에게 반환 · 하루 5회"
         stats={
-          <Link
-            href="/wallet"
-            className="h-9 px-3 rounded-full bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-[11px] inline-flex items-center gap-1 hover:scale-[1.02] active:scale-[0.98] transition shrink-0"
-          >
-            🎁 선물 보내기
-          </Link>
+          <div className="flex items-center gap-2 shrink-0">
+            <HelpButton
+              size="sm"
+              title="선물함"
+              sections={[
+                {
+                  heading: "선물 시스템",
+                  icon: "🎁",
+                  body: (
+                    <>
+                      <b>PCL 슬랩</b>(감별 6 이상)만 선물할 수 있어요. 받는 사람이 수락하면 슬랩 소유권이 그대로 이전돼요.
+                    </>
+                  ),
+                },
+                {
+                  heading: "받는 쪽",
+                  icon: "📥",
+                  body: (
+                    <ul>
+                      <li><b>수락</b> · 슬랩이 내 PCL 지갑으로 이전. 가격이 0p가 아니면 그 만큼 차감.</li>
+                      <li><b>거절</b> · 슬랩은 보낸 사람에게 그대로 남아요.</li>
+                      <li><b>방치</b> · 24시간 뒤 자동 만료, 슬랩은 보낸 사람 지갑에 그대로.</li>
+                    </ul>
+                  ),
+                },
+                {
+                  heading: "보내는 쪽",
+                  icon: "📤",
+                  body: (
+                    <ul>
+                      <li>하루 <b>5회</b> 한도 (24시간 슬라이딩)</li>
+                      <li>전시 중인 슬랩, 다른 선물에 묶인 슬랩은 못 보내요</li>
+                      <li>받는 사람 닉네임 또는 아이디로 검색</li>
+                      <li>가격을 <b>0p</b>로 두면 무료 선물</li>
+                      <li>140자 메시지 첨부 가능 · 보내는 동안엔 회수 가능</li>
+                    </ul>
+                  ),
+                },
+                {
+                  heading: "주의",
+                  icon: "⚠️",
+                  body: (
+                    <>
+                      본인에게는 못 보내요. 만료·거절된 선물의 슬랩은 자동으로 보낸 사람에게 그대로 남아요.
+                    </>
+                  ),
+                },
+              ]}
+            />
+            <Link
+              href="/wallet?tab=psa"
+              className="h-9 px-3 rounded-full bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-[11px] inline-flex items-center gap-1 hover:scale-[1.02] active:scale-[0.98] transition shrink-0"
+            >
+              🎁 선물 보내기
+            </Link>
+          </div>
         }
       />
 
@@ -169,7 +234,7 @@ export default function GiftsView() {
         <AnimatePresence initial={false}>
           <ul className="mt-6 space-y-2.5">
             {list.map((g) => {
-              const card = getCard(g.card_id);
+              const card = g.card_id ? getCard(g.card_id) : null;
               if (!card) return null;
               const isReceived = tab === "received";
               const counterparty = isReceived
@@ -179,11 +244,12 @@ export default function GiftsView() {
               const countdown =
                 g.status === "pending" ? formatCountdown(g.expires_at) : null;
               const isBusy = busyId === g.id;
-              const canAccept =
-                isReceived &&
-                g.status === "pending" &&
-                new Date(g.expires_at) > new Date();
+              const isPending =
+                g.status === "pending" && new Date(g.expires_at) > new Date();
+              const canAccept = isReceived && isPending;
               const canDecline = canAccept;
+              const canCancel = !isReceived && isPending;
+              const isLegacy = g.grading_id == null;
 
               return (
                 <motion.li
@@ -200,18 +266,35 @@ export default function GiftsView() {
                   )}
                 >
                   <div className="flex items-start gap-3 md:gap-4">
-                    <div className="shrink-0 w-14 h-20 md:w-16 md:h-24 rounded-lg overflow-hidden bg-zinc-900 ring-1 ring-white/10">
-                      {card.imageUrl ? (
-                        <img
-                          src={card.imageUrl}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      ) : null}
+                    <div className="shrink-0">
+                      {g.grade != null ? (
+                        <div className="w-[120px] md:w-[140px]">
+                          <PsaSlab
+                            card={card}
+                            grade={g.grade}
+                            size="sm"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-14 h-20 md:w-16 md:h-24 rounded-lg overflow-hidden bg-zinc-900 ring-1 ring-white/10">
+                          {card.imageUrl ? (
+                            <img
+                              src={card.imageUrl}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          ) : null}
+                        </div>
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <RarityBadge rarity={card.rarity} size="xs" />
+                        {g.grade != null && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black border bg-amber-500/15 text-amber-200 border-amber-400/40 tabular-nums">
+                            PCL {g.grade}
+                          </span>
+                        )}
                         <span
                           className={clsx(
                             "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border",
@@ -220,6 +303,11 @@ export default function GiftsView() {
                         >
                           {ss.label}
                         </span>
+                        {isLegacy && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border bg-zinc-500/15 text-zinc-300 border-zinc-400/30">
+                            구버전
+                          </span>
+                        )}
                         <span className="text-[10px] text-zinc-500">
                           {new Date(g.created_at).toLocaleString("ko-KR", {
                             month: "2-digit",
@@ -274,7 +362,7 @@ export default function GiftsView() {
                     </div>
                   </div>
 
-                  {(canAccept || canDecline) && (
+                  {(canAccept || canDecline) && !isLegacy && (
                     <div className="mt-3 flex gap-2">
                       <button
                         onClick={() => handleAccept(g)}
@@ -307,6 +395,17 @@ export default function GiftsView() {
                         className="h-10 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs md:text-sm"
                       >
                         거절
+                      </button>
+                    </div>
+                  )}
+                  {canCancel && (
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={() => handleCancel(g)}
+                        disabled={isBusy}
+                        className="flex-1 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs md:text-sm"
+                      >
+                        {isBusy ? "처리 중..." : "선물 회수"}
                       </button>
                     </div>
                   )}
