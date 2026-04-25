@@ -790,8 +790,8 @@ function IdleCTA({
       {/* Permanent-loss warning — spelled out so no one stumbles into
           a battle thinking their slab is safe. */}
       <div className="mx-4 mb-4 md:mx-8 md:mb-8 rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-200 leading-relaxed">
-        ⚠️ <b>지면 사용한 PCL 슬랩이 영원히 삭제</b>돼요. 그 카드로 얻었던
-        랭킹 점수도 함께 사라집니다. 신중하게 상대의 타입을 보고 고르세요.
+        ⚠️ <b>지면 사용한 PCL 슬랩이 영원히 삭제</b>돼요. 신중하게 상대의
+        타입을 보고 고르세요.
       </div>
     </motion.div>
   );
