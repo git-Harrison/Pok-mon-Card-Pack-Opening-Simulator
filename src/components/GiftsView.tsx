@@ -126,7 +126,7 @@ export default function GiftsView() {
       setError(res.error ?? "회수 실패");
       return;
     }
-    await refresh();
+    await Promise.all([refreshMe(), refresh()]);
   };
 
   return (
@@ -166,7 +166,7 @@ export default function GiftsView() {
                     <ul>
                       <li>하루 <b>5회</b> 한도 (24시간 슬라이딩)</li>
                       <li>전시 중인 슬랩, 다른 선물에 묶인 슬랩은 못 보내요</li>
-                      <li>받는 사람 닉네임 또는 아이디로 검색</li>
+                      <li>받는 사람을 사용자 목록에서 선택</li>
                       <li>가격을 <b>0p</b>로 두면 무료 선물</li>
                       <li>140자 메시지 첨부 가능 · 보내는 동안엔 회수 가능</li>
                     </ul>

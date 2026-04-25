@@ -47,7 +47,7 @@ export default function PageHeader({
         dense ? "" : "mb-4 md:mb-5"
       )}
     >
-      <div className="min-w-0">
+      <div className="min-w-0 hidden md:block">
         <h1
           className={clsx(
             "text-2xl md:text-3xl font-black tracking-tight leading-tight",
@@ -64,7 +64,7 @@ export default function PageHeader({
         )}
       </div>
       {stats && (
-        <div className="flex items-center gap-2 text-xs shrink-0">{stats}</div>
+        <div className="flex items-center gap-2 text-xs flex-wrap min-w-0">{stats}</div>
       )}
       {actions && (
         <div className="w-full flex items-center gap-2 flex-wrap">{actions}</div>

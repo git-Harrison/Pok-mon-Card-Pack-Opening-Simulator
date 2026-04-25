@@ -109,6 +109,21 @@ export async function fetchMe(userId: string): Promise<DbUser | null> {
   return data as DbUser;
 }
 
+// ---------- Users directory ----------
+
+export interface UserListEntry {
+  id: string;
+  user_id: string;
+  display_name: string;
+  character: string | null;
+}
+
+export async function fetchAllUsers(): Promise<UserListEntry[]> {
+  const { data, error } = await supabase.rpc("list_users");
+  if (error) return [];
+  return (data ?? []) as UserListEntry[];
+}
+
 // ---------- Wallet ----------
 
 export async function fetchWallet(userId: string): Promise<WalletSnapshot> {

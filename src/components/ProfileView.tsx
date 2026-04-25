@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
@@ -10,12 +11,15 @@ import {
 } from "@/lib/db";
 import {
   CHARACTERS,
+  DISPLAY_NAME_MAX,
+  DISPLAY_NAME_MIN,
   fetchProfile,
   getCharacter,
   MAX_MAIN_CARDS,
   MAX_PET_SCORE,
   setCharacter as rpcSetCharacter,
   setMainCards as rpcSetMainCards,
+  updateDisplayName as rpcUpdateDisplayName,
   type CharacterDef,
   type ProfileMainCard,
   type ProfileSnapshot,
@@ -32,22 +36,45 @@ const HELP_SECTIONS: HelpSection[] = [
     icon: "🎭",
     body: (
       <>
-        포켓몬 본가 시리즈의 6명 주인공 중 한 명을 선택해 자신의 트레이너로
-        쓸 수 있어요.
+        애니메이션 1세대 관동 지방의 캐릭터 6명 중 한 명을 선택해 자신의
+        트레이너로 쓸 수 있어요. 모든 캐릭터는 도트 모션으로 움직여요.
         <ul className="mt-1.5">
           <li>
-            <b className="text-rose-300">레드 / 리프</b> · 관동 지방
+            <b className="text-rose-300">지우</b> · 만년 10살 주인공
           </li>
           <li>
-            <b className="text-amber-300">골드 / 코토네</b> · 성도 지방
+            <b className="text-cyan-300">이슬</b> · 푸른 도시 체육관 관장
           </li>
           <li>
-            <b className="text-sky-300">쿠로 / 토우코</b> · 하나 지방
+            <b className="text-amber-300">웅</b> · 회색 시티 체육관 관장
+          </li>
+          <li>
+            <b className="text-zinc-200">오박사</b> · 태초마을 박사
+          </li>
+          <li>
+            <b className="text-emerald-300">그린</b> · 라이벌
+          </li>
+          <li>
+            <b className="text-rose-400">목호</b> · 사천왕 챔피언
           </li>
         </ul>
+        <p className="mt-2 text-rose-300 font-bold">
+          ⚠️ 캐릭터는 한 번 선택하면 변경할 수 없어요. 신중하게 골라주세요.
+        </p>
+      </>
+    ),
+  },
+  {
+    heading: "닉네임 변경",
+    icon: "✏️",
+    body: (
+      <>
+        프로필 배너의 <b className="text-amber-300">닉네임 변경</b> 버튼으로
+        언제든 새 닉네임으로 바꿀 수 있어요. 길이는 {DISPLAY_NAME_MIN}~
+        {DISPLAY_NAME_MAX}자, 다른 사용자와 중복은 불가.
         <p className="mt-2 text-zinc-400">
-          캐릭터는 언제든 변경할 수 있지만 신중하게 골라주세요. 선택을
-          누르면 한 번 더 확인해요.
+          랭킹 · 선물 · 도촬 등 닉네임이 표시되는 모든 곳에 즉시 반영돼요.
+          로그인 아이디는 바뀌지 않아요.
         </p>
       </>
     ),
@@ -99,7 +126,7 @@ const HELP_SECTIONS: HelpSection[] = [
 ];
 
 export default function ProfileView() {
-  const { user } = useAuth();
+  const { user, refreshMe } = useAuth();
   const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
   const [psa, setPsa] = useState<PsaGradingWithDisplay[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,6 +134,7 @@ export default function ProfileView() {
   const [error, setError] = useState<string | null>(null);
 
   const [pickerSlot, setPickerSlot] = useState<number | null>(null);
+  const [nameOpen, setNameOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -148,12 +176,12 @@ export default function ProfileView() {
   const onPickCharacter = useCallback(
     async (def: CharacterDef) => {
       if (!user || savingChar) return;
-      const current = profile?.character;
-      if (current === def.key) return;
+      if (profile?.character_locked) {
+        setError("캐릭터는 한 번 선택하면 변경할 수 없어요.");
+        return;
+      }
       const ok = window.confirm(
-        current
-          ? `캐릭터를 "${def.name}"(으)로 변경할까요?`
-          : `${def.name}(으)로 시작할까요?`
+        `${def.name}(으)로 확정할까요?\n\n⚠️ 한 번 선택하면 변경할 수 없어요.`
       );
       if (!ok) return;
       setSavingChar(true);
@@ -166,7 +194,7 @@ export default function ProfileView() {
       }
       await refresh();
     },
-    [user, profile?.character, refresh, savingChar]
+    [user, profile?.character_locked, refresh, savingChar]
   );
 
   const onSelectSlab = useCallback(
@@ -236,7 +264,39 @@ export default function ProfileView() {
             petScore={petScore}
             scorePct={scorePct}
             slotsUsed={filledSlots.filter(Boolean).length}
+            centerPower={profile?.center_power ?? 0}
+            pokedexCount={profile?.pokedex_count ?? 0}
+            onEditName={() => setNameOpen(true)}
           />
+
+          <section className="mt-4 grid grid-cols-2 gap-2.5">
+            <Link
+              href="/wallet"
+              className="rounded-2xl p-3 border border-amber-400/30 bg-amber-400/5 hover:bg-amber-400/10 transition flex items-center gap-3"
+            >
+              <span className="text-2xl">🎴</span>
+              <div className="min-w-0">
+                <div className="text-sm font-bold text-amber-100">내 지갑</div>
+                <div className="text-[10px] text-amber-200/70">
+                  카드 · PCL 슬랩
+                </div>
+              </div>
+            </Link>
+            <Link
+              href="/center"
+              className="rounded-2xl p-3 border border-fuchsia-400/30 bg-fuchsia-400/5 hover:bg-fuchsia-400/10 transition flex items-center gap-3"
+            >
+              <span className="text-2xl">🏛️</span>
+              <div className="min-w-0">
+                <div className="text-sm font-bold text-fuchsia-100">
+                  내 센터
+                </div>
+                <div className="text-[10px] text-fuchsia-200/70">
+                  보관함 · 전시
+                </div>
+              </div>
+            </Link>
+          </section>
 
           {error && (
             <div className="mt-4 px-3 py-2 rounded-lg bg-rose-500/10 border border-rose-500/40 text-rose-200 text-xs">
@@ -247,24 +307,32 @@ export default function ProfileView() {
           <section className="mt-7">
             <h2 className="text-sm font-bold text-white inline-flex items-center gap-1.5">
               <span aria-hidden>🎭</span>캐릭터 선택
+              {profile?.character_locked && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-200 border border-rose-500/40">
+                  🔒 확정됨
+                </span>
+              )}
             </h2>
-            <p className="mt-1 text-[11px] text-zinc-400">
-              포켓몬 본가의 6명 주인공 중 한 명을 골라요.
+            <p className="mt-1 text-[11px] text-rose-300 font-semibold">
+              ⚠️ 캐릭터는 한 번 선택하면 변경할 수 없어요. 신중하게 골라주세요.
             </p>
             <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               {CHARACTERS.map((def) => {
                 const active = profile?.character === def.key;
+                const locked = profile?.character_locked && !active;
                 return (
                   <button
                     key={def.key}
                     type="button"
                     onClick={() => onPickCharacter(def)}
-                    disabled={savingChar}
+                    disabled={savingChar || locked}
                     style={{ touchAction: "manipulation" }}
                     className={clsx(
                       "relative rounded-2xl p-3 border transition text-left",
                       active
                         ? "bg-white text-zinc-900 border-white shadow-[0_0_28px_-6px_rgba(255,255,255,0.55)]"
+                        : locked
+                        ? "bg-white/5 border-white/10 text-zinc-500 opacity-50 cursor-not-allowed"
                         : "bg-white/5 border-white/10 text-zinc-200 hover:bg-white/10"
                     )}
                   >
@@ -348,6 +416,20 @@ export default function ProfileView() {
             onPick={(id) => onSelectSlab(pickerSlot, id)}
           />
         )}
+        {nameOpen && user && (
+          <NicknameModal
+            current={user.display_name ?? ""}
+            onClose={() => setNameOpen(false)}
+            onSaved={async () => {
+              await refreshMe();
+              setNameOpen(false);
+            }}
+            onSubmit={async (next) => {
+              const res = await rpcUpdateDisplayName(user.id, next);
+              return res;
+            }}
+          />
+        )}
       </AnimatePresence>
     </div>
   );
@@ -359,12 +441,18 @@ function ProfileBanner({
   petScore,
   scorePct,
   slotsUsed,
+  centerPower,
+  pokedexCount,
+  onEditName,
 }: {
   character: CharacterDef | null;
   displayName: string;
   petScore: number;
   scorePct: number;
   slotsUsed: number;
+  centerPower: number;
+  pokedexCount: number;
+  onEditName: () => void;
 }) {
   return (
     <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 via-white/[0.02] to-transparent p-4 md:p-5 flex items-center gap-4">
@@ -385,6 +473,14 @@ function ProfileBanner({
               {character.name}
             </span>
           )}
+          <button
+            type="button"
+            onClick={onEditName}
+            className="ml-auto inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md bg-white/10 hover:bg-white/15 text-zinc-100 border border-white/10"
+            style={{ touchAction: "manipulation" }}
+          >
+            <span aria-hidden>✏️</span>닉네임 변경
+          </button>
         </div>
         <p className="mt-1 text-[11px] text-zinc-400">
           {character
@@ -416,6 +512,28 @@ function ProfileBanner({
           <p className="mt-1 text-[10px] uppercase tracking-wider text-zinc-500">
             펫 점수
           </p>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="rounded-xl bg-rose-500/10 border border-rose-500/30 px-3 py-2">
+            <div className="text-[9px] uppercase tracking-wider text-rose-300/70">
+              ⚔️ 전투력
+            </div>
+            <div className="mt-0.5 text-base md:text-lg font-black tabular-nums text-rose-200">
+              {centerPower.toLocaleString("ko-KR")}
+            </div>
+          </div>
+          <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3 py-2">
+            <div className="text-[9px] uppercase tracking-wider text-emerald-300/70">
+              📔 도감 박제
+            </div>
+            <div className="mt-0.5 text-base md:text-lg font-black tabular-nums text-emerald-200">
+              {pokedexCount.toLocaleString("ko-KR")}
+              <span className="text-[10px] text-emerald-300/60 font-semibold">
+                {" "}장
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -456,11 +574,14 @@ export function CharacterAvatar({
           draggable={false}
           onError={() => setBroken(true)}
           style={{ imageRendering: "pixelated" }}
-          className="absolute inset-0 w-full h-full object-contain p-1.5 select-none pointer-events-none"
+          className={clsx(
+            "absolute inset-0 w-full h-full object-contain p-1.5 select-none pointer-events-none",
+            def.motion === "css-bob" && "animate-avatar-bob"
+          )}
         />
       ) : (
         <div
-          className="absolute inset-0 flex items-center justify-center text-2xl"
+          className="absolute inset-0 flex items-center justify-center text-2xl animate-avatar-bob"
           aria-hidden
         >
           {def.emoji}
@@ -648,6 +769,157 @@ function SlabPicker({
               style={{ touchAction: "manipulation" }}
             >
               닫기
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </Portal>
+  );
+}
+
+function NicknameModal({
+  current,
+  onClose,
+  onSubmit,
+  onSaved,
+}: {
+  current: string;
+  onClose: () => void;
+  onSubmit: (
+    next: string
+  ) => Promise<{ ok: boolean; error?: string; display_name?: string }>;
+  onSaved: () => void | Promise<void>;
+}) {
+  const [value, setValue] = useState(current);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  const trimmed = value.trim();
+  const tooShort = trimmed.length < DISPLAY_NAME_MIN;
+  const tooLong = trimmed.length > DISPLAY_NAME_MAX;
+  const same = trimmed === current.trim();
+  const disabled = saving || tooShort || tooLong || same;
+
+  const submit = async () => {
+    if (disabled) return;
+    setSaving(true);
+    setErr(null);
+    const res = await onSubmit(trimmed);
+    setSaving(false);
+    if (!res.ok) {
+      setErr(res.error ?? "닉네임을 변경하지 못했어요.");
+      return;
+    }
+    await onSaved();
+  };
+
+  return (
+    <Portal>
+      <motion.div
+        className="fixed inset-0 z-[170] bg-black/85 backdrop-blur-md flex items-center justify-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{
+          paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+          paddingLeft: 12,
+          paddingRight: 12,
+        }}
+      >
+        <motion.div
+          className="relative w-full max-w-sm bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden shadow-2xl"
+          initial={{ y: 24, opacity: 0, scale: 0.97 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: 24, opacity: 0, scale: 0.97 }}
+          transition={{ type: "spring", stiffness: 220, damping: 24 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between gap-3 px-4 h-12 border-b border-white/10 bg-gradient-to-r from-amber-500/10 via-fuchsia-500/10 to-indigo-500/10">
+            <h2 className="text-sm font-bold text-white inline-flex items-center gap-1.5">
+              <span aria-hidden>✏️</span>닉네임 변경
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="닫기"
+              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white inline-flex items-center justify-center"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="p-4 space-y-3">
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              랭킹 · 선물 · 도촬에서 보일 새 닉네임을 입력하세요.
+              <br />
+              {DISPLAY_NAME_MIN}~{DISPLAY_NAME_MAX}자, 다른 사용자와 중복 불가.
+            </p>
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+              }}
+              maxLength={DISPLAY_NAME_MAX + 4}
+              placeholder="새 닉네임"
+              autoFocus
+              className="w-full h-11 px-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:border-amber-300/60 focus:bg-white/10"
+            />
+            <div className="flex items-center justify-between text-[10px] text-zinc-500 tabular-nums">
+              <span>
+                {tooShort
+                  ? `${DISPLAY_NAME_MIN}자 이상 입력해주세요`
+                  : tooLong
+                  ? `${DISPLAY_NAME_MAX}자 이하로 입력해주세요`
+                  : same
+                  ? "현재 닉네임과 동일해요"
+                  : "사용 가능"}
+              </span>
+              <span>
+                {trimmed.length} / {DISPLAY_NAME_MAX}
+              </span>
+            </div>
+            {err && (
+              <div className="px-3 py-2 rounded-lg bg-rose-500/10 border border-rose-500/40 text-rose-200 text-xs">
+                {err}
+              </div>
+            )}
+          </div>
+
+          <div className="shrink-0 border-t border-white/10 p-3 bg-black/40 flex gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              className="flex-1 h-11 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-100 font-bold text-sm active:scale-[0.98] disabled:opacity-50"
+              style={{ touchAction: "manipulation" }}
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={submit}
+              disabled={disabled}
+              className={clsx(
+                "flex-1 h-11 rounded-xl font-bold text-sm active:scale-[0.98]",
+                disabled
+                  ? "bg-white/20 text-zinc-400 cursor-not-allowed"
+                  : "bg-amber-300 text-zinc-900 hover:bg-amber-200"
+              )}
+              style={{ touchAction: "manipulation" }}
+            >
+              {saving ? "저장 중…" : "변경"}
             </button>
           </div>
         </motion.div>

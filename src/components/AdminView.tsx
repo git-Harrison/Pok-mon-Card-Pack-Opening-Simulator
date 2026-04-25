@@ -10,6 +10,7 @@ import {
   type AdminUserRow,
 } from "@/lib/db";
 import CoinIcon from "./CoinIcon";
+import UserSelect from "./UserSelect";
 
 const ADMIN_LOGIN = "hun";
 
@@ -59,7 +60,7 @@ export default function AdminView() {
     if (!user) return;
     const amount = parseInt(amountRaw, 10);
     if (!target.trim()) {
-      setError("대상 닉네임/아이디를 입력하세요.");
+      setError("대상 사용자를 선택하세요.");
       return;
     }
     if (Number.isNaN(amount) || amount === 0) {
@@ -122,17 +123,12 @@ export default function AdminView() {
       <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
         <label className="block">
           <span className="text-xs text-zinc-300 mb-1.5 block">
-            대상 (닉네임 또는 아이디)
+            대상 사용자
           </span>
-          <input
-            value={target}
-            onChange={(e) => setTarget(e.target.value)}
-            autoComplete="off"
-            autoCapitalize="none"
-            spellCheck={false}
-            placeholder="예: 은루베리 또는 eunada"
-            style={{ fontSize: "16px" }}
-            className="w-full h-11 px-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400/60"
+          <UserSelect
+            value={target || null}
+            placeholder="대상 사용자 고르기"
+            onChange={(u) => setTarget(u.user_id)}
           />
         </label>
         <label className="block mt-3">

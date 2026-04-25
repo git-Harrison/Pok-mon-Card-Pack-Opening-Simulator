@@ -515,7 +515,7 @@ export default function WildView() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
+    <div className="max-w-2xl mx-auto px-3 md:px-6 py-3 md:py-8 fade-in">
       <PageHeader
         title="🌿 야생"
         stats={
@@ -561,16 +561,18 @@ export default function WildView() {
       )}
 
       {phase === "player-turn" && (
-        <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="mt-3 grid grid-cols-2 gap-2">
           <button
             onClick={playerAttack}
-            className="h-12 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 text-zinc-950 font-black text-sm active:scale-[0.98]"
+            style={{ touchAction: "manipulation" }}
+            className="h-11 md:h-12 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 text-zinc-950 font-black text-sm active:scale-[0.98]"
           >
             ⚔️ 공격
           </button>
           <button
             onClick={flee}
-            className="h-12 rounded-xl bg-white/10 border border-white/15 text-white font-bold text-sm active:scale-[0.98]"
+            style={{ touchAction: "manipulation" }}
+            className="h-11 md:h-12 rounded-xl bg-white/10 border border-white/15 text-white font-bold text-sm active:scale-[0.98]"
           >
             🏃 도망
           </button>
@@ -628,19 +630,20 @@ function IdleCTA({
           "radial-gradient(140% 80% at 50% 0%, rgba(16,185,129,0.18) 0%, rgba(6,95,70,0.05) 60%, transparent 100%)",
       }}
     >
-      <div className="p-5 md:p-8 text-center">
-        <div className="text-5xl mb-2 motion-safe:animate-bounce">🌾</div>
-        <h2 className="text-lg md:text-xl font-black text-white">
+      <div className="p-4 md:p-8 text-center">
+        <div className="text-4xl md:text-5xl mb-2 motion-safe:animate-bounce">🌾</div>
+        <h2 className="text-base md:text-xl font-black text-white">
           풀숲이 흔들린다…
         </h2>
-        <p className="mt-1 text-xs text-zinc-300">
+        <p className="mt-1 text-[11px] md:text-xs text-zinc-300">
           보유한 PCL 슬랩 {count}장으로 야생 포켓몬과 겨룹니다.
         </p>
         <button
           onClick={onStart}
           disabled={blocked}
+          style={{ touchAction: "manipulation" }}
           className={clsx(
-            "mt-4 h-12 px-6 rounded-xl font-black text-sm inline-flex items-center gap-2 transition",
+            "mt-3 md:mt-4 h-11 md:h-12 px-5 md:px-6 rounded-xl font-black text-sm inline-flex items-center gap-2 transition",
             blocked
               ? "bg-white/10 text-zinc-500"
               : "bg-gradient-to-r from-emerald-400 to-lime-500 text-zinc-950 hover:scale-[1.03] active:scale-[0.98]"
@@ -651,7 +654,7 @@ function IdleCTA({
       </div>
       {/* Permanent-loss warning — spelled out so no one stumbles into
           a battle thinking their slab is safe. */}
-      <div className="mx-5 mb-5 md:mx-8 md:mb-8 rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-200 leading-relaxed">
+      <div className="mx-4 mb-4 md:mx-8 md:mb-8 rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-200 leading-relaxed">
         ⚠️ <b>지면 사용한 PCL 슬랩이 영원히 삭제</b>돼요. 그 카드로 얻었던
         랭킹 점수도 함께 사라집니다. 신중하게 상대의 타입을 보고 고르세요.
       </div>
@@ -710,8 +713,8 @@ function BattleScene({
   const playerBubble = bubble?.side === "player" ? bubble.text : "";
   return (
     <section
-      className="relative mt-4 overflow-visible"
-      style={{ aspectRatio: "4 / 5" }}
+      className="relative mt-3 overflow-visible"
+      style={{ aspectRatio: "4 / 4.5" }}
     >
       <div
         aria-hidden
@@ -1027,6 +1030,7 @@ function PickSlabPanel({
             <li key={s.gradingId}>
               <button
                 onClick={() => onPick(s)}
+                style={{ touchAction: "manipulation" }}
                 className={clsx(
                   "w-full flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-left hover:bg-white/10 active:scale-[0.98] transition"
                 )}
@@ -1134,6 +1138,7 @@ function ResultPanel({
         <button
           onClick={onAgain}
           disabled={disableAgain}
+          style={{ touchAction: "manipulation" }}
           className={clsx(
             "h-11 rounded-xl font-bold text-sm",
             disableAgain
@@ -1145,6 +1150,7 @@ function ResultPanel({
         </button>
         <button
           onClick={onExit}
+          style={{ touchAction: "manipulation" }}
           className="h-11 rounded-xl bg-white/10 border border-white/15 text-white font-bold text-sm active:scale-[0.98]"
         >
           그만하기

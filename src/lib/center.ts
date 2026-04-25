@@ -93,3 +93,17 @@ export const SHOWCASE_ORDER: ShowcaseType[] = [
 // stay within that bound.
 export const CENTER_GRID_COLS = 6;
 export const CENTER_GRID_ROWS = 6;
+
+// Mirror of supabase/migrations/20260518_showcase_income_v3.sql
+// `slab_income_trade(p_rarity, p_grade)`. Keep in sync with the SQL.
+const SLAB_INCOME_TRADE: Record<string, Record<number, number>> = {
+  MUR: { 10: 100_000, 9: 50_000, 8: 20_000, 7: 10_000, 6: 5_000 },
+  UR: { 10: 60_000, 9: 30_000, 8: 12_000, 7: 6_000, 6: 3_000 },
+  SAR: { 10: 40_000, 9: 20_000, 8: 8_000, 7: 4_000, 6: 2_000 },
+  MA: { 10: 30_000, 9: 15_000, 8: 6_000, 7: 3_000, 6: 1_500 },
+  SR: { 10: 20_000, 9: 10_000, 8: 4_000, 7: 2_000, 6: 1_000 },
+};
+
+export function slabIncomeTrade(rarity: string, grade: number): number {
+  return SLAB_INCOME_TRADE[rarity]?.[grade] ?? 0;
+}

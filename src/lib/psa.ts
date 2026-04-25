@@ -1,7 +1,12 @@
 import type { Rarity } from "./types";
 
-/** PCL 감정 대상 등급 — SR/MA/SAR/UR/MUR 만 맡길 수 있음. */
+/** PCL 감정 대상 등급 — 모든 등급의 카드를 감별할 수 있음. */
 export const PSA_ELIGIBLE_RARITIES: readonly Rarity[] = [
+  "C",
+  "U",
+  "R",
+  "RR",
+  "AR",
   "SR",
   "MA",
   "SAR",

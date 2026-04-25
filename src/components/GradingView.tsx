@@ -35,8 +35,8 @@ const HELP_SECTIONS: HelpSection[] = [
     icon: "🔎",
     body: (
       <>
-        SR / MA / SAR / UR / MUR 등급의 카드를 PCL 슬랩으로 감별하는
-        시스템이에요. 슬랩은 일반 카드보다 가치가 훨씬 높고,{" "}
+        모든 등급의 카드를 PCL 슬랩으로 감별할 수 있어요. 슬랩은 일반 카드보다
+        가치가 훨씬 높고,{" "}
         <b>센터 전시</b>·<b>야생 배틀</b>·<b>랭킹 점수</b>의 핵심 자원이에요.
       </>
     ),
@@ -172,7 +172,7 @@ export default function GradingView() {
   const submit = useCallback(async () => {
     if (!user || !selected || phase !== "idle") return;
     if (!isPsaEligible(selected.rarity)) {
-      setError("SR · MA · SAR · UR · MUR 카드만 감별을 받을 수 있어요.");
+      setError("감별 가능한 카드가 아니에요.");
       return;
     }
     setError(null);
@@ -215,25 +215,27 @@ export default function GradingView() {
   const tone = grade ? psaTone(grade) : null;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 md:px-6 py-4 md:py-8 fade-in">
+    <div className="max-w-2xl mx-auto px-3 md:px-6 py-3 md:py-8 fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h1 className="text-xl md:text-3xl font-black tracking-tight">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="min-w-0 flex-1 hidden md:block">
+          <h1 className="text-lg md:text-3xl font-black tracking-tight">
             <span className="bg-gradient-to-r from-fuchsia-300 via-violet-200 to-indigo-300 bg-clip-text text-transparent">
               PCL 감정실
             </span>
           </h1>
-          <p className="text-[10px] md:text-xs text-zinc-500 tracking-[0.2em] uppercase">
+          <p className="text-[9px] md:text-xs text-zinc-500 tracking-[0.2em] uppercase">
             Card Authentication Lab
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="text-right">
-            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
+        <div className="flex items-center gap-2 min-w-0 ml-auto">
+          <div className="text-right min-w-0">
+            <div className="text-[9px] md:text-[10px] text-zinc-500 uppercase tracking-wider">
               접수 번호
             </div>
-            <div className="text-xs font-mono text-fuchsia-200">{caseId}</div>
+            <div className="text-[10px] md:text-xs font-mono text-fuchsia-200 truncate">
+              {caseId}
+            </div>
           </div>
           <HelpButton size="sm" title="PCL 감별" sections={HELP_SECTIONS} />
         </div>
@@ -241,7 +243,7 @@ export default function GradingView() {
 
       {/* Lab stage */}
       <section
-        className="relative mt-4 rounded-2xl border overflow-hidden"
+        className="relative mt-3 rounded-2xl border overflow-hidden"
         style={{
           borderColor: "rgba(168, 85, 247, 0.35)",
           background:
@@ -285,7 +287,7 @@ export default function GradingView() {
         </div>
 
         {/* Pedestal */}
-        <div className="relative px-4 py-6 flex justify-center">
+        <div className="relative px-4 py-3 md:py-6 flex justify-center">
           <Pedestal
             selected={selected}
             grade={grade}
@@ -349,13 +351,13 @@ export default function GradingView() {
         )}
 
         {/* Actions */}
-        <div className="relative px-4 pb-4 grid grid-cols-2 gap-2">
+        <div className="relative px-3 md:px-4 pb-3 md:pb-4 grid grid-cols-2 gap-2">
           {phase === "idle" && (
             <>
               <button
                 onClick={() => setPicking(true)}
                 style={{ touchAction: "manipulation" }}
-                className="h-12 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-sm"
+                className="h-11 md:h-12 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-sm"
               >
                 {selected ? "다른 카드" : "카드 선택"}
               </button>
@@ -489,7 +491,7 @@ function Pedestal({
   onPick: () => void;
 }) {
   return (
-    <div className="relative w-full flex justify-center" style={{ minHeight: 260 }}>
+    <div className="relative w-full flex justify-center" style={{ minHeight: 200 }}>
       {/* Orbital rings during animation */}
       {phase === "animating" && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -577,7 +579,7 @@ function ShatteringCard({ card }: { card: Card }) {
         }}
         transition={{ duration: 1.1, times: [0, 0.2, 0.4, 0.55, 0.7, 0.85, 0.95, 1], ease: "easeIn" }}
         className={clsx(
-          "relative w-[170px] md:w-[200px] aspect-[5/7] rounded-2xl overflow-hidden isolate ring-2 bg-zinc-900",
+          "relative w-[140px] md:w-[200px] aspect-[5/7] rounded-2xl overflow-hidden isolate ring-2 bg-zinc-900",
           style.frame
         )}
       >
@@ -684,7 +686,7 @@ function CardOnPedestal({
         animate={scanning ? { y: [-2, -8, -2] } : { y: 0 }}
         transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
         className={clsx(
-          "relative w-[170px] md:w-[200px] aspect-[5/7] rounded-2xl overflow-hidden isolate ring-2 bg-zinc-900",
+          "relative w-[140px] md:w-[200px] aspect-[5/7] rounded-2xl overflow-hidden isolate ring-2 bg-zinc-900",
           style.frame,
           style.glow
         )}
@@ -740,7 +742,7 @@ function EmptyPedestal({ onPick }: { onPick: () => void }) {
       <button
         onClick={onPick}
         style={{ touchAction: "manipulation" }}
-        className="relative w-[160px] md:w-[180px] aspect-[5/7] rounded-2xl border-2 border-dashed border-fuchsia-400/40 bg-fuchsia-500/5 text-fuchsia-200 hover:text-white hover:border-fuchsia-300/60 transition flex flex-col items-center justify-center gap-2"
+        className="relative w-[130px] md:w-[180px] aspect-[5/7] rounded-2xl border-2 border-dashed border-fuchsia-400/40 bg-fuchsia-500/5 text-fuchsia-200 hover:text-white hover:border-fuchsia-300/60 transition flex flex-col items-center justify-center gap-2"
       >
         <span className="text-3xl">＋</span>
         <span className="text-xs font-semibold">감정 대상 카드 놓기</span>
@@ -901,7 +903,7 @@ function CardPicker({
             <div className="py-10 text-center text-sm text-zinc-400">
               <p>감정 대상 카드가 없어요.</p>
               <p className="mt-1 text-[11px]">
-                SR · MA · SAR · UR · MUR 카드만 맡길 수 있습니다.
+                모든 등급의 카드를 감별할 수 있어요.
               </p>
             </div>
           ) : (
@@ -1110,7 +1112,7 @@ function BulkGradingModal({
                   <div className="py-10 text-center text-sm text-zinc-400">
                     <p>감정 대상 카드가 없어요.</p>
                     <p className="mt-1 text-[11px]">
-                      SR · MA · SAR · UR · MUR 카드만 맡길 수 있습니다.
+                      모든 등급의 카드를 감별할 수 있어요.
                     </p>
                   </div>
                 ) : (

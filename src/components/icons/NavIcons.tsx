@@ -176,6 +176,24 @@ export function UserIcon({ className = "w-6 h-6" }: IconProps) {
   );
 }
 
+export function BookIcon({ className = "w-6 h-6" }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4 5a2 2 0 0 1 2-2h4a3 3 0 0 1 2 1 3 3 0 0 1 2-1h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4a2 2 0 0 0-2 2 2 2 0 0 0-2-2H6a2 2 0 0 1-2-2z" />
+      <path d="M12 4v16" />
+    </svg>
+  );
+}
+
 export function LogoutIcon({ className = "w-5 h-5" }: IconProps) {
   return (
     <svg

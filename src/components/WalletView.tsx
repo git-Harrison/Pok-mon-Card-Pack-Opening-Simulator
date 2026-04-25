@@ -26,6 +26,7 @@ import PsaSlab from "./PsaSlab";
 import CoinIcon from "./CoinIcon";
 import PageHeader from "./PageHeader";
 import HelpButton from "./HelpButton";
+import UserSelect from "./UserSelect";
 
 type Mode = "cards" | "psa";
 type RarityFilter = "ALL" | Rarity;
@@ -214,6 +215,18 @@ export default function WalletView() {
                     </>
                   ),
                 },
+                {
+                  heading: "🏛️ 전시 중 슬랩",
+                  icon: "🔒",
+                  body: (
+                    <>
+                      <b>전시 중</b> 배지가 붙은 슬랩은 지금 센터에 전시돼
+                      있어요. 전시된 카드는 <b>일괄 판매 · 야생 배틀 · 재감별 ·
+                      선물</b>에 사용할 수 없고, 센터에서 꺼내거나 상대에게
+                      부서지기 전까지 잠겨있어요.
+                    </>
+                  ),
+                },
               ]}
             />
           </>
@@ -268,59 +281,54 @@ function CardsMode({
 }) {
   return (
     <>
-      {/* Compact filter row: single horizontal scroll + tight bulk-sell chip. */}
-      <div className="mt-4 flex items-center gap-2">
-        <div
-          className="flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar"
-          style={{ scrollbarWidth: "none" }}
-        >
-          <FilterPill
-            active={rarityFilter === "ALL"}
-            onClick={() => setRarityFilter("ALL")}
-          >
-            전체
-          </FilterPill>
-          {RARITY_ORDER.map((r) => {
-            const count = rarityCounts.get(r) ?? 0;
-            if (count === 0 && rarityFilter !== r) return null;
-            return (
-              <FilterPill
-                key={r}
-                active={rarityFilter === r}
-                onClick={() => setRarityFilter(r)}
-              >
-                <span
-                  className={clsx(
-                    "inline-block w-1.5 h-1.5 rounded-full mr-1",
-                    RARITY_STYLE[r].badge
-                  )}
-                />
-                {r}
-                <span className="ml-1 text-[10px] opacity-60 tabular-nums">
-                  {count}
-                </span>
-              </FilterPill>
-            );
-          })}
-        </div>
+      {/* Filter row + prominent bulk-sell button. */}
+      <div className="mt-4 flex items-center justify-between gap-2 flex-wrap">
         {hasAny ? (
           <Link
             href="/wallet/bulk-sell"
             style={{ touchAction: "manipulation" }}
             aria-label="일괄 판매"
-            className="shrink-0 h-7 px-2.5 rounded-full text-[11px] font-bold inline-flex items-center gap-1 bg-gradient-to-r from-emerald-400 to-amber-400 text-zinc-950 hover:scale-[1.03] active:scale-[0.97] transition"
+            className="shrink-0 h-10 px-4 rounded-xl text-sm font-black inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-400 to-amber-400 text-zinc-950 shadow-[0_8px_24px_-8px_rgba(251,191,36,0.6)] hover:scale-[1.02] active:scale-[0.98] transition"
           >
-            <CoinIcon size="xs" />
-            <span className="hidden sm:inline">일괄 판매</span>
-            <span className="sm:hidden">판매</span>
+            <CoinIcon size="sm" />
+            일괄 판매
           </Link>
         ) : (
-          <span className="shrink-0 h-7 px-2.5 rounded-full text-[11px] font-bold border border-white/10 bg-white/5 text-zinc-500 inline-flex items-center gap-1">
-            <CoinIcon size="xs" />
-            <span className="hidden sm:inline">일괄 판매</span>
-            <span className="sm:hidden">판매</span>
+          <span className="shrink-0 h-10 px-4 rounded-xl text-sm font-black border border-white/10 bg-white/5 text-zinc-500 inline-flex items-center gap-1.5">
+            <CoinIcon size="sm" />
+            일괄 판매
           </span>
         )}
+      </div>
+      <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+        <FilterPill
+          active={rarityFilter === "ALL"}
+          onClick={() => setRarityFilter("ALL")}
+        >
+          전체
+        </FilterPill>
+        {RARITY_ORDER.map((r) => {
+          const count = rarityCounts.get(r) ?? 0;
+          if (count === 0 && rarityFilter !== r) return null;
+          return (
+            <FilterPill
+              key={r}
+              active={rarityFilter === r}
+              onClick={() => setRarityFilter(r)}
+            >
+              <span
+                className={clsx(
+                  "inline-block w-1.5 h-1.5 rounded-full mr-1",
+                  RARITY_STYLE[r].badge
+                )}
+              />
+              {r}
+              <span className="ml-1 text-[10px] opacity-60 tabular-nums">
+                {count}
+              </span>
+            </FilterPill>
+          );
+        })}
       </div>
 
       {items.length === 0 ? (
@@ -395,22 +403,13 @@ function PsaMode({
   const displayedCount = items.filter((x) => x.grading.displayed).length;
   return (
     <>
-      {/* Context blurb — explains the "전시 중" badge + wild lockout. */}
-      <div className="mt-4 rounded-xl border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 py-2 text-[11px] text-fuchsia-100 leading-snug">
-        🏛️ <b>전시 중</b> 배지가 붙은 슬랩은 지금 센터에 전시돼 있어요.
-        전시된 카드는 <b>일괄 판매 · 야생 배틀 · 재감별 · 선물</b>에 사용할 수 없고,
-        센터에서 꺼내거나 상대에게 부서지기 전까지 잠겨있어요.
-        {displayedCount > 0 && (
-          <span className="ml-1 text-fuchsia-300 font-bold">
-            (현재 {displayedCount}장 전시 중)
-          </span>
-        )}
-      </div>
+      {displayedCount > 0 && (
+        <div className="mt-3 text-[11px] text-fuchsia-300 font-semibold tabular-nums">
+          🏛️ 전시 중 {displayedCount}장
+        </div>
+      )}
       <div
-        className="mt-6 md:mt-8 grid gap-10 md:gap-12 place-items-center"
-        style={{
-          gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-        }}
+        className="mt-6 md:mt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-10 place-items-center"
       >
         {items.map(({ grading, card }) => {
           const giftable = !grading.displayed && grading.grade >= 6;
@@ -588,17 +587,13 @@ function SlabGiftComposer({
                 <div className="flex flex-col">
                   <label className="block">
                     <span className="text-xs text-zinc-300 mb-2 block">
-                      받는 사람 닉네임 또는 아이디
+                      받는 사람
                     </span>
-                    <input
-                      value={recipient}
-                      onChange={(e) => setRecipient(e.target.value)}
-                      autoComplete="off"
-                      autoCapitalize="none"
-                      spellCheck={false}
-                      placeholder="예: min"
-                      style={{ fontSize: "16px" }}
-                      className="w-full h-12 px-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400/60"
+                    <UserSelect
+                      value={recipient || null}
+                      excludeSelf
+                      placeholder="받는 사람 고르기"
+                      onChange={(u) => setRecipient(u.user_id)}
                     />
                   </label>
 

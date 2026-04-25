@@ -78,6 +78,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (fresh) persist(fresh);
   }, [user, persist]);
 
+  const userId = user?.id ?? null;
+  useEffect(() => {
+    if (!userId) return;
+    let alive = true;
+    const tick = async () => {
+      if (!alive) return;
+      if (typeof document !== "undefined" && document.hidden) return;
+      const fresh = await fetchMe(userId);
+      if (alive && fresh) persist(fresh);
+    };
+    const id = setInterval(tick, 20_000);
+    const onVis = () => {
+      if (typeof document !== "undefined" && !document.hidden) tick();
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVis);
+    }
+    return () => {
+      alive = false;
+      clearInterval(id);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVis);
+      }
+    };
+  }, [userId, persist]);
+
   const setPoints = useCallback(
     (points: number) => {
       if (!user) return;

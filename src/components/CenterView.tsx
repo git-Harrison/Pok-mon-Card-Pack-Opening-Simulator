@@ -23,12 +23,12 @@ import {
   CENTER_GRID_ROWS,
   SHOWCASES,
   SHOWCASE_ORDER,
+  slabIncomeTrade,
   type ShowcaseType,
 } from "@/lib/center";
 import { getCard } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
 import { psaTone } from "@/lib/psa";
-import PointsChip from "./PointsChip";
 import CoinIcon from "./CoinIcon";
 import RarityBadge from "./RarityBadge";
 import PsaSlab from "./PsaSlab";
@@ -201,6 +201,18 @@ export default function CenterView() {
     [showcases]
   );
 
+  const incomePerHour = useMemo(() => {
+    let total = 0;
+    for (const sc of showcases) {
+      for (const c of sc.cards) {
+        const card = getCard(c.card_id);
+        if (!card) continue;
+        total += slabIncomeTrade(card.rarity, c.grade);
+      }
+    }
+    return total;
+  }, [showcases]);
+
   return (
     <div className="relative min-h-[calc(100dvh-4rem)]">
       <CenterBackdrop />
@@ -209,7 +221,6 @@ export default function CenterView() {
           title="내 포켓몬센터"
           stats={
             <>
-              {user && <PointsChip points={user.points} size="sm" />}
               <Kpi label="보관함" value={`${showcases.length}`} />
               <Kpi label="전시" value={`${totalCards}`} highlight />
               <HelpButton
@@ -220,6 +231,19 @@ export default function CenterView() {
             </>
           }
         />
+
+        {totalCards > 0 && (
+          <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-[11px] text-zinc-200">
+            <CoinIcon size="xs" />
+            <span>
+              현재 받게 될 수익 (전시 중 {totalCards}장 기준):{" "}
+              <b className="text-amber-200 tabular-nums">
+                +{incomePerHour.toLocaleString("ko-KR")}p
+              </b>{" "}
+              / 시간
+            </span>
+          </div>
+        )}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button

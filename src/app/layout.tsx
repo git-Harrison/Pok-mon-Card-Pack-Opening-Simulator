@@ -13,8 +13,11 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  minimumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
-  themeColor: "#07070b",
+  themeColor: "#0a0a0a",
 };
 
 export default function RootLayout({
@@ -42,10 +45,6 @@ export default function RootLayout({
           <Navbar />
           <main className="w-full pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
             {children}
-            <footer className="mt-10 text-center text-[11px] text-zinc-500 py-5 px-4">
-              © {new Date().getFullYear()} Pokémon TCG Sim · 카드 이미지 저작권은
-              The Pokémon Company / 포켓몬 코리아에 있습니다.
-            </footer>
           </main>
           <NotificationsOverlay />
         </AuthProvider>

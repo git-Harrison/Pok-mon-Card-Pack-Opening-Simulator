@@ -446,7 +446,7 @@ export default function SetView({ set }: { set: SetInfo }) {
           </h1>
           <p className="text-xs md:text-sm text-zinc-400 mt-1">{set.subtitle}</p>
         </div>
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-2 text-xs flex-wrap min-w-0 justify-end">
           {user && <PointsChip points={user.points} size="sm" />}
           <Stat label="박스당" value={`${set.packsPerBox}팩`} />
           <Stat label="팩당" value={`${set.cardsPerPack}장`} />
@@ -524,8 +524,8 @@ export default function SetView({ set }: { set: SetInfo }) {
                 body: (
                   <ul>
                     <li>
-                      SR / MA / SAR / UR / MUR이 나오면 <b>감별</b>해서 슬랩으로
-                      만드세요 — 일괄 판매보다 보너스가 훨씬 커요.
+                      어떤 등급이든 <b>감별</b>해서 슬랩으로 만들 수 있어요 —
+                      일괄 판매보다 보너스가 훨씬 커요.
                     </li>
                     <li>감별 실패 시 카드가 사라지니 신중히 (실패 70%).</li>
                     <li>

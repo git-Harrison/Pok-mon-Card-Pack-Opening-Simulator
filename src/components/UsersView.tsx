@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
 import { fetchUserRankings, sendTaunt, type RankingRow } from "@/lib/db";
-import { getCard, SETS } from "@/lib/sets";
+import { getCard } from "@/lib/sets";
 import PointsChip from "./PointsChip";
 import PageHeader from "./PageHeader";
 import Portal from "./Portal";
@@ -14,30 +14,12 @@ import HelpButton from "./HelpButton";
 import { getCharacter } from "@/lib/profile";
 import { CharacterAvatar } from "./ProfileView";
 
-const GRADE_COLOR: Record<number, string> = {
-  10: "text-amber-300",
-  9: "text-slate-100",
-  8: "text-teal-200",
-  7: "text-sky-200",
-  6: "text-indigo-200",
-};
-
-const GRADE_RING: Record<number, string> = {
-  10: "border-amber-400/60 bg-amber-400/10",
-  9: "border-slate-300/40 bg-slate-200/10",
-  8: "border-teal-400/40 bg-teal-500/10",
-  7: "border-sky-400/40 bg-sky-500/10",
-  6: "border-indigo-400/40 bg-indigo-500/10",
-};
-
 type RankingMode = "rank" | "power" | "pet";
 
 export default function UsersView() {
   const { user: currentUser } = useAuth();
   const [rows, setRows] = useState<RankingRow[]>([]);
   const [loading, setLoading] = useState(true);
-  // { userId: grade } — which grade accordion is expanded for which user
-  const [expanded, setExpanded] = useState<Record<string, number | null>>({});
   const [mode, setMode] = useState<RankingMode>("rank");
   const [tauntTarget, setTauntTarget] = useState<RankingRow | null>(null);
 
@@ -70,13 +52,6 @@ export default function UsersView() {
       }),
     [rows, mode]
   );
-
-  const toggleGrade = (userId: string, grade: number) => {
-    setExpanded((prev) => ({
-      ...prev,
-      [userId]: prev[userId] === grade ? null : grade,
-    }));
-  };
 
   return (
     <div className="max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
@@ -165,20 +140,11 @@ export default function UsersView() {
                 ),
               },
               {
-                heading: "행 안의 칩",
-                icon: "🎫",
-                body: (
-                  <>
-                    각 사용자 행의 PCL 등급 칩(<b>PCL 10 ×N</b>)을 누르면 그 등급 슬랩 목록이 펼쳐져요. 어떤 카드를 모았는지 미리 볼 수 있어요.
-                  </>
-                ),
-              },
-              {
                 heading: "조롱하기 🔥",
                 icon: "🔥",
                 body: (
                   <>
-                    전투력 모드에서 다른 유저 옆 🔥 버튼으로 200자 메시지를 던질 수 있어요. 받은 사람 화면에 강제 팝업으로 떠요. 자기 자신에게는 못 보내요.
+                    다른 유저 행의 🔥 버튼으로 200자 메시지를 던질 수 있어요. 받은 사람 화면에 강제 팝업으로 떠요. 자기 자신에게는 못 보내요.
                   </>
                 ),
               },
@@ -270,14 +236,7 @@ export default function UsersView() {
         <ul className="mt-6 space-y-2.5">
           {entries.map((e, rank) => {
             const isMe = currentUser?.id === e.id;
-            const openGrade = expanded[e.id] ?? null;
-            const gradeCounts: { grade: number; count: number }[] = [
-              { grade: 10, count: e.psa_10 },
-              { grade: 9, count: e.psa_9 },
-              { grade: 8, count: e.psa_8 },
-              { grade: 7, count: e.psa_7 },
-              { grade: 6, count: e.psa_6 },
-            ].filter((g) => g.count > 0);
+            const def = getCharacter(e.character);
 
             return (
               <motion.li
@@ -292,7 +251,6 @@ export default function UsersView() {
                     : "bg-white/5 border-white/10"
                 )}
               >
-                {/* Header row */}
                 <div className="p-3 md:p-4 flex items-center gap-3 md:gap-4">
                   <div
                     className={clsx(
@@ -308,38 +266,16 @@ export default function UsersView() {
                   >
                     {rank + 1}
                   </div>
-                  {(() => {
-                    const def = getCharacter(e.character);
-                    return def ? (
-                      <CharacterAvatar def={def} size="sm" />
-                    ) : null;
-                  })()}
+                  {def ? <CharacterAvatar def={def} size="sm" /> : null}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="text-base md:text-lg font-bold text-white">
+                      <h2 className="text-base md:text-lg font-bold text-white truncate">
                         {e.display_name}
                       </h2>
                       {isMe && (
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-400 text-zinc-900">
                           나
                         </span>
-                      )}
-                      <Link
-                        href={`/center/${encodeURIComponent(e.user_id)}`}
-                        aria-label={`${e.display_name}님의 포켓몬센터`}
-                        className="inline-flex items-center gap-1 h-6 px-2 rounded-full bg-gradient-to-r from-fuchsia-500/80 to-indigo-500/80 hover:from-fuchsia-500 hover:to-indigo-500 text-white text-[10px] font-bold transition"
-                      >
-                        🏛️ 센터
-                      </Link>
-                      {!isMe && mode === "power" && (
-                        <button
-                          type="button"
-                          onClick={() => setTauntTarget(e)}
-                          aria-label={`${e.display_name}에게 조롱 보내기`}
-                          className="inline-flex items-center gap-1 h-6 px-2 rounded-full bg-gradient-to-r from-rose-500/80 to-amber-500/80 hover:from-rose-500 hover:to-amber-500 text-white text-[10px] font-bold transition"
-                        >
-                          🔥 조롱
-                        </button>
                       )}
                     </div>
                     <p className="text-[11px] md:text-xs text-zinc-400 mt-0.5">
@@ -426,95 +362,27 @@ export default function UsersView() {
                   </div>
                 )}
 
-                {/* Grade chips row — click to expand */}
-                {gradeCounts.length > 0 && (
-                  <div className="px-3 md:px-4 pb-3 flex flex-wrap gap-1.5">
-                    {gradeCounts.map(({ grade, count }) => {
-                      const active = openGrade === grade;
-                      return (
-                        <button
-                          key={grade}
-                          onClick={() => toggleGrade(e.id, grade)}
-                          style={{ touchAction: "manipulation" }}
-                          className={clsx(
-                            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition",
-                            active
-                              ? "bg-white text-zinc-900 border-white"
-                              : clsx(
-                                  GRADE_RING[grade],
-                                  GRADE_COLOR[grade],
-                                  "hover:brightness-125"
-                                )
-                          )}
-                          aria-expanded={active}
-                        >
-                          <span>PCL {grade}</span>
-                          <span className="opacity-80">×{count}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Expanded card list for the selected grade */}
-                <AnimatePresence initial={false}>
-                  {openGrade !== null && (
-                    <motion.div
-                      key={`exp-${openGrade}`}
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden border-t border-white/5 bg-black/20"
+                <div className="px-3 md:px-4 pb-3 flex items-center gap-2">
+                  <Link
+                    href={`/center/${encodeURIComponent(e.user_id)}`}
+                    aria-label={`${e.display_name}님의 포켓몬센터 방문`}
+                    style={{ touchAction: "manipulation" }}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 px-3 rounded-xl bg-gradient-to-r from-fuchsia-500/90 to-indigo-500/90 hover:from-fuchsia-500 hover:to-indigo-500 active:scale-[0.98] text-white text-sm font-bold transition"
+                  >
+                    🏛️ 센터 방문
+                  </Link>
+                  {!isMe && (
+                    <button
+                      type="button"
+                      onClick={() => setTauntTarget(e)}
+                      aria-label={`${e.display_name}에게 조롱 보내기`}
+                      style={{ touchAction: "manipulation" }}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 px-3 rounded-xl bg-gradient-to-r from-rose-500/90 to-amber-500/90 hover:from-rose-500 hover:to-amber-500 active:scale-[0.98] text-white text-sm font-bold transition"
                     >
-                      <div className="px-3 md:px-4 py-3">
-                        <p className="text-[10px] uppercase tracking-wider text-zinc-400 mb-2">
-                          PCL {openGrade} 카드 ({gradeCounts.find((g) => g.grade === openGrade)?.count ?? 0}장)
-                        </p>
-                        <ul className="space-y-1.5">
-                          {e.gradings
-                            .filter((g) => g.grade === openGrade)
-                            .map((g) => {
-                              const card = getCard(g.card_id);
-                              if (!card) return null;
-                              return (
-                                <li
-                                  key={g.id}
-                                  className="flex items-center gap-3 p-2 rounded-lg bg-white/5"
-                                >
-                                  <div className="shrink-0 w-8 h-11 rounded overflow-hidden bg-zinc-900 ring-1 ring-white/10">
-                                    {card.imageUrl && (
-                                      <img
-                                        src={card.imageUrl}
-                                        alt=""
-                                        className="w-full h-full object-cover"
-                                      />
-                                    )}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs text-white font-semibold truncate">
-                                      {card.name}
-                                    </p>
-                                    <p className="text-[10px] text-zinc-400">
-                                      {SETS[card.setCode].name} · #{card.number}
-                                    </p>
-                                  </div>
-                                  <span
-                                    className={clsx(
-                                      "shrink-0 text-xs font-black tabular-nums",
-                                      GRADE_COLOR[g.grade]
-                                    )}
-                                  >
-                                    PCL {g.grade}
-                                  </span>
-                                </li>
-                              );
-                            })}
-                        </ul>
-                      </div>
-                    </motion.div>
+                      🔥 조롱하기
+                    </button>
                   )}
-                </AnimatePresence>
+                </div>
               </motion.li>
             );
           })}

@@ -534,8 +534,8 @@ function VisitStatsPanel({ stats }: { stats: CenterVisitStats }) {
   const total = stats.income_rank_total ?? 0;
   const pet = stats.pet_score ?? 0;
   return (
-    <div className="mt-3 -mx-4 md:mx-0 px-4 md:px-0 overflow-x-auto">
-      <div className="flex items-center gap-2 min-w-max md:min-w-0 md:flex-wrap">
+    <div className="mt-3">
+      <div className="flex items-center gap-2 flex-wrap">
         {character && (
           <div className="shrink-0">
             <CharacterAvatar def={character} size="sm" />
