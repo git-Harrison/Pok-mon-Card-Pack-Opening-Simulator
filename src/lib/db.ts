@@ -187,6 +187,35 @@ export async function recordPackPull(
   };
 }
 
+export interface BatchPullPack {
+  card_ids: string[];
+  rarities: string[];
+}
+
+export async function recordPackPullsBatch(
+  userId: string,
+  setCode: SetCode,
+  pulls: BatchPullPack[],
+  autoSellSubAR: boolean
+) {
+  const { data, error } = await supabase.rpc("record_pack_pulls_batch", {
+    p_user_id: userId,
+    p_set_code: setCode,
+    p_pulls: pulls,
+    p_auto_sell_sub_ar: autoSellSubAR,
+  });
+  if (error) throw error;
+  return data as {
+    ok: boolean;
+    error?: string;
+    pack_count: number;
+    total_kept: number;
+    total_sold_count: number;
+    total_sold_earned: number;
+    points: number;
+  };
+}
+
 // ---------- Box purchase ----------
 
 export async function refundBoxPurchase(userId: string, setCode: SetCode) {

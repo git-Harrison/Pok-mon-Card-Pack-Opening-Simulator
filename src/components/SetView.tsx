@@ -7,7 +7,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import type { Card, SetInfo } from "@/lib/types";
 import { drawBox } from "@/lib/pack-draw";
-import { buyBox, recordPackPull, refundBoxPurchase } from "@/lib/db";
+import {
+  buyBox,
+  recordPackPull,
+  recordPackPullsBatch,
+  refundBoxPurchase,
+  type BatchPullPack,
+} from "@/lib/db";
 
 // Postgres errcode for our own RAISE EXCEPTION (wallet cap, etc.).
 // These are intentional server-side rejections — retrying is pointless
@@ -59,6 +65,44 @@ async function persistPackWithRetry(
       return {
         sold_count: res.sold_count ?? 0,
         sold_earned: res.sold_earned ?? 0,
+        points: res.points ?? 0,
+      };
+    } catch (e) {
+      lastErr = e;
+      if (isIntentionalRejection(e)) throw e;
+      if (i < tries - 1) {
+        await new Promise((r) => setTimeout(r, 500 * (i + 1)));
+      }
+    }
+  }
+  throw lastErr;
+}
+
+async function persistBatchWithRetry(
+  userId: string,
+  setCode: SetInfo["code"],
+  pulls: BatchPullPack[],
+  autoSellSubAR: boolean,
+  tries = 3
+): Promise<{
+  total_sold_count: number;
+  total_sold_earned: number;
+  total_kept: number;
+  points: number;
+}> {
+  let lastErr: unknown;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const res = await recordPackPullsBatch(
+        userId,
+        setCode,
+        pulls,
+        autoSellSubAR
+      );
+      return {
+        total_sold_count: res.total_sold_count ?? 0,
+        total_sold_earned: res.total_sold_earned ?? 0,
+        total_kept: res.total_kept ?? 0,
         points: res.points ?? 0,
       };
     } catch (e) {
