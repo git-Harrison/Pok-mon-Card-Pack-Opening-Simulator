@@ -9,7 +9,7 @@ export type CharacterKey =
   | "misty"
   | "brock"
   | "oak"
-  | "gary"
+  | "leaf"
   | "lance";
 
 export type CharacterMotion = "apng" | "css-bob";

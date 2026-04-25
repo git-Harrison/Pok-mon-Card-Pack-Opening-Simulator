@@ -25,6 +25,7 @@ import {
   type ProfileSnapshot,
 } from "@/lib/profile";
 import { getCard, SETS } from "@/lib/sets";
+import { RARITY_STYLE } from "@/lib/rarity";
 import PageHeader from "./PageHeader";
 import PsaSlab from "./PsaSlab";
 import Portal from "./Portal";
@@ -518,29 +519,51 @@ function PetSlot({
       </button>
     );
   }
+  const rstyle = RARITY_STYLE[cardDef.rarity];
   return (
-    <div className="relative group">
+    <div className="relative">
       <button
         type="button"
         onClick={onPick}
-        className="block w-full text-left"
         aria-label={`${cardDef.name} 펫 변경`}
         style={{ touchAction: "manipulation" }}
+        className={clsx(
+          "relative block w-full aspect-[5/7] rounded-xl overflow-hidden ring-2 bg-zinc-900",
+          rstyle.frame,
+          rstyle.glow
+        )}
       >
-        <PsaSlab card={cardDef} grade={card.grade} size="sm" />
+        {cardDef.imageUrl ? (
+          <img
+            src={cardDef.imageUrl}
+            alt=""
+            draggable={false}
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-zinc-800" />
+        )}
+        <span
+          className={clsx(
+            "absolute top-0.5 left-0.5 text-[8px] font-black px-1 py-0.5 rounded leading-none",
+            rstyle.badge
+          )}
+        >
+          {cardDef.rarity}
+        </span>
+        <span className="absolute bottom-0.5 right-0.5 text-[8px] font-black px-1 py-0.5 rounded leading-none bg-amber-300 text-zinc-950 tabular-nums">
+          {card.grade}
+        </span>
       </button>
       <button
         type="button"
         onClick={onRemove}
         aria-label="해제"
-        className="absolute -top-1.5 -right-1.5 w-7 h-7 rounded-full bg-rose-500 hover:bg-rose-400 text-white text-xs font-black shadow-lg flex items-center justify-center ring-2 ring-zinc-950"
+        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-400 text-white text-[10px] font-black shadow-lg flex items-center justify-center ring-2 ring-zinc-950"
         style={{ touchAction: "manipulation" }}
       >
         ✕
       </button>
-      <p className="mt-1 text-center text-[10px] uppercase tracking-wider text-zinc-500">
-        슬롯 {index + 1}
-      </p>
     </div>
   );
 }
