@@ -100,12 +100,15 @@ function randomFarewell(name: string): string {
 interface Biome {
   key: string;
   name: string;
-  sky: string; // main vertical gradient
+  sky: string; // main vertical gradient (used as fallback / tint)
   ground: string; // ground glow (bottom radial)
   accent: string; // decorative tint (corner radial)
   border: string;
   emoji: string; // tiny flair in the corner
+  image?: string; // optional real battle BG (Pokemon Showdown gen6bgs)
 }
+
+const BG_BASE = "https://play.pokemonshowdown.com/sprites/gen6bgs/";
 
 const BIOMES: readonly Biome[] = [
   {
@@ -118,6 +121,7 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(50% 40% at 85% 15%, rgba(253,224,71,0.18), transparent 70%)",
     border: "border-emerald-500/30",
     emoji: "🌿",
+    image: `${BG_BASE}bg-meadow.png`,
   },
   {
     key: "cave",
@@ -129,6 +133,7 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(45% 40% at 18% 20%, rgba(196,181,253,0.22), transparent 70%)",
     border: "border-violet-500/30",
     emoji: "🕳️",
+    image: `${BG_BASE}bg-cave.png`,
   },
   {
     key: "beach",
@@ -140,6 +145,7 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(40% 35% at 80% 20%, rgba(253,224,71,0.3), transparent 70%)",
     border: "border-sky-400/30",
     emoji: "🏖️",
+    image: `${BG_BASE}bg-beach.png`,
   },
   {
     key: "volcano",
@@ -151,6 +157,7 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(55% 45% at 80% 18%, rgba(251,146,60,0.28), transparent 70%)",
     border: "border-rose-500/40",
     emoji: "🌋",
+    image: `${BG_BASE}bg-volcanocave.png`,
   },
   {
     key: "snow",
@@ -162,6 +169,7 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(50% 40% at 20% 18%, rgba(219,234,254,0.25), transparent 70%)",
     border: "border-sky-200/40",
     emoji: "❄️",
+    image: `${BG_BASE}bg-tundra.png`,
   },
   {
     key: "night-forest",
@@ -173,6 +181,7 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(45% 40% at 82% 16%, rgba(226,232,240,0.28), transparent 70%)",
     border: "border-emerald-400/25",
     emoji: "🌙",
+    image: `${BG_BASE}bg-darkforest.png`,
   },
   {
     key: "ruins",
@@ -184,6 +193,7 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(50% 40% at 75% 20%, rgba(251,191,36,0.22), transparent 70%)",
     border: "border-amber-600/35",
     emoji: "🏛️",
+    image: `${BG_BASE}bg-darkbeach.png`,
   },
   {
     key: "gym",
@@ -195,6 +205,7 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(35% 45% at 50% 0%, rgba(255,255,255,0.18), transparent 75%)",
     border: "border-amber-300/35",
     emoji: "🏟️",
+    image: `${BG_BASE}bg-elite.png`,
   },
   {
     key: "stadium",
@@ -206,6 +217,7 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(40% 30% at 50% -10%, rgba(255,255,255,0.28), transparent 70%), radial-gradient(35% 18% at 50% 100%, rgba(168,85,247,0.22), transparent 80%)",
     border: "border-indigo-400/35",
     emoji: "🏆",
+    image: `${BG_BASE}bg-elite.png`,
   },
   {
     key: "city",
@@ -217,6 +229,7 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(28% 22% at 18% 60%, rgba(244,114,182,0.28), transparent 70%), radial-gradient(24% 20% at 82% 65%, rgba(34,211,238,0.32), transparent 70%), radial-gradient(18% 14% at 35% 78%, rgba(250,204,21,0.22), transparent 70%)",
     border: "border-fuchsia-400/35",
     emoji: "🌆",
+    image: `${BG_BASE}bg-skycity.png`,
   },
   {
     key: "harbor",
@@ -228,6 +241,7 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(22% 12% at 50% 38%, rgba(255,236,180,0.55), transparent 70%), repeating-linear-gradient(180deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 8px)",
     border: "border-orange-400/35",
     emoji: "⚓",
+    image: `${BG_BASE}bg-beachshore.png`,
   },
   {
     key: "temple",
@@ -239,6 +253,7 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(20% 24% at 18% 30%, rgba(251,191,36,0.45), transparent 70%), radial-gradient(20% 24% at 82% 30%, rgba(251,191,36,0.45), transparent 70%), repeating-linear-gradient(0deg, rgba(120,90,60,0.06) 0 18px, rgba(0,0,0,0.15) 18px 24px)",
     border: "border-orange-500/40",
     emoji: "🕯️",
+    image: `${BG_BASE}bg-orascave.png`,
   },
   {
     key: "magma",
@@ -250,6 +265,7 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(28% 18% at 30% 80%, rgba(255,140,40,0.55), transparent 70%), radial-gradient(22% 14% at 70% 86%, rgba(255,210,80,0.55), transparent 70%)",
     border: "border-orange-500/50",
     emoji: "🔥",
+    image: `${BG_BASE}bg-volcano.png`,
   },
   {
     key: "space",
@@ -261,6 +277,7 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(2px 2px at 12% 18%, white, transparent), radial-gradient(2px 2px at 28% 32%, white, transparent), radial-gradient(1px 1px at 44% 12%, white, transparent), radial-gradient(2px 2px at 62% 26%, white, transparent), radial-gradient(1px 1px at 74% 14%, white, transparent), radial-gradient(2px 2px at 88% 36%, white, transparent), radial-gradient(1px 1px at 18% 48%, white, transparent), radial-gradient(2px 2px at 56% 52%, white, transparent), radial-gradient(1px 1px at 82% 60%, white, transparent)",
     border: "border-violet-300/35",
     emoji: "🌌",
+    image: `${BG_BASE}bg-space.png`,
   },
   {
     key: "waterfall",
@@ -272,6 +289,7 @@ const BIOMES: readonly Biome[] = [
       "repeating-linear-gradient(180deg, rgba(255,255,255,0.12) 0 2px, transparent 2px 6px), radial-gradient(40% 18% at 50% 92%, rgba(255,255,255,0.28), transparent 70%)",
     border: "border-sky-300/40",
     emoji: "💧",
+    image: `${BG_BASE}bg-shoal.png`,
   },
   {
     key: "flower",
@@ -283,6 +301,7 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(8% 6% at 22% 78%, rgba(244,114,182,0.6), transparent 70%), radial-gradient(7% 5% at 38% 88%, rgba(250,204,21,0.55), transparent 70%), radial-gradient(8% 6% at 62% 82%, rgba(167,139,250,0.55), transparent 70%), radial-gradient(7% 5% at 78% 90%, rgba(244,114,182,0.6), transparent 70%)",
     border: "border-pink-300/45",
     emoji: "🌸",
+    image: `${BG_BASE}bg-meadowsmall.png`,
   },
   {
     key: "desert",
@@ -294,6 +313,7 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(28% 14% at 50% 32%, rgba(255,236,180,0.55), transparent 70%), repeating-linear-gradient(95deg, rgba(255,255,255,0.04) 0 6px, transparent 6px 16px)",
     border: "border-amber-400/40",
     emoji: "🏜️",
+    image: `${BG_BASE}bg-desert.png`,
   },
   {
     key: "thunder-plain",
@@ -305,6 +325,7 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(35% 18% at 28% 22%, rgba(253,224,71,0.55), transparent 70%), radial-gradient(32% 14% at 78% 30%, rgba(125,211,252,0.4), transparent 70%)",
     border: "border-yellow-300/45",
     emoji: "⚡",
+    image: `${BG_BASE}bg-thunderplains.png`,
   },
 ];
 
@@ -823,6 +844,23 @@ function BattleScene({
         )}
         style={{ background: biome.sky }}
       >
+        {biome.image && (
+          <img
+            src={biome.image}
+            alt=""
+            draggable={false}
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+            style={{ imageRendering: "pixelated" }}
+          />
+        )}
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.45) 100%)",
+          }}
+        />
         <div
           aria-hidden
           className="absolute inset-0 pointer-events-none"

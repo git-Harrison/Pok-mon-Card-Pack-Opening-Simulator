@@ -271,6 +271,16 @@ samp {
   will-change: transform;
 }
 
+/* ---------- Loading dot pulse ---------- */
+@keyframes dot-pulse {
+  0%, 60%, 100% { opacity: 0.2; transform: translateY(0); }
+  30%           { opacity: 1;   transform: translateY(-2px); }
+}
+.dot-pulse {
+  display: inline-block;
+  animation: dot-pulse 1.2s ease-in-out infinite;
+}
+
 /* ---------- Pokeball loader spin/wobble ---------- */
 @keyframes pokeball-spin {
   0%   { transform: rotate(0deg) scale(1); }

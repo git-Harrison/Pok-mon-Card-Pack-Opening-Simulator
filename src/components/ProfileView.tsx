@@ -450,10 +450,10 @@ export function CharacterAvatar({
     size === "xs"
       ? "w-7 h-7"
       : size === "sm"
-      ? "w-10 h-10"
+      ? "w-12 h-12"
       : size === "lg"
-      ? "w-20 h-20 md:w-24 md:h-24"
-      : "w-16 h-16";
+      ? "w-24 h-24 md:w-28 md:h-28"
+      : "w-20 h-20 md:w-24 md:h-24";
   const [broken, setBroken] = useState(false);
   return (
     <div

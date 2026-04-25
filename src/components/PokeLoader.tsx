@@ -3,6 +3,32 @@
 import clsx from "clsx";
 import Portal from "./Portal";
 
+/** Loading label that cycles "..." dots so the user sees the spinner is alive. */
+export function LoadingText({
+  text,
+  className,
+}: {
+  text: string;
+  className?: string;
+}) {
+  return (
+    <span className={clsx("inline-flex items-baseline", className)}>
+      <span>{text}</span>
+      <span className="ml-0.5 inline-flex">
+        <span className="dot-pulse" style={{ animationDelay: "0ms" }}>
+          .
+        </span>
+        <span className="dot-pulse" style={{ animationDelay: "180ms" }}>
+          .
+        </span>
+        <span className="dot-pulse" style={{ animationDelay: "360ms" }}>
+          .
+        </span>
+      </span>
+    </span>
+  );
+}
+
 const SIZE_MAP = {
   sm: "w-7 h-7",
   md: "w-12 h-12",
@@ -71,7 +97,7 @@ export function CenteredPokeLoader({
         <div className="flex flex-col items-center gap-3">
           <PokeLoader size="lg" />
           <p className="text-xs font-semibold text-zinc-200 tracking-wide drop-shadow">
-            {label}
+            <LoadingText text={label.replace(/\.+$/, "")} />
           </p>
         </div>
       </div>

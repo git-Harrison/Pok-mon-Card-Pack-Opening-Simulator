@@ -82,7 +82,7 @@ async function persistBatchWithRetry(
 }
 import { useAuth } from "@/lib/auth";
 import { BOX_COST, RARITY_STYLE } from "@/lib/rarity";
-import PokeLoader from "./PokeLoader";
+import PokeLoader, { LoadingText } from "./PokeLoader";
 import PackOpeningStage from "./PackOpeningStage";
 import RarityBadge from "./RarityBadge";
 import CoinIcon from "./CoinIcon";
@@ -813,9 +813,11 @@ function BoxOpening({ set }: { set: SetInfo }) {
           }}
         />
       </div>
-      <p className="text-sm text-zinc-200 font-semibold">카드 저장 중…</p>
+      <p className="text-sm text-zinc-200 font-semibold">
+        <LoadingText text="일괄 카드깡 진행 중" />
+      </p>
       <p className="mt-1 text-[11px] text-zinc-500">
-        박스를 열고 전체 팩을 DB에 기록하고 있어요. 닫지 말고 잠시만요.
+        팩을 열고 카드를 정리하고 있어요. 닫지 말고 잠시만요.
       </p>
     </motion.div>
   );
@@ -831,7 +833,9 @@ function BulkLoading() {
     >
       <div className="flex flex-col items-center gap-3">
         <PokeLoader size="lg" />
-        <p className="text-sm text-white font-semibold">모든 팩을 한번에 여는 중...</p>
+        <p className="text-sm text-white font-semibold">
+          <LoadingText text="일괄 카드깡 진행 중" />
+        </p>
       </div>
     </motion.div>
   );
@@ -1016,12 +1020,16 @@ function MultiBuyingOverlay({
           <PokeLoader size="lg" />
         </div>
         <p className="mt-4 text-base font-black text-white tabular-nums">
-          {done < total ? `박스 ${done} / ${total} 구매 중` : `${total}박스 일괄 저장 중`}
+          {done < total ? (
+            <LoadingText text={`박스 ${done} / ${total} 구매 중`} />
+          ) : (
+            <LoadingText text="일괄 카드깡 진행 중" />
+          )}
         </p>
         <p className="mt-1 text-xs text-zinc-400">
           {done < total
-            ? "박스를 결제하고 카드를 뽑는 중…"
-            : "모든 카드를 한 번에 DB에 저장 중. 닫지 말고 잠시만요."}
+            ? "박스를 결제하고 카드를 뽑는 중이에요."
+            : "팩을 열고 카드를 정리하고 있어요."}
         </p>
         <div className="mt-3 h-1 w-60 mx-auto rounded-full bg-white/10 overflow-hidden">
           <motion.div
