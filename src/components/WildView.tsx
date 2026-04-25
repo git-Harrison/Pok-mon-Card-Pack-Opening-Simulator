@@ -89,6 +89,28 @@ const WILD_HELP_SECTIONS: HelpSection[] = [
     ),
   },
   {
+    heading: "배경",
+    icon: "🏞️",
+    body: (
+      <>
+        매 조우마다 풀숲·동굴·해변·화산·설산·밤의 숲·고대 유적·체육관·배틀
+        스타디움·도시 거리·항구·우주·꽃밭 등 다양한 배틀 무대가 무작위로
+        펼쳐져요.
+      </>
+    ),
+  },
+  {
+    heading: "포켓몬 종류",
+    icon: "👾",
+    body: (
+      <>
+        1세대를 중심으로 35종 이상의 야생 포켓몬이 등장해요. 망나뇽·갸라도스·
+        프리져·썬더·파이어 같은 강적부터 메타몽·이브이·파오리 같은 친숙한
+        얼굴까지 매번 새로운 만남이 기다립니다.
+      </>
+    ),
+  },
+  {
     heading: "팁",
     icon: "💡",
     body: (
@@ -127,9 +149,55 @@ const FAREWELL_LINES = [
   "좋은 친구였어, {name}…",
 ];
 
+const INTRO_LINES = [
+  "{name}, 부탁해!",
+  "{name}, 보여줘!",
+  "가라! {name}!",
+  "{name}, 너만 믿는다!",
+  "내 차례야! {name}!",
+  "좋아! {name} — 가자!",
+];
+
+const TURN_OPENER_LINES = [
+  "내 턴!",
+  "이 기회야!",
+  "지금이다!",
+  "집중하자…",
+  "한 방에 끝내자!",
+];
+
+const PLAYER_ATTACK_LINES = [
+  "{name}의 일격!",
+  "{name}, 공격!",
+  "{name}의 결정타!",
+  "받아라!",
+  "여기다!",
+  "{name}의 공격!",
+];
+
+const ENEMY_ATTACK_LINES = [
+  "야생의 {name}이(가) 반격!",
+  "야생의 {name}의 공격!",
+  "야생의 {name}이(가) 노려본다!",
+  "{name}이(가) 덮친다!",
+  "야생의 {name}이(가) 달려든다!",
+];
+
+const VICTORY_LINES = [
+  "야생의 {name}을(를) 쓰러뜨렸다!",
+  "{name}, 기절!",
+  "이겼다! {name}!",
+  "야생의 {name}은(는) 쓰러졌다!",
+  "{name}을(를) 무찔렀다!",
+];
+
+function pickLine(arr: readonly string[], name: string): string {
+  const line = arr[Math.floor(Math.random() * arr.length)];
+  return line.replace(/\{name\}/g, name);
+}
+
 function randomFarewell(name: string): string {
-  const line = FAREWELL_LINES[Math.floor(Math.random() * FAREWELL_LINES.length)];
-  return line.replace("{name}", name);
+  return pickLine(FAREWELL_LINES, name);
 }
 
 /** Battle biomes — picked per encounter. Pure CSS so we don't
@@ -221,6 +289,127 @@ const BIOMES: readonly Biome[] = [
       "radial-gradient(50% 40% at 75% 20%, rgba(251,191,36,0.22), transparent 70%)",
     border: "border-amber-600/35",
     emoji: "🏛️",
+  },
+  {
+    key: "gym",
+    name: "체육관",
+    sky: "linear-gradient(180deg, #0a0a14 0%, #181828 35%, #0f0f1a 70%, #050508 100%)",
+    ground:
+      "radial-gradient(60% 80% at 50% 0%, rgba(250,204,21,0.32), rgba(202,138,4,0) 70%), repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0 12px, rgba(0,0,0,0.18) 12px 24px)",
+    accent:
+      "radial-gradient(35% 45% at 50% 0%, rgba(255,255,255,0.18), transparent 75%)",
+    border: "border-amber-300/35",
+    emoji: "🏟️",
+  },
+  {
+    key: "stadium",
+    name: "배틀 스타디움",
+    sky: "linear-gradient(180deg, #050912 0%, #0e1a3a 35%, #14224a 65%, #050912 100%)",
+    ground:
+      "radial-gradient(80% 60% at 50% 0%, rgba(99,102,241,0.32), rgba(30,27,75,0) 75%)",
+    accent:
+      "radial-gradient(40% 30% at 50% -10%, rgba(255,255,255,0.28), transparent 70%), radial-gradient(35% 18% at 50% 100%, rgba(168,85,247,0.22), transparent 80%)",
+    border: "border-indigo-400/35",
+    emoji: "🏆",
+  },
+  {
+    key: "city",
+    name: "도시 거리",
+    sky: "linear-gradient(180deg, #050214 0%, #1a0a3a 30%, #2a0a4a 65%, #08010f 100%)",
+    ground:
+      "radial-gradient(70% 80% at 50% 0%, rgba(34,211,238,0.22), rgba(2,132,199,0) 70%)",
+    accent:
+      "radial-gradient(28% 22% at 18% 60%, rgba(244,114,182,0.28), transparent 70%), radial-gradient(24% 20% at 82% 65%, rgba(34,211,238,0.32), transparent 70%), radial-gradient(18% 14% at 35% 78%, rgba(250,204,21,0.22), transparent 70%)",
+    border: "border-fuchsia-400/35",
+    emoji: "🌆",
+  },
+  {
+    key: "harbor",
+    name: "항구",
+    sky: "linear-gradient(180deg, #2a0f1a 0%, #6b2a1c 22%, #c45a2a 45%, #1a3a55 75%, #0c1a2a 100%)",
+    ground:
+      "radial-gradient(80% 70% at 50% 0%, rgba(251,146,60,0.28), rgba(180,83,9,0) 75%)",
+    accent:
+      "radial-gradient(22% 12% at 50% 38%, rgba(255,236,180,0.55), transparent 70%), repeating-linear-gradient(180deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 8px)",
+    border: "border-orange-400/35",
+    emoji: "⚓",
+  },
+  {
+    key: "temple",
+    name: "사원",
+    sky: "linear-gradient(180deg, #0e0805 0%, #2a1408 35%, #1c0d05 65%, #050302 100%)",
+    ground:
+      "radial-gradient(70% 100% at 50% 0%, rgba(251,146,60,0.32), rgba(124,45,18,0) 70%)",
+    accent:
+      "radial-gradient(20% 24% at 18% 30%, rgba(251,191,36,0.45), transparent 70%), radial-gradient(20% 24% at 82% 30%, rgba(251,191,36,0.45), transparent 70%), repeating-linear-gradient(0deg, rgba(120,90,60,0.06) 0 18px, rgba(0,0,0,0.15) 18px 24px)",
+    border: "border-orange-500/40",
+    emoji: "🕯️",
+  },
+  {
+    key: "magma",
+    name: "화산 분화구",
+    sky: "linear-gradient(180deg, #0a0205 0%, #45100a 25%, #b13a0a 55%, #ff7a1a 80%, #420a05 100%)",
+    ground:
+      "radial-gradient(75% 90% at 50% 0%, rgba(255,180,40,0.55), rgba(220,40,10,0) 70%)",
+    accent:
+      "radial-gradient(28% 18% at 30% 80%, rgba(255,140,40,0.55), transparent 70%), radial-gradient(22% 14% at 70% 86%, rgba(255,210,80,0.55), transparent 70%)",
+    border: "border-orange-500/50",
+    emoji: "🔥",
+  },
+  {
+    key: "space",
+    name: "우주 정거장",
+    sky: "linear-gradient(180deg, #02010a 0%, #0a0524 35%, #1a0a3a 70%, #02010a 100%)",
+    ground:
+      "radial-gradient(70% 80% at 50% 0%, rgba(167,139,250,0.22), rgba(76,29,149,0) 75%)",
+    accent:
+      "radial-gradient(2px 2px at 12% 18%, white, transparent), radial-gradient(2px 2px at 28% 32%, white, transparent), radial-gradient(1px 1px at 44% 12%, white, transparent), radial-gradient(2px 2px at 62% 26%, white, transparent), radial-gradient(1px 1px at 74% 14%, white, transparent), radial-gradient(2px 2px at 88% 36%, white, transparent), radial-gradient(1px 1px at 18% 48%, white, transparent), radial-gradient(2px 2px at 56% 52%, white, transparent), radial-gradient(1px 1px at 82% 60%, white, transparent)",
+    border: "border-violet-300/35",
+    emoji: "🌌",
+  },
+  {
+    key: "waterfall",
+    name: "폭포",
+    sky: "linear-gradient(180deg, #051a2c 0%, #0e3a5f 25%, #1d6bb0 55%, #4ba4d8 85%, #08283a 100%)",
+    ground:
+      "radial-gradient(80% 60% at 50% 0%, rgba(186,230,253,0.45), rgba(14,165,233,0) 75%)",
+    accent:
+      "repeating-linear-gradient(180deg, rgba(255,255,255,0.12) 0 2px, transparent 2px 6px), radial-gradient(40% 18% at 50% 92%, rgba(255,255,255,0.28), transparent 70%)",
+    border: "border-sky-300/40",
+    emoji: "💧",
+  },
+  {
+    key: "flower",
+    name: "꽃밭",
+    sky: "linear-gradient(180deg, #2c0a3a 0%, #6a1d6e 22%, #d97aaa 50%, #f5c4d4 78%, #b46a8a 100%)",
+    ground:
+      "radial-gradient(75% 80% at 50% 0%, rgba(251,207,232,0.45), rgba(219,39,119,0) 70%)",
+    accent:
+      "radial-gradient(8% 6% at 22% 78%, rgba(244,114,182,0.6), transparent 70%), radial-gradient(7% 5% at 38% 88%, rgba(250,204,21,0.55), transparent 70%), radial-gradient(8% 6% at 62% 82%, rgba(167,139,250,0.55), transparent 70%), radial-gradient(7% 5% at 78% 90%, rgba(244,114,182,0.6), transparent 70%)",
+    border: "border-pink-300/45",
+    emoji: "🌸",
+  },
+  {
+    key: "desert",
+    name: "사막",
+    sky: "linear-gradient(180deg, #2a1208 0%, #8a4a1a 22%, #d8923a 50%, #f0c878 78%, #5a2a10 100%)",
+    ground:
+      "radial-gradient(80% 70% at 50% 0%, rgba(252,211,77,0.45), rgba(180,83,9,0) 70%)",
+    accent:
+      "radial-gradient(28% 14% at 50% 32%, rgba(255,236,180,0.55), transparent 70%), repeating-linear-gradient(95deg, rgba(255,255,255,0.04) 0 6px, transparent 6px 16px)",
+    border: "border-amber-400/40",
+    emoji: "🏜️",
+  },
+  {
+    key: "thunder-plain",
+    name: "번개 평원",
+    sky: "linear-gradient(180deg, #060a18 0%, #1a2050 30%, #2a1850 60%, #060a18 100%)",
+    ground:
+      "radial-gradient(80% 70% at 50% 0%, rgba(250,204,21,0.32), rgba(202,138,4,0) 75%)",
+    accent:
+      "radial-gradient(35% 18% at 28% 22%, rgba(253,224,71,0.55), transparent 70%), radial-gradient(32% 14% at 78% 30%, rgba(125,211,252,0.4), transparent 70%)",
+    border: "border-yellow-300/45",
+    emoji: "⚡",
   },
 ];
 
@@ -368,8 +557,8 @@ export default function WildView() {
     async (s: Slab) => {
       setSlab({ ...s });
       setPhase("starting");
-      await say(`좋아! ${s.name} — 가자!`, "player", 900);
-      setBubble({ side: "player", text: "내 턴!" });
+      await say(pickLine(INTRO_LINES, s.name), "player", 900);
+      setBubble({ side: "player", text: pickLine(TURN_OPENER_LINES, s.name) });
       setPhase("player-turn");
     },
     [say]
@@ -380,7 +569,7 @@ export default function WildView() {
     const mult = effectiveness(slab.type!, wild.type);
     const dmg = computeDamage(slab.atk, mult);
     setAttackingSide("player");
-    await say(`${slab.name}의 공격!`, "player", 500);
+    await say(pickLine(PLAYER_ATTACK_LINES, slab.name), "player", 500);
     if (mult === 0) {
       addFloater("enemy", 0, false, true);
     } else {
@@ -396,7 +585,7 @@ export default function WildView() {
     setAttackingSide(null);
 
     if (newHp <= 0) {
-      await say(`야생의 ${wild.name}은(는) 쓰러졌다!`, "wild", 900);
+      await say(pickLine(VICTORY_LINES, wild.name), "wild", 900);
       const prize = winReward(wild.hp);
       setRewarded(prize);
       if (user) {
@@ -408,7 +597,7 @@ export default function WildView() {
     }
     // enemy counter-attack
     setPhase("enemy-attack");
-    await say(`야생의 ${wild.name}의 공격!`, "wild", 600);
+    await say(pickLine(ENEMY_ATTACK_LINES, wild.name), "wild", 600);
     setAttackingSide("enemy");
     const emult = effectiveness(wild.type, slab.type!);
     const edmg = computeDamage(wild.atk, emult);
@@ -440,7 +629,7 @@ export default function WildView() {
       setCooldownUntil(Date.now() + 30_000);
       return;
     }
-    setBubble({ side: "player", text: "내 턴!" });
+    setBubble({ side: "player", text: pickLine(TURN_OPENER_LINES, slab.name) });
     setPhase("player-turn");
   }, [slab, wild, wildHp, addFloater, say, user, setPoints, refresh]);
 
@@ -484,16 +673,8 @@ export default function WildView() {
   if (eligibleSlabs.length === 0) {
     return (
       <div className="max-w-2xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
-        <PageHeader
-          title="🌿 야생"
-          stats={
-            <HelpButton
-              size="sm"
-              title="야생 배틀"
-              sections={WILD_HELP_SECTIONS}
-            />
-          }
-        />
+        <FloatingHelp />
+        <PageHeader title="🌿 야생" />
         <div className="mt-8 rounded-2xl border border-dashed border-white/10 bg-white/5 py-14 flex flex-col items-center gap-3 text-center px-4">
           <span className="text-5xl">🌾</span>
           <p className="text-lg text-white font-semibold">
@@ -515,19 +696,8 @@ export default function WildView() {
 
   return (
     <div className="max-w-2xl mx-auto px-3 md:px-6 py-3 md:py-8 fade-in">
-      <PageHeader
-        title="🌿 야생"
-        stats={
-          <>
-            {user && <PointsChip points={user.points} size="sm" />}
-            <HelpButton
-              size="sm"
-              title="야생 배틀"
-              sections={WILD_HELP_SECTIONS}
-            />
-          </>
-        }
-      />
+      <FloatingHelp />
+      <PageHeader title="🌿 야생" />
 
       {phase === "idle" && (
         <div className="mt-4">
@@ -610,6 +780,17 @@ export default function WildView() {
 }
 
 /* ─────────────── sub-components ─────────────── */
+
+function FloatingHelp() {
+  return (
+    <div
+      className="fixed right-3 z-30"
+      style={{ top: "calc(env(safe-area-inset-top, 0px) + 64px)" }}
+    >
+      <HelpButton size="sm" title="야생 배틀" sections={WILD_HELP_SECTIONS} />
+    </div>
+  );
+}
 
 function IdleCTA({
   count,
@@ -712,8 +893,7 @@ function BattleScene({
   const playerBubble = bubble?.side === "player" ? bubble.text : "";
   return (
     <section
-      className="relative mt-3 overflow-visible"
-      style={{ aspectRatio: "4 / 4.5" }}
+      className="relative mt-3 overflow-visible aspect-[4/3.2] md:aspect-[4/4]"
     >
       <div
         aria-hidden
@@ -742,7 +922,7 @@ function BattleScene({
       {/* Enemy (top-right): bubble on the LEFT of the sprite */}
       <div className="absolute top-3 right-3 md:top-6 md:right-6 flex flex-col items-end">
         <HpBar label={wild.name} hp={wildHp} max={wild.hp} type={wild.type} />
-        <div className="mt-2 flex items-center gap-2">
+        <div className="mt-2 flex items-center gap-3 md:gap-4">
           {/* Wild speech bubble — pops to the left of the sprite */}
           <AnimatePresence>
             {wildBubble && (
@@ -788,7 +968,7 @@ function BattleScene({
       <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 flex flex-col items-start">
         {slab && (
           <>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3 md:gap-4">
               <motion.div
                 initial={{ x: -200, opacity: 0 }}
                 animate={
@@ -1015,28 +1195,37 @@ function PickSlabPanel({
   onPick: (s: Slab) => void;
 }) {
   return (
-    <div className="mt-4">
-      <p className="text-xs text-zinc-400 mb-2">
+    <div className="mt-2 md:mt-4">
+      <p className="text-[11px] md:text-xs text-zinc-400 mb-1.5 md:mb-2 px-1">
         싸울 PCL 슬랩을 고르세요 — 타입 상성을 잘 살피고!
       </p>
       <ul
-        className="grid gap-2"
-        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))" }}
+        className={clsx(
+          "flex gap-2 overflow-x-auto pb-1 -mx-3 px-3 snap-x snap-mandatory",
+          "md:grid md:gap-2 md:overflow-visible md:mx-0 md:px-0 md:snap-none"
+        )}
+        style={{
+          scrollbarWidth: "thin",
+          gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+        }}
       >
         {slabs.map((s) => {
           const tone = psaTone(s.grade);
           return (
-            <li key={s.gradingId}>
+            <li
+              key={s.gradingId}
+              className="snap-start shrink-0 w-[44%] sm:w-[32%] md:w-auto"
+            >
               <button
                 onClick={() => onPick(s)}
                 style={{ touchAction: "manipulation" }}
                 className={clsx(
-                  "w-full flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-left hover:bg-white/10 active:scale-[0.98] transition"
+                  "w-full flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-1.5 md:py-2 text-left hover:bg-white/10 active:scale-[0.98] transition"
                 )}
               >
                 <div
                   className={clsx(
-                    "shrink-0 w-10 h-14 rounded-md overflow-hidden ring-2 bg-zinc-900",
+                    "shrink-0 w-9 h-12 md:w-10 md:h-14 rounded-md overflow-hidden ring-2 bg-zinc-900",
                     RARITY_STYLE[s.rarity].frame
                   )}
                 >
@@ -1050,10 +1239,10 @@ function PickSlabPanel({
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-bold text-white truncate">
+                  <p className="text-[10.5px] md:text-[11px] font-bold text-white truncate">
                     {s.name}
                   </p>
-                  <p className="text-[10px] flex items-center gap-1">
+                  <p className="text-[10px] flex items-center gap-1 mt-0.5">
                     <span
                       className={clsx(
                         "px-1 py-[1px] rounded font-black text-[9px]",
@@ -1176,7 +1365,8 @@ function SpeechBubble({
       className={clsx(
         "relative max-w-[140px] md:max-w-[160px] rounded-xl px-2.5 py-1.5",
         "bg-white text-zinc-900 text-[11px] md:text-xs font-bold leading-snug",
-        "shadow-[0_4px_14px_rgba(0,0,0,0.4)] break-keep"
+        "shadow-[0_4px_14px_rgba(0,0,0,0.4)] break-keep",
+        side === "left" ? "mr-1.5" : "ml-1.5"
       )}
     >
       {text}

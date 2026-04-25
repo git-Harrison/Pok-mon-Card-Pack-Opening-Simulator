@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
 import { fetchUnseenGiftCount } from "@/lib/db";
 import { getCharacter } from "@/lib/profile";
+import { useRealtimeInbox } from "@/lib/useRealtimeInbox";
 import { CharacterAvatar } from "./ProfileView";
 import PointsChip from "./PointsChip";
 import {
@@ -74,19 +75,30 @@ export default function Navbar() {
   // viewed yet. Refreshes on route change so visiting /gifts (which
   // marks them viewed) clears the dot on next nav transition.
   const [giftBadge, setGiftBadge] = useState(0);
+  const userId = user?.id ?? null;
+  const refreshGiftBadge = useCallback(() => {
+    if (!userId) {
+      setGiftBadge(0);
+      return;
+    }
+    fetchUnseenGiftCount(userId).then((n) => setGiftBadge(n));
+  }, [userId]);
+
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setGiftBadge(0);
       return;
     }
     let canceled = false;
-    fetchUnseenGiftCount(user.id).then((n) => {
+    fetchUnseenGiftCount(userId).then((n) => {
       if (!canceled) setGiftBadge(n);
     });
     return () => {
       canceled = true;
     };
-  }, [user, pathname]);
+  }, [userId, pathname]);
+
+  useRealtimeInbox(userId, undefined, refreshGiftBadge);
 
   return (
     <>

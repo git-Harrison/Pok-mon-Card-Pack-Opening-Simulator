@@ -244,6 +244,12 @@ export default function ProfileView() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
+      <div
+        className="fixed right-3 z-30"
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 64px)" }}
+      >
+        <HelpButton size="sm" title="내 프로필" sections={HELP_SECTIONS} />
+      </div>
       <PageHeader
         title="내 프로필"
         subtitle="트레이너 캐릭터를 고르고 자랑할 슬랩을 펫으로 등록하세요"
@@ -444,89 +450,82 @@ function ProfileBanner({
   onEditName: () => void;
 }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 via-white/[0.02] to-transparent p-4 md:p-5 flex items-center gap-4">
-      {character ? (
-        <CharacterAvatar def={character} size="lg" />
-      ) : (
-        <div className="shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white/5 border border-dashed border-white/20 flex items-center justify-center text-3xl">
-          ❓
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <h2 className="text-lg md:text-xl font-black text-white truncate">
-            {displayName || "이름 없음"}
-          </h2>
-          {character && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-400 text-zinc-900">
-              {character.name}
-            </span>
-          )}
-          <div className="ml-auto flex items-center gap-1.5">
+    <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 via-white/[0.02] to-transparent p-3 md:p-4">
+      <div className="flex items-center gap-3">
+        {character ? (
+          <CharacterAvatar def={character} size="md" />
+        ) : (
+          <div className="shrink-0 w-14 h-14 rounded-xl bg-white/5 border border-dashed border-white/20 flex items-center justify-center text-2xl">
+            ❓
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <h2 className="text-base md:text-lg font-black text-white truncate">
+              {displayName || "이름 없음"}
+            </h2>
             <button
               type="button"
               onClick={onEditName}
-              className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md bg-white/10 hover:bg-white/15 text-zinc-100 border border-white/10"
+              aria-label="닉네임 변경"
+              className="shrink-0 w-7 h-7 rounded-full bg-white/10 hover:bg-white/15 text-zinc-100 border border-white/10 inline-flex items-center justify-center text-xs"
               style={{ touchAction: "manipulation" }}
             >
-              <span aria-hidden>✏️</span>닉네임 변경
+              ✏️
             </button>
-            <HelpButton size="sm" title="내 프로필" sections={HELP_SECTIONS} />
           </div>
+          {character ? (
+            <span className="mt-0.5 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-400 text-zinc-900">
+              {character.name}
+            </span>
+          ) : (
+            <p className="mt-0.5 text-[10px] text-zinc-400">
+              캐릭터를 선택해주세요
+            </p>
+          )}
         </div>
-        {!character && (
-          <p className="mt-1 text-[11px] text-zinc-400">
-            캐릭터를 선택해주세요
-          </p>
-        )}
+      </div>
 
-        <div className="mt-3">
-          <div className="flex items-end justify-between gap-2">
-            <div className="flex items-baseline gap-1.5">
-              <span aria-hidden className="text-amber-300">🐾</span>
-              <span className="text-2xl md:text-3xl font-black tabular-nums text-amber-300 leading-none">
-                {petScore.toLocaleString("ko-KR")}
-              </span>
-              <span className="text-[10px] uppercase tracking-wider text-zinc-500">
-                / {MAX_PET_SCORE}
-              </span>
-            </div>
-            <span className="text-[10px] text-zinc-400 tabular-nums">
-              슬롯 {slotsUsed}/5
+      <div className="mt-3 grid grid-cols-3 gap-1.5">
+        <div className="rounded-lg bg-amber-400/10 border border-amber-400/30 px-2 py-1.5 text-center">
+          <div className="text-[9px] uppercase tracking-wider text-amber-300/80">
+            🐾 펫
+          </div>
+          <div className="mt-0.5 text-sm md:text-base font-black tabular-nums text-amber-200 leading-tight">
+            {petScore.toLocaleString("ko-KR")}
+            <span className="text-[9px] text-amber-300/60 font-semibold">
+              {" "}/ {MAX_PET_SCORE}
             </span>
           </div>
-          <div className="mt-1.5 h-2 rounded-full bg-white/5 overflow-hidden border border-white/5">
-            <div
-              className="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500"
-              style={{ width: `${scorePct}%` }}
-            />
-          </div>
-          <p className="mt-1 text-[10px] uppercase tracking-wider text-zinc-500">
-            펫 점수
-          </p>
-        </div>
-
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <div className="rounded-xl bg-rose-500/10 border border-rose-500/30 px-3 py-2">
-            <div className="text-[9px] uppercase tracking-wider text-rose-300/70">
-              ⚔️ 전투력
-            </div>
-            <div className="mt-0.5 text-base md:text-lg font-black tabular-nums text-rose-200">
-              {centerPower.toLocaleString("ko-KR")}
-            </div>
-          </div>
-          <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3 py-2">
-            <div className="text-[9px] uppercase tracking-wider text-emerald-300/70">
-              📔 도감 박제
-            </div>
-            <div className="mt-0.5 text-base md:text-lg font-black tabular-nums text-emerald-200">
-              {pokedexCount.toLocaleString("ko-KR")}
-              <span className="text-[10px] text-emerald-300/60 font-semibold">
-                {" "}장
-              </span>
-            </div>
+          <div className="text-[9px] text-amber-300/60 tabular-nums">
+            {slotsUsed}/{MAX_MAIN_CARDS} 슬롯
           </div>
         </div>
+        <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 px-2 py-1.5 text-center">
+          <div className="text-[9px] uppercase tracking-wider text-rose-300/80">
+            ⚔️ 전투력
+          </div>
+          <div className="mt-0.5 text-sm md:text-base font-black tabular-nums text-rose-200 leading-tight">
+            {centerPower.toLocaleString("ko-KR")}
+          </div>
+        </div>
+        <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-2 py-1.5 text-center">
+          <div className="text-[9px] uppercase tracking-wider text-emerald-300/80">
+            📔 도감
+          </div>
+          <div className="mt-0.5 text-sm md:text-base font-black tabular-nums text-emerald-200 leading-tight">
+            {pokedexCount.toLocaleString("ko-KR")}
+            <span className="text-[9px] text-emerald-300/60 font-semibold">
+              {" "}장
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="mt-1.5 h-1 rounded-full bg-white/5 overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500"
+          style={{ width: `${scorePct}%` }}
+        />
       </div>
     </div>
   );

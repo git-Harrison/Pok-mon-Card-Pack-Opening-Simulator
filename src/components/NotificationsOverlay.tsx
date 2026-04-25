@@ -9,6 +9,7 @@ import {
   markTauntSeen,
   type TauntRow,
 } from "@/lib/db";
+import { useRealtimeInbox } from "@/lib/useRealtimeInbox";
 import Portal from "./Portal";
 
 /**
@@ -37,9 +38,8 @@ export default function NotificationsOverlay() {
     refresh();
   }, [refresh, pathname]);
 
-  // Background polling — keeps the popup timely for users who stay on
-  // one page. 3s feels effectively real-time for taunts; pauses when
-  // the tab is hidden so background tabs don't burn RPC quota.
+  useRealtimeInbox(user?.id ?? null, refresh);
+
   useEffect(() => {
     if (!user) return;
     let alive = true;
@@ -48,8 +48,7 @@ export default function NotificationsOverlay() {
       if (typeof document !== "undefined" && document.hidden) return;
       refresh();
     };
-    const id = setInterval(tick, 3_000);
-    // Also refresh immediately on tab focus after being hidden.
+    const id = setInterval(tick, 30_000);
     const onVis = () => {
       if (typeof document !== "undefined" && !document.hidden) refresh();
     };
