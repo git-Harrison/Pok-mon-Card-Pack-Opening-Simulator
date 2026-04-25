@@ -195,14 +195,9 @@ export default function UsersView() {
                       <h2 className="text-base md:text-lg font-bold text-white truncate">
                         {e.display_name}
                       </h2>
-                      {isMe && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-400 text-zinc-900">
-                          나
-                        </span>
-                      )}
                     </div>
-                    <p className="text-[11px] md:text-xs text-zinc-400 mt-0.5">
-                      전시 {e.showcase_count ?? 0}장 · 부수기 성공{" "}
+                    <p className="text-[11px] md:text-xs text-zinc-400 mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
+                      전시 {e.showcase_count ?? 0}장 · 부수기{" "}
                       {e.sabotage_wins ?? 0}회
                       {mode !== "rank" && (e.pet_score ?? 0) > 0 && (
                         <>
