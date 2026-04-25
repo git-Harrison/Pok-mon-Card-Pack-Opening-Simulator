@@ -29,7 +29,7 @@ begin
       u.display_name,
       u.age,
       u.points,
-      u.character,
+      u."character",
       coalesce(u.pet_score, 0) as pet_score,
       coalesce(u.main_card_ids, '{}'::uuid[]) as main_card_ids,
       coalesce((

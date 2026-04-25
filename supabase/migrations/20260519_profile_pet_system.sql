@@ -16,7 +16,7 @@
 -- ============================================================
 
 alter table users
-  add column if not exists character text;
+  add column if not exists "character" text;
 
 alter table users
   add column if not exists main_card_ids uuid[] not null default '{}';
@@ -65,7 +65,7 @@ begin
     return json_build_object('ok', false, 'error', '유효하지 않은 캐릭터입니다.');
   end if;
 
-  update users set character = p_character where id = p_user_id;
+  update users set "character" = p_character where id = p_user_id;
   if not found then
     return json_build_object('ok', false, 'error', '사용자를 찾을 수 없습니다.');
   end if;
@@ -136,7 +136,7 @@ declare
   v_cards jsonb;
   v_recomputed int;
 begin
-  select character, main_card_ids, pet_score
+  select "character", main_card_ids, pet_score
     into v_character, v_ids, v_pet_score
     from users
    where id = p_user_id;
@@ -197,7 +197,7 @@ begin
       u.display_name,
       u.age,
       u.points,
-      u.character,
+      u."character",
       coalesce(u.pet_score, 0) as pet_score,
       (
         coalesce(u.pcl_10_wins, 0) * 500

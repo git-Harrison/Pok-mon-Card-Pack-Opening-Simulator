@@ -12,7 +12,7 @@ declare
   v_rank_position int := 0;
   v_rank_total int := 0;
 begin
-  select id, user_id, display_name, character, pet_score, showcase_rank_pts
+  select id, user_id, display_name, "character" as character_key, pet_score, showcase_rank_pts
     into v_owner
     from users
    where user_id = lower(p_login_id)
@@ -57,7 +57,7 @@ begin
     'user_id', v_owner.id,
     'login_id', v_owner.user_id,
     'display_name', v_owner.display_name,
-    'character', v_owner.character,
+    'character', v_owner.character_key,
     'pet_score', coalesce(v_owner.pet_score, 0),
     'showcase_count', v_showcase_count,
     'income_per_hour_trade', v_income_trade::int,
