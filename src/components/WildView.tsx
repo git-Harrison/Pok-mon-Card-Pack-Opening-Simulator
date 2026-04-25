@@ -750,7 +750,12 @@ function IdleCTA({
             <div className="text-[9px] uppercase tracking-wider text-amber-300/80">
               승리 보상
             </div>
-            <div className="text-sm font-black text-amber-100">+20,000p</div>
+            <div className="text-sm font-black text-amber-100 leading-tight">
+              +20,000p
+            </div>
+            <div className="text-[10px] font-bold text-amber-200/80 leading-tight">
+              랭킹 +50
+            </div>
           </div>
           <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 px-2 py-1.5">
             <div className="text-[9px] uppercase tracking-wider text-rose-300/80">

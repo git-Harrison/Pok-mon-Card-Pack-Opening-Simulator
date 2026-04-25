@@ -21,11 +21,13 @@ import {
   type PsaGradingWithDisplay,
   type WalletSnapshot,
 } from "@/lib/db";
+import { fetchProfile } from "@/lib/profile";
 import Link from "next/link";
 import PokeCard from "./PokeCard";
 import PsaSlab from "./PsaSlab";
 import CoinIcon from "./CoinIcon";
 import PageHeader from "./PageHeader";
+import Portal from "./Portal";
 import UserSelect from "./UserSelect";
 
 type Mode = "cards" | "psa";
@@ -43,17 +45,20 @@ export default function WalletView() {
     totalCards: 0,
   });
   const [psa, setPsa] = useState<PsaGradingWithDisplay[]>([]);
+  const [petIds, setPetIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>("ALL");
 
   const refresh = useCallback(async () => {
     if (!user) return;
-    const [w, g] = await Promise.all([
+    const [w, g, p] = await Promise.all([
       fetchWallet(user.id),
       fetchAllGradingsWithDisplay(user.id),
+      fetchProfile(user.id),
     ]);
     setSnap(w);
     setPsa(g);
+    setPetIds(new Set(p.main_card_ids ?? []));
     setLoading(false);
   }, [user]);
 
@@ -75,6 +80,7 @@ export default function WalletView() {
 
   const psaItems = useMemo(() => {
     return psa
+      .filter((g) => !g.displayed && !petIds.has(g.id))
       .map((g) => {
         const card = getCard(g.card_id);
         if (!card) return null;
@@ -83,14 +89,8 @@ export default function WalletView() {
       .filter(
         (v): v is { grading: PsaGradingWithDisplay; card: Card } => v !== null
       )
-      .sort((a, b) => {
-        // Undisplayed first, then by grade desc so active slabs feel primary.
-        if (a.grading.displayed !== b.grading.displayed) {
-          return a.grading.displayed ? 1 : -1;
-        }
-        return b.grading.grade - a.grading.grade;
-      });
-  }, [psa]);
+      .sort((a, b) => b.grading.grade - a.grading.grade);
+  }, [psa, petIds]);
 
   const rarityCounts = useMemo(() => {
     const counts = new Map<Rarity, number>();
@@ -119,7 +119,7 @@ export default function WalletView() {
         <div className="inline-flex items-stretch rounded-xl bg-white/5 border border-white/10 p-1">
           <ModeTab active={mode === "psa"} onClick={() => setMode("psa")}>
             PCL 감별
-            <span className="ml-1.5 text-[10px] opacity-70">{psa.length}</span>
+            <span className="ml-1.5 text-[10px] opacity-70">{psaItems.length}</span>
           </ModeTab>
           <ModeTab active={mode === "cards"} onClick={() => setMode("cards")}>
             보유 카드
@@ -270,17 +270,11 @@ function PsaMode({
       </div>
     );
   }
-  const displayedCount = items.filter((x) => x.grading.displayed).length;
   return (
     <>
-      {displayedCount > 0 && (
-        <div className="mt-3 text-[11px] text-fuchsia-300 font-semibold tabular-nums">
-          🏛️ 전시 중 {displayedCount}장
-        </div>
-      )}
       <div className="mt-4 grid grid-cols-3 gap-2 md:gap-3 place-items-stretch">
         {items.map(({ grading, card }) => {
-          const giftable = !grading.displayed && grading.grade >= 6;
+          const giftable = grading.grade >= 6;
           return (
             <button
               key={grading.id}
@@ -290,17 +284,11 @@ function PsaMode({
               style={{ touchAction: "manipulation" }}
               className={clsx(
                 "relative flex flex-col items-center gap-1 w-full text-left active:scale-[0.98] transition",
-                grading.displayed && "opacity-70 cursor-not-allowed",
-                !giftable && !grading.displayed && "cursor-not-allowed"
+                !giftable && "cursor-not-allowed"
               )}
             >
               <div className="relative w-full">
                 <PsaSlab card={card} grade={grading.grade} size="sm" compact />
-                {grading.displayed && (
-                  <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-fuchsia-500 text-white text-[9px] font-black shadow-[0_4px_10px_rgba(217,70,239,0.6)] whitespace-nowrap">
-                    🏛️
-                  </span>
-                )}
               </div>
               <p className="w-full text-center text-[10px] text-zinc-300 leading-tight line-clamp-1 px-0.5">
                 {card.name}
@@ -391,24 +379,25 @@ function SlabGiftComposer({
   return (
     <AnimatePresence>
       {target && (
-        <motion.div
-          key="backdrop"
-          className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          style={{
-            paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
-            paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
-            paddingLeft: "12px",
-            paddingRight: "12px",
-          }}
-        >
+        <Portal>
+          <motion.div
+            key="backdrop"
+            className="fixed inset-0 z-[150] bg-black/85 backdrop-blur-md flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            style={{
+              paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+              paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+              paddingLeft: "12px",
+              paddingRight: "12px",
+            }}
+          >
           <motion.div
             onClick={(e) => e.stopPropagation()}
             className="relative w-full md:max-w-2xl bg-zinc-950/95 border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-            style={{ maxHeight: "calc(100dvh - 24px)" }}
+            style={{ maxHeight: "calc(100dvh - 24px)", height: "auto" }}
             initial={{ scale: 0.94, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.94, opacity: 0 }}
@@ -544,7 +533,8 @@ function SlabGiftComposer({
               </div>
             </div>
           </motion.div>
-        </motion.div>
+          </motion.div>
+        </Portal>
       )}
     </AnimatePresence>
   );

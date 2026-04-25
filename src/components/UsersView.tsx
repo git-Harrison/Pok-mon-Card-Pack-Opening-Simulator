@@ -98,10 +98,10 @@ export default function UsersView() {
       </div>
       {mode === "power" && (
         <p className="mt-2 text-[11px] text-zinc-400 leading-snug">
-          전투력 = 센터에 전시된 슬랩마다{" "}
-          <b className="text-zinc-200">희귀도 점수</b>(SR 5·MA 6·SAR 7·UR 8·MUR
-          10) × <b className="text-zinc-200">PCL 점수</b>(9→9, 10→10) 를 모두
-          합산.
+          전투력 = <b className="text-zinc-200">전시 슬랩</b>(희귀도×PCL) +{" "}
+          <b className="text-emerald-200">도감 보너스</b> +{" "}
+          <b className="text-fuchsia-200">펫 점수</b>. 펫 슬랩이 강할수록(MUR
+          최강) 전투력이 함께 올라요.
         </p>
       )}
       {mode === "pet" && (
