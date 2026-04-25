@@ -198,14 +198,6 @@ export default function UsersView() {
                     <p className="text-[11px] md:text-xs text-zinc-400 mt-0.5 whitespace-nowrap">
                       전시 {e.showcase_count ?? 0}장 · 부수기{" "}
                       {e.sabotage_wins ?? 0}회
-                      {mode === "pet" && (e.pet_score ?? 0) > 0 && (
-                        <>
-                          {" · "}
-                          <span className="text-amber-300 font-semibold">
-                            🐾 {e.pet_score}
-                          </span>
-                        </>
-                      )}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
@@ -227,9 +219,6 @@ export default function UsersView() {
                         </div>
                         <div className="mt-1 text-[10px] text-fuchsia-300/70 uppercase tracking-wider">
                           MAX 500
-                        </div>
-                        <div className="mt-1 text-[10px] text-zinc-400 tabular-nums">
-                          랭킹 {e.rank_score.toLocaleString("ko-KR")}
                         </div>
                       </>
                     ) : (
