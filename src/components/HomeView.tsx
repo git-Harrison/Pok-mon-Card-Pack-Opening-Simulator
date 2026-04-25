@@ -18,6 +18,18 @@ import {
   type WalletSnapshot,
 } from "@/lib/db";
 import { fetchPokedex, type PokedexEntry } from "@/lib/pokedex";
+import {
+  BookIcon,
+  HomeIcon,
+  LeafIcon,
+  MagnifyIcon,
+  MuseumIcon,
+  TrophyIcon,
+  UserIcon,
+  WalletIcon,
+} from "./icons/NavIcons";
+
+type NavIconType = (props: { className?: string }) => React.JSX.Element;
 
 const ADMIN_LOGIN = "hun";
 
@@ -766,31 +778,72 @@ function SectionTitle({
 interface NavItem {
   href: string;
   label: string;
-  emoji: string;
+  Icon: NavIconType;
+  /** Tailwind classes: stroke + glow color theme per destination. */
+  tint: string;
   adminOnly?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/wallet", label: "지갑", emoji: "🎴" },
-  { href: "/center", label: "센터", emoji: "🏛️" },
-  { href: "/grading", label: "감별", emoji: "🔎" },
-  { href: "/wild", label: "야생", emoji: "🌿" },
-  { href: "/pokedex", label: "도감", emoji: "📔" },
-  { href: "/users", label: "랭킹", emoji: "🏆" },
-  { href: "/profile", label: "프로필", emoji: "🎭" },
-  { href: "/admin", label: "관리자", emoji: "🛠️", adminOnly: true },
+  {
+    href: "/wallet",
+    label: "지갑",
+    Icon: WalletIcon,
+    tint: "text-amber-300 bg-amber-400/10 border-amber-400/30 hover:bg-amber-400/15 hover:border-amber-400/50 hover:shadow-[0_8px_22px_-12px_rgba(251,191,36,0.65)]",
+  },
+  {
+    href: "/center",
+    label: "센터",
+    Icon: MuseumIcon,
+    tint: "text-fuchsia-300 bg-fuchsia-400/10 border-fuchsia-400/30 hover:bg-fuchsia-400/15 hover:border-fuchsia-400/50 hover:shadow-[0_8px_22px_-12px_rgba(217,70,239,0.65)]",
+  },
+  {
+    href: "/grading",
+    label: "감별",
+    Icon: MagnifyIcon,
+    tint: "text-violet-300 bg-violet-400/10 border-violet-400/30 hover:bg-violet-400/15 hover:border-violet-400/50 hover:shadow-[0_8px_22px_-12px_rgba(168,85,247,0.65)]",
+  },
+  {
+    href: "/wild",
+    label: "야생",
+    Icon: LeafIcon,
+    tint: "text-emerald-300 bg-emerald-400/10 border-emerald-400/30 hover:bg-emerald-400/15 hover:border-emerald-400/50 hover:shadow-[0_8px_22px_-12px_rgba(52,211,153,0.65)]",
+  },
+  {
+    href: "/pokedex",
+    label: "도감",
+    Icon: BookIcon,
+    tint: "text-cyan-300 bg-cyan-400/10 border-cyan-400/30 hover:bg-cyan-400/15 hover:border-cyan-400/50 hover:shadow-[0_8px_22px_-12px_rgba(34,211,238,0.65)]",
+  },
+  {
+    href: "/users",
+    label: "랭킹",
+    Icon: TrophyIcon,
+    tint: "text-yellow-300 bg-yellow-400/10 border-yellow-400/30 hover:bg-yellow-400/15 hover:border-yellow-400/50 hover:shadow-[0_8px_22px_-12px_rgba(250,204,21,0.65)]",
+  },
+  {
+    href: "/profile",
+    label: "프로필",
+    Icon: UserIcon,
+    tint: "text-sky-300 bg-sky-400/10 border-sky-400/30 hover:bg-sky-400/15 hover:border-sky-400/50 hover:shadow-[0_8px_22px_-12px_rgba(56,189,248,0.65)]",
+  },
+  {
+    href: "/admin",
+    label: "관리자",
+    Icon: HomeIcon,
+    tint: "text-rose-300 bg-rose-400/10 border-rose-400/30 hover:bg-rose-400/15 hover:border-rose-400/50 hover:shadow-[0_8px_22px_-12px_rgba(244,63,94,0.65)]",
+    adminOnly: true,
+  },
 ];
 
-function NavTile({ href, label, emoji }: NavItem) {
+function NavTile({ href, label, Icon, tint }: NavItem) {
   return (
     <Link
       href={href}
-      className="group flex flex-col items-center justify-center gap-1 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] hover:border-white/20 transition aspect-square px-2 py-3 active:scale-[0.97]"
+      className={`group flex flex-col items-center justify-center gap-1.5 rounded-2xl border transition aspect-square px-2 py-3 active:scale-[0.97] ${tint}`}
     >
-      <span className="text-2xl md:text-3xl group-hover:scale-110 transition-transform">
-        {emoji}
-      </span>
-      <span className="text-[11px] md:text-xs font-semibold text-zinc-200 group-hover:text-white">
+      <Icon className="w-7 h-7 md:w-8 md:h-8 group-hover:scale-110 transition-transform" />
+      <span className="text-[11px] md:text-xs font-semibold text-zinc-100 group-hover:text-white">
         {label}
       </span>
     </Link>
