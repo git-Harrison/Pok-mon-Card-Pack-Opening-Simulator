@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import Portal from "./Portal";
 
 const SIZE_MAP = {
   sm: "w-7 h-7",
@@ -58,13 +59,22 @@ export function CenteredPokeLoader({
   label?: string;
 }) {
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
-      <div className="flex flex-col items-center gap-3">
-        <PokeLoader size="lg" />
-        <p className="text-xs font-semibold text-zinc-200 tracking-wide drop-shadow">
-          {label}
-        </p>
+    <Portal>
+      <div
+        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none"
+        style={{
+          paddingTop: "env(safe-area-inset-top, 0px)",
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        }}
+        aria-live="polite"
+      >
+        <div className="flex flex-col items-center gap-3">
+          <PokeLoader size="lg" />
+          <p className="text-xs font-semibold text-zinc-200 tracking-wide drop-shadow">
+            {label}
+          </p>
+        </div>
       </div>
-    </div>
+    </Portal>
   );
 }

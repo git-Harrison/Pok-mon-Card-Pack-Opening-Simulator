@@ -284,16 +284,21 @@ function PsaMode({
         </div>
       )}
       <div
-        className="mt-4 grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-5 place-items-center"
+        className="mt-4 grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-5 place-items-stretch"
       >
         {items.map(({ grading, card }) => {
           const giftable = !grading.displayed && grading.grade >= 6;
           return (
-            <div
+            <button
               key={grading.id}
+              type="button"
+              onClick={() => setGiftTarget({ grading, card })}
+              disabled={!giftable}
+              style={{ touchAction: "manipulation" }}
               className={clsx(
-                "relative flex flex-col items-center gap-1.5 w-full",
-                grading.displayed && "opacity-80"
+                "relative flex flex-col items-center gap-1 w-full text-left active:scale-[0.98] transition",
+                grading.displayed && "opacity-70 cursor-not-allowed",
+                !giftable && !grading.displayed && "cursor-not-allowed"
               )}
             >
               <div className="relative w-full">
@@ -307,17 +312,7 @@ function PsaMode({
               <p className="w-full text-center text-[10px] text-zinc-300 leading-tight line-clamp-1 px-0.5">
                 {card.name}
               </p>
-              {giftable && (
-                <button
-                  type="button"
-                  onClick={() => setGiftTarget({ grading, card })}
-                  style={{ touchAction: "manipulation" }}
-                  className="h-7 w-full rounded-md bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-[10px] inline-flex items-center justify-center gap-1 hover:scale-[1.02] active:scale-[0.98] transition"
-                >
-                  🎁 선물
-                </button>
-              )}
-            </div>
+            </button>
           );
         })}
       </div>
