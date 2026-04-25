@@ -4,21 +4,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
-import { fetchAllGradingsWithDisplay, type PsaGradingWithDisplay } from "@/lib/db";
 import {
+  bulkRegisterPokedex,
   fetchPokedex,
+  getAllCatalogCards,
   nextBreakpoint,
   pokedexPowerBonus,
   POKEDEX_BREAKPOINTS,
-  registerPokedexEntry,
   type PokedexEntry,
 } from "@/lib/pokedex";
-import { getCard } from "@/lib/sets";
-import { compareRarity, RARITY_STYLE } from "@/lib/rarity";
-import type { Rarity } from "@/lib/types";
+import { RARITY_ORDER, RARITY_STYLE, RARITY_LABEL } from "@/lib/rarity";
+import type { Card, Rarity } from "@/lib/types";
 import HelpButton, { type HelpSection } from "./HelpButton";
 import PageHeader from "./PageHeader";
-import Portal from "./Portal";
 import RarityBadge from "./RarityBadge";
 
 const HELP_SECTIONS: HelpSection[] = [
@@ -27,9 +25,9 @@ const HELP_SECTIONS: HelpSection[] = [
     icon: "📔",
     body: (
       <>
-        PCL 10 슬랩을 영구히 박제해 모으는 컬렉션이에요. 한 번 등록하면 그 슬랩
-        은 카드지갑/센터에서 사라지고 도감에 박제돼요. 카드 한 종류는 한 번만
-        등록할 수 있어요.
+        모든 카드가 표시되며, 도감에 등록되지 않은 카드는 어둡게 보여요. 한 번
+        등록하면 그 슬랩은 카드지갑에서 사라지고 도감에 박제돼요. 카드 한 종류는
+        한 번만 등록할 수 있어요.
       </>
     ),
   },
@@ -38,11 +36,21 @@ const HELP_SECTIONS: HelpSection[] = [
     icon: "✅",
     body: (
       <ul>
-        <li>본인 소유 PCL 10 슬랩만 가능</li>
-        <li>센터에 전시 중이거나 선물로 보낸 슬랩은 불가</li>
-        <li>같은 카드(card_id) 는 한 번만 등록 가능</li>
-        <li>등록한 슬랩은 영구 삭제. 환불 불가</li>
+        <li>PCL 10등급으로 감별된 카드만 등록 가능 (센터에 전시 중이 아닌 슬랩)</li>
+        <li>같은 카드(card_id)는 한 번만 등록 가능</li>
+        <li>등록된 카드는 카드지갑에서 영구 삭제 — 다시 꺼낼 수 없어요</li>
       </ul>
+    ),
+  },
+  {
+    heading: "일괄 등록",
+    icon: "📦",
+    body: (
+      <>
+        <b>📔 도감 일괄 등록</b> 버튼을 누르면 보유 중인 모든 PCL10 슬랩 (전시
+        중이 아니고 도감에 없는 카드) 이 한 번에 도감에 등록되고, 해당 슬랩들은
+        카드지갑에서 영구 삭제돼요.
+      </>
     ),
   },
   {
@@ -68,8 +76,7 @@ const HELP_SECTIONS: HelpSection[] = [
     body: (
       <>
         도감은 책처럼 한 페이지에 6장씩 펼쳐져요. 좌우 화살표로 페이지를 넘기면
-        3D 페이지 플립 애니메이션이 재생돼요. <b>등급별</b> 탭은 PCL 등급 구간
-        으로, <b>포켓몬별</b> 탭은 카드 ID 순으로 정렬돼요.
+        3D 페이지 플립 애니메이션이 재생돼요.
       </>
     ),
   },
@@ -77,16 +84,18 @@ const HELP_SECTIONS: HelpSection[] = [
 
 const CARDS_PER_PAGE = 6;
 
-type GroupTab = "rarity" | "name";
+const RARITY_TABS: Rarity[] = RARITY_ORDER;
 
 export default function PokedexView() {
   const { user } = useAuth();
   const [entries, setEntries] = useState<PokedexEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<GroupTab>("rarity");
+  const [activeRarity, setActiveRarity] = useState<Rarity>("MUR");
   const [pageIndex, setPageIndex] = useState(0);
   const [flipDir, setFlipDir] = useState<1 | -1>(1);
-  const [registerOpen, setRegisterOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -100,39 +109,34 @@ export default function PokedexView() {
     refresh();
   }, [refresh]);
 
-  const sorted = useMemo(() => {
-    const arr = [...entries];
-    if (tab === "rarity") {
-      arr.sort((a, b) => {
-        const ra = (a.rarity ?? "") as Rarity;
-        const rb = (b.rarity ?? "") as Rarity;
-        const tierA = RARITY_STYLE[ra]?.tier ?? -1;
-        const tierB = RARITY_STYLE[rb]?.tier ?? -1;
-        if (tierA !== tierB) return tierB - tierA;
-        return a.card_id.localeCompare(b.card_id);
-      });
-    } else {
-      arr.sort((a, b) => {
-        const ca = getCard(a.card_id);
-        const cb = getCard(b.card_id);
-        const na = ca?.name ?? a.card_id;
-        const nb = cb?.name ?? b.card_id;
-        return na.localeCompare(nb, "ko");
-      });
-    }
-    return arr;
-  }, [entries, tab]);
+  const catalog = useMemo(() => getAllCatalogCards(), []);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / CARDS_PER_PAGE));
+  const groupedByRarity = useMemo(() => {
+    const map = new Map<Rarity, Card[]>();
+    for (const r of RARITY_TABS) map.set(r, []);
+    for (const c of catalog) {
+      const arr = map.get(c.rarity);
+      if (arr) arr.push(c);
+    }
+    return map;
+  }, [catalog]);
+
+  const registeredIds = useMemo(
+    () => new Set(entries.map((e) => e.card_id)),
+    [entries]
+  );
+
+  const cardsForTab = groupedByRarity.get(activeRarity) ?? [];
+  const totalPages = Math.max(1, Math.ceil(cardsForTab.length / CARDS_PER_PAGE));
   const safePageIndex = Math.min(pageIndex, totalPages - 1);
-  const pageEntries = sorted.slice(
+  const pageCards = cardsForTab.slice(
     safePageIndex * CARDS_PER_PAGE,
     safePageIndex * CARDS_PER_PAGE + CARDS_PER_PAGE
   );
 
   useEffect(() => {
     setPageIndex(0);
-  }, [tab]);
+  }, [activeRarity]);
 
   const goPrev = () => {
     if (safePageIndex <= 0) return;
@@ -149,12 +153,37 @@ export default function PokedexView() {
   const bonus = pokedexPowerBonus(count);
   const next = nextBreakpoint(count);
 
+  const handleBulk = async () => {
+    if (!user || submitting) return;
+    setSubmitting(true);
+    setConfirmOpen(false);
+    const res = await bulkRegisterPokedex(user.id);
+    setSubmitting(false);
+    if (!res.ok) {
+      setToast(res.error ?? "도감 등록에 실패했어요.");
+      return;
+    }
+    const n = res.registered_count ?? 0;
+    if (n === 0) {
+      setToast("등록 가능한 PCL10 슬랩이 없어요.");
+    } else {
+      setToast(`도감에 ${n}장 추가됨!`);
+    }
+    refresh();
+  };
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2800);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   return (
     <div className="max-w-5xl mx-auto px-3 md:px-6 py-4 md:py-8 fade-in">
       <PageHeader
         title="PCL 도감"
         icon="📔"
-        subtitle="PCL10 슬랩을 영구 박제해 모으는 컬렉션. 도감 수에 따라 센터 전투력 보너스."
+        subtitle="모든 카드를 한눈에. PCL10 슬랩을 영구 박제해 모으는 컬렉션."
         tone="amber"
         stats={
           <>
@@ -187,11 +216,17 @@ export default function PokedexView() {
           </div>
           <button
             type="button"
-            onClick={() => setRegisterOpen(true)}
+            onClick={() => setConfirmOpen(true)}
+            disabled={submitting}
             style={{ touchAction: "manipulation" }}
-            className="h-10 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-zinc-950 font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition shadow-[0_10px_30px_-10px_rgba(251,191,36,0.7)]"
+            className={clsx(
+              "h-10 px-4 rounded-xl font-bold text-sm transition shadow-[0_10px_30px_-10px_rgba(251,191,36,0.7)]",
+              submitting
+                ? "bg-amber-400/40 text-zinc-900 cursor-wait"
+                : "bg-gradient-to-r from-amber-400 to-fuchsia-500 text-zinc-950 hover:scale-[1.02] active:scale-[0.98]"
+            )}
           >
-            + 도감 등록
+            {submitting ? "등록 중..." : "📔 도감 일괄 등록"}
           </button>
         </div>
         <div className="mt-2 flex items-center gap-1 flex-wrap">
@@ -211,17 +246,25 @@ export default function PokedexView() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 mb-3">
-        <TabBtn active={tab === "rarity"} onClick={() => setTab("rarity")}>
-          등급별
-        </TabBtn>
-        <TabBtn active={tab === "name"} onClick={() => setTab("name")}>
-          포켓몬별
-        </TabBtn>
-        <span className="ml-auto text-[11px] text-zinc-400 tabular-nums">
-          {totalPages > 0
-            ? `${safePageIndex + 1} / ${totalPages}`
-            : "0 / 0"}
+      <div className="flex items-center gap-1.5 mb-3 overflow-x-auto pb-1 -mx-1 px-1">
+        {RARITY_TABS.map((r) => {
+          const totalInTab = groupedByRarity.get(r)?.length ?? 0;
+          const dexedInTab = (groupedByRarity.get(r) ?? []).filter((c) =>
+            registeredIds.has(c.id)
+          ).length;
+          return (
+            <RarityTab
+              key={r}
+              rarity={r}
+              active={activeRarity === r}
+              dexed={dexedInTab}
+              total={totalInTab}
+              onClick={() => setActiveRarity(r)}
+            />
+          );
+        })}
+        <span className="ml-auto shrink-0 text-[11px] text-zinc-400 tabular-nums pl-2">
+          {totalPages > 0 ? `${safePageIndex + 1} / ${totalPages}` : "0 / 0"}
         </span>
       </div>
 
@@ -229,7 +272,10 @@ export default function PokedexView() {
         loading={loading}
         flipDir={flipDir}
         pageIndex={safePageIndex}
-        pageEntries={pageEntries}
+        pageCards={pageCards}
+        registeredIds={registeredIds}
+        emptyForRarity={cardsForTab.length === 0}
+        rarityLabel={RARITY_LABEL[activeRarity]}
       />
 
       <div className="mt-3 flex items-center justify-between gap-2">
@@ -267,15 +313,25 @@ export default function PokedexView() {
       </div>
 
       <AnimatePresence>
-        {registerOpen && user && (
-          <RegisterModal
-            userId={user.id}
-            registeredCardIds={new Set(entries.map((e) => e.card_id))}
-            onClose={() => setRegisterOpen(false)}
-            onRegistered={() => {
-              setRegisterOpen(false);
-              refresh();
-            }}
+        {toast && (
+          <motion.div
+            key="toast"
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className="fixed left-1/2 -translate-x-1/2 bottom-8 z-[200] px-4 py-3 rounded-xl bg-zinc-950 border border-amber-400/50 text-amber-100 font-bold text-sm shadow-2xl"
+          >
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {confirmOpen && (
+          <BulkConfirm
+            onCancel={() => setConfirmOpen(false)}
+            onConfirm={handleBulk}
+            submitting={submitting}
           />
         )}
       </AnimatePresence>
@@ -283,28 +339,41 @@ export default function PokedexView() {
   );
 }
 
-function TabBtn({
+function RarityTab({
+  rarity,
   active,
+  dexed,
+  total,
   onClick,
-  children,
 }: {
+  rarity: Rarity;
   active: boolean;
+  dexed: number;
+  total: number;
   onClick: () => void;
-  children: React.ReactNode;
 }) {
+  const style = RARITY_STYLE[rarity];
   return (
     <button
       type="button"
       onClick={onClick}
       style={{ touchAction: "manipulation" }}
       className={clsx(
-        "h-9 px-4 rounded-full text-xs font-bold transition border",
+        "shrink-0 h-9 px-3 rounded-full text-[11px] font-bold transition border inline-flex items-center gap-1.5",
         active
-          ? "bg-white text-zinc-900 border-white"
+          ? clsx("ring-2", style.frame, "bg-white text-zinc-900 border-white")
           : "bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10"
       )}
     >
-      {children}
+      <span>{rarity}</span>
+      <span
+        className={clsx(
+          "tabular-nums text-[10px] px-1.5 py-0.5 rounded-full",
+          active ? "bg-zinc-900/15 text-zinc-700" : "bg-white/10 text-zinc-400"
+        )}
+      >
+        {dexed}/{total}
+      </span>
     </button>
   );
 }
@@ -313,12 +382,18 @@ function Book({
   loading,
   flipDir,
   pageIndex,
-  pageEntries,
+  pageCards,
+  registeredIds,
+  emptyForRarity,
+  rarityLabel,
 }: {
   loading: boolean;
   flipDir: 1 | -1;
   pageIndex: number;
-  pageEntries: PokedexEntry[];
+  pageCards: Card[];
+  registeredIds: Set<string>;
+  emptyForRarity: boolean;
+  rarityLabel: string;
 }) {
   return (
     <div
@@ -341,12 +416,14 @@ function Book({
         <div className="flex items-center justify-center py-16 text-sm text-zinc-400">
           도감을 펼치는 중...
         </div>
-      ) : pageEntries.length === 0 ? (
+      ) : emptyForRarity ? (
         <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
           <div className="text-5xl mb-3">📖</div>
-          <p className="text-sm text-zinc-300 font-bold">아직 도감이 비어있어요</p>
+          <p className="text-sm text-zinc-300 font-bold">
+            {rarityLabel} 카드가 없어요
+          </p>
           <p className="mt-1 text-[12px] text-zinc-500">
-            PCL 10 슬랩을 등록하면 여기에 박제돼요.
+            다른 등급 탭을 눌러 보세요.
           </p>
         </div>
       ) : (
@@ -361,10 +438,14 @@ function Book({
             style={{ transformOrigin: flipDir === 1 ? "left center" : "right center" }}
           >
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 backface-hidden">
-              {pageEntries.map((e) => (
-                <DexCell key={e.id} entry={e} />
+              {pageCards.map((c) => (
+                <DexCell
+                  key={c.id}
+                  card={c}
+                  registered={registeredIds.has(c.id)}
+                />
               ))}
-              {Array.from({ length: CARDS_PER_PAGE - pageEntries.length }).map(
+              {Array.from({ length: CARDS_PER_PAGE - pageCards.length }).map(
                 (_, i) => (
                   <div
                     key={`pad-${i}`}
@@ -380,25 +461,31 @@ function Book({
   );
 }
 
-function DexCell({ entry }: { entry: PokedexEntry }) {
-  const card = getCard(entry.card_id);
-  const rarity = (entry.rarity ?? card?.rarity ?? "C") as Rarity;
+function DexCell({
+  card,
+  registered,
+}: {
+  card: Card;
+  registered: boolean;
+}) {
+  const rarity = card.rarity;
   const style = RARITY_STYLE[rarity];
-  const date = new Date(entry.registered_at);
-  const dateStr = `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(
-    2,
-    "0"
-  )}.${String(date.getDate()).padStart(2, "0")}`;
 
   return (
     <div
       className={clsx(
-        "relative rounded-xl overflow-hidden ring-2 bg-zinc-950",
-        style.frame
+        "relative rounded-xl overflow-hidden ring-2 bg-zinc-950 transition",
+        style.frame,
+        !registered && "ring-zinc-700/30"
       )}
     >
-      <div className="relative aspect-[5/7]">
-        {card?.imageUrl ? (
+      <div
+        className={clsx(
+          "relative aspect-[5/7]",
+          !registered && "opacity-30 saturate-50 grayscale"
+        )}
+      >
+        {card.imageUrl ? (
           <img
             src={card.imageUrl}
             alt={card.name}
@@ -408,263 +495,57 @@ function DexCell({ entry }: { entry: PokedexEntry }) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-zinc-400 text-xs">
-            {card?.name ?? entry.card_id}
+            {card.name}
           </div>
         )}
-        <div className="absolute top-1.5 right-1.5">
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-400 text-zinc-950 shadow-[0_0_10px_rgba(251,191,36,0.6)]">
-            PCL10
-          </span>
-        </div>
+        {registered && (
+          <div className="absolute top-1.5 right-1.5">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-[12px] font-black bg-emerald-400 text-zinc-950 shadow-[0_0_10px_rgba(74,222,128,0.7)]">
+              ✓
+            </span>
+          </div>
+        )}
+        {!registered && (
+          <div className="absolute inset-0 flex items-end justify-center pb-2">
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-black/70 text-zinc-300 border border-white/10">
+              미등록
+            </span>
+          </div>
+        )}
       </div>
       <div className="px-2 py-1.5 bg-black/60 border-t border-white/5">
         <div className="flex items-center justify-between gap-1">
-          <p className="text-[11px] font-bold text-white truncate">
-            {card?.name ?? entry.card_id}
+          <p
+            className={clsx(
+              "text-[11px] font-bold truncate",
+              registered ? "text-white" : "text-zinc-500"
+            )}
+          >
+            {card.name}
           </p>
           <RarityBadge rarity={rarity} size="xs" />
         </div>
-        <p className="text-[9px] text-zinc-500 mt-0.5 tabular-nums">
-          {dateStr} 박제
+        <p className="text-[9px] text-zinc-600 mt-0.5 tabular-nums">
+          {card.id}
         </p>
       </div>
     </div>
   );
 }
 
-function RegisterModal({
-  userId,
-  registeredCardIds,
-  onClose,
-  onRegistered,
-}: {
-  userId: string;
-  registeredCardIds: Set<string>;
-  onClose: () => void;
-  onRegistered: () => void;
-}) {
-  const [slabs, setSlabs] = useState<PsaGradingWithDisplay[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [confirm, setConfirm] = useState<PsaGradingWithDisplay | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
-
-  useEffect(() => {
-    let canceled = false;
-    fetchAllGradingsWithDisplay(userId).then((list) => {
-      if (canceled) return;
-      const eligible = list.filter(
-        (g) => g.grade === 10 && !g.displayed && !registeredCardIds.has(g.card_id)
-      );
-      eligible.sort((a, b) => {
-        const ca = getCard(a.card_id);
-        const cb = getCard(b.card_id);
-        if (ca && cb) {
-          const r = compareRarity(ca.rarity, cb.rarity);
-          if (r !== 0) return r;
-        }
-        return a.card_id.localeCompare(b.card_id);
-      });
-      setSlabs(eligible);
-      setLoading(false);
-    });
-    return () => {
-      canceled = true;
-    };
-  }, [userId, registeredCardIds]);
-
-  const handleRegister = async () => {
-    if (!confirm) return;
-    setSubmitting(true);
-    setError(null);
-    const res = await registerPokedexEntry(userId, confirm.id);
-    setSubmitting(false);
-    if (!res.ok) {
-      setError(res.error ?? "등록에 실패했어요.");
-      return;
-    }
-    onRegistered();
-  };
-
-  return (
-    <Portal>
-      <motion.div
-        className="fixed inset-0 z-[180] bg-black/85 backdrop-blur-md flex items-end md:items-center justify-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        style={{
-          paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
-          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
-          paddingLeft: 12,
-          paddingRight: 12,
-        }}
-      >
-        <motion.div
-          className="relative w-full max-w-2xl bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col"
-          style={{ maxHeight: "calc(100dvh - 24px)" }}
-          initial={{ y: 32, opacity: 0, scale: 0.97 }}
-          animate={{ y: 0, opacity: 1, scale: 1 }}
-          exit={{ y: 32, opacity: 0, scale: 0.97 }}
-          transition={{ type: "spring", stiffness: 220, damping: 24 }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="shrink-0 flex items-center justify-between gap-3 px-4 h-12 border-b border-white/10 bg-gradient-to-r from-amber-500/15 via-fuchsia-500/10 to-indigo-500/15">
-            <h2 className="text-sm font-bold text-white inline-flex items-center gap-1.5">
-              <span aria-hidden>📔</span>
-              도감 등록 — PCL 10 슬랩 선택
-            </h2>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="닫기"
-              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white inline-flex items-center justify-center"
-              style={{ touchAction: "manipulation" }}
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4">
-            {loading ? (
-              <div className="text-center py-10 text-sm text-zinc-400">
-                슬랩을 불러오는 중...
-              </div>
-            ) : slabs.length === 0 ? (
-              <div className="text-center py-10 px-6">
-                <div className="text-4xl mb-2">📭</div>
-                <p className="text-sm text-zinc-300 font-bold">
-                  등록 가능한 슬랩이 없어요
-                </p>
-                <p className="mt-1 text-[12px] text-zinc-500">
-                  PCL 10 등급이고 센터에 전시 중이 아니며, 아직 도감에 없는 카드
-                  여야 해요.
-                </p>
-              </div>
-            ) : (
-              <ul className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {slabs.map((g) => (
-                  <SlabCell
-                    key={g.id}
-                    slab={g}
-                    onPick={() => setConfirm(g)}
-                  />
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {error && (
-            <div className="shrink-0 mx-3 mb-2 text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">
-              {error}
-            </div>
-          )}
-
-          <div className="shrink-0 border-t border-white/10 p-3 bg-black/40">
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-full h-11 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-sm"
-              style={{ touchAction: "manipulation" }}
-            >
-              닫기
-            </button>
-          </div>
-        </motion.div>
-
-        <AnimatePresence>
-          {confirm && (
-            <ConfirmDialog
-              slab={confirm}
-              submitting={submitting}
-              onCancel={() => setConfirm(null)}
-              onConfirm={handleRegister}
-            />
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </Portal>
-  );
-}
-
-function SlabCell({
-  slab,
-  onPick,
-}: {
-  slab: PsaGradingWithDisplay;
-  onPick: () => void;
-}) {
-  const card = getCard(slab.card_id);
-  const rarity = (card?.rarity ?? "SR") as Rarity;
-  const style = RARITY_STYLE[rarity];
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={onPick}
-        style={{ touchAction: "manipulation" }}
-        className={clsx(
-          "group w-full text-left rounded-xl overflow-hidden ring-2 bg-zinc-950 hover:scale-[1.02] active:scale-[0.98] transition",
-          style.frame
-        )}
-      >
-        <div className="relative aspect-[5/7]">
-          {card?.imageUrl ? (
-            <img
-              src={card.imageUrl}
-              alt={card.name}
-              loading="lazy"
-              draggable={false}
-              className="w-full h-full object-contain bg-zinc-950 select-none pointer-events-none"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-zinc-500 text-xs">
-              {slab.card_id}
-            </div>
-          )}
-          <div className="absolute top-1.5 right-1.5">
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-400 text-zinc-950 shadow-[0_0_10px_rgba(251,191,36,0.6)]">
-              PCL10
-            </span>
-          </div>
-        </div>
-        <div className="px-2 py-1.5 bg-black/60 border-t border-white/5">
-          <div className="flex items-center justify-between gap-1">
-            <p className="text-[11px] font-bold text-white truncate">
-              {card?.name ?? slab.card_id}
-            </p>
-            <RarityBadge rarity={rarity} size="xs" />
-          </div>
-        </div>
-      </button>
-    </li>
-  );
-}
-
-function ConfirmDialog({
-  slab,
-  submitting,
+function BulkConfirm({
   onCancel,
   onConfirm,
+  submitting,
 }: {
-  slab: PsaGradingWithDisplay;
-  submitting: boolean;
   onCancel: () => void;
   onConfirm: () => void;
+  submitting: boolean;
 }) {
-  const card = getCard(slab.card_id);
   return (
     <motion.div
-      className="absolute inset-0 z-[10] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+      key="bulk-confirm"
+      className="fixed inset-0 z-[190] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -681,11 +562,12 @@ function ConfirmDialog({
         <div className="px-4 pt-4 pb-2 text-center">
           <div className="text-4xl mb-1">📔</div>
           <h3 className="text-base font-black text-white">
-            정말 등록할까요?
+            도감 일괄 등록할까요?
           </h3>
           <p className="mt-1 text-[12px] text-zinc-300 leading-relaxed">
-            <b className="text-amber-200">{card?.name ?? slab.card_id}</b> PCL10
-            슬랩을 도감에 박제해요. 이 슬랩은 영구히 카드지갑에서 사라져요.
+            보유 중인 PCL10 슬랩 (전시 중이 아니고 도감에 없는 카드) 이 모두
+            도감에 박제돼요. 해당 슬랩은 <b className="text-amber-200">카드지갑
+            에서 영구 삭제</b>되며 다시 꺼낼 수 없어요.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2 p-3">
@@ -710,7 +592,7 @@ function ConfirmDialog({
                 : "bg-gradient-to-r from-amber-400 to-fuchsia-500 text-zinc-950 hover:scale-[1.02] active:scale-[0.98]"
             )}
           >
-            {submitting ? "박제 중..." : "박제하기"}
+            {submitting ? "등록 중..." : "전부 등록"}
           </button>
         </div>
       </motion.div>

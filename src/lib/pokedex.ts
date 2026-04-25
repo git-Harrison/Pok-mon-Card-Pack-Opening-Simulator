@@ -1,6 +1,9 @@
 "use client";
 
 import { createClient } from "@/utils/supabase/client";
+import { SETS, SET_ORDER } from "@/lib/sets";
+import { RARITY_STYLE } from "@/lib/rarity";
+import type { Card } from "@/lib/types";
 
 const supabase = createClient();
 
@@ -73,4 +76,38 @@ export async function registerPokedexEntry(userId: string, gradingId: string) {
     pokedex_count?: number;
     power_bonus?: number;
   };
+}
+
+export async function bulkRegisterPokedex(userId: string) {
+  const { data, error } = await supabase.rpc("bulk_register_pokedex_entries", {
+    p_user_id: userId,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    error?: string;
+    registered_count?: number;
+    power_bonus?: number;
+    new_pokedex_count?: number;
+  };
+}
+
+let catalogCache: Card[] | null = null;
+
+export function getAllCatalogCards(): Card[] {
+  if (catalogCache) return catalogCache;
+  const all: Card[] = [];
+  for (const code of SET_ORDER) {
+    const set = SETS[code];
+    if (!set) continue;
+    for (const c of set.cards) all.push(c);
+  }
+  all.sort((a, b) => {
+    const ta = RARITY_STYLE[a.rarity]?.tier ?? -1;
+    const tb = RARITY_STYLE[b.rarity]?.tier ?? -1;
+    if (ta !== tb) return tb - ta;
+    return a.id.localeCompare(b.id);
+  });
+  catalogCache = all;
+  return all;
 }
