@@ -14,7 +14,9 @@ import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
 import {
   fetchAllGradingsWithDisplay,
+  fetchTauntHistory,
   type PsaGradingWithDisplay,
+  type TauntEntry,
 } from "@/lib/db";
 import {
   CHARACTERS,
@@ -48,6 +50,7 @@ export default function ProfileView() {
 
   const [pickerSlot, setPickerSlot] = useState<number | null>(null);
   const [nameOpen, setNameOpen] = useState(false);
+  const [tauntOpen, setTauntOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -177,7 +180,7 @@ export default function ProfileView() {
             onEditName={() => setNameOpen(true)}
           />
 
-          <section className="mt-4 grid grid-cols-2 gap-2.5">
+          <section className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             <Link
               href="/wallet"
               className="rounded-2xl p-3 border border-amber-400/30 bg-amber-400/5 hover:bg-amber-400/10 transition flex items-center gap-3"
@@ -204,6 +207,20 @@ export default function ProfileView() {
                 </div>
               </div>
             </Link>
+            <button
+              type="button"
+              onClick={() => setTauntOpen(true)}
+              style={{ touchAction: "manipulation" }}
+              className="col-span-2 sm:col-span-1 rounded-2xl p-3 border border-rose-400/30 bg-rose-400/5 hover:bg-rose-400/10 transition flex items-center gap-3 text-left active:scale-[0.98]"
+            >
+              <span className="text-2xl">🔥</span>
+              <div className="min-w-0">
+                <div className="text-sm font-bold text-rose-100">조롱 기록</div>
+                <div className="text-[10px] text-rose-200/70">
+                  보낸 · 받은 조롱
+                </div>
+              </div>
+            </button>
           </section>
 
           {error && (
@@ -340,6 +357,12 @@ export default function ProfileView() {
               const res = await rpcUpdateDisplayName(user.id, next);
               return res;
             }}
+          />
+        )}
+        {tauntOpen && user && (
+          <TauntHistoryModal
+            userId={user.id}
+            onClose={() => setTauntOpen(false)}
           />
         )}
       </AnimatePresence>
@@ -920,6 +943,225 @@ function NicknameModal({
               style={{ touchAction: "manipulation" }}
             >
               {saving ? "저장 중…" : "변경"}
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </Portal>
+  );
+}
+
+function formatTauntTime(iso: string) {
+  const d = new Date(iso);
+  const diff = Date.now() - d.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "방금";
+  if (mins < 60) return `${mins}분 전`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}시간 전`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return "어제";
+  if (days < 7) return `${days}일 전`;
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+}
+
+function TauntHistoryModal({
+  userId,
+  onClose,
+}: {
+  userId: string;
+  onClose: () => void;
+}) {
+  const [tab, setTab] = useState<"sent" | "received">("received");
+  const [loading, setLoading] = useState(true);
+  const [sent, setSent] = useState<TauntEntry[]>([]);
+  const [received, setReceived] = useState<TauntEntry[]>([]);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    fetchTauntHistory(userId).then((res) => {
+      if (!alive) return;
+      if (!res.ok) {
+        setErr(res.error ?? "조롱 기록을 불러오지 못했어요.");
+      } else {
+        setSent(res.sent);
+        setReceived(res.received);
+      }
+      setLoading(false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [userId]);
+
+  const list = tab === "sent" ? sent : received;
+  const emptyText =
+    tab === "sent"
+      ? "아직 보낸 조롱이 없어요"
+      : "아직 받은 조롱이 없어요";
+
+  return (
+    <Portal>
+      <motion.div
+        className="fixed inset-0 z-[150] bg-black/85 backdrop-blur-md flex items-end md:items-center justify-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{
+          paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+          paddingLeft: 12,
+          paddingRight: 12,
+        }}
+      >
+        <motion.div
+          className="relative w-full max-w-lg bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+          style={{ maxHeight: "calc(100dvh - 24px)" }}
+          initial={{ y: 32, opacity: 0, scale: 0.97 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: 32, opacity: 0, scale: 0.97 }}
+          transition={{ type: "spring", stiffness: 220, damping: 24 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="shrink-0 flex items-center justify-between gap-3 px-4 h-12 border-b border-white/10 bg-gradient-to-r from-rose-500/15 via-fuchsia-500/10 to-indigo-500/10">
+            <h2 className="text-sm font-bold text-white inline-flex items-center gap-1.5 truncate">
+              <span aria-hidden>🔥</span>
+              <span className="truncate">
+                조롱 기록 (보낸 {sent.length} · 받은 {received.length})
+              </span>
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="닫기"
+              className="shrink-0 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white inline-flex items-center justify-center"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="shrink-0 grid grid-cols-2 gap-1 px-3 pt-3 pb-2 bg-black/30 border-b border-white/5">
+            <button
+              type="button"
+              onClick={() => setTab("received")}
+              style={{ touchAction: "manipulation" }}
+              className={clsx(
+                "h-9 rounded-lg text-xs font-bold transition",
+                tab === "received"
+                  ? "bg-rose-500/20 text-rose-100 ring-1 ring-rose-400/40"
+                  : "bg-white/5 text-zinc-400 hover:bg-white/10"
+              )}
+            >
+              받은 조롱 {received.length > 0 && `· ${received.length}`}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("sent")}
+              style={{ touchAction: "manipulation" }}
+              className={clsx(
+                "h-9 rounded-lg text-xs font-bold transition",
+                tab === "sent"
+                  ? "bg-amber-400/20 text-amber-100 ring-1 ring-amber-300/40"
+                  : "bg-white/5 text-zinc-400 hover:bg-white/10"
+              )}
+            >
+              보낸 조롱 {sent.length > 0 && `· ${sent.length}`}
+            </button>
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-y-auto p-3">
+            {loading ? (
+              <div className="py-10 flex justify-center">
+                <PokeLoader size="sm" />
+              </div>
+            ) : err ? (
+              <div className="px-3 py-2 rounded-lg bg-rose-500/10 border border-rose-500/40 text-rose-200 text-xs">
+                {err}
+              </div>
+            ) : list.length === 0 ? (
+              <p className="py-12 text-center text-sm text-zinc-400">
+                {emptyText}
+              </p>
+            ) : (
+              <ul className="space-y-1.5">
+                {list.map((t) => {
+                  const who =
+                    tab === "sent"
+                      ? `→ ${t.to_name}`
+                      : `${t.from_name} →`;
+                  return (
+                    <li
+                      key={t.id}
+                      className={clsx(
+                        "flex items-start gap-3 rounded-lg border px-3 py-2",
+                        tab === "sent"
+                          ? "bg-amber-400/5 border-amber-400/20"
+                          : "bg-rose-500/5 border-rose-500/20"
+                      )}
+                    >
+                      <span
+                        className={clsx(
+                          "shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-full text-base mt-0.5",
+                          tab === "sent"
+                            ? "bg-amber-400/20 text-amber-200"
+                            : "bg-rose-500/20 text-rose-200"
+                        )}
+                        aria-hidden
+                      >
+                        🔥
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-bold text-white truncate">
+                            {who}
+                          </p>
+                          <span className="shrink-0 text-[10px] text-zinc-500 tabular-nums">
+                            {formatTauntTime(t.created_at)}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-[12px] text-zinc-200 leading-snug whitespace-pre-wrap break-words">
+                          {t.message}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
+          <div className="shrink-0 border-t border-white/10 p-3 bg-black/40">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full h-11 rounded-xl bg-white text-zinc-900 font-bold text-sm active:scale-[0.98]"
+              style={{ touchAction: "manipulation" }}
+            >
+              닫기
             </button>
           </div>
         </motion.div>
