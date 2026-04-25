@@ -213,7 +213,7 @@ function CardsMode({
         <div
           className="mt-6 md:mt-8 grid gap-4 md:gap-6"
           style={{
-            gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))",
           }}
         >
           {items.map(({ card, count }) => (
@@ -285,7 +285,7 @@ function PsaMode({
         </div>
       )}
       <div
-        className="mt-6 md:mt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-10 place-items-center"
+        className="mt-4 grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-5 place-items-center"
       >
         {items.map(({ grading, card }) => {
           const giftable = !grading.displayed && grading.grade >= 6;
@@ -293,35 +293,29 @@ function PsaMode({
             <div
               key={grading.id}
               className={clsx(
-                "relative flex flex-col items-center gap-3",
+                "relative flex flex-col items-center gap-1.5 w-full",
                 grading.displayed && "opacity-80"
               )}
             >
-              <div className="relative">
-                <PsaSlab card={card} grade={grading.grade} size="md" />
+              <div className="relative w-full">
+                <PsaSlab card={card} grade={grading.grade} size="sm" />
                 {grading.displayed && (
-                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-fuchsia-500 text-white text-[10px] font-black shadow-[0_4px_10px_rgba(217,70,239,0.6)] whitespace-nowrap">
-                    🏛️ 전시 중
+                  <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-fuchsia-500 text-white text-[9px] font-black shadow-[0_4px_10px_rgba(217,70,239,0.6)] whitespace-nowrap">
+                    🏛️
                   </span>
                 )}
               </div>
-              <div className="w-full text-center px-1">
-                <p className="text-[11px] text-zinc-300 leading-tight line-clamp-2">
-                  {card.name}
-                </p>
-                <p className="text-[10px] text-zinc-500 tabular-nums">
-                  {SETS[card.setCode].name} · #{card.number} ·{" "}
-                  {new Date(grading.graded_at).toLocaleDateString("ko-KR")}
-                </p>
-              </div>
+              <p className="w-full text-center text-[10px] text-zinc-300 leading-tight line-clamp-1 px-0.5">
+                {card.name}
+              </p>
               {giftable && (
                 <button
                   type="button"
                   onClick={() => setGiftTarget({ grading, card })}
                   style={{ touchAction: "manipulation" }}
-                  className="h-9 px-3 rounded-full bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-[11px] inline-flex items-center gap-1 hover:scale-[1.02] active:scale-[0.98] transition"
+                  className="h-7 w-full rounded-md bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-[10px] inline-flex items-center justify-center gap-1 hover:scale-[1.02] active:scale-[0.98] transition"
                 >
-                  🎁 선물 보내기
+                  🎁 선물
                 </button>
               )}
             </div>
