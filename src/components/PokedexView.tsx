@@ -590,8 +590,9 @@ function BulkConfirm({
               도감 일괄 등록할까요?
             </h3>
             <p className="mt-1 text-[12px] text-zinc-300 leading-relaxed">
-              보유 중인 PCL10 슬랩 (전시 중이 아니고 도감에 없는 카드) 이 모두
-              도감에 박제돼요. 해당 슬랩은{" "}
+              보유 중인 PCL10 슬랩 중{" "}
+              <b className="text-emerald-200">전시 중·펫·도감 등록·선물 대기</b>{" "}
+              가 아닌 카드만 박제돼요. 해당 슬랩은{" "}
               <b className="text-amber-200">카드지갑에서 영구 삭제</b>되며 다시
               꺼낼 수 없어요.
             </p>
