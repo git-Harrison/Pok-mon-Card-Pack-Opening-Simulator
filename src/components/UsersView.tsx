@@ -51,11 +51,19 @@ export default function UsersView() {
     if (activityCache[key] || activityLoading[key]) return;
     setActivityLoading((prev) => ({ ...prev, [key]: true }));
     let cancelled = false;
-    fetchUserActivity(expandedId, mode).then((events) => {
-      if (cancelled) return;
-      setActivityCache((prev) => ({ ...prev, [key]: events }));
-      setActivityLoading((prev) => ({ ...prev, [key]: false }));
-    });
+    fetchUserActivity(expandedId, mode)
+      .then((events) => {
+        if (cancelled) return;
+        setActivityCache((prev) => ({ ...prev, [key]: events }));
+        setActivityLoading((prev) => ({ ...prev, [key]: false }));
+      })
+      .catch(() => {
+        // Defensive: even if fetchUserActivity itself throws (already
+        // wrapped, but safety belt), make sure the skeleton clears.
+        if (cancelled) return;
+        setActivityCache((prev) => ({ ...prev, [key]: [] }));
+        setActivityLoading((prev) => ({ ...prev, [key]: false }));
+      });
     return () => {
       cancelled = true;
     };

@@ -108,7 +108,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const fresh = await fetchMe(userId);
       if (alive && fresh) persist(fresh);
     };
-    const id = setInterval(tick, 20_000);
+    // 4s ticker so admin grants / gifts / wild rewards reflect in the
+    // header WalletPill without users having to reload. The persist()
+    // shallow-skip below means identical refreshes are free.
+    const id = setInterval(tick, 4_000);
     const onVis = () => {
       if (typeof document !== "undefined" && !document.hidden) tick();
     };

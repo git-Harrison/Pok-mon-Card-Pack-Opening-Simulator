@@ -394,12 +394,20 @@ export async function fetchUserActivity(
   userId: string,
   tab: UserActivityTab
 ): Promise<UserActivityEvent[]> {
-  const { data, error } = await supabase.rpc("get_user_activity", {
-    p_user_id: userId,
-    p_tab: tab,
-  });
-  if (error) return [];
-  return (data ?? []) as UserActivityEvent[];
+  try {
+    const { data, error } = await supabase.rpc("get_user_activity", {
+      p_user_id: userId,
+      p_tab: tab,
+    });
+    if (error) {
+      console.warn("get_user_activity error", error.message);
+      return [];
+    }
+    return (data ?? []) as UserActivityEvent[];
+  } catch (err) {
+    console.warn("get_user_activity threw", err);
+    return [];
+  }
 }
 
 export interface BulkSellItem {

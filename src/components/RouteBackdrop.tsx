@@ -16,34 +16,99 @@ import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import PageBackdrop, { type BackdropTone } from "./PageBackdrop";
 
-const ROUTE_TONES: Record<string, BackdropTone | null> = {
-  wallet: "amber",
-  pokedex: "parchment",
-  users: "stadium",
-  profile: "sky",
-  admin: "admin",
-  gifts: "amber",
-  // Owned scenery — no PageBackdrop here:
+const SHOWDOWN = "https://play.pokemonshowdown.com/sprites/gen6bgs/";
+
+interface RouteSpec {
+  tone: BackdropTone | null;
+  image: string | null;
+  /** Tailwind classes for the dark overlay tint above the image. */
+  overlay: string;
+}
+
+const ROUTE_MAP: Record<string, RouteSpec | null> = {
+  wallet: {
+    tone: "amber",
+    image: `${SHOWDOWN}bg-orascave.png`,
+    overlay:
+      "bg-gradient-to-b from-zinc-950/70 via-zinc-950/80 to-zinc-950/95",
+  },
+  pokedex: {
+    tone: "parchment",
+    image: `${SHOWDOWN}bg-darkbeach.png`,
+    overlay:
+      "bg-gradient-to-b from-zinc-950/65 via-zinc-950/80 to-zinc-950/95",
+  },
+  users: {
+    tone: "stadium",
+    image: `${SHOWDOWN}bg-elite.png`,
+    overlay:
+      "bg-gradient-to-b from-zinc-950/70 via-zinc-950/85 to-zinc-950/95",
+  },
+  profile: {
+    tone: "sky",
+    image: `${SHOWDOWN}bg-skycity.png`,
+    overlay:
+      "bg-gradient-to-b from-zinc-950/55 via-zinc-950/75 to-zinc-950/95",
+  },
+  admin: {
+    tone: "admin",
+    image: `${SHOWDOWN}bg-volcanocave.png`,
+    overlay:
+      "bg-gradient-to-b from-zinc-950/75 via-zinc-950/85 to-zinc-950/95",
+  },
+  gifts: {
+    tone: "amber",
+    image: `${SHOWDOWN}bg-meadow.png`,
+    overlay:
+      "bg-gradient-to-b from-zinc-950/70 via-zinc-950/80 to-zinc-950/95",
+  },
+  // Pages that own their full-screen scenery internally.
   "": null, // home
   center: null,
   grading: null,
   wild: null,
   card: null,
+  set: null,
   "access-blocked": null,
   login: null,
   signup: null,
-  set: null,
 };
 
 export default function RouteBackdrop() {
   const pathname = usePathname();
-  const tone = useMemo<BackdropTone | null>(() => {
+  const spec = useMemo<RouteSpec | null>(() => {
     const seg = pathname?.split("/")[1] ?? "";
-    if (seg in ROUTE_TONES) return ROUTE_TONES[seg];
-    // Default for unknown routes: a neutral tone so something still shows.
-    return "sky";
+    if (seg in ROUTE_MAP) return ROUTE_MAP[seg];
+    return {
+      tone: "sky",
+      image: `${SHOWDOWN}bg-meadow.png`,
+      overlay:
+        "bg-gradient-to-b from-zinc-950/65 via-zinc-950/80 to-zinc-950/95",
+    };
   }, [pathname]);
 
-  if (!tone) return null;
-  return <PageBackdrop tone={tone} />;
+  if (!spec) return null;
+  return (
+    <>
+      {spec.image && (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 -z-20 overflow-hidden"
+        >
+          <img
+            src={spec.image}
+            alt=""
+            draggable={false}
+            className="absolute inset-0 w-full h-full object-cover opacity-40 select-none pointer-events-none"
+            style={{ imageRendering: "pixelated" }}
+          />
+          <div
+            aria-hidden
+            className={`absolute inset-0 ${spec.overlay}`}
+          />
+        </div>
+      )}
+      {spec.tone && <PageBackdrop tone={spec.tone} />}
+    </>
+  );
 }

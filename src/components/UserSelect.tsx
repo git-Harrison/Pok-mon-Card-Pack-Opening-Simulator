@@ -177,7 +177,7 @@ export default function UserSelect({
           {open && (
             <motion.div
               key="user-select-backdrop"
-              className="fixed inset-0 z-[80] bg-black/85 backdrop-blur-md flex items-end md:items-center justify-center"
+              className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-md flex items-end md:items-center justify-center"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
