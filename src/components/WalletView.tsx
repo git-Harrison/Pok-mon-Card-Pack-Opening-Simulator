@@ -211,7 +211,7 @@ function CardsMode({
         <EmptyState />
       ) : (
         <div
-          className="mt-6 md:mt-8 grid gap-4 md:gap-6"
+          className="mt-5 md:mt-7 grid gap-x-3 gap-y-5 md:gap-x-5 md:gap-y-7"
           style={{
             gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))",
           }}

@@ -83,61 +83,53 @@ export default function PsaSlab({
       />
 
       {/* ── Header: brand | card info | grade ── */}
-      <div className="relative flex items-stretch">
+      <div className="relative flex items-stretch h-9 md:h-10">
         {/* Brand column */}
         <div
           className={clsx(
-            "shrink-0 px-1.5 md:px-2 py-1.5 flex flex-col items-center justify-center border-r border-white/10",
+            "shrink-0 px-1.5 md:px-2 flex flex-col items-center justify-center border-r border-white/10",
             tone.text
           )}
         >
-          <span className="text-[10px] md:text-[11px] font-black tracking-[0.16em] leading-none">
+          <span className="text-[9px] md:text-[10px] font-black tracking-[0.14em] leading-none">
             {GRADE_BRAND}
-          </span>
-          <span className="mt-0.5 text-[7px] uppercase tracking-[0.22em] opacity-70 leading-none">
-            Graded
           </span>
         </div>
         {/* Card info column */}
-        <div className="flex-1 min-w-0 px-2 py-1.5 flex flex-col justify-center">
-          <p className="text-[11px] md:text-[12px] font-bold text-white leading-snug line-clamp-2 break-keep">
+        <div className="flex-1 min-w-0 px-2 flex flex-col justify-center">
+          <p className="text-[11px] md:text-[12px] font-bold text-white leading-tight truncate">
             {card.name}
           </p>
-          <p className="text-[8px] md:text-[9px] uppercase tracking-[0.14em] text-white/55 truncate mt-0.5">
-            {SETS[card.setCode].name} · #{card.number}
+          <p className="text-[8px] md:text-[9px] uppercase tracking-[0.1em] text-white/70 truncate leading-tight mt-px">
+            #{card.number}
           </p>
         </div>
         {/* Grade banner */}
         <div
           className={clsx(
-            "shrink-0 flex flex-col items-center justify-center px-2 md:px-2.5 font-black tabular-nums",
+            "shrink-0 flex items-center justify-center px-2 md:px-2.5 font-black tabular-nums",
             tone.banner
           )}
         >
-          <span className="text-[7px] uppercase tracking-[0.2em] font-bold opacity-80 leading-none">
-            Grade
-          </span>
-          <span className="text-xl md:text-2xl leading-none mt-0.5">
-            {grade}
-          </span>
+          <span className="text-base md:text-lg leading-none">{grade}</span>
         </div>
       </div>
 
       {/* Label strip (e.g. GEM MINT) */}
       <div
         className={clsx(
-          "relative px-3 py-1 text-center border-t border-white/5 border-b border-white/5",
+          "relative px-2 py-0.5 text-center border-t border-b border-white/5",
           tone.text
         )}
       >
-        <span className="text-[9px] md:text-[10px] uppercase tracking-[0.3em] font-bold">
+        <span className="text-[8px] md:text-[9px] uppercase tracking-[0.24em] font-bold">
           {label}
         </span>
       </div>
 
       {/* ── Card window ── */}
       <div
-        className="relative m-2.5 rounded-md overflow-hidden ring-1 ring-white/10 bg-zinc-950"
+        className="relative m-1.5 md:m-2 rounded-md overflow-hidden ring-1 ring-white/10 bg-zinc-950"
         style={{
           boxShadow:
             "inset 0 0 16px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)",
@@ -170,9 +162,9 @@ export default function PsaSlab({
       </div>
 
       {/* ── Bottom band: cert + barcode ── */}
-      <div className="relative px-3 pb-2 flex items-center justify-between gap-2">
-        <span className="text-[8px] md:text-[9px] font-mono tracking-wider text-white/45 truncate">
-          {GRADE_BRAND} · {cert}
+      <div className="relative px-2 pb-1 flex items-center justify-between gap-2">
+        <span className="text-[7px] md:text-[8px] font-mono tracking-wider text-white/50 truncate">
+          {cert}
         </span>
         <Barcode />
       </div>
