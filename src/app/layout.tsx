@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import NotificationsOverlay from "@/components/NotificationsOverlay";
+import ScrollTopButton from "@/components/ScrollTopButton";
 import { AuthProvider } from "@/lib/auth";
 
 export const metadata: Metadata = {
@@ -47,6 +48,7 @@ export default function RootLayout({
             {children}
           </main>
           <NotificationsOverlay />
+          <ScrollTopButton />
         </AuthProvider>
       </body>
     </html>
