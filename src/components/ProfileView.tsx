@@ -277,7 +277,7 @@ export default function ProfileView() {
               </span>
             </div>
 
-            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+            <div className="mt-3 grid grid-cols-5 gap-1.5 md:gap-2">
               {filledSlots.map((slot, i) => (
                 <PetSlot
                   key={i}
@@ -385,20 +385,6 @@ function ProfileBanner({
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-1.5">
-        <div className="rounded-lg bg-amber-400/10 border border-amber-400/30 px-2 py-1.5 text-center">
-          <div className="text-[9px] uppercase tracking-wider text-amber-300/80">
-            🐾 펫
-          </div>
-          <div className="mt-0.5 text-sm md:text-base font-black tabular-nums text-amber-200 leading-tight">
-            {slotsUsed}
-            <span className="text-[9px] text-amber-300/60 font-semibold">
-              {" "}/ {MAX_MAIN_CARDS}
-            </span>
-          </div>
-          <div className="text-[9px] text-amber-300/60 tabular-nums">
-            점수 {petScore.toLocaleString("ko-KR")}
-          </div>
-        </div>
         <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 px-2 py-1.5 text-center">
           <div className="text-[9px] uppercase tracking-wider text-rose-300/80">
             ⚔️ 전투력
@@ -416,6 +402,20 @@ function ProfileBanner({
             <span className="text-[9px] text-emerald-300/60 font-semibold">
               {" "}장
             </span>
+          </div>
+        </div>
+        <div className="rounded-lg bg-amber-400/10 border border-amber-400/30 px-2 py-1.5 text-center">
+          <div className="text-[9px] uppercase tracking-wider text-amber-300/80">
+            🐾 펫
+          </div>
+          <div className="mt-0.5 text-sm md:text-base font-black tabular-nums text-amber-200 leading-tight">
+            {slotsUsed}
+            <span className="text-[9px] text-amber-300/60 font-semibold">
+              {" "}/ {MAX_MAIN_CARDS}
+            </span>
+          </div>
+          <div className="text-[9px] text-amber-300/60 tabular-nums">
+            점수 {petScore.toLocaleString("ko-KR")}
           </div>
         </div>
       </div>
@@ -497,13 +497,12 @@ function PetSlot({
         type="button"
         onClick={onPick}
         style={{ touchAction: "manipulation" }}
-        className="relative aspect-[5/7] rounded-2xl border-2 border-dashed border-white/15 bg-white/[0.02] hover:bg-white/5 hover:border-amber-300/50 transition flex flex-col items-center justify-center gap-1 p-2 text-zinc-400 hover:text-amber-200"
+        className="relative aspect-[5/7] rounded-xl border-2 border-dashed border-white/15 bg-white/[0.02] hover:bg-white/5 hover:border-amber-300/50 transition flex flex-col items-center justify-center gap-0.5 p-1 text-zinc-400 hover:text-amber-200"
       >
-        <span className="text-2xl" aria-hidden>+</span>
-        <span className="text-[10px] font-semibold uppercase tracking-wider">
-          슬롯 {index + 1}
+        <span className="text-lg leading-none" aria-hidden>+</span>
+        <span className="text-[8px] font-semibold uppercase tracking-wider">
+          {index + 1}
         </span>
-        <span className="text-[10px] text-zinc-500">PCL10 추가</span>
       </button>
     );
   }
