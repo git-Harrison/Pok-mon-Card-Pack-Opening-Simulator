@@ -17,6 +17,7 @@ import { usePresence } from "@/lib/usePresence";
 import { getCard } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
 import type { Rarity } from "@/lib/types";
+import PageBackdrop from "./PageBackdrop";
 import Portal from "./Portal";
 import { getCharacter } from "@/lib/profile";
 import { CharacterAvatar } from "./ProfileView";
@@ -91,7 +92,8 @@ export default function UsersView() {
   );
 
   return (
-    <div className="max-w-3xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
+    <div className="relative max-w-3xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
+      <PageBackdrop tone="stadium" />
       <div className="inline-flex items-stretch rounded-xl bg-white/5 border border-white/10 p-1">
         <button
           type="button"
