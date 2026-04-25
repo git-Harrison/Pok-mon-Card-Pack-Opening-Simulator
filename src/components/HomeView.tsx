@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { getCard, SET_ORDER, SETS } from "@/lib/sets";
+import { formatKoreanPoints } from "@/lib/format";
 import type { PsaGrading, SetCode } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import {
@@ -543,7 +544,7 @@ function QuickStats({
   reduce: boolean;
 }) {
   const items = [
-    { label: "지갑 포인트", value: fmtNumber(points) + "p", tone: "amber" },
+    { label: "지갑 포인트", value: formatKoreanPoints(points), tone: "amber" },
     { label: "개봉한 팩", value: stats.loading ? "—" : fmtNumber(stats.packsOpened), tone: "fuchsia" },
     { label: "보유 카드", value: stats.loading ? "—" : fmtNumber(stats.cards) + "장", tone: "cyan" },
     { label: "PCL 슬랩", value: stats.loading ? "—" : fmtNumber(stats.slabs) + "장", tone: "emerald" },

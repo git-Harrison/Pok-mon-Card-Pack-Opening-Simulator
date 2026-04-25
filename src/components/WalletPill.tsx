@@ -22,19 +22,7 @@ import { useEffect, useRef, useState } from "react";
 import { animate, motion, useReducedMotion } from "framer-motion";
 import clsx from "clsx";
 import CoinIcon from "./CoinIcon";
-
-function formatCompact(n: number): string {
-  if (n < 1_000_000) return n.toLocaleString("ko-KR");
-  if (n < 1_000_000_000) {
-    const v = n / 1_000_000;
-    // 12.3M (one decimal); strip trailing .0
-    const s = v.toFixed(1).replace(/\.0$/, "");
-    return `${s}M`;
-  }
-  const v = n / 1_000_000_000;
-  const s = v.toFixed(2).replace(/\.?0+$/, "");
-  return `${s}B`;
-}
+import { formatKoreanPoints } from "@/lib/format";
 
 function PulseSkeleton({ size }: { size: "sm" | "md" }) {
   return (
@@ -93,10 +81,7 @@ export default function WalletPill({
   if (points == null) return <PulseSkeleton size={size} />;
 
   const fullLabel = `${points.toLocaleString("ko-KR")}p`;
-  const showCompact = display >= 1_000_000;
-  const numText = showCompact
-    ? `${formatCompact(display)}p`
-    : `${display.toLocaleString("ko-KR")}p`;
+  const numText = formatKoreanPoints(display);
 
   return (
     <Link
