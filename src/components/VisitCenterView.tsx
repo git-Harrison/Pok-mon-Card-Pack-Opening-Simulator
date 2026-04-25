@@ -159,7 +159,9 @@ export default function VisitCenterView({ loginId }: { loginId: string }) {
           }
         />
 
-        {stats && <VisitStatsPanel stats={stats} />}
+        {stats && (
+          <VisitStatsPanel stats={stats} displayName={data.display_name} />
+        )}
 
         {error && (
           <div className="mt-3 text-xs text-rose-200 bg-rose-500/15 border border-rose-500/40 rounded-lg px-3 py-2">
@@ -231,52 +233,92 @@ function VisitShowcaseModal({
   onAttack: (slotIndex: number, cardId: string) => void;
 }) {
   const spec = SHOWCASES[showcase.showcase_type];
+  const isVault = showcase.showcase_type === "vault";
+  const sortedCards = useMemo(
+    () => showcase.cards.slice().sort((a, b) => a.slot_index - b.slot_index),
+    [showcase.cards]
+  );
   return (
     <ModalShell
       title={`${spec.icon} ${spec.name}`}
       subtitle={
         canSabotage
-          ? "부수고 싶은 카드를 선택해 주세요 (10만p)"
+          ? `부수고 싶은 카드를 선택해 주세요 (${spec.sabotageCost.toLocaleString("ko-KR")}p)`
           : "전시된 카드들"
       }
       onClose={onClose}
     >
       <div className="p-3 md:p-5">
-        <div className="flex justify-center">
-          {Array.from({ length: spec.capacity }).map((_, i) => {
-            const row = showcase.cards.find((c) => c.slot_index === i);
-            const card = row ? getCard(row.card_id) : null;
-            if (!card || !row) {
+        {isVault ? (
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+            {sortedCards.map((row) => {
+              const card = getCard(row.card_id);
+              if (!card) return null;
+              const clickable = canSabotage;
               return (
-                <div
-                  key={i}
-                  className="w-full max-w-[320px] aspect-[5/7] rounded-lg border-2 border-dashed border-white/15 bg-white/[0.02]"
-                />
+                <button
+                  key={row.slot_index}
+                  type="button"
+                  disabled={!clickable}
+                  onClick={() => clickable && onAttack(row.slot_index, row.card_id)}
+                  style={{ touchAction: "manipulation" }}
+                  className={clsx(
+                    "relative flex flex-col items-center gap-1 text-left rounded-lg transition",
+                    clickable && "hover:scale-[1.03] active:scale-[0.98]"
+                  )}
+                >
+                  <PsaSlab card={card} grade={row.grade} size="sm" />
+                  {clickable && (
+                    <span className="text-[10px] font-bold text-rose-300">
+                      💥 부수기
+                    </span>
+                  )}
+                </button>
               );
-            }
-            const clickable = canSabotage;
-            return (
-              <button
-                key={i}
-                type="button"
-                disabled={!clickable}
-                onClick={() => clickable && onAttack(i, row.card_id)}
-                style={{ touchAction: "manipulation" }}
-                className={clsx(
-                  "relative flex flex-col items-center gap-2 text-left rounded-lg transition w-full max-w-[320px]",
-                  clickable && "hover:scale-[1.03] active:scale-[0.98]"
-                )}
-              >
-                <PsaSlab card={card} grade={row.grade} size="lg" />
-                {clickable && (
-                  <span className="text-xs font-bold text-rose-300">
-                    💥 부수기 가능
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+            })}
+            {sortedCards.length === 0 && (
+              <p className="col-span-full py-10 text-center text-sm text-zinc-400">
+                전시된 카드가 없어요.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="flex justify-center">
+            {Array.from({ length: spec.capacity }).map((_, i) => {
+              const row = showcase.cards.find((c) => c.slot_index === i);
+              const card = row ? getCard(row.card_id) : null;
+              if (!card || !row) {
+                return (
+                  <div
+                    key={i}
+                    className="w-full max-w-[320px] aspect-[5/7] rounded-lg border-2 border-dashed border-white/15 bg-white/[0.02]"
+                  />
+                );
+              }
+              const clickable = canSabotage;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  disabled={!clickable}
+                  onClick={() => clickable && onAttack(i, row.card_id)}
+                  style={{ touchAction: "manipulation" }}
+                  className={clsx(
+                    "relative flex flex-col items-center gap-2 text-left rounded-lg transition w-full max-w-[320px]",
+                    clickable && "hover:scale-[1.03] active:scale-[0.98]"
+                  )}
+                >
+                  <PsaSlab card={card} grade={row.grade} size="lg" />
+                  {clickable && (
+                    <span className="text-xs font-bold text-rose-300">
+                      💥 부수기 가능
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </ModalShell>
   );
@@ -472,62 +514,50 @@ function SabotageResultModal({
   );
 }
 
-function VisitStatsPanel({ stats }: { stats: CenterVisitStats }) {
+function VisitStatsPanel({
+  stats,
+  displayName,
+}: {
+  stats: CenterVisitStats;
+  displayName?: string;
+}) {
   const character = getCharacter(stats.character ?? null);
   const trade = stats.income_per_hour_trade ?? 0;
   const rankPerHr = stats.income_per_hour_rank ?? 0;
-  const rankPts = stats.showcase_rank_pts ?? 0;
   const pos = stats.income_rank_position ?? 0;
   const total = stats.income_rank_total ?? 0;
-  const pet = stats.pet_score ?? 0;
   return (
-    <div className="mt-3">
-      <div className="flex items-center gap-2 flex-wrap">
+    <div className="mt-3 space-y-2">
+      <div className="flex items-center gap-2">
         {character && (
           <div className="shrink-0">
             <CharacterAvatar def={character} size="sm" />
           </div>
         )}
-        {pet > 0 && (
-          <div className="shrink-0 rounded-lg border border-amber-400/40 bg-amber-400/10 px-2.5 py-1">
-            <div className="text-[9px] uppercase tracking-wider text-amber-200/80">
-              펫 점수
-            </div>
-            <div className="text-xs font-bold tabular-nums text-amber-200 inline-flex items-center gap-1">
-              <span aria-hidden>🐾</span>
-              {pet.toLocaleString("ko-KR")}
-            </div>
-          </div>
-        )}
-        <div className="shrink-0 rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1">
-          <div className="text-[9px] uppercase tracking-wider text-emerald-200/80">
-            시간당 거래 수익
-          </div>
-          <div className="text-xs font-bold tabular-nums text-emerald-100 inline-flex items-center gap-1">
-            <CoinIcon size="xs" />
-            {trade.toLocaleString("ko-KR")}p/h
-          </div>
+        <div className="min-w-0 flex-1">
+          {displayName && (
+            <p className="text-sm font-bold text-white truncate">
+              {displayName}
+            </p>
+          )}
+          {total > 0 && (
+            <p className="text-[11px] font-semibold text-zinc-300 tabular-nums">
+              랭킹 {pos > 0 ? `${pos}위` : "—"} · 전체 {total}명
+            </p>
+          )}
         </div>
-        {total > 0 && (
-          <div className="shrink-0 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-white tabular-nums">
-            랭킹 {pos > 0 ? `${pos}위` : "—"} / 전체 {total}명
-          </div>
-        )}
-        <div className="shrink-0 rounded-lg border border-sky-400/40 bg-sky-400/10 px-2.5 py-1">
-          <div className="text-[9px] uppercase tracking-wider text-sky-200/80">
-            시간당 랭킹 적립
-          </div>
-          <div className="text-xs font-bold tabular-nums text-sky-100">
-            +{rankPerHr.toLocaleString("ko-KR")} pts/h
-          </div>
-        </div>
-        <div className="shrink-0 rounded-lg border border-fuchsia-400/40 bg-fuchsia-400/10 px-2.5 py-1">
-          <div className="text-[9px] uppercase tracking-wider text-fuchsia-200/80">
-            누적 전시 랭킹 점수
-          </div>
-          <div className="text-xs font-bold tabular-nums text-fuchsia-100">
-            {rankPts.toLocaleString("ko-KR")}
-          </div>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="shrink-0 rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1 inline-flex items-center gap-1.5">
+          <CoinIcon size="xs" />
+          <span className="text-xs font-bold tabular-nums text-emerald-100">
+            +{trade.toLocaleString("ko-KR")}p
+          </span>
+          <span className="text-emerald-200/70 text-[10px]">/</span>
+          <span className="text-xs font-bold tabular-nums text-sky-200">
+            +{rankPerHr.toLocaleString("ko-KR")}점
+          </span>
+          <span className="text-[10px] text-zinc-300/70">시간</span>
         </div>
       </div>
     </div>

@@ -33,7 +33,7 @@ type RarityFilter = "ALL" | Rarity;
 export default function WalletView() {
   const { user } = useAuth();
   const params = useSearchParams();
-  const initialMode: Mode = params.get("tab") === "psa" ? "psa" : "cards";
+  const initialMode: Mode = params.get("tab") === "cards" ? "cards" : "psa";
   const [mode, setMode] = useState<Mode>(initialMode);
 
   const [snap, setSnap] = useState<WalletSnapshot>({
@@ -108,78 +108,25 @@ export default function WalletView() {
     [snap.packsOpenedBySet]
   );
 
+  const hasAny = snap.items.length > 0 || psa.length > 0;
+
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
-      <PageHeader
-        title="내 카드지갑"
-        stats={
-          <>
-            <Kpi label="종류" value={`${snap.items.length}`} />
-            <Kpi
-              label="장수"
-              value={`${snap.totalCards} / 10,000`}
-              highlight={snap.totalCards >= 9000}
-            />
-            <Kpi label="개봉" value={`${totalPacks}팩`} />
-            <Kpi
-              label="PCL"
-              value={`${psa.length} / 500`}
-              highlight={psa.length >= 450}
-            />
-          </>
-        }
-      />
+      <PageHeader title="내 카드지갑" />
 
-      {/* Primary mode tabs */}
-      <div className="mt-6 inline-flex items-stretch rounded-xl bg-white/5 border border-white/10 p-1">
-        <ModeTab active={mode === "cards"} onClick={() => setMode("cards")}>
-          보유 카드
-          <span className="ml-1.5 text-[10px] opacity-70">
-            {snap.items.length}
-          </span>
-        </ModeTab>
-        <ModeTab active={mode === "psa"} onClick={() => setMode("psa")}>
-          PCL 감별
-          <span className="ml-1.5 text-[10px] opacity-70">{psa.length}</span>
-        </ModeTab>
-      </div>
-
-      {loading ? (
-        <div className="mt-16 flex justify-center">
-          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+      <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
+        <div className="inline-flex items-stretch rounded-xl bg-white/5 border border-white/10 p-1">
+          <ModeTab active={mode === "psa"} onClick={() => setMode("psa")}>
+            PCL 감별
+            <span className="ml-1.5 text-[10px] opacity-70">{psa.length}</span>
+          </ModeTab>
+          <ModeTab active={mode === "cards"} onClick={() => setMode("cards")}>
+            보유 카드
+            <span className="ml-1.5 text-[10px] opacity-70">
+              {snap.items.length}
+            </span>
+          </ModeTab>
         </div>
-      ) : mode === "cards" ? (
-        <CardsMode
-          items={items}
-          rarityCounts={rarityCounts}
-          rarityFilter={rarityFilter}
-          setRarityFilter={setRarityFilter}
-          hasAny={snap.items.length > 0 || psa.length > 0}
-        />
-      ) : (
-        <PsaMode items={psaItems} onAfterGift={refresh} />
-      )}
-    </div>
-  );
-}
-
-function CardsMode({
-  items,
-  rarityCounts,
-  rarityFilter,
-  setRarityFilter,
-  hasAny,
-}: {
-  items: { card: Card; count: number }[];
-  rarityCounts: Map<Rarity, number>;
-  rarityFilter: RarityFilter;
-  setRarityFilter: (r: RarityFilter) => void;
-  hasAny: boolean;
-}) {
-  return (
-    <>
-      {/* Filter row + prominent bulk-sell button. */}
-      <div className="mt-4 flex items-center justify-between gap-2 flex-wrap">
         {hasAny ? (
           <Link
             href="/wallet/bulk-sell"
@@ -197,7 +144,39 @@ function CardsMode({
           </span>
         )}
       </div>
-      <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+
+      {loading ? (
+        <div className="mt-16 flex justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+        </div>
+      ) : mode === "cards" ? (
+        <CardsMode
+          items={items}
+          rarityCounts={rarityCounts}
+          rarityFilter={rarityFilter}
+          setRarityFilter={setRarityFilter}
+        />
+      ) : (
+        <PsaMode items={psaItems} onAfterGift={refresh} />
+      )}
+    </div>
+  );
+}
+
+function CardsMode({
+  items,
+  rarityCounts,
+  rarityFilter,
+  setRarityFilter,
+}: {
+  items: { card: Card; count: number }[];
+  rarityCounts: Map<Rarity, number>;
+  rarityFilter: RarityFilter;
+  setRarityFilter: (r: RarityFilter) => void;
+}) {
+  return (
+    <>
+      <div className="mt-4 flex items-center gap-1.5 flex-wrap">
         <FilterPill
           active={rarityFilter === "ALL"}
           onClick={() => setRarityFilter("ALL")}
