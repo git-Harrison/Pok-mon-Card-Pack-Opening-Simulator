@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
 import {
@@ -340,6 +340,7 @@ function Book({
   rarityLabel: string;
   onSelect: (c: Card) => void;
 }) {
+  const reduce = useReducedMotion();
   return (
     <div
       className="relative rounded-2xl overflow-hidden border border-amber-900/40 bg-[linear-gradient(160deg,#3a2410_0%,#1a0e07_55%,#0a0604_100%)] p-3 md:p-5 perspective-1200"
@@ -376,19 +377,32 @@ function Book({
           <motion.div
             key={pageIndex}
             className="relative preserve-3d"
-            initial={{ rotateY: flipDir === 1 ? 90 : -90, opacity: 0 }}
-            animate={{ rotateY: 0, opacity: 1 }}
-            exit={{ rotateY: flipDir === 1 ? -90 : 90, opacity: 0 }}
-            transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
+            initial={reduce ? { opacity: 0 } : { rotateY: flipDir === 1 ? 90 : -90, opacity: 0 }}
+            animate={reduce ? { opacity: 1 } : { rotateY: 0, opacity: 1 }}
+            exit={reduce ? { opacity: 0 } : { rotateY: flipDir === 1 ? -90 : 90, opacity: 0 }}
+            transition={{ duration: reduce ? 0.15 : 0.45, ease: [0.4, 0, 0.2, 1] }}
             style={{ transformOrigin: flipDir === 1 ? "left center" : "right center" }}
           >
-            <div className="grid grid-cols-6 sm:grid-cols-6 md:grid-cols-8 gap-1.5 backface-hidden">
+            <motion.div
+              className="grid grid-cols-6 sm:grid-cols-6 md:grid-cols-8 gap-1.5 backface-hidden"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: {},
+                visible: {
+                  transition: reduce
+                    ? { staggerChildren: 0 }
+                    : { staggerChildren: 0.012, delayChildren: 0.08 },
+                },
+              }}
+            >
               {pageCards.map((c) => (
                 <DexCell
                   key={c.id}
                   card={c}
                   registered={registeredIds.has(c.id)}
                   onClick={() => onSelect(c)}
+                  reduce={!!reduce}
                 />
               ))}
               {Array.from({ length: CARDS_PER_PAGE - pageCards.length }).map(
@@ -399,7 +413,7 @@ function Book({
                   />
                 )
               )}
-            </div>
+            </motion.div>
           </motion.div>
         </AnimatePresence>
       )}
@@ -411,22 +425,40 @@ function DexCell({
   card,
   registered,
   onClick,
+  reduce,
 }: {
   card: Card;
   registered: boolean;
   onClick: () => void;
+  reduce: boolean;
 }) {
   const rarity = card.rarity;
   const style = RARITY_STYLE[rarity];
 
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onClick}
       style={{ touchAction: "manipulation" }}
       aria-label={`${card.name} 카드 보기`}
+      variants={{
+        hidden: reduce
+          ? { opacity: 0 }
+          : { opacity: 0, y: 6, scale: 0.96 },
+        visible: reduce
+          ? { opacity: 1, transition: { duration: 0.15 } }
+          : {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              transition: { duration: 0.28, ease: [0.4, 0, 0.2, 1] },
+            },
+      }}
+      whileHover={reduce ? undefined : { scale: 1.04 }}
+      whileTap={{ scale: 0.97 }}
+      transition={{ type: "spring", stiffness: 380, damping: 26 }}
       className={clsx(
-        "group relative w-full aspect-[5/7] rounded-md overflow-hidden ring-1 bg-zinc-950 transition hover:scale-[1.04] active:scale-[0.97]",
+        "group relative w-full aspect-[5/7] rounded-md overflow-hidden ring-1 bg-zinc-950",
         style.frame,
         !registered && "ring-zinc-700/30"
       )}
@@ -452,17 +484,30 @@ function DexCell({
           </div>
         )}
       </div>
-      {registered && (
-        <div className="absolute top-0.5 right-0.5">
-          <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[8px] font-black bg-emerald-400 text-zinc-950 shadow-[0_0_6px_rgba(74,222,128,0.6)]">
-            ✓
-          </span>
-        </div>
-      )}
+      <AnimatePresence>
+        {registered && (
+          <motion.div
+            key="check"
+            className="absolute top-0.5 right-0.5"
+            initial={reduce ? { opacity: 0 } : { scale: 0, rotate: -45, opacity: 0 }}
+            animate={
+              reduce
+                ? { opacity: 1 }
+                : { scale: [0, 1.3, 1], rotate: [-45, 8, 0], opacity: 1 }
+            }
+            exit={{ opacity: 0, scale: 0.6 }}
+            transition={{ duration: reduce ? 0.15 : 0.4, ease: [0.4, 0, 0.2, 1] }}
+          >
+            <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[8px] font-black bg-emerald-400 text-zinc-950 shadow-[0_0_6px_rgba(74,222,128,0.6)]">
+              ✓
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="absolute bottom-0 left-0">
         <RarityBadge rarity={rarity} size="xs" />
       </div>
-    </button>
+    </motion.button>
   );
 }
 

@@ -1,9 +1,15 @@
 "use client";
 
 import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import {
+  AnimatePresence,
+  LayoutGroup,
+  animate,
+  motion,
+  useReducedMotion,
+} from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
 import {
@@ -275,17 +281,19 @@ export default function ProfileView() {
               </span>
             </div>
 
-            <div className="mt-3 grid grid-cols-5 gap-1.5 md:gap-2">
-              {filledSlots.map((slot, i) => (
-                <PetSlot
-                  key={i}
-                  index={i}
-                  card={slot}
-                  onPick={() => setPickerSlot(i)}
-                  onRemove={() => onRemoveSlot(i)}
-                />
-              ))}
-            </div>
+            <LayoutGroup>
+              <div className="mt-3 grid grid-cols-5 gap-1.5 md:gap-2">
+                {filledSlots.map((slot, i) => (
+                  <PetSlot
+                    key={slot ? slot.id : `empty-${i}`}
+                    index={i}
+                    card={slot}
+                    onPick={() => setPickerSlot(i)}
+                    onRemove={() => onRemoveSlot(i)}
+                  />
+                ))}
+              </div>
+            </LayoutGroup>
 
             {eligibleSlabs.length === 0 && (
               <p className="mt-3 text-[11px] text-amber-200/80">
@@ -339,6 +347,45 @@ export default function ProfileView() {
   );
 }
 
+function CountUp({
+  value,
+  className,
+  duration = 0.6,
+}: {
+  value: number;
+  className?: string;
+  duration?: number;
+}) {
+  const reduce = useReducedMotion();
+  const [display, setDisplay] = useState(reduce ? value : 0);
+  const playedRef = useRef(false);
+
+  useEffect(() => {
+    if (playedRef.current) {
+      // After first play, snap to current value on subsequent updates.
+      setDisplay(value);
+      return;
+    }
+    playedRef.current = true;
+    if (reduce) {
+      setDisplay(value);
+      return;
+    }
+    const controls = animate(0, value, {
+      duration,
+      ease: [0.4, 0, 0.2, 1],
+      onUpdate: (v) => setDisplay(Math.round(v)),
+    });
+    return () => controls.stop();
+  }, [value, reduce, duration]);
+
+  return (
+    <span className={className}>
+      {display.toLocaleString("ko-KR")}
+    </span>
+  );
+}
+
 function ProfileBanner({
   character,
   displayName,
@@ -358,11 +405,22 @@ function ProfileBanner({
   pokedexCount: number;
   onEditName: () => void;
 }) {
+  const reduce = useReducedMotion();
   return (
     <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 via-white/[0.02] to-transparent p-3 md:p-4">
       <div className="flex items-center gap-3">
         {character ? (
-          <CharacterAvatar def={character} size="md" />
+          <motion.div
+            initial={reduce ? { opacity: 0 } : { scale: 0.7, opacity: 0, rotate: -6 }}
+            animate={reduce ? { opacity: 1 } : { scale: 1, opacity: 1, rotate: 0 }}
+            transition={
+              reduce
+                ? { duration: 0.2 }
+                : { type: "spring", stiffness: 320, damping: 18 }
+            }
+          >
+            <CharacterAvatar def={character} size="md" />
+          </motion.div>
         ) : (
           <div className="shrink-0 w-14 h-14 rounded-xl bg-white/5 border border-dashed border-white/20 flex items-center justify-center text-2xl">
             ❓
@@ -401,7 +459,7 @@ function ProfileBanner({
             ⚔️ 전투력
           </div>
           <div className="mt-0.5 text-sm md:text-base font-black tabular-nums text-rose-200 leading-tight">
-            {centerPower.toLocaleString("ko-KR")}
+            <CountUp value={centerPower} />
           </div>
         </div>
         <div className="min-h-[68px] flex flex-col items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-2 py-1.5 text-center">
@@ -409,7 +467,7 @@ function ProfileBanner({
             📔 도감
           </div>
           <div className="mt-0.5 text-sm md:text-base font-black tabular-nums text-emerald-200 leading-tight">
-            {pokedexCount.toLocaleString("ko-KR")}
+            <CountUp value={pokedexCount} />
             <span className="text-[9px] text-emerald-300/60 font-semibold">
               {" "}/ {getAllCatalogCards().length.toLocaleString("ko-KR")}
             </span>
@@ -426,14 +484,20 @@ function ProfileBanner({
             </span>
           </div>
           <div className="text-[9px] text-amber-300/60 tabular-nums">
-            점수 {petScore.toLocaleString("ko-KR")}
+            점수 <CountUp value={petScore} />
           </div>
         </div>
       </div>
       <div className="mt-1.5 h-1 rounded-full bg-white/5 overflow-hidden">
-        <div
+        <motion.div
           className="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500"
-          style={{ width: `${scorePct}%` }}
+          initial={reduce ? { width: `${scorePct}%` } : { width: 0 }}
+          animate={{ width: `${scorePct}%` }}
+          transition={{
+            duration: reduce ? 0 : 0.7,
+            ease: [0.4, 0, 0.2, 1],
+            delay: reduce ? 0 : 0.1,
+          }}
         />
       </div>
     </div>
@@ -502,39 +566,57 @@ function PetSlot({
   onPick: () => void;
   onRemove: () => void;
 }) {
+  const reduce = useReducedMotion();
+  const layoutProps = reduce
+    ? {}
+    : {
+        layout: true as const,
+        transition: { type: "spring" as const, stiffness: 380, damping: 30 },
+      };
   if (!card) {
     return (
-      <button
+      <motion.button
+        {...layoutProps}
         type="button"
         onClick={onPick}
+        whileTap={{ scale: 0.96 }}
         style={{ touchAction: "manipulation" }}
-        className="relative aspect-[5/7] rounded-xl border-2 border-dashed border-white/15 bg-white/[0.02] hover:bg-white/5 hover:border-amber-300/50 transition flex flex-col items-center justify-center gap-0.5 p-1 text-zinc-400 hover:text-amber-200"
+        className="relative aspect-[5/7] rounded-xl border-2 border-dashed border-white/15 bg-white/[0.02] hover:bg-white/5 hover:border-amber-300/50 transition-colors flex flex-col items-center justify-center gap-0.5 p-1 text-zinc-400 hover:text-amber-200"
       >
         <span className="text-lg leading-none" aria-hidden>+</span>
         <span className="text-[8px] font-semibold uppercase tracking-wider">
           {index + 1}
         </span>
-      </button>
+      </motion.button>
     );
   }
   const cardDef = getCard(card.card_id);
   if (!cardDef) {
     return (
-      <button
+      <motion.button
+        {...layoutProps}
         type="button"
         onClick={onRemove}
         className="aspect-[5/7] rounded-2xl bg-rose-500/10 border border-rose-500/40 text-rose-200 text-xs p-2"
       >
         카드 정보 없음 — 눌러서 해제
-      </button>
+      </motion.button>
     );
   }
   const rstyle = RARITY_STYLE[cardDef.rarity];
   return (
-    <div className="relative">
-      <button
+    <motion.div
+      {...layoutProps}
+      initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.85, y: 8 }}
+      animate={reduce ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+      exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.85 }}
+      className="relative"
+    >
+      <motion.button
         type="button"
         onClick={onPick}
+        whileHover={reduce ? undefined : { scale: 1.04 }}
+        whileTap={{ scale: 0.97 }}
         aria-label={`${cardDef.name} 펫 변경`}
         style={{ touchAction: "manipulation" }}
         className={clsx(
@@ -564,17 +646,17 @@ function PetSlot({
         <span className="absolute bottom-0.5 right-0.5 text-[8px] font-black px-1 py-0.5 rounded leading-none bg-amber-300 text-zinc-950 tabular-nums">
           {card.grade}
         </span>
-      </button>
+      </motion.button>
       <button
         type="button"
         onClick={onRemove}
         aria-label="해제"
-        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-400 text-white text-[10px] font-black shadow-lg flex items-center justify-center ring-2 ring-zinc-950"
+        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-400 text-white text-[10px] font-black shadow-lg flex items-center justify-center ring-2 ring-zinc-950 transition active:scale-90"
         style={{ touchAction: "manipulation" }}
       >
         ✕
       </button>
-    </div>
+    </motion.div>
   );
 }
 

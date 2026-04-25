@@ -3,7 +3,7 @@
 import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
 import { fetchUserRankings, sendTaunt, type RankingRow } from "@/lib/db";
@@ -19,6 +19,7 @@ type RankingMode = "rank" | "power" | "pet";
 
 export default function UsersView() {
   const { user: currentUser } = useAuth();
+  const reduce = useReducedMotion();
   const onlineSet = usePresence(currentUser?.id);
   const [rows, setRows] = useState<RankingRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,6 +121,7 @@ export default function UsersView() {
           아직 사용자가 없습니다.
         </p>
       ) : (
+        <LayoutGroup id={`rankings-${mode}`}>
         <ul className="mt-6 space-y-2.5">
           {entries.map((e, rank) => {
             const isMe = currentUser?.id === e.id;
@@ -133,9 +135,13 @@ export default function UsersView() {
             return (
               <motion.li
                 key={e.id}
+                layout={reduce ? false : "position"}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(rank * 0.03, 0.3) }}
+                transition={{
+                  delay: Math.min(rank * 0.03, 0.3),
+                  layout: { type: "spring", stiffness: 380, damping: 32 },
+                }}
                 onClick={() =>
                   setExpandedId((cur) => (cur === e.id ? null : e.id))
                 }
@@ -158,7 +164,16 @@ export default function UsersView() {
                 )}
               >
                 <div className="p-3 md:p-4 flex items-center gap-3 md:gap-4">
-                  <div
+                  <motion.div
+                    whileHover={
+                      reduce || !isTopThree
+                        ? undefined
+                        : {
+                            rotate: [0, -10, 10, -8, 8, 0],
+                            scale: 1.1,
+                            transition: { duration: 0.5, ease: "easeInOut" },
+                          }
+                    }
                     className={clsx(
                       "shrink-0 rounded-full flex items-center justify-center font-black border",
                       isTopThree
@@ -175,7 +190,7 @@ export default function UsersView() {
                     aria-label={`${rank + 1}위`}
                   >
                     {trophy ?? rank + 1}
-                  </div>
+                  </motion.div>
                   {def ? (
                     <div className="shrink-0 flex items-center justify-center">
                       <CharacterAvatar def={def} size="sm" />
@@ -377,6 +392,7 @@ export default function UsersView() {
             );
           })}
         </ul>
+        </LayoutGroup>
       )}
 
       <AnimatePresence>
