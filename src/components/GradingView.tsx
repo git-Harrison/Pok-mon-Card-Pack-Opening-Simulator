@@ -1,7 +1,8 @@
 "use client";
 
-import PokeLoader from "./PokeLoader";
+import PokeLoader, { LoadingText } from "./PokeLoader";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
@@ -33,7 +34,6 @@ type Phase = "idle" | "animating" | "failing" | "revealed" | "failed";
 export default function GradingView() {
   const { user, setPoints } = useAuth();
   const [wallet, setWallet] = useState<WalletSnapshot | null>(null);
-  const [picking, setPicking] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [selected, setSelected] = useState<Card | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -42,6 +42,7 @@ export default function GradingView() {
   const [bonus, setBonus] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [caseId] = useState(() => generateCaseId());
+  const [revealKey, setRevealKey] = useState(0);
 
   const refreshWallet = useCallback(async () => {
     if (!user) return;
@@ -66,10 +67,14 @@ export default function GradingView() {
       { v: target, t: 2560 },
     ];
     const timers = steps.map((s) => setTimeout(() => setGauge(s.v), s.t));
-    const done = setTimeout(
-      () => setPhase(grade === null ? "failing" : "revealed"),
-      3300
-    );
+    const done = setTimeout(() => {
+      if (grade === null) {
+        setPhase("failing");
+      } else {
+        setRevealKey((k) => k + 1);
+        setPhase("revealed");
+      }
+    }, 3300);
     return () => {
       timers.forEach(clearTimeout);
       clearTimeout(done);
@@ -161,30 +166,19 @@ export default function GradingView() {
         style={{
           borderColor: "rgba(168, 85, 247, 0.35)",
           background:
-            "linear-gradient(180deg, #16102a 0%, #0a0615 100%)",
+            "linear-gradient(180deg, #1a1235 0%, #0a0716 60%, #050309 100%)",
         }}
       >
-        {/* Ambient glow */}
-        <div
-          aria-hidden
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(closest-side at 50% 30%, rgba(168,85,247,0.25), rgba(168,85,247,0) 65%)",
-          }}
-        />
-        {/* Grid overlay */}
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-[0.05] pointer-events-none"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(168,85,247,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(168,85,247,0.6) 1px, transparent 1px)",
-            backgroundSize: "32px 32px",
-          }}
-        />
+        <LabBackdrop phase={phase} />
 
-        {/* Examiner NPC with reactive dialogue */}
+        {/* Reveal stage flash + ring burst (sits above backdrop, below content) */}
+        <AnimatePresence>
+          {phase === "revealed" && (
+            <RevealOverlay key={revealKey} grade={grade} />
+          )}
+        </AnimatePresence>
+
+        {/* Examiner NPC + assistant pixie + status */}
         <div className="relative px-4 pt-3 flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <NpcDialog
@@ -197,6 +191,7 @@ export default function GradingView() {
               sizeClass="w-14 h-14 md:w-16 md:h-16"
             />
           </div>
+          <AssistantPixie phase={phase} />
           <StatusDot phase={phase} />
         </div>
 
@@ -206,7 +201,7 @@ export default function GradingView() {
             selected={selected}
             grade={grade}
             phase={phase}
-            onPick={() => setPicking(true)}
+            onPick={() => setBulkOpen(true)}
           />
         </div>
 
@@ -341,6 +336,274 @@ export default function GradingView() {
 }
 
 /* ─────────────── sub-components ─────────────── */
+
+/**
+ * CSS-painted Pokemon lab backdrop. We tried Pokemon Showdown's
+ * gen6bgs/bg-laboratory.png but it returns 404, so we paint the lab
+ * in CSS: perspective floor grid, two glowing monitors, machinery
+ * silhouettes on the sides, ambient violet/cyan lighting, and a
+ * gentle floating dust layer.
+ */
+function LabBackdrop({ phase }: { phase: Phase }) {
+  const accent =
+    phase === "failing" || phase === "failed"
+      ? "rgba(244,63,94,0.35)"
+      : phase === "revealed"
+      ? "rgba(216,180,254,0.45)"
+      : "rgba(168,85,247,0.32)";
+
+  const dust = useMemo(
+    () =>
+      Array.from({ length: 16 }).map((_, i) => ({
+        left: `${(i * 53) % 100}%`,
+        bottom: `${(i * 17) % 60}px`,
+        dx: `${((i * 19) % 60) - 30}px`,
+        dy: `-${120 + (i * 13) % 80}px`,
+        dur: `${7 + (i % 5) * 1.4}s`,
+        delay: `${(i * 0.6) % 8}s`,
+        opacity: i % 3 === 0 ? 0.7 : 0.4,
+      })),
+    []
+  );
+
+  return (
+    <div aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden">
+      {/* Ceiling lights — soft violet/cyan wash */}
+      <div
+        className="absolute inset-x-0 top-0 h-1/2"
+        style={{
+          background:
+            "radial-gradient(60% 80% at 30% 0%, rgba(56,189,248,0.18), transparent 70%), radial-gradient(60% 80% at 75% 0%, rgba(192,132,252,0.22), transparent 70%)",
+        }}
+      />
+
+      {/* Stage glow over pedestal */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `radial-gradient(closest-side at 50% 60%, ${accent}, transparent 60%)`,
+          transition: "background 0.6s ease",
+        }}
+      />
+
+      {/* Perspective floor */}
+      <div
+        className="absolute inset-x-0 bottom-0 h-2/5"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(15,10,30,0) 0%, rgba(15,10,30,0.6) 60%, rgba(7,5,16,0.95) 100%)",
+        }}
+      />
+      <div
+        className="absolute inset-x-0 bottom-0 h-2/5 opacity-60"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(168,85,247,0.45) 1px, transparent 1px), linear-gradient(90deg, rgba(168,85,247,0.35) 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
+          transform: "perspective(420px) rotateX(58deg)",
+          transformOrigin: "50% 100%",
+          maskImage:
+            "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.85) 30%, rgba(0,0,0,1) 100%)",
+          WebkitMaskImage:
+            "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.85) 30%, rgba(0,0,0,1) 100%)",
+          animation: "lab-grid-pan 4.6s linear infinite",
+        }}
+      />
+
+      {/* Side machinery silhouettes — left bank of consoles */}
+      <div className="absolute left-0 bottom-0 w-1/4 h-1/2">
+        <div
+          className="absolute left-2 bottom-8 w-16 h-20 rounded-md monitor-flicker"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(56,189,248,0.55), rgba(168,85,247,0.35))",
+            boxShadow:
+              "inset 0 0 12px rgba(56,189,248,0.55), 0 0 18px rgba(56,189,248,0.35)",
+            border: "1px solid rgba(56,189,248,0.45)",
+          }}
+        />
+        <div
+          className="absolute left-3 bottom-2 w-20 h-6 rounded-sm"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(40,30,70,0.9), rgba(20,15,40,0.95))",
+            border: "1px solid rgba(168,85,247,0.3)",
+          }}
+        />
+        <div
+          className="absolute left-4 bottom-4 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
+          style={{ animation: "dot-pulse 2.2s ease-in-out infinite" }}
+        />
+      </div>
+
+      {/* Right bank — taller server rack */}
+      <div className="absolute right-0 bottom-0 w-1/4 h-3/5">
+        <div
+          className="absolute right-2 bottom-2 w-14 h-32 rounded-md"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(30,20,60,0.95), rgba(15,10,35,0.95))",
+            border: "1px solid rgba(192,132,252,0.4)",
+            boxShadow: "inset 0 0 16px rgba(192,132,252,0.18)",
+          }}
+        />
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="absolute right-3 w-12 h-1 rounded-sm bg-fuchsia-400/60"
+            style={{
+              bottom: `${10 + i * 24}px`,
+              boxShadow: "0 0 6px rgba(217,70,239,0.7)",
+              animation: `dot-pulse ${1.4 + i * 0.3}s ease-in-out infinite`,
+              animationDelay: `${i * 0.18}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Floating dust motes */}
+      {dust.map((d, i) => (
+        <span
+          key={i}
+          className="lab-dust"
+          style={
+            {
+              left: d.left,
+              bottom: d.bottom,
+              "--dx": d.dx,
+              "--dy": d.dy,
+              "--dur": d.dur,
+              "--delay": d.delay,
+              "--dust-opacity": d.opacity,
+            } as CSSProperties
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Evolution-style reveal sequence: white flash + expanding ring burst,
+ * plus confetti for high grades. Mounts on phase=revealed, animates
+ * once, then unmounts.
+ */
+function RevealOverlay({ grade }: { grade: number | null }) {
+  const isHype = grade !== null && grade >= 9;
+  const tone = grade !== null ? psaTone(grade) : null;
+
+  const confetti = useMemo(() => {
+    if (!isHype) return [];
+    return Array.from({ length: 18 }).map((_, i) => {
+      const angle = (i / 18) * Math.PI * 2;
+      const dist = 90 + Math.random() * 60;
+      return {
+        cx: `${Math.cos(angle) * dist}px`,
+        cy: `${Math.sin(angle) * dist - 20}px`,
+        cr: `${Math.random() * 360}deg`,
+        cdur: `${1.1 + Math.random() * 0.8}s`,
+        cdelay: `${0.1 + Math.random() * 0.3}s`,
+        hue: ["#fde68a", "#fbbf24", "#f9a8d4", "#c4b5fd", "#67e8f9"][i % 5],
+      };
+    });
+  }, [isHype]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute inset-0 pointer-events-none z-20"
+    >
+      {/* White burn-in flash */}
+      <div className="absolute inset-0 evo-flash" />
+      {/* Expanding ring */}
+      <span className="evo-ring-burst" />
+      {isHype && (
+        <span
+          className="evo-ring-burst"
+          style={{
+            animationDelay: "0.18s",
+            borderColor:
+              grade === 10 ? "rgba(251,191,36,0.95)" : "rgba(226,232,240,0.9)",
+          }}
+        />
+      )}
+      {/* Grade impact text */}
+      {grade !== null && (
+        <div
+          className={clsx(
+            "grade-impact absolute left-1/2 top-1/2 text-3xl md:text-5xl font-black tracking-tight drop-shadow-[0_4px_18px_rgba(0,0,0,0.6)]",
+            tone?.text
+          )}
+          style={{
+            textShadow:
+              "0 0 18px rgba(255,255,255,0.5), 0 0 38px rgba(216,180,254,0.55)",
+          }}
+        >
+          PCL {grade}
+        </div>
+      )}
+      {/* Confetti */}
+      {confetti.map((c, i) => (
+        <span
+          key={i}
+          className="confetti-burst absolute left-1/2 top-1/2 w-2 h-3 rounded-sm"
+          style={
+            {
+              background: c.hue,
+              boxShadow: `0 0 8px ${c.hue}`,
+              "--cx": c.cx,
+              "--cy": c.cy,
+              "--cr": c.cr,
+              "--cdur": c.cdur,
+              "--cdelay": c.cdelay,
+            } as CSSProperties
+          }
+        />
+      ))}
+    </motion.div>
+  );
+}
+
+/** Tiny robot/pixie helper that reacts to the phase. */
+function AssistantPixie({ phase }: { phase: Phase }) {
+  const tone =
+    phase === "failing" || phase === "failed"
+      ? "from-rose-400 to-rose-600 shadow-[0_0_12px_rgba(244,63,94,0.7)]"
+      : phase === "animating"
+      ? "from-amber-300 to-amber-500 shadow-[0_0_14px_rgba(251,191,36,0.85)]"
+      : phase === "revealed"
+      ? "from-emerald-300 to-emerald-500 shadow-[0_0_14px_rgba(52,211,153,0.85)]"
+      : "from-fuchsia-300 to-fuchsia-500 shadow-[0_0_12px_rgba(217,70,239,0.7)]";
+  const eye =
+    phase === "failing" || phase === "failed" ? "•_•" : phase === "revealed" ? "^_^" : "·_·";
+  return (
+    <motion.div
+      animate={
+        phase === "animating"
+          ? { y: [0, -3, 0], rotate: [-3, 3, -3] }
+          : phase === "revealed"
+          ? { y: [0, -6, 0] }
+          : phase === "failing" || phase === "failed"
+          ? { y: [0, 1, 0] }
+          : { y: [0, -2, 0] }
+      }
+      transition={{
+        duration: phase === "animating" ? 0.7 : 2.4,
+        repeat: Infinity,
+        ease: "easeInOut",
+      }}
+      className={clsx(
+        "hidden md:flex shrink-0 w-9 h-9 rounded-full bg-gradient-to-br items-center justify-center text-[9px] font-black text-zinc-900",
+        tone
+      )}
+      aria-hidden
+      title="연구 보조 픽시"
+    >
+      <span className="leading-none -mt-0.5">{eye}</span>
+    </motion.div>
+  );
+}
 
 function StatusDot({ phase }: { phase: Phase }) {
   const tone =
@@ -555,50 +818,98 @@ function CardOnPedestal({
   scanning: boolean;
 }) {
   const style = RARITY_STYLE[card.rarity];
+  // Particle stream: 7 sparkles rising from card during scanning
+  const particles = useMemo(
+    () =>
+      Array.from({ length: 7 }).map((_, i) => ({
+        left: `${10 + (i * 13) % 80}%`,
+        x: `${((i * 23) % 24) - 12}px`,
+        dur: `${1.4 + (i % 4) * 0.3}s`,
+        delay: `${(i * 0.18) % 1.2}s`,
+      })),
+    []
+  );
   return (
     <div className="relative flex flex-col items-center gap-3">
-      <motion.div
-        animate={scanning ? { y: [-2, -8, -2] } : { y: 0 }}
-        transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-        className={clsx(
-          "relative w-[140px] md:w-[200px] aspect-[5/7] rounded-2xl overflow-hidden isolate ring-2 bg-zinc-900",
-          style.frame,
-          style.glow
-        )}
-      >
-        {card.imageUrl ? (
-          <img
-            src={card.imageUrl}
-            alt={card.name}
-            className="w-full h-full object-contain bg-zinc-900 select-none pointer-events-none"
-            draggable={false}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-700 to-amber-600 text-white p-4 text-center">
-            {card.name}
-          </div>
-        )}
-        {scanning && (
-          <div
-            aria-hidden
-            className="absolute left-0 right-0 h-8 pointer-events-none"
-            style={{
-              top: 0,
-              background:
-                "linear-gradient(180deg, rgba(216,180,254,0) 0%, rgba(168,85,247,0.85) 50%, rgba(216,180,254,0) 100%)",
-              animation: "scan-line 1.2s linear infinite",
-            }}
-          />
-        )}
-        {!scanning && (
-          <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent">
-            <div className="flex items-center justify-between text-[11px]">
-              <RarityBadge rarity={card.rarity} size="xs" />
-              <span className="text-white/80">#{card.number}</span>
+      <div className={clsx("relative", scanning && "pokeball-wobble")}>
+        <motion.div
+          animate={scanning ? { y: [-2, -6, -2] } : { y: 0 }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+          className={clsx(
+            "relative w-[140px] md:w-[200px] aspect-[5/7] rounded-2xl overflow-hidden isolate ring-2 bg-zinc-900",
+            style.frame,
+            style.glow
+          )}
+        >
+          {card.imageUrl ? (
+            <img
+              src={card.imageUrl}
+              alt={card.name}
+              className="w-full h-full object-contain bg-zinc-900 select-none pointer-events-none"
+              draggable={false}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-700 to-amber-600 text-white p-4 text-center">
+              {card.name}
             </div>
-          </div>
-        )}
-      </motion.div>
+          )}
+          {scanning && (
+            <>
+              {/* Vertical scan line */}
+              <div
+                aria-hidden
+                className="absolute left-0 right-0 h-8 pointer-events-none"
+                style={{
+                  top: 0,
+                  background:
+                    "linear-gradient(180deg, rgba(216,180,254,0) 0%, rgba(168,85,247,0.85) 50%, rgba(216,180,254,0) 100%)",
+                  animation: "scan-line 1.2s linear infinite",
+                }}
+              />
+              {/* Diagonal sweeping beam */}
+              <div
+                aria-hidden
+                className="absolute inset-y-0 w-1/3 scan-beam pointer-events-none"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%)",
+                  mixBlendMode: "screen",
+                }}
+              />
+            </>
+          )}
+          {!scanning && (
+            <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent">
+              <div className="flex items-center justify-between text-[11px]">
+                <RarityBadge rarity={card.rarity} size="xs" />
+                <span className="text-white/80">#{card.number}</span>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      </div>
+      {/* Particle stream during scan */}
+      {scanning && (
+        <div className="absolute inset-0 pointer-events-none">
+          {particles.map((p, i) => (
+            <span
+              key={i}
+              className="particle-rise absolute bottom-12 w-1.5 h-1.5 rounded-full"
+              style={
+                {
+                  left: p.left,
+                  background:
+                    "radial-gradient(closest-side, rgba(255,255,255,0.95), rgba(216,180,254,0.5) 60%, rgba(216,180,254,0) 80%)",
+                  boxShadow: "0 0 8px rgba(216,180,254,0.95)",
+                  "--x": p.x,
+                  "--dur": p.dur,
+                  "--delay": p.delay,
+                } as CSSProperties
+              }
+            />
+          ))}
+        </div>
+      )}
       {/* Platform shadow */}
       <div
         className="w-[160px] h-4 rounded-full"
@@ -617,10 +928,16 @@ function EmptyPedestal({ onPick }: { onPick: () => void }) {
       <button
         onClick={onPick}
         style={{ touchAction: "manipulation" }}
-        className="relative w-[130px] md:w-[180px] aspect-[5/7] rounded-2xl border-2 border-dashed border-fuchsia-400/40 bg-fuchsia-500/5 text-fuchsia-200 hover:text-white hover:border-fuchsia-300/60 transition flex flex-col items-center justify-center gap-2"
+        className="relative w-[130px] md:w-[180px] aspect-[5/7] rounded-2xl border-2 border-dashed border-fuchsia-400/40 bg-fuchsia-500/5 text-fuchsia-200 hover:text-white hover:border-fuchsia-300/60 transition flex flex-col items-center justify-center gap-2 group overflow-hidden"
       >
-        <span className="text-3xl">＋</span>
-        <span className="text-xs font-semibold">감정 대상 카드 놓기</span>
+        {/* Hovering hologram ring */}
+        <span
+          aria-hidden
+          className="absolute inset-3 rounded-xl border border-fuchsia-300/30"
+          style={{ animation: "ring-spin 12s linear infinite" }}
+        />
+        <span className="relative text-3xl group-hover:scale-110 transition">＋</span>
+        <span className="relative text-xs font-semibold">감정 대상 카드 놓기</span>
       </button>
       <div
         className="w-[140px] h-4 rounded-full"
@@ -949,6 +1266,8 @@ function BulkGradingModal({
 
           {phase === "done" && result ? (
             <BulkResults result={result} onClose={onClose} />
+          ) : phase === "submitting" ? (
+            <BulkSubmittingScreen count={totalEligibleCount} />
           ) : (
             <>
               <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-5 space-y-4">
@@ -976,7 +1295,7 @@ function BulkGradingModal({
                     </div>
                     <AutoSellThresholdPicker
                       value={autoSellBelow}
-                      disabled={phase === "submitting"}
+                      disabled={false}
                       onChange={setAutoSellBelow}
                     />
                   </>
@@ -993,25 +1312,16 @@ function BulkGradingModal({
                 <button
                   type="button"
                   onClick={submit}
-                  disabled={totalEligibleCount === 0 || phase === "submitting"}
+                  disabled={totalEligibleCount === 0}
                   className={clsx(
                     "w-full h-12 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 transition",
-                    totalEligibleCount > 0 && phase !== "submitting"
+                    totalEligibleCount > 0
                       ? "bg-gradient-to-r from-fuchsia-500 to-indigo-500 text-white hover:scale-[1.01] active:scale-[0.98] shadow-[0_10px_30px_-10px_rgba(168,85,247,0.6)]"
                       : "bg-white/5 text-zinc-500 cursor-not-allowed border border-white/10"
                   )}
                   style={{ touchAction: "manipulation" }}
                 >
-                  {phase === "submitting" ? (
-                    <>
-                      <PokeLoader size="sm" />
-                      감별 중...
-                    </>
-                  ) : (
-                    <>
-                      🔎 {totalEligibleCount.toLocaleString("ko-KR")}장 일괄 감별
-                    </>
-                  )}
+                  🔎 {totalEligibleCount.toLocaleString("ko-KR")}장 일괄 감별
                 </button>
               </div>
             </>
@@ -1156,6 +1466,81 @@ function BulkPickRow({
         >
           +
         </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Themed loading screen rendered inside the bulk-grading modal while
+ * the server processes the batch. Even though the request returns
+ * quickly we use cinematic visuals (spinning pokeball, evolution
+ * flashes, pulsing progress bar) so the user feels something is
+ * happening.
+ */
+function BulkSubmittingScreen({ count }: { count: number }) {
+  return (
+    <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-6 p-8 relative overflow-hidden">
+      {/* Ambient glow */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(closest-side at 50% 45%, rgba(168,85,247,0.35), transparent 65%)",
+        }}
+      />
+      {/* Periodic evolution-flash blips (3 staggered) */}
+      {[0, 0.8, 1.6].map((d, i) => (
+        <span
+          key={i}
+          aria-hidden
+          className="bulk-blip absolute inset-0 pointer-events-none"
+          style={
+            {
+              background:
+                "radial-gradient(closest-side at 50% 45%, rgba(255,255,255,0.55), rgba(255,255,255,0) 60%)",
+              "--bdelay": `${d}s`,
+            } as CSSProperties
+          }
+        />
+      ))}
+
+      <div className="relative">
+        <PokeLoader size="lg" />
+        {/* Halo */}
+        <span
+          aria-hidden
+          className="absolute -inset-6 rounded-full border border-fuchsia-300/30"
+          style={{ animation: "ring-spin 4s linear infinite" }}
+        />
+        <span
+          aria-hidden
+          className="absolute -inset-12 rounded-full border border-fuchsia-300/15"
+          style={{ animation: "ring-spin 8s linear infinite reverse" }}
+        />
+      </div>
+
+      <div className="relative text-center">
+        <p className="text-base md:text-lg font-bold text-white">
+          <LoadingText
+            text={`${count.toLocaleString("ko-KR")}장 일괄 감별 중`}
+          />
+        </p>
+        <p className="mt-1 text-[11px] text-fuchsia-200/80">
+          후딘 박사가 카드를 한 장씩 살펴보고 있어요
+        </p>
+      </div>
+
+      {/* Pulsing progress bar */}
+      <div className="relative w-full max-w-xs h-2 rounded-full overflow-hidden bg-white/5 ring-1 ring-fuchsia-400/20">
+        <div
+          className="absolute inset-0 bulk-progress-pulse"
+          style={{
+            backgroundImage:
+              "linear-gradient(90deg, rgba(217,70,239,0.15) 0%, rgba(217,70,239,0.85) 35%, rgba(255,255,255,0.95) 50%, rgba(99,102,241,0.85) 65%, rgba(99,102,241,0.15) 100%)",
+          }}
+        />
       </div>
     </div>
   );

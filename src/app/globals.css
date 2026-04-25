@@ -463,3 +463,161 @@ samp {
   0%, 100% { opacity: 0; transform: rotate(var(--rotation, 0deg)) scaleX(0.2); }
   50% { opacity: 1; transform: rotate(var(--rotation, 0deg)) scaleX(1); }
 }
+
+/* ---------- 포켓몬 연구실 (Lab) ambience ---------- */
+@keyframes lab-dust-drift {
+  0%   { transform: translate3d(0, 0, 0); opacity: 0; }
+  10%  { opacity: var(--dust-opacity, 0.55); }
+  90%  { opacity: var(--dust-opacity, 0.55); }
+  100% { transform: translate3d(var(--dx, 30px), var(--dy, -120px), 0); opacity: 0; }
+}
+.lab-dust {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+  background: radial-gradient(closest-side, rgba(216,180,254,0.95), rgba(216,180,254,0));
+  filter: blur(0.4px);
+  animation: lab-dust-drift var(--dur, 9s) linear infinite;
+  animation-delay: var(--delay, 0s);
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+@keyframes monitor-flicker {
+  0%, 100% { opacity: 0.55; }
+  47%      { opacity: 0.62; }
+  50%      { opacity: 0.32; }
+  53%      { opacity: 0.6; }
+}
+.monitor-flicker { animation: monitor-flicker 5.2s ease-in-out infinite; }
+
+@keyframes lab-grid-pan {
+  0%   { background-position: 0 0; }
+  100% { background-position: 0 32px; }
+}
+
+/* Pokeball-style 3-shake wobble for the scanning card */
+@keyframes pokeball-wobble {
+  0%   { transform: translateX(0) rotate(0); }
+  10%  { transform: translateX(-3px) rotate(-3deg); }
+  20%  { transform: translateX(3px)  rotate(3deg); }
+  30%  { transform: translateX(0)    rotate(0); }
+  40%  { transform: translateX(-5px) rotate(-5deg); }
+  55%  { transform: translateX(5px)  rotate(5deg); }
+  65%  { transform: translateX(0)    rotate(0); }
+  78%  { transform: translateX(-7px) rotate(-7deg); }
+  88%  { transform: translateX(7px)  rotate(7deg); }
+  100% { transform: translateX(0)    rotate(0); }
+}
+.pokeball-wobble {
+  animation: pokeball-wobble 2.8s ease-in-out infinite;
+  transform-origin: 50% 80%;
+  will-change: transform;
+}
+
+/* Evolution-style white flash overlay (full-stage burn-in) */
+@keyframes evo-flash {
+  0%   { opacity: 0; }
+  20%  { opacity: 1; }
+  60%  { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+.evo-flash {
+  animation: evo-flash 1.2s ease-out forwards;
+  background: radial-gradient(closest-side, rgba(255,255,255,0.95), rgba(255,255,255,0.35) 55%, rgba(255,255,255,0) 80%);
+  pointer-events: none;
+}
+
+/* Evolution ring burst (expanding shockwave) */
+@keyframes evo-ring-burst {
+  0%   { opacity: 0.95; transform: translate(-50%, -50%) scale(0.2); border-width: 6px; }
+  100% { opacity: 0;    transform: translate(-50%, -50%) scale(8);   border-width: 1px; }
+}
+.evo-ring-burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 220px;
+  height: 220px;
+  border-radius: 9999px;
+  border-style: solid;
+  border-color: rgba(216, 180, 254, 0.9);
+  box-shadow: 0 0 40px rgba(216,180,254,0.6);
+  animation: evo-ring-burst 0.95s ease-out forwards;
+  pointer-events: none;
+}
+
+/* Card silhouette pulse during reveal (white burnout → restore) */
+@keyframes evo-silhouette {
+  0%   { filter: brightness(1) saturate(1); }
+  35%  { filter: brightness(8) saturate(0); }
+  60%  { filter: brightness(8) saturate(0); }
+  100% { filter: brightness(1) saturate(1); }
+}
+
+/* Particle stream (rising sparkles from card during scan) */
+@keyframes particle-rise {
+  0%   { transform: translate(var(--x, 0), 0) scale(0.4); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translate(var(--x, 0), -140px) scale(1); opacity: 0; }
+}
+.particle-rise {
+  animation: particle-rise var(--dur, 1.6s) ease-out infinite;
+  animation-delay: var(--delay, 0s);
+  pointer-events: none;
+}
+
+/* Grade impact text bounce */
+@keyframes grade-impact {
+  0%   { transform: translate(-50%, -50%) scale(0.2); opacity: 0; letter-spacing: 0.4em; }
+  35%  { transform: translate(-50%, -50%) scale(1.25); opacity: 1; letter-spacing: 0.05em; }
+  55%  { transform: translate(-50%, -50%) scale(0.95); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
+.grade-impact {
+  animation: grade-impact 1.4s cubic-bezier(0.2, 0.9, 0.3, 1.05) forwards;
+}
+
+/* Confetti pop for PCL 9/10 reveal */
+@keyframes confetti-burst {
+  0%   { transform: translate(0, 0) scale(0.4) rotate(0); opacity: 0; }
+  10%  { opacity: 1; }
+  100% { transform: translate(var(--cx, 80px), var(--cy, -120px)) scale(1) rotate(var(--cr, 220deg)); opacity: 0; }
+}
+.confetti-burst {
+  animation: confetti-burst var(--cdur, 1.4s) cubic-bezier(0.15, 0.8, 0.4, 1) forwards;
+  animation-delay: var(--cdelay, 0s);
+  pointer-events: none;
+}
+
+/* Bulk loader: pulsing progress bar */
+@keyframes bulk-progress-pulse {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.bulk-progress-pulse {
+  background-size: 200% 100%;
+  animation: bulk-progress-pulse 1.4s linear infinite;
+}
+
+/* Bulk loader: occasional evolution-flash blip */
+@keyframes bulk-blip {
+  0%, 100% { opacity: 0; }
+  50%      { opacity: 1; }
+}
+.bulk-blip {
+  animation: bulk-blip 2.4s ease-in-out infinite;
+  animation-delay: var(--bdelay, 0s);
+}
+
+/* Scanning beam — diagonal sweeping highlight across the card */
+@keyframes scan-beam {
+  0%   { transform: translateX(-120%) skewX(-18deg); opacity: 0; }
+  20%  { opacity: 0.95; }
+  80%  { opacity: 0.95; }
+  100% { transform: translateX(220%) skewX(-18deg); opacity: 0; }
+}
+.scan-beam {
+  animation: scan-beam 1.6s ease-in-out infinite;
+}

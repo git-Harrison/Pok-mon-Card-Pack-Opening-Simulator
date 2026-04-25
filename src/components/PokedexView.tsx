@@ -13,9 +13,11 @@ import {
   type PokedexEntry,
 } from "@/lib/pokedex";
 import { RARITY_ORDER, RARITY_STYLE, RARITY_LABEL } from "@/lib/rarity";
+import { SETS } from "@/lib/sets";
 import type { Card, Rarity } from "@/lib/types";
 import PageHeader from "./PageHeader";
 import Portal from "./Portal";
+import PokeCard from "./PokeCard";
 import RarityBadge from "./RarityBadge";
 
 const CARDS_PER_PAGE = 24;
@@ -32,6 +34,7 @@ export default function PokedexView() {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [previewCard, setPreviewCard] = useState<Card | null>(null);
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -198,6 +201,7 @@ export default function PokedexView() {
           registeredIds={registeredIds}
           emptyForRarity={cardsForTab.length === 0}
           rarityLabel={RARITY_LABEL[activeRarity]}
+          onSelect={setPreviewCard}
         />
         <button
           type="button"
@@ -254,6 +258,16 @@ export default function PokedexView() {
             onCancel={() => setConfirmOpen(false)}
             onConfirm={handleBulk}
             submitting={submitting}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {previewCard && (
+          <CardPreview
+            card={previewCard}
+            registered={registeredIds.has(previewCard.id)}
+            onClose={() => setPreviewCard(null)}
           />
         )}
       </AnimatePresence>
@@ -315,6 +329,7 @@ function Book({
   registeredIds,
   emptyForRarity,
   rarityLabel,
+  onSelect,
 }: {
   loading: boolean;
   flipDir: 1 | -1;
@@ -323,6 +338,7 @@ function Book({
   registeredIds: Set<string>;
   emptyForRarity: boolean;
   rarityLabel: string;
+  onSelect: (c: Card) => void;
 }) {
   return (
     <div
@@ -372,6 +388,7 @@ function Book({
                   key={c.id}
                   card={c}
                   registered={registeredIds.has(c.id)}
+                  onClick={() => onSelect(c)}
                 />
               ))}
               {Array.from({ length: CARDS_PER_PAGE - pageCards.length }).map(
@@ -393,17 +410,23 @@ function Book({
 function DexCell({
   card,
   registered,
+  onClick,
 }: {
   card: Card;
   registered: boolean;
+  onClick: () => void;
 }) {
   const rarity = card.rarity;
   const style = RARITY_STYLE[rarity];
 
   return (
-    <div
+    <button
+      type="button"
+      onClick={onClick}
+      style={{ touchAction: "manipulation" }}
+      aria-label={`${card.name} 카드 보기`}
       className={clsx(
-        "group relative w-full aspect-[5/7] rounded-md overflow-hidden ring-1 bg-zinc-950 transition",
+        "group relative w-full aspect-[5/7] rounded-md overflow-hidden ring-1 bg-zinc-950 transition hover:scale-[1.04] active:scale-[0.97]",
         style.frame,
         !registered && "ring-zinc-700/30"
       )}
@@ -439,7 +462,91 @@ function DexCell({
       <div className="absolute bottom-0 left-0">
         <RarityBadge rarity={rarity} size="xs" />
       </div>
-    </div>
+    </button>
+  );
+}
+
+function CardPreview({
+  card,
+  registered,
+  onClose,
+}: {
+  card: Card;
+  registered: boolean;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
+
+  const setName = SETS[card.setCode]?.name ?? card.setCode;
+
+  return (
+    <Portal>
+      <motion.div
+        key="dex-preview"
+        className="fixed inset-0 z-[180] bg-black/90 backdrop-blur-md flex items-center justify-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{
+          paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+          paddingLeft: 12,
+          paddingRight: 12,
+        }}
+      >
+        <motion.div
+          className="relative w-full max-w-sm bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden shadow-2xl"
+          style={{ maxHeight: "calc(100dvh - 24px)" }}
+          initial={{ y: 16, opacity: 0, scale: 0.95 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: 16, opacity: 0, scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 240, damping: 26 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="닫기"
+            className="absolute top-2 right-2 z-10 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+            style={{ touchAction: "manipulation" }}
+          >
+            ✕
+          </button>
+          <div className="px-4 pt-4 pb-3 flex flex-col items-center gap-3">
+            <div className={clsx(!registered && "opacity-60 saturate-50")}>
+              <PokeCard card={card} revealed size="md" />
+            </div>
+            <div className="w-full text-center">
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <h3 className="text-lg font-black text-white">{card.name}</h3>
+                <RarityBadge rarity={card.rarity} size="sm" />
+              </div>
+              <p className="mt-1 text-[11px] text-zinc-400">
+                {setName} · #{card.number}
+              </p>
+              <p className="mt-2 text-[11px] font-bold">
+                {registered ? (
+                  <span className="text-emerald-300">✓ 도감 등록 완료</span>
+                ) : (
+                  <span className="text-zinc-500">아직 미등록</span>
+                )}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </Portal>
   );
 }
 
