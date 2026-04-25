@@ -247,9 +247,6 @@ export default function ProfileView() {
       <PageHeader
         title="내 프로필"
         subtitle="트레이너 캐릭터를 고르고 자랑할 슬랩을 펫으로 등록하세요"
-        stats={
-          <HelpButton size="sm" title="내 프로필" sections={HELP_SECTIONS} />
-        }
       />
 
       {loading ? (
@@ -274,7 +271,7 @@ export default function ProfileView() {
               href="/wallet"
               className="rounded-2xl p-3 border border-amber-400/30 bg-amber-400/5 hover:bg-amber-400/10 transition flex items-center gap-3"
             >
-              <span className="text-2xl">🎴</span>
+              <span className="text-2xl">💼</span>
               <div className="min-w-0">
                 <div className="text-sm font-bold text-amber-100">내 지갑</div>
                 <div className="text-[10px] text-amber-200/70">
@@ -350,14 +347,6 @@ export default function ProfileView() {
                         {def.gender}
                       </span>
                     </div>
-                    <p
-                      className={clsx(
-                        "text-[10px] mt-0.5",
-                        active ? "text-zinc-600" : "text-zinc-400"
-                      )}
-                    >
-                      {def.region} 지방
-                    </p>
                     {active && (
                       <span className="absolute top-1.5 right-1.5 text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-400 text-zinc-900">
                         ✓ 선택됨
@@ -384,7 +373,7 @@ export default function ProfileView() {
               </span>
             </div>
 
-            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
               {filledSlots.map((slot, i) => (
                 <PetSlot
                   key={i}
@@ -473,20 +462,23 @@ function ProfileBanner({
               {character.name}
             </span>
           )}
-          <button
-            type="button"
-            onClick={onEditName}
-            className="ml-auto inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md bg-white/10 hover:bg-white/15 text-zinc-100 border border-white/10"
-            style={{ touchAction: "manipulation" }}
-          >
-            <span aria-hidden>✏️</span>닉네임 변경
-          </button>
+          <div className="ml-auto flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={onEditName}
+              className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md bg-white/10 hover:bg-white/15 text-zinc-100 border border-white/10"
+              style={{ touchAction: "manipulation" }}
+            >
+              <span aria-hidden>✏️</span>닉네임 변경
+            </button>
+            <HelpButton size="sm" title="내 프로필" sections={HELP_SECTIONS} />
+          </div>
         </div>
-        <p className="mt-1 text-[11px] text-zinc-400">
-          {character
-            ? `${character.region} 지방 출신 트레이너`
-            : "캐릭터를 선택해주세요"}
-        </p>
+        {!character && (
+          <p className="mt-1 text-[11px] text-zinc-400">
+            캐릭터를 선택해주세요
+          </p>
+        )}
 
         <div className="mt-3">
           <div className="flex items-end justify-between gap-2">

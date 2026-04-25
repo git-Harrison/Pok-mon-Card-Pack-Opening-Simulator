@@ -140,8 +140,8 @@ export interface ProfileSnapshot {
   pokedex_bonus: number;
 }
 
-export const MAX_MAIN_CARDS = 5;
-export const MAX_PET_SCORE = 500;
+export const MAX_MAIN_CARDS = 6;
+export const MAX_PET_SCORE = 600;
 
 export const DISPLAY_NAME_MIN = 2;
 export const DISPLAY_NAME_MAX = 20;

@@ -42,7 +42,6 @@ export default function CenterView() {
   const [availableGradings, setAvailableGradings] = useState<PsaGrading[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [claimNotice, setClaimNotice] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   // open modals
@@ -78,22 +77,14 @@ export default function CenterView() {
     setLoading(false);
   }, [user]);
 
-  // Claim any pending passive income on mount.
+  // Silently sync any pending passive income on mount — no visible
+  // counter / toast. Showcase income accrues server-side and the
+  // user just sees a static "시간당 +Np / +M 점" rate below.
   useEffect(() => {
     (async () => {
       if (!user) return;
       const res = await claimShowcaseIncome(user.id);
-      if (res.ok && ((res.earned && res.earned > 0) || (res.earned_rank && res.earned_rank > 0))) {
-        const earned = res.earned ?? 0;
-        const earnedRank = res.earned_rank ?? 0;
-        const parts = [`전시 수익 +${earned.toLocaleString("ko-KR")}p`];
-        if (earnedRank > 0) {
-          parts.push(`랭킹 +${earnedRank.toLocaleString("ko-KR")}점`);
-        }
-        setClaimNotice(parts.join(" · "));
-        if (typeof res.points === "number") setPoints(res.points);
-        setTimeout(() => setClaimNotice(null), 5000);
-      }
+      if (res.ok && typeof res.points === "number") setPoints(res.points);
       await refresh();
     })();
   }, [user, refresh, setPoints]);
@@ -202,15 +193,18 @@ export default function CenterView() {
   );
 
   const incomePerHour = useMemo(() => {
-    let total = 0;
+    let trade = 0;
+    let rank = 0;
     for (const sc of showcases) {
       for (const c of sc.cards) {
         const card = getCard(c.card_id);
         if (!card) continue;
-        total += slabIncomeTrade(card.rarity, c.grade);
+        const t = slabIncomeTrade(card.rarity, c.grade);
+        trade += t;
+        rank += Math.floor(t / 200);
       }
     }
-    return total;
+    return { trade, rank };
   }, [showcases]);
 
   return (
@@ -233,14 +227,25 @@ export default function CenterView() {
         />
 
         {totalCards > 0 && (
-          <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-[11px] text-zinc-200">
-            <CoinIcon size="xs" />
-            <span>
-              현재 받게 될 수익 (전시 중 {totalCards}장 기준):{" "}
-              <b className="text-amber-200 tabular-nums">
-                +{incomePerHour.toLocaleString("ko-KR")}p
-              </b>{" "}
-              / 시간
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-amber-400/10 border border-amber-400/30 px-3 py-1.5 text-amber-200">
+              <CoinIcon size="xs" />
+              <b className="tabular-nums">
+                +{incomePerHour.trade.toLocaleString("ko-KR")}p
+              </b>
+              <span className="text-amber-200/70">/ 시간</span>
+            </div>
+            {incomePerHour.rank > 0 && (
+              <div className="inline-flex items-center gap-1.5 rounded-lg bg-rose-400/10 border border-rose-400/30 px-3 py-1.5 text-rose-200">
+                🏆
+                <b className="tabular-nums">
+                  +{incomePerHour.rank.toLocaleString("ko-KR")}
+                </b>
+                <span className="text-rose-200/70">랭킹 / 시간</span>
+              </div>
+            )}
+            <span className="text-zinc-500 text-[10px]">
+              · 1시간마다 자동 적립
             </span>
           </div>
         )}
@@ -259,13 +264,6 @@ export default function CenterView() {
             📜 방문 기록
           </button>
         </div>
-
-        {claimNotice && (
-          <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-amber-400/15 border border-amber-400/40 text-amber-200 text-xs font-bold px-3 py-1.5">
-            <CoinIcon size="xs" />
-            {claimNotice}
-          </div>
-        )}
 
         {error && (
           <div className="mt-3 text-xs text-rose-200 bg-rose-500/15 border border-rose-500/40 rounded-lg px-3 py-2">
