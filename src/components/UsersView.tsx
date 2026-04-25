@@ -199,10 +199,10 @@ export default function UsersView() {
       )}
       {mode === "pet" && (
         <p className="mt-2 text-[11px] text-zinc-400 leading-snug">
-          펫 점수 = 등록한 PCL10 펫 슬랩 (최대 5장) 의{" "}
+          펫 점수 = 등록한 PCL10 펫 슬랩 (최대 10장) 의{" "}
           <b className="text-zinc-200">희귀도 점수</b>(SR 5·MA 6·SAR 7·UR 8·MUR
           10) × 10 합산. 최대{" "}
-          <b className="text-fuchsia-300">500</b>점.
+          <b className="text-fuchsia-300">1,000</b>점.
         </p>
       )}
 
@@ -227,10 +227,15 @@ export default function UsersView() {
               <motion.li
                 key={e.id}
                 layout={reduce ? false : "position"}
-                initial={{ opacity: 0, y: 8 }}
+                // Cap stagger at 0.025/row and 0.25s total — the previous
+                // 0.03 step pushed long ranking lists past the 0.3s budget
+                // and the bottom rows visibly "rolled in" after the user
+                // had already started scrolling. Reduced motion skips the
+                // initial entry animation entirely.
+                initial={reduce ? false : { opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{
-                  delay: Math.min(rank * 0.03, 0.3),
+                  delay: reduce ? 0 : Math.min(rank * 0.025, 0.25),
                   layout: { type: "spring", stiffness: 380, damping: 32 },
                 }}
                 onClick={() =>

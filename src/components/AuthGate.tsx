@@ -20,5 +20,11 @@ export default function AuthGate({
   if (isLoading || !user) {
     return <CenteredPokeLoader label="잠시만요..." />;
   }
-  return <>{children}</>;
+  // Wrap with a CSS fade-in so the swap from loader → page doesn't snap.
+  // Using a CSS keyframe (not framer-motion) means the transition happens
+  // synchronously on the very first paint after auth resolves, instead of
+  // queuing a re-render to start an animation. This avoids the "loader
+  // disappears and the page initial={opacity:0} then re-fades" double
+  // animation the user perceived as choppy.
+  return <div className="fade-in">{children}</div>;
 }

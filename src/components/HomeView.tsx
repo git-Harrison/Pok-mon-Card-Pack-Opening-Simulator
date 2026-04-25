@@ -172,13 +172,16 @@ export default function HomeView() {
   const isAdmin = user?.user_id === ADMIN_LOGIN;
 
   // Stagger variants for set grid + nav tiles.
+  // Cap stagger at 0.025/child so 6-pack grid finishes within 0.15s and the
+  // 7-tile quick-nav finishes within 0.18s — feels snappy on mid-tier mobile
+  // devices where the previous 0.06 step caused a visible "rolling" delay.
   const gridVariants: Variants = useMemo(
     () => ({
       hidden: {},
       show: {
         transition: {
-          staggerChildren: reduce ? 0 : 0.06,
-          delayChildren: 0.12,
+          staggerChildren: reduce ? 0 : 0.025,
+          delayChildren: reduce ? 0 : 0.06,
         },
       },
     }),
@@ -428,22 +431,14 @@ function Hero({
 
       <motion.h1
         className="text-2xl sm:text-3xl md:text-5xl font-black tracking-tight leading-[1.15]"
-        initial={
-          reduce ? false : { opacity: 0, y: 10, filter: "blur(6px)" }
-        }
-        animate={{
-          opacity: 1,
-          y: 0,
-          filter: reduce
-            ? "blur(0px)"
-            : ["blur(6px)", "blur(0px)", "blur(2px)", "blur(0px)"],
-        }}
-        transition={{
-          duration: 0.9,
-          times: [0, 0.55, 0.7, 1],
-          ease: "easeOut",
-          delay: 0.05,
-        }}
+        // The original "blur-flicker" keyframes (6→0→2→0px filter on a huge
+        // gradient text node) were the single biggest paint hit on first
+        // render — every blur step forces a full-text repaint. Collapse to
+        // a single fade + tiny lift; the hero now draws in one frame on
+        // mid-tier phones instead of stuttering through 4 filter phases.
+        initial={reduce ? false : { opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: "easeOut", delay: 0.04 }}
       >
         <span className="bg-gradient-to-r from-amber-300 via-fuchsia-300 to-cyan-300 bg-clip-text text-transparent bg-[length:220%_100%] animate-[hero-sweep_8s_linear_infinite]">
           까고, 감별하고, 전시하고, 싸우자

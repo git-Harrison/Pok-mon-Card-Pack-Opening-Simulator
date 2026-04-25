@@ -55,6 +55,7 @@ function StaticCard({ card, sizing }: { card: Card; sizing: string }) {
           src={card.imageUrl}
           alt={card.name}
           loading="lazy"
+          decoding="async"
           draggable={false}
           onError={() => setImgError(true)}
           className="w-full h-full object-contain bg-zinc-900 select-none pointer-events-none"

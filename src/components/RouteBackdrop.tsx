@@ -99,6 +99,15 @@ export default function RouteBackdrop() {
             src={spec.image}
             alt=""
             draggable={false}
+            // Pre-decode off the main thread so backdrop swaps don't block
+            // first paint when navigating between routes. `loading="eager"`
+            // keeps the image in the initial fetch wave (it's the only
+            // visual chrome behind the page) while `decoding="async"` and
+            // `fetchPriority="low"` ensure it doesn't compete with content
+            // paint on slower devices.
+            loading="eager"
+            decoding="async"
+            fetchPriority="low"
             className="absolute inset-0 w-full h-full object-cover opacity-40 select-none pointer-events-none"
             style={{ imageRendering: "pixelated" }}
           />

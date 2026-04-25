@@ -475,6 +475,10 @@ const DexCell = memo(function DexCell({
             src={card.imageUrl}
             alt={card.name}
             loading="lazy"
+            // Async decode keeps the page-flip animation smooth — without
+            // it, decoding 24 card thumbnails on the main thread caused a
+            // visible hitch right as the flip transition started.
+            decoding="async"
             draggable={false}
             className="w-full h-full object-contain bg-zinc-950 select-none pointer-events-none"
           />

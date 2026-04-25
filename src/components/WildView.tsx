@@ -1244,6 +1244,11 @@ function BattleScene({
             src={biome.image}
             alt=""
             draggable={false}
+            // Async decode + eager load — biome backdrop is critical chrome
+            // so we want the network request immediately, but decoding off
+            // the main thread keeps the encounter UI's first paint snappy.
+            loading="eager"
+            decoding="async"
             className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
             style={{ imageRendering: "pixelated" }}
             initial={reduce ? false : { scale: 1.06, x: -8 }}
@@ -1465,6 +1470,7 @@ const WildSprite = memo(function WildSprite({
         src={src}
         alt=""
         draggable={false}
+        decoding="async"
         onError={() => setSrc(wildSpriteUrl(dex, false))}
         style={{
           imageRendering: "pixelated",
