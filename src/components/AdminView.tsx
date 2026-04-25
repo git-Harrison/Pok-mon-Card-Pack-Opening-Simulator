@@ -84,12 +84,16 @@ export default function AdminView() {
     await refresh();
   }, [user, target, amountRaw, mode, refresh]);
 
-  const grantAll = useCallback(
-    async (amount: number) => {
+  const bulkApply = useCallback(
+    async (magnitude: number) => {
       if (!user) return;
+      const signed = mode === "deduct" ? -Math.abs(magnitude) : Math.abs(magnitude);
+      const verb = mode === "deduct" ? "차감" : "지급";
+      const sign = signed >= 0 ? "+" : "-";
+      const display = `${sign}${Math.abs(signed).toLocaleString("ko-KR")}p`;
       if (
         !window.confirm(
-          `전체 ${users.length}명에게 ${amount.toLocaleString("ko-KR")}p를 지급할까요?`
+          `전체 ${users.length}명에게 ${display}를 ${verb}할까요?`
         )
       )
         return;
@@ -97,15 +101,15 @@ export default function AdminView() {
       setError(null);
       setNotice(null);
       for (const u of users) {
-        await adminGrantPoints(user.id, u.user_id, amount);
+        await adminGrantPoints(user.id, u.user_id, signed);
       }
       setSubmitting(false);
       setNotice(
-        `전체 ${users.length}명에게 +${amount.toLocaleString("ko-KR")}p 지급 완료`
+        `전체 ${users.length}명 ${display} ${verb} 완료`
       );
       await refresh();
     },
-    [user, users, refresh]
+    [user, users, mode, refresh]
   );
 
   return (
@@ -188,19 +192,29 @@ export default function AdminView() {
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => grantAll(1_000_000)}
+            onClick={() => bulkApply(1_000_000)}
             disabled={submitting}
-            className="h-9 px-3 rounded-full text-[11px] font-semibold border border-amber-400/40 bg-amber-400/10 text-amber-200 hover:bg-amber-400/20 disabled:opacity-50"
+            className={clsx(
+              "h-9 px-3 rounded-full text-[11px] font-semibold border disabled:opacity-50",
+              mode === "deduct"
+                ? "border-rose-500/40 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20"
+                : "border-amber-400/40 bg-amber-400/10 text-amber-200 hover:bg-amber-400/20"
+            )}
           >
-            전체 +100만p
+            전체 {mode === "deduct" ? "−" : "+"}100만p
           </button>
           <button
             type="button"
-            onClick={() => grantAll(10_000_000)}
+            onClick={() => bulkApply(10_000_000)}
             disabled={submitting}
-            className="h-9 px-3 rounded-full text-[11px] font-semibold border border-amber-300/60 bg-amber-300/15 text-amber-100 hover:bg-amber-300/25 disabled:opacity-50"
+            className={clsx(
+              "h-9 px-3 rounded-full text-[11px] font-semibold border disabled:opacity-50",
+              mode === "deduct"
+                ? "border-rose-400/60 bg-rose-500/15 text-rose-100 hover:bg-rose-500/25"
+                : "border-amber-300/60 bg-amber-300/15 text-amber-100 hover:bg-amber-300/25"
+            )}
           >
-            전체 +1,000만p
+            전체 {mode === "deduct" ? "−" : "+"}1,000만p
           </button>
         </div>
       </div>
