@@ -1,7 +1,7 @@
 "use client";
 
 import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import clsx from "clsx";
@@ -406,7 +406,7 @@ function modeAccent(mode: RankingMode): string {
   return "text-amber-300";
 }
 
-function ActivityFeed({
+const ActivityFeed = memo(function ActivityFeed({
   events,
   loading,
   mode,
@@ -464,7 +464,7 @@ function ActivityFeed({
       </ul>
     </div>
   );
-}
+});
 
 const TAUNT_PRESETS = [
   "네 센터는 장식용이야?",

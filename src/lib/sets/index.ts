@@ -28,12 +28,26 @@ export function getSet(code: string): SetInfo | null {
   return (SETS as Record<string, SetInfo | undefined>)[code] ?? null;
 }
 
-export function getCard(id: string): Card | null {
+// Build the id→card lookup once per module load. The previous
+// implementation did Array.find across every set on every call —
+// O(N×6), where N is per-set card count. With ~1,000 cards across six
+// sets it ran thousands of times per render in CenterView (incomePerHour
+// loop), WildView (eligibleSlabs), WalletView (psaItems), etc. The Map
+// is built lazily on first lookup so no startup cost is paid until a
+// card lookup is actually requested.
+let CARD_BY_ID: Map<string, Card> | null = null;
+function getCardIndex(): Map<string, Card> {
+  if (CARD_BY_ID) return CARD_BY_ID;
+  const m = new Map<string, Card>();
   for (const code of SET_ORDER) {
-    const found = SETS[code].cards.find((c) => c.id === id);
-    if (found) return found;
+    for (const c of SETS[code].cards) m.set(c.id, c);
   }
-  return null;
+  CARD_BY_ID = m;
+  return m;
+}
+
+export function getCard(id: string): Card | null {
+  return getCardIndex().get(id) ?? null;
 }
 
 export { m2a, m2, sv8, sv2a, sv8a, sv5a };

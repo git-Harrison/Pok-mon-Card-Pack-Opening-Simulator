@@ -1,7 +1,7 @@
 "use client";
 
 import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -1438,7 +1438,13 @@ function BattleScene({
   );
 }
 
-function WildSprite({ dex, hit }: { dex: number; hit: boolean }) {
+const WildSprite = memo(function WildSprite({
+  dex,
+  hit,
+}: {
+  dex: number;
+  hit: boolean;
+}) {
   const [src, setSrc] = useState(wildSpriteUrl(dex, true));
   // Without this, the local `src` state stays pinned to whichever dex
   // we mounted with — so 한번 더 swaps the name/text but leaves the
@@ -1469,9 +1475,9 @@ function WildSprite({ dex, hit }: { dex: number; hit: boolean }) {
       />
     </div>
   );
-}
+});
 
-function PlayerSlab({ slab }: { slab: Slab }) {
+const PlayerSlab = memo(function PlayerSlab({ slab }: { slab: Slab }) {
   const rstyle = RARITY_STYLE[slab.rarity];
   return (
     <div
@@ -1494,9 +1500,9 @@ function PlayerSlab({ slab }: { slab: Slab }) {
       )}
     </div>
   );
-}
+});
 
-function HpBar({
+const HpBar = memo(function HpBar({
   label,
   hp,
   max,
@@ -1549,7 +1555,7 @@ function HpBar({
       </div>
     </div>
   );
-}
+});
 
 function FloatingNumber({ damage }: { damage: FloatingDamage }) {
   const txt = damage.immune ? "무효" : `-${damage.value}`;

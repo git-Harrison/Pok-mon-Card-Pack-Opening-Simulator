@@ -1,7 +1,7 @@
 "use client";
 
 import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
@@ -501,7 +501,7 @@ export function CenterGrid({
   );
 }
 
-function ShowcaseCell({
+const ShowcaseCell = memo(function ShowcaseCell({
   showcase,
   onClick,
 }: {
@@ -576,7 +576,7 @@ function ShowcaseCell({
       </div>
     </Root>
   );
-}
+});
 
 function ShopModal({
   slot,

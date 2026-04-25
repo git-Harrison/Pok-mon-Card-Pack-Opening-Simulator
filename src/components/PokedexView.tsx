@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
@@ -423,7 +423,7 @@ function Book({
   );
 }
 
-function DexCell({
+const DexCell = memo(function DexCell({
   card,
   registered,
   onClick,
@@ -511,7 +511,7 @@ function DexCell({
       </div>
     </motion.button>
   );
-}
+});
 
 function CardPreview({
   card,

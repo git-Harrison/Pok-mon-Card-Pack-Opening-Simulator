@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { getCard, SET_ORDER, SETS } from "@/lib/sets";
@@ -85,20 +85,25 @@ export default function HomeView() {
   const [teasers, setTeasers] = useState<ActivityTeasers>(FALLBACK_TEASERS);
   const [topRankers, setTopRankers] = useState<RankingRow[]>([]);
 
-  // Quick stats: wallet + slabs + pokedex
+  // One combined fetch — slabs and pokedex were previously fetched
+  // twice (once for stats, once for teasers). Folding both effects
+  // into a single Promise.all halves the request count and lets the
+  // dashboard settle in a single paint instead of shimmering twice.
   useEffect(() => {
     if (!user) return;
     let alive = true;
     (async () => {
       try {
-        const [wallet, slabs, pokedex]: [
+        const [wallet, slabs, pokedex, activity]: [
           WalletSnapshot,
           PsaGrading[],
           PokedexEntry[],
+          UserActivityEvent[],
         ] = await Promise.all([
           fetchWallet(user.id),
           fetchPsaGradings(user.id),
           fetchPokedex(user.id),
+          fetchUserActivity(user.id, "rank"),
         ]);
         if (!alive) return;
         const packs = Object.values(wallet.packsOpenedBySet).reduce(
@@ -112,38 +117,10 @@ export default function HomeView() {
           pokedexCount: pokedex.length,
           loading: false,
         });
-      } catch {
-        if (!alive) return;
-        setStats((prev) => ({ ...prev, loading: false }));
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [user]);
-
-  // Activity teasers: latest slab + latest wild win + pokedex registered today
-  useEffect(() => {
-    if (!user) return;
-    let alive = true;
-    (async () => {
-      try {
-        const [slabs, activity, pokedex]: [
-          PsaGrading[],
-          UserActivityEvent[],
-          PokedexEntry[],
-        ] = await Promise.all([
-          fetchPsaGradings(user.id),
-          fetchUserActivity(user.id, "rank"),
-          fetchPokedex(user.id),
-        ]);
-        if (!alive) return;
-        // Latest slab by graded_at
         const sortedSlabs = [...slabs].sort((a, b) =>
           a.graded_at < b.graded_at ? 1 : -1
         );
         const top = sortedSlabs[0] ?? null;
-        // Latest wild victory from activity stream
         const wildWin =
           activity.find(
             (e) =>
@@ -151,7 +128,6 @@ export default function HomeView() {
               /야생/.test(e.label) ||
               /승리/.test(e.label)
           ) ?? null;
-        // Pokedex entries registered today (KST)
         const todayIso = startOfTodayKstISO();
         const pokedexToday = pokedex.filter(
           (p) => p.registered_at >= todayIso
@@ -170,6 +146,7 @@ export default function HomeView() {
         });
       } catch {
         if (!alive) return;
+        setStats((prev) => ({ ...prev, loading: false }));
         setTeasers((prev) => ({ ...prev, loading: false }));
       }
     })();
@@ -588,7 +565,7 @@ function QuickStats({
  * Pack tile (centerpiece)
  * ============================================================ */
 
-function PackTile({ code }: { code: SetCode }) {
+const PackTile = memo(function PackTile({ code }: { code: SetCode }) {
   const set = SETS[code];
   return (
     <Link
@@ -669,9 +646,15 @@ function PackTile({ code }: { code: SetCode }) {
       </div>
     </Link>
   );
-}
+});
 
-function Stat({ label, value }: { label: string; value: string }) {
+const Stat = memo(function Stat({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
   return (
     <div className="rounded-md bg-white/5 py-1.5 px-1 border border-white/5">
       <dt className="text-[9px] uppercase tracking-wider text-zinc-500">
@@ -682,7 +665,7 @@ function Stat({ label, value }: { label: string; value: string }) {
       </dd>
     </div>
   );
-}
+});
 
 /* ============================================================
  * Activity cards
@@ -838,7 +821,7 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-function NavTile({ href, label, Icon, tint }: NavItem) {
+const NavTile = memo(function NavTile({ href, label, Icon, tint }: NavItem) {
   return (
     <Link
       href={href}
@@ -850,7 +833,7 @@ function NavTile({ href, label, Icon, tint }: NavItem) {
       </span>
     </Link>
   );
-}
+});
 
 /* ============================================================
  * Background ambience
