@@ -1,5 +1,6 @@
 "use client";
 
+import PokeLoader from "./PokeLoader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -286,7 +287,7 @@ export default function CenterView() {
 
         {loading ? (
           <div className="mt-12 flex justify-center">
-            <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+            <PokeLoader size="md" />
           </div>
         ) : (
           <CenterGrid

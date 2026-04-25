@@ -1,5 +1,6 @@
 "use client";
 
+import PokeLoader from "./PokeLoader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
@@ -168,7 +169,7 @@ export default function GiftsView() {
 
       {loading ? (
         <div className="mt-16 flex justify-center">
-          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+          <PokeLoader size="md" />
         </div>
       ) : list.length === 0 ? (
         <div className="mt-10 rounded-2xl border border-dashed border-white/10 bg-white/5 py-10 flex flex-col items-center gap-2 text-center px-4">

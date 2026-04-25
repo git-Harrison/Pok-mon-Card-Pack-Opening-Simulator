@@ -271,6 +271,20 @@ samp {
   will-change: transform;
 }
 
+/* ---------- Pokeball loader spin/wobble ---------- */
+@keyframes pokeball-spin {
+  0%   { transform: rotate(0deg) scale(1); }
+  20%  { transform: rotate(-18deg) scale(1.04); }
+  50%  { transform: rotate(18deg) scale(1.04); }
+  80%  { transform: rotate(-12deg) scale(1.02); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+.animate-pokeball-spin {
+  animation: pokeball-spin 1.1s ease-in-out infinite;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
 /* ---------- Page entry fade ---------- */
 @keyframes fade-in {
   from {

@@ -1,5 +1,6 @@
 "use client";
 
+import PokeLoader from "./PokeLoader";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -560,7 +561,7 @@ export default function WildView() {
   if (loading) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 flex justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+        <PokeLoader size="md" />
       </div>
     );
   }
@@ -598,7 +599,6 @@ export default function WildView() {
             cooldownLeft={cooldownLeft}
             onStart={encounter}
           />
-          <TypeChartHint className="mt-4" />
         </div>
       )}
 

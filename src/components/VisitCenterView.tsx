@@ -1,5 +1,6 @@
 "use client";
 
+import PokeLoader from "./PokeLoader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -110,7 +111,7 @@ export default function VisitCenterView({ loginId }: { loginId: string }) {
       <div className="relative min-h-[calc(100dvh-4rem)]">
         <CenterBackdrop />
         <div className="relative z-10 max-w-3xl mx-auto px-4 py-12 flex justify-center">
-          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+          <PokeLoader size="md" />
         </div>
       </div>
     );
