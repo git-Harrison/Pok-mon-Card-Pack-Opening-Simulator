@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
-import { SET_ORDER, SETS } from "@/lib/sets";
+import { getCard, SET_ORDER, SETS } from "@/lib/sets";
 import type { PsaGrading, SetCode } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import {
@@ -284,7 +284,8 @@ export default function HomeView() {
                       </b>{" "}
                       <span className="text-zinc-400">·</span>{" "}
                       <span className="text-zinc-300">
-                        {teasers.latestSlab.card_id}
+                        {getCard(teasers.latestSlab.card_id)?.name ??
+                          teasers.latestSlab.card_id}
                       </span>
                     </span>
                   ) : (
