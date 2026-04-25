@@ -268,24 +268,11 @@ export default function GradingView() {
           {phase === "idle" && (
             <>
               <button
-                onClick={() => setPicking(true)}
+                onClick={() => setBulkOpen(true)}
                 style={{ touchAction: "manipulation" }}
-                className="h-11 md:h-12 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-sm"
+                className="col-span-2 h-12 rounded-xl bg-gradient-to-r from-fuchsia-500 to-indigo-500 text-white font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition shadow-[0_10px_30px_-10px_rgba(168,85,247,0.6)]"
               >
-                {selected ? "다른 카드" : "카드 선택"}
-              </button>
-              <button
-                onClick={submit}
-                disabled={!selected}
-                style={{ touchAction: "manipulation" }}
-                className={clsx(
-                  "h-12 rounded-xl font-bold text-sm transition",
-                  selected
-                    ? "bg-gradient-to-r from-fuchsia-500 to-indigo-500 text-white hover:scale-[1.02] active:scale-[0.98] shadow-[0_10px_30px_-10px_rgba(168,85,247,0.6)]"
-                    : "bg-white/5 text-zinc-500 cursor-not-allowed"
-                )}
-              >
-                감정 의뢰 접수
+                🔎 감별 카드 선택
               </button>
             </>
           )}
@@ -334,33 +321,7 @@ export default function GradingView() {
         </div>
       </section>
 
-      {/* Bulk grading CTA */}
-      <button
-        type="button"
-        onClick={() => setBulkOpen(true)}
-        disabled={phase !== "idle" && phase !== "revealed" && phase !== "failed"}
-        style={{ touchAction: "manipulation" }}
-        className={clsx(
-          "mt-3 w-full h-12 rounded-xl border text-sm font-bold inline-flex items-center justify-center gap-2 transition",
-          phase !== "idle" && phase !== "revealed" && phase !== "failed"
-            ? "bg-white/5 border-white/10 text-zinc-500 cursor-not-allowed"
-            : "bg-fuchsia-500/10 border-fuchsia-400/40 text-fuchsia-100 hover:bg-fuchsia-500/20"
-        )}
-      >
-        📚 일괄 감별
-      </button>
-
       <AnimatePresence>
-        {picking && wallet && (
-          <CardPicker
-            wallet={wallet}
-            onPick={(c) => {
-              setSelected(c);
-              setPicking(false);
-            }}
-            onClose={() => setPicking(false)}
-          />
-        )}
         {bulkOpen && wallet && user && (
           <BulkGradingModal
             wallet={wallet}
@@ -894,56 +855,26 @@ function BulkGradingModal({
       .sort((a, b) => compareRarity(a.card.rarity, b.card.rarity));
   }, [wallet]);
 
-  const [counts, setCounts] = useState<Record<string, number>>({});
   const [phase, setPhase] = useState<BulkPhase>("picking");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<BulkGradingResult | null>(null);
-  // null = 미사용. 7/8/9/10 = 해당 등급 미만은 자동 판매.
   const [autoSellBelow, setAutoSellBelow] = useState<number | null>(null);
 
-  const totalSelected = useMemo(
-    () => Object.values(counts).reduce((s, n) => s + n, 0),
-    [counts]
+  const totalEligibleCount = useMemo(
+    () => eligible.reduce((s, it) => s + it.count, 0),
+    [eligible]
   );
-
-  const bump = useCallback(
-    (cardId: string, max: number, delta: number) => {
-      setCounts((prev) => {
-        const cur = prev[cardId] ?? 0;
-        const next = Math.max(0, Math.min(max, cur + delta));
-        if (next === cur) return prev;
-        const out = { ...prev };
-        if (next === 0) delete out[cardId];
-        else out[cardId] = next;
-        return out;
-      });
-    },
-    []
-  );
-
-  const selectAll = useCallback(() => {
-    const next: Record<string, number> = {};
-    for (const it of eligible) next[it.card.id] = it.count;
-    setCounts(next);
-  }, [eligible]);
-
-  const clearAll = useCallback(() => setCounts({}), []);
 
   const submit = useCallback(async () => {
-    if (totalSelected === 0 || phase !== "picking") return;
+    if (totalEligibleCount === 0 || phase !== "picking") return;
     setError(null);
     setPhase("submitting");
-    // Expand into flat arrays: each card repeated `count` times; the
-    // rarities[] array is kept parallel so the server can credit
-    // hourly income at the right tier later.
     const cardIds: string[] = [];
     const rarities: string[] = [];
-    for (const [id, n] of Object.entries(counts)) {
-      const item = eligible.find((it) => it.card.id === id);
-      const rarity = item?.card.rarity ?? "";
-      for (let i = 0; i < n; i++) {
-        cardIds.push(id);
-        rarities.push(rarity);
+    for (const it of eligible) {
+      for (let i = 0; i < it.count; i++) {
+        cardIds.push(it.card.id);
+        rarities.push(it.card.rarity);
       }
     }
     const res = await bulkSubmitPsaGrading(
@@ -968,9 +899,8 @@ function BulkGradingModal({
     setResult(res);
     setPhase("done");
   }, [
-    totalSelected,
+    totalEligibleCount,
     phase,
-    counts,
     userId,
     username,
     onPointsChange,
@@ -1020,48 +950,34 @@ function BulkGradingModal({
             <BulkResults result={result} onClose={onClose} />
           ) : (
             <>
-              <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4">
-                {eligible.length === 0 ? (
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-5 space-y-4">
+                {totalEligibleCount === 0 ? (
                   <div className="py-10 text-center text-sm text-zinc-400">
-                    <p>감정 대상 카드가 없어요.</p>
+                    <p>감별 가능한 카드가 없어요.</p>
                     <p className="mt-1 text-[11px]">
-                      모든 등급의 카드를 감별할 수 있어요.
+                      박스를 열어 카드를 모은 뒤 다시 시도해 주세요.
                     </p>
                   </div>
                 ) : (
                   <>
-                    <div className="mb-3 flex items-center justify-between gap-2">
-                      <div className="text-[11px] text-zinc-400">
-                        실패 시 카드 소실 · 감별 확률은 단일 감별과 동일
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={selectAll}
-                          className="h-8 px-2.5 rounded-md bg-white/5 hover:bg-white/10 text-xs text-zinc-200 font-semibold border border-white/10"
-                        >
-                          전부 선택
-                        </button>
-                        <button
-                          type="button"
-                          onClick={clearAll}
-                          className="h-8 px-2.5 rounded-md bg-white/5 hover:bg-white/10 text-xs text-zinc-200 font-semibold border border-white/10"
-                        >
-                          초기화
-                        </button>
-                      </div>
+                    <div className="rounded-2xl border border-fuchsia-400/40 bg-fuchsia-500/10 p-4 text-center">
+                      <p className="text-[11px] uppercase tracking-wider text-fuchsia-200/80">
+                        지갑에서 감별 가능한 카드
+                      </p>
+                      <p className="mt-1 text-3xl md:text-4xl font-black tabular-nums text-fuchsia-100">
+                        {totalEligibleCount.toLocaleString("ko-KR")}
+                        <span className="text-base font-bold text-fuchsia-300/80"> 장</span>
+                      </p>
+                      <p className="mt-2 text-[11px] text-fuchsia-200/80 leading-relaxed">
+                        제출 시 <b>모든 감별 가능 카드</b>를 일괄로 의뢰해요.
+                        실패 시 카드는 사라져요. (감별 확률은 단일 감별과 동일)
+                      </p>
                     </div>
-                    <div className="space-y-1.5">
-                      {eligible.map(({ card, count }) => (
-                        <BulkPickRow
-                          key={card.id}
-                          card={card}
-                          owned={count}
-                          selected={counts[card.id] ?? 0}
-                          onBump={(delta) => bump(card.id, count, delta)}
-                        />
-                      ))}
-                    </div>
+                    <AutoSellThresholdPicker
+                      value={autoSellBelow}
+                      disabled={phase === "submitting"}
+                      onChange={setAutoSellBelow}
+                    />
                   </>
                 )}
               </div>
@@ -1072,19 +988,14 @@ function BulkGradingModal({
                 </div>
               )}
 
-              <div className="shrink-0 border-t border-white/10 p-3 bg-black/40 space-y-2.5">
-                <AutoSellThresholdPicker
-                  value={autoSellBelow}
-                  disabled={phase === "submitting"}
-                  onChange={setAutoSellBelow}
-                />
+              <div className="shrink-0 border-t border-white/10 p-3 bg-black/40">
                 <button
                   type="button"
                   onClick={submit}
-                  disabled={totalSelected === 0 || phase === "submitting"}
+                  disabled={totalEligibleCount === 0 || phase === "submitting"}
                   className={clsx(
                     "w-full h-12 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 transition",
-                    totalSelected > 0 && phase !== "submitting"
+                    totalEligibleCount > 0 && phase !== "submitting"
                       ? "bg-gradient-to-r from-fuchsia-500 to-indigo-500 text-white hover:scale-[1.01] active:scale-[0.98] shadow-[0_10px_30px_-10px_rgba(168,85,247,0.6)]"
                       : "bg-white/5 text-zinc-500 cursor-not-allowed border border-white/10"
                   )}
@@ -1093,11 +1004,11 @@ function BulkGradingModal({
                   {phase === "submitting" ? (
                     <>
                       <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                      감정 중...
+                      감별 중...
                     </>
                   ) : (
                     <>
-                      감정 의뢰 접수 · {totalSelected}장
+                      🔎 {totalEligibleCount.toLocaleString("ko-KR")}장 일괄 감별
                     </>
                   )}
                 </button>

@@ -206,14 +206,10 @@ export default function ProfileView() {
             </div>
           )}
 
+          {!profile?.character_locked && (
           <section className="mt-7">
             <h2 className="text-sm font-bold text-white inline-flex items-center gap-1.5">
               <span aria-hidden>🎭</span>캐릭터 선택
-              {profile?.character_locked && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-200 border border-rose-500/40">
-                  🔒 확정됨
-                </span>
-              )}
             </h2>
             <p className="mt-1 text-[11px] text-rose-300 font-semibold">
               ⚠️ 캐릭터는 한 번 선택하면 변경할 수 없어요. 신중하게 골라주세요.
@@ -262,6 +258,7 @@ export default function ProfileView() {
               })}
             </div>
           </section>
+          )}
 
           <section className="mt-8">
             <div className="flex items-end justify-between gap-2 flex-wrap">

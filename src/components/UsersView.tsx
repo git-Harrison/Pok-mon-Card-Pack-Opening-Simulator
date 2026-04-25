@@ -10,7 +10,6 @@ import { usePresence } from "@/lib/usePresence";
 import { getCard } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
 import type { Rarity } from "@/lib/types";
-import PageHeader from "./PageHeader";
 import Portal from "./Portal";
 import { getCharacter } from "@/lib/profile";
 import { CharacterAvatar } from "./ProfileView";
@@ -58,13 +57,7 @@ export default function UsersView() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
-      <PageHeader
-        title="사용자 랭킹"
-        subtitle="PCL 감별 성공 + 센터 전시로 점수를 쌓아 올라가세요"
-      />
-
-      {/* Tab switcher: 랭킹 점수 / 전투력 */}
-      <div className="mt-3 inline-flex items-stretch rounded-xl bg-white/5 border border-white/10 p-1">
+      <div className="inline-flex items-stretch rounded-xl bg-white/5 border border-white/10 p-1">
         <button
           type="button"
           onClick={() => setMode("rank")}
@@ -184,7 +177,11 @@ export default function UsersView() {
                   >
                     {trophy ?? rank + 1}
                   </div>
-                  {def ? <CharacterAvatar def={def} size="sm" /> : null}
+                  {def ? (
+                    <div className="shrink-0 flex items-center justify-center">
+                      <CharacterAvatar def={def} size="md" />
+                    </div>
+                  ) : null}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       {isOnline && (
@@ -194,11 +191,11 @@ export default function UsersView() {
                           className="inline-block w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
                         />
                       )}
-                      <h2 className="text-base md:text-lg font-bold text-white truncate">
+                      <h2 className="text-base md:text-lg font-bold text-white break-words">
                         {e.display_name}
                       </h2>
                     </div>
-                    <p className="text-[11px] md:text-xs text-zinc-400 mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
+                    <p className="text-[11px] md:text-xs text-zinc-400 mt-0.5 whitespace-nowrap">
                       전시 {e.showcase_count ?? 0}장 · 부수기{" "}
                       {e.sabotage_wins ?? 0}회
                       {mode === "pet" && (e.pet_score ?? 0) > 0 && (
