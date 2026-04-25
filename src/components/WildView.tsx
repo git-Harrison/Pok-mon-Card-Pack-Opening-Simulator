@@ -849,7 +849,7 @@ function BattleScene({
   const playerBubble = bubble?.side === "player" ? bubble.text : "";
   return (
     <motion.section
-      className="relative mt-3 overflow-visible aspect-[4/3.2] md:aspect-[4/4]"
+      className="relative mt-3 overflow-visible aspect-[4/4.4] md:aspect-[4/4.6]"
       animate={
         phase === "lost" && !reduce
           ? { x: [0, -8, 8, -6, 6, -3, 3, 0] }
