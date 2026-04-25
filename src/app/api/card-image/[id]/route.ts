@@ -4,8 +4,8 @@ import { getCard } from "@/lib/sets";
 /**
  * Proxy the card's source image (Pokellector CDN) through our own origin
  * so the browser can convert it into a File object without tripping CORS.
- * Used by the "카드 공유하기" button on CardDetailView to attach the real
- * card image to navigator.share({ files }).
+ * Used by the "카드 공유하기" button on the /card/[id] page (CardActions
+ * island) to attach the real card image to navigator.share({ files }).
  *
  * Also reused by the OG image response so link previews in Discord /
  * iMessage / KakaoTalk show the card art directly.

@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 
+// Pure static SSR — no user data, no dynamic params. Force-static so
+// the route is fully prerendered at build time and served from the edge
+// cache without invoking the Node runtime.
+export const dynamic = "force-static";
+
 export const metadata: Metadata = {
   title: "접속 제한 · Access Blocked",
   robots: { index: false, follow: false },
