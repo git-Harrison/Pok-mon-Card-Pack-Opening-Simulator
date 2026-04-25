@@ -147,7 +147,7 @@ export default function ProfileView() {
   const scorePct = Math.min(100, (petScore / MAX_PET_SCORE) * 100);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
+    <div className="max-w-3xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
       <PageHeader
         title="내 프로필"
         subtitle="트레이너 캐릭터를 고르고 자랑할 슬랩을 펫으로 등록하세요"
@@ -385,7 +385,7 @@ function ProfileBanner({
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-1.5">
-        <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 px-2 py-1.5 text-center">
+        <div className="min-h-[68px] flex flex-col items-center justify-center rounded-lg bg-rose-500/10 border border-rose-500/30 px-2 py-1.5 text-center">
           <div className="text-[9px] uppercase tracking-wider text-rose-300/80">
             ⚔️ 전투력
           </div>
@@ -393,7 +393,7 @@ function ProfileBanner({
             {centerPower.toLocaleString("ko-KR")}
           </div>
         </div>
-        <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-2 py-1.5 text-center">
+        <div className="min-h-[68px] flex flex-col items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-2 py-1.5 text-center">
           <div className="text-[9px] uppercase tracking-wider text-emerald-300/80">
             📔 도감
           </div>
@@ -404,7 +404,7 @@ function ProfileBanner({
             </span>
           </div>
         </div>
-        <div className="rounded-lg bg-amber-400/10 border border-amber-400/30 px-2 py-1.5 text-center">
+        <div className="min-h-[68px] flex flex-col items-center justify-center rounded-lg bg-amber-400/10 border border-amber-400/30 px-2 py-1.5 text-center">
           <div className="text-[9px] uppercase tracking-wider text-amber-300/80">
             🐾 펫
           </div>

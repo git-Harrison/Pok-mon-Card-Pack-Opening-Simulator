@@ -6,6 +6,7 @@ import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import {
+  bulkDisplayPclSlabs,
   buyShowcase,
   claimShowcaseIncome,
   displayGrading,
@@ -209,7 +210,7 @@ export default function CenterView() {
   return (
     <div className="relative min-h-[calc(100dvh-4rem)]">
       <CenterBackdrop />
-      <div className="relative z-10 max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
+      <div className="relative z-10 max-w-3xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
         <PageHeader
           title="내 포켓몬센터"
           stats={

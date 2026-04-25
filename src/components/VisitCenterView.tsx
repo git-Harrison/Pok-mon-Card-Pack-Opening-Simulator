@@ -141,7 +141,7 @@ export default function VisitCenterView({ loginId }: { loginId: string }) {
   return (
     <div className="relative min-h-[calc(100dvh-4rem)]">
       <CenterBackdrop />
-      <div className="relative z-10 max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
+      <div className="relative z-10 max-w-3xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
         <Link
           href="/center"
           className="inline-block mb-1 text-[11px] text-zinc-300/80 hover:text-white"

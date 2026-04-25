@@ -427,7 +427,7 @@ export default function SetView({ set }: { set: SetInfo }) {
   const remainingCount = packs.length - openedCount;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-12">
+    <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 md:py-8">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <Link href="/" className="text-xs text-zinc-400 hover:text-white">

@@ -129,7 +129,7 @@ export default function GradingView() {
   const tone = grade ? psaTone(grade) : null;
 
   return (
-    <div className="max-w-2xl mx-auto px-3 md:px-6 py-3 md:py-8 fade-in">
+    <div className="max-w-2xl mx-auto px-3 md:px-6 py-3 md:py-6 fade-in">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="min-w-0 flex-1 hidden md:block">

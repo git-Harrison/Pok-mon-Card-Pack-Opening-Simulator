@@ -6,8 +6,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
 import { fetchUserRankings, sendTaunt, type RankingRow } from "@/lib/db";
+import { usePresence } from "@/lib/usePresence";
 import { getCard } from "@/lib/sets";
-import PointsChip from "./PointsChip";
 import PageHeader from "./PageHeader";
 import Portal from "./Portal";
 import { getCharacter } from "@/lib/profile";
@@ -17,6 +17,7 @@ type RankingMode = "rank" | "power" | "pet";
 
 export default function UsersView() {
   const { user: currentUser } = useAuth();
+  const onlineSet = usePresence(currentUser?.id);
   const [rows, setRows] = useState<RankingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<RankingMode>("rank");
@@ -54,7 +55,7 @@ export default function UsersView() {
   );
 
   return (
-    <div className="max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
+    <div className="max-w-3xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
       <PageHeader
         title="사용자 랭킹"
         subtitle="PCL 감별 성공 + 센터 전시로 점수를 쌓아 올라가세요"
@@ -129,9 +130,11 @@ export default function UsersView() {
           {entries.map((e, rank) => {
             const isMe = currentUser?.id === e.id;
             const def = getCharacter(e.character);
-            const isOnline = (e.seconds_since_seen ?? Infinity) < 300;
+            const isOnline = onlineSet.has(e.id);
             const isExpanded = expandedId === e.id;
             const petCount = e.main_card_ids?.length ?? 0;
+            const isTopThree = rank < 3;
+            const trophy = rank === 0 ? "🏆" : rank === 1 ? "🥈" : rank === 2 ? "🥉" : null;
 
             return (
               <motion.li
@@ -154,7 +157,7 @@ export default function UsersView() {
                 }}
                 style={{ touchAction: "manipulation" }}
                 className={clsx(
-                  "rounded-2xl border overflow-hidden cursor-pointer hover:bg-white/[0.02] transition-colors",
+                  "rounded-2xl border overflow-hidden cursor-pointer hover:bg-white/5 hover:border-white/20 transition-colors",
                   isMe
                     ? "bg-amber-400/5 border-amber-400/50 shadow-[0_0_24px_-6px_rgba(251,191,36,0.4)]"
                     : "bg-white/5 border-white/10"
@@ -163,17 +166,21 @@ export default function UsersView() {
                 <div className="p-3 md:p-4 flex items-center gap-3 md:gap-4">
                   <div
                     className={clsx(
-                      "shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-black text-sm md:text-base border",
+                      "shrink-0 rounded-full flex items-center justify-center font-black border",
+                      isTopThree
+                        ? "w-12 h-12 md:w-14 md:h-14 text-xl md:text-2xl"
+                        : "w-10 h-10 md:w-12 md:h-12 text-sm md:text-base",
                       rank === 0
-                        ? "bg-amber-400/20 text-amber-200 border-amber-400/60"
+                        ? "bg-amber-400/20 text-amber-200 border-amber-400/60 shadow-[0_0_16px_-4px_rgba(251,191,36,0.7)]"
                         : rank === 1
                         ? "bg-zinc-300/10 text-zinc-200 border-zinc-300/40"
                         : rank === 2
                         ? "bg-orange-500/10 text-orange-200 border-orange-500/40"
                         : "bg-white/5 text-zinc-400 border-white/10"
                     )}
+                    aria-label={`${rank + 1}위`}
                   >
-                    {rank + 1}
+                    {trophy ?? rank + 1}
                   </div>
                   {def ? <CharacterAvatar def={def} size="sm" /> : null}
                   <div className="flex-1 min-w-0">
@@ -197,7 +204,7 @@ export default function UsersView() {
                     <p className="text-[11px] md:text-xs text-zinc-400 mt-0.5">
                       전시 {e.showcase_count ?? 0}장 · 부수기 성공{" "}
                       {e.sabotage_wins ?? 0}회
-                      {(e.pet_score ?? 0) > 0 && (
+                      {mode !== "rank" && (e.pet_score ?? 0) > 0 && (
                         <>
                           {" · "}
                           <span className="text-amber-300 font-semibold">
@@ -242,16 +249,13 @@ export default function UsersView() {
                         <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
                           랭킹 점수
                         </div>
-                        <div className="mt-1">
-                          <PointsChip points={e.points} size="sm" />
-                        </div>
                       </>
                     )}
                   </div>
                   <span
                     aria-hidden
                     className={clsx(
-                      "shrink-0 text-zinc-500 text-xs transition-transform",
+                      "shrink-0 w-6 h-6 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-zinc-300 text-[11px] transition-transform",
                       isExpanded ? "rotate-180" : "rotate-0"
                     )}
                   >

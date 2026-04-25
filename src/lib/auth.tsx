@@ -13,7 +13,6 @@ import {
   fetchMe,
   rpcLogin,
   rpcSignup,
-  touchLastSeen,
   type DbUser,
 } from "./db";
 
@@ -68,7 +67,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const stored = loadSession();
     if (stored) {
       setUser(stored);
-      void touchLastSeen(stored.id);
       fetchMe(stored.id)
         .then((fresh) => {
           if (fresh) persist(fresh);
@@ -92,7 +90,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const tick = async () => {
       if (!alive) return;
       if (typeof document !== "undefined" && document.hidden) return;
-      void touchLastSeen(userId);
       const fresh = await fetchMe(userId);
       if (alive && fresh) persist(fresh);
     };

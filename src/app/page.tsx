@@ -5,7 +5,7 @@ import { SET_ORDER, SETS } from "@/lib/sets";
 export default function Home() {
   return (
     <AuthGate>
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-14 fade-in">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-4 md:py-10 fade-in">
         <section className="text-center max-w-3xl mx-auto">
           <div className="flex items-center justify-center gap-2 flex-wrap mb-2">
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-white/5 border border-white/10 text-zinc-300">

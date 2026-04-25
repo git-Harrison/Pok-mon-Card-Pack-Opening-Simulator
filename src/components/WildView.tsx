@@ -588,7 +588,7 @@ export default function WildView() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-3 md:px-6 py-3 md:py-8 fade-in">
+    <div className="max-w-2xl mx-auto px-3 md:px-6 py-3 md:py-6 fade-in">
       <PageHeader title="🌿 야생" />
 
       {phase === "idle" && (

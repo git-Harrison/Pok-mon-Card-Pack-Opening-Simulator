@@ -641,6 +641,23 @@ export async function undisplayGrading(
   return data as { ok: boolean; error?: string };
 }
 
+export async function bulkDisplayPclSlabs(
+  userId: string,
+  showcaseId: string
+) {
+  const { data, error } = await supabase.rpc("bulk_display_pcl_slabs", {
+    p_user_id: userId,
+    p_showcase_id: showcaseId,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    error?: string;
+    displayed_count?: number;
+    remaining_capacity?: number;
+  };
+}
+
 export async function fetchUndisplayedGradings(
   userId: string
 ): Promise<PsaGrading[]> {

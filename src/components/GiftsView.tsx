@@ -129,7 +129,7 @@ export default function GiftsView() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
+    <div className="max-w-4xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
       <PageHeader
         title="선물함"
         stats={

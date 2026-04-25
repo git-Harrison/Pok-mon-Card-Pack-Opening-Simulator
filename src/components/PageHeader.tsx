@@ -44,7 +44,7 @@ export default function PageHeader({
     <header
       className={clsx(
         "flex items-start justify-between gap-3 flex-wrap",
-        dense ? "" : "mb-4 md:mb-5"
+        dense ? "" : "mb-2 md:mb-5"
       )}
     >
       <div className="min-w-0 hidden md:block">

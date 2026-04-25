@@ -15,6 +15,7 @@ import {
 import { RARITY_ORDER, RARITY_STYLE, RARITY_LABEL } from "@/lib/rarity";
 import type { Card, Rarity } from "@/lib/types";
 import PageHeader from "./PageHeader";
+import Portal from "./Portal";
 import RarityBadge from "./RarityBadge";
 
 const CARDS_PER_PAGE = 24;
@@ -114,7 +115,7 @@ export default function PokedexView() {
   }, [toast]);
 
   return (
-    <div className="max-w-5xl mx-auto px-3 md:px-6 py-4 md:py-8 fade-in">
+    <div className="max-w-5xl mx-auto px-3 md:px-6 py-3 md:py-6 fade-in">
       <PageHeader
         title="PCL 도감"
         icon="📔"
@@ -188,48 +189,49 @@ export default function PokedexView() {
         </span>
       </div>
 
-      <Book
-        loading={loading}
-        flipDir={flipDir}
-        pageIndex={safePageIndex}
-        pageCards={pageCards}
-        registeredIds={registeredIds}
-        emptyForRarity={cardsForTab.length === 0}
-        rarityLabel={RARITY_LABEL[activeRarity]}
-      />
-
-      <div className="mt-3 flex items-center justify-between gap-2">
+      <div className="relative">
+        <Book
+          loading={loading}
+          flipDir={flipDir}
+          pageIndex={safePageIndex}
+          pageCards={pageCards}
+          registeredIds={registeredIds}
+          emptyForRarity={cardsForTab.length === 0}
+          rarityLabel={RARITY_LABEL[activeRarity]}
+        />
         <button
           type="button"
           onClick={goPrev}
           disabled={safePageIndex <= 0}
+          aria-label="이전 페이지"
           style={{ touchAction: "manipulation" }}
           className={clsx(
-            "h-11 px-5 rounded-xl border font-bold text-sm transition inline-flex items-center gap-2",
+            "absolute left-0 md:left-1 top-1/2 -translate-y-1/2 z-10 inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full border-2 font-black text-lg transition shadow-lg",
             safePageIndex <= 0
-              ? "bg-white/5 border-white/10 text-zinc-600 cursor-not-allowed"
-              : "bg-white/10 border-white/15 text-white hover:bg-white/15"
+              ? "bg-zinc-900/60 border-white/10 text-zinc-600 cursor-not-allowed"
+              : "bg-zinc-950/90 border-amber-400/50 text-amber-100 hover:bg-amber-500/20 hover:scale-110 active:scale-95"
           )}
         >
-          ← 이전
+          ◀
         </button>
-        <div className="text-[11px] text-zinc-400 tabular-nums">
-          {safePageIndex + 1} / {totalPages}
-        </div>
         <button
           type="button"
           onClick={goNext}
           disabled={safePageIndex >= totalPages - 1}
+          aria-label="다음 페이지"
           style={{ touchAction: "manipulation" }}
           className={clsx(
-            "h-11 px-5 rounded-xl border font-bold text-sm transition inline-flex items-center gap-2",
+            "absolute right-0 md:right-1 top-1/2 -translate-y-1/2 z-10 inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full border-2 font-black text-lg transition shadow-lg",
             safePageIndex >= totalPages - 1
-              ? "bg-white/5 border-white/10 text-zinc-600 cursor-not-allowed"
-              : "bg-white/10 border-white/15 text-white hover:bg-white/15"
+              ? "bg-zinc-900/60 border-white/10 text-zinc-600 cursor-not-allowed"
+              : "bg-zinc-950/90 border-amber-400/50 text-amber-100 hover:bg-amber-500/20 hover:scale-110 active:scale-95"
           )}
         >
-          다음 →
+          ▶
         </button>
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 px-2.5 py-1 rounded-full bg-zinc-950/80 border border-white/10 text-[11px] text-zinc-300 tabular-nums font-bold">
+          {safePageIndex + 1} / {totalPages}
+        </div>
       </div>
 
       <AnimatePresence>
@@ -451,59 +453,69 @@ function BulkConfirm({
   submitting: boolean;
 }) {
   return (
-    <motion.div
-      key="bulk-confirm"
-      className="fixed inset-0 z-[190] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onCancel}
-    >
+    <Portal>
       <motion.div
-        className="w-full max-w-sm bg-zinc-950 border border-amber-400/40 rounded-2xl overflow-hidden shadow-2xl"
-        initial={{ y: 16, opacity: 0, scale: 0.95 }}
-        animate={{ y: 0, opacity: 1, scale: 1 }}
-        exit={{ y: 16, opacity: 0, scale: 0.95 }}
-        transition={{ type: "spring", stiffness: 220, damping: 24 }}
-        onClick={(e) => e.stopPropagation()}
+        key="bulk-confirm"
+        className="fixed inset-0 z-[190] bg-black/85 backdrop-blur-md flex items-center justify-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onCancel}
+        style={{
+          paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+          paddingLeft: 12,
+          paddingRight: 12,
+        }}
       >
-        <div className="px-4 pt-4 pb-2 text-center">
-          <div className="text-4xl mb-1">📔</div>
-          <h3 className="text-base font-black text-white">
-            도감 일괄 등록할까요?
-          </h3>
-          <p className="mt-1 text-[12px] text-zinc-300 leading-relaxed">
-            보유 중인 PCL10 슬랩 (전시 중이 아니고 도감에 없는 카드) 이 모두
-            도감에 박제돼요. 해당 슬랩은 <b className="text-amber-200">카드지갑
-            에서 영구 삭제</b>되며 다시 꺼낼 수 없어요.
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-2 p-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={submitting}
-            style={{ touchAction: "manipulation" }}
-            className="h-11 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-sm disabled:opacity-50"
-          >
-            취소
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={submitting}
-            style={{ touchAction: "manipulation" }}
-            className={clsx(
-              "h-11 rounded-xl font-bold text-sm transition",
-              submitting
-                ? "bg-amber-400/40 text-zinc-900 cursor-wait"
-                : "bg-gradient-to-r from-amber-400 to-fuchsia-500 text-zinc-950 hover:scale-[1.02] active:scale-[0.98]"
-            )}
-          >
-            {submitting ? "등록 중..." : "전부 등록"}
-          </button>
-        </div>
+        <motion.div
+          className="w-full max-w-md bg-zinc-950 border border-amber-400/40 rounded-2xl overflow-y-auto shadow-2xl"
+          style={{ maxHeight: "calc(100dvh - 24px)" }}
+          initial={{ y: 16, opacity: 0, scale: 0.95 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: 16, opacity: 0, scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 220, damping: 24 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-4 pt-4 pb-2 text-center">
+            <div className="text-4xl mb-1">📔</div>
+            <h3 className="text-base font-black text-white">
+              도감 일괄 등록할까요?
+            </h3>
+            <p className="mt-1 text-[12px] text-zinc-300 leading-relaxed">
+              보유 중인 PCL10 슬랩 (전시 중이 아니고 도감에 없는 카드) 이 모두
+              도감에 박제돼요. 해당 슬랩은{" "}
+              <b className="text-amber-200">카드지갑에서 영구 삭제</b>되며 다시
+              꺼낼 수 없어요.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 p-3">
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={submitting}
+              style={{ touchAction: "manipulation" }}
+              className="h-11 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-sm disabled:opacity-50"
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={submitting}
+              style={{ touchAction: "manipulation" }}
+              className={clsx(
+                "h-11 rounded-xl font-bold text-sm transition",
+                submitting
+                  ? "bg-amber-400/40 text-zinc-900 cursor-wait"
+                  : "bg-gradient-to-r from-amber-400 to-fuchsia-500 text-zinc-950 hover:scale-[1.02] active:scale-[0.98]"
+              )}
+            >
+              {submitting ? "등록 중..." : "전부 등록"}
+            </button>
+          </div>
+        </motion.div>
       </motion.div>
-    </motion.div>
+    </Portal>
   );
 }

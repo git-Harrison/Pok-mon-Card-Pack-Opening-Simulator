@@ -109,7 +109,7 @@ export default function WalletView() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
+    <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
       <PageHeader
         title="내 카드지갑"
         stats={

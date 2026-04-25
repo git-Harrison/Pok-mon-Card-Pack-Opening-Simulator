@@ -169,7 +169,7 @@ export default function BulkSellView() {
   const hasAny = rarityTotals.length > 0 || gradeTotals.length > 0;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
+    <div className="max-w-2xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
       <div className="flex items-center justify-between gap-2">
         <button
           onClick={() => router.back()}
