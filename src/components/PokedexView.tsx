@@ -10,79 +10,14 @@ import {
   getAllCatalogCards,
   nextBreakpoint,
   pokedexPowerBonus,
-  POKEDEX_BREAKPOINTS,
   type PokedexEntry,
 } from "@/lib/pokedex";
 import { RARITY_ORDER, RARITY_STYLE, RARITY_LABEL } from "@/lib/rarity";
 import type { Card, Rarity } from "@/lib/types";
-import HelpButton, { type HelpSection } from "./HelpButton";
 import PageHeader from "./PageHeader";
 import RarityBadge from "./RarityBadge";
 
-const HELP_SECTIONS: HelpSection[] = [
-  {
-    heading: "도감이란",
-    icon: "📔",
-    body: (
-      <>
-        모든 카드가 표시되며, 도감에 등록되지 않은 카드는 어둡게 보여요. 한 번
-        등록하면 그 슬랩은 카드지갑에서 사라지고 도감에 박제돼요. 카드 한 종류는
-        한 번만 등록할 수 있어요.
-      </>
-    ),
-  },
-  {
-    heading: "등록 조건",
-    icon: "✅",
-    body: (
-      <ul>
-        <li>PCL 10등급으로 감별된 카드만 등록 가능 (센터에 전시 중이 아닌 슬랩)</li>
-        <li>같은 카드(card_id)는 한 번만 등록 가능</li>
-        <li>등록된 카드는 카드지갑에서 영구 삭제 — 다시 꺼낼 수 없어요</li>
-      </ul>
-    ),
-  },
-  {
-    heading: "일괄 등록",
-    icon: "📦",
-    body: (
-      <>
-        <b>📔 도감 일괄 등록</b> 버튼을 누르면 보유 중인 모든 PCL10 슬랩 (전시
-        중이 아니고 도감에 없는 카드) 이 한 번에 도감에 등록되고, 해당 슬랩들은
-        카드지갑에서 영구 삭제돼요.
-      </>
-    ),
-  },
-  {
-    heading: "전투력 보너스",
-    icon: "⚡",
-    body: (
-      <>
-        도감 보유 수에 따라 <b>센터 전투력</b>에 보너스가 붙어 사용자 랭킹에
-        자동 반영돼요.
-        <ul className="mt-1.5">
-          <li>5장 → +500</li>
-          <li>10장 → +1,200</li>
-          <li>15장 → +2,000</li>
-          <li>20장 → +3,000</li>
-          <li>30장 → +5,000 (이후 1장당 +100)</li>
-        </ul>
-      </>
-    ),
-  },
-  {
-    heading: "책 넘기기",
-    icon: "📖",
-    body: (
-      <>
-        도감은 책처럼 한 페이지에 6장씩 펼쳐져요. 좌우 화살표로 페이지를 넘기면
-        3D 페이지 플립 애니메이션이 재생돼요.
-      </>
-    ),
-  },
-];
-
-const CARDS_PER_PAGE = 6;
+const CARDS_PER_PAGE = 24;
 
 const RARITY_TABS: Rarity[] = RARITY_ORDER;
 
@@ -193,7 +128,6 @@ export default function PokedexView() {
             <span className="px-2 py-1 rounded-full bg-fuchsia-400/15 border border-fuchsia-400/40 text-fuchsia-100 text-[11px] font-bold">
               전투력 +{bonus.toLocaleString("ko-KR")}p
             </span>
-            <HelpButton size="sm" title="PCL 도감" sections={HELP_SECTIONS} />
           </>
         }
       />
@@ -229,24 +163,9 @@ export default function PokedexView() {
             {submitting ? "등록 중..." : "📔 도감 일괄 등록"}
           </button>
         </div>
-        <div className="mt-2 flex items-center gap-1 flex-wrap">
-          {POKEDEX_BREAKPOINTS.map((b) => (
-            <span
-              key={b.count}
-              className={clsx(
-                "px-2 py-0.5 rounded-full text-[10px] font-bold border",
-                count >= b.count
-                  ? "bg-amber-400/20 text-amber-100 border-amber-400/50"
-                  : "bg-white/5 text-zinc-400 border-white/10"
-              )}
-            >
-              {b.count}장 · {b.label}
-            </span>
-          ))}
-        </div>
       </div>
 
-      <div className="flex items-center gap-1.5 mb-3 overflow-x-auto pb-1 -mx-1 px-1">
+      <div className="flex items-center gap-1.5 mb-3 overflow-x-auto py-2 -my-1 px-1 -mx-1">
         {RARITY_TABS.map((r) => {
           const totalInTab = groupedByRarity.get(r)?.length ?? 0;
           const dexedInTab = (groupedByRarity.get(r) ?? []).filter((c) =>
@@ -259,6 +178,7 @@ export default function PokedexView() {
               active={activeRarity === r}
               dexed={dexedInTab}
               total={totalInTab}
+              complete={totalInTab > 0 && dexedInTab >= totalInTab}
               onClick={() => setActiveRarity(r)}
             />
           );
@@ -344,12 +264,14 @@ function RarityTab({
   active,
   dexed,
   total,
+  complete,
   onClick,
 }: {
   rarity: Rarity;
   active: boolean;
   dexed: number;
   total: number;
+  complete: boolean;
   onClick: () => void;
 }) {
   const style = RARITY_STYLE[rarity];
@@ -359,7 +281,7 @@ function RarityTab({
       onClick={onClick}
       style={{ touchAction: "manipulation" }}
       className={clsx(
-        "shrink-0 h-9 px-3 rounded-full text-[11px] font-bold transition border inline-flex items-center gap-1.5",
+        "shrink-0 h-10 px-3 rounded-full text-[11px] font-bold transition border inline-flex items-center gap-1.5 ring-offset-0",
         active
           ? clsx("ring-2", style.frame, "bg-white text-zinc-900 border-white")
           : "bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10"
@@ -374,6 +296,11 @@ function RarityTab({
       >
         {dexed}/{total}
       </span>
+      {complete && (
+        <span className="tabular-nums text-[10px] px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-fuchsia-500 text-zinc-950 font-black">
+          ✨ 완성
+        </span>
+      )}
     </button>
   );
 }
@@ -437,7 +364,7 @@ function Book({
             transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
             style={{ transformOrigin: flipDir === 1 ? "left center" : "right center" }}
           >
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 backface-hidden">
+            <div className="grid grid-cols-6 sm:grid-cols-6 md:grid-cols-8 gap-1.5 backface-hidden">
               {pageCards.map((c) => (
                 <DexCell
                   key={c.id}
@@ -449,7 +376,7 @@ function Book({
                 (_, i) => (
                   <div
                     key={`pad-${i}`}
-                    className="rounded-xl border border-dashed border-white/5 bg-white/[0.02] aspect-[5/7]"
+                    className="rounded-md border border-dashed border-white/5 bg-white/[0.02] aspect-[5/7]"
                   />
                 )
               )}
@@ -474,14 +401,15 @@ function DexCell({
   return (
     <div
       className={clsx(
-        "relative rounded-xl overflow-hidden ring-2 bg-zinc-950 transition",
+        "group relative w-full aspect-[5/7] rounded-md overflow-hidden ring-1 bg-zinc-950 transition",
         style.frame,
         !registered && "ring-zinc-700/30"
       )}
+      title={`${card.name} · ${rarity}`}
     >
       <div
         className={clsx(
-          "relative aspect-[5/7]",
+          "absolute inset-0",
           !registered && "opacity-30 saturate-50 grayscale"
         )}
       >
@@ -494,40 +422,20 @@ function DexCell({
             className="w-full h-full object-contain bg-zinc-950 select-none pointer-events-none"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-zinc-400 text-xs">
+          <div className="w-full h-full flex items-center justify-center text-zinc-500 text-[8px] px-0.5 text-center leading-tight">
             {card.name}
-          </div>
-        )}
-        {registered && (
-          <div className="absolute top-1.5 right-1.5">
-            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-[12px] font-black bg-emerald-400 text-zinc-950 shadow-[0_0_10px_rgba(74,222,128,0.7)]">
-              ✓
-            </span>
-          </div>
-        )}
-        {!registered && (
-          <div className="absolute inset-0 flex items-end justify-center pb-2">
-            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-black/70 text-zinc-300 border border-white/10">
-              미등록
-            </span>
           </div>
         )}
       </div>
-      <div className="px-2 py-1.5 bg-black/60 border-t border-white/5">
-        <div className="flex items-center justify-between gap-1">
-          <p
-            className={clsx(
-              "text-[11px] font-bold truncate",
-              registered ? "text-white" : "text-zinc-500"
-            )}
-          >
-            {card.name}
-          </p>
-          <RarityBadge rarity={rarity} size="xs" />
+      {registered && (
+        <div className="absolute top-0.5 right-0.5">
+          <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[8px] font-black bg-emerald-400 text-zinc-950 shadow-[0_0_6px_rgba(74,222,128,0.6)]">
+            ✓
+          </span>
         </div>
-        <p className="text-[9px] text-zinc-600 mt-0.5 tabular-nums">
-          {card.id}
-        </p>
+      )}
+      <div className="absolute bottom-0 left-0">
+        <RarityBadge rarity={rarity} size="xs" />
       </div>
     </div>
   );

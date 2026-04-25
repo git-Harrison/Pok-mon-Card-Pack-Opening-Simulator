@@ -22,7 +22,6 @@ import CoinIcon from "./CoinIcon";
 import PsaSlab from "./PsaSlab";
 import { CenterBackdrop, CenterGrid, ModalShell } from "./CenterView";
 import PageHeader from "./PageHeader";
-import HelpButton, { type HelpSection } from "./HelpButton";
 import { CharacterAvatar } from "./ProfileView";
 
 export default function VisitCenterView({ loginId }: { loginId: string }) {
@@ -156,11 +155,6 @@ export default function VisitCenterView({ loginId }: { loginId: string }) {
             <>
               <Kpi label="보관함" value={`${showcases.length}`} />
               <Kpi label="전시" value={`${totalCards}`} highlight />
-              <HelpButton
-                size="sm"
-                title="다른 유저 센터"
-                sections={VISIT_HELP_SECTIONS}
-              />
             </>
           }
         />
@@ -477,51 +471,6 @@ function SabotageResultModal({
     </ModalShell>
   );
 }
-
-const VISIT_HELP_SECTIONS: HelpSection[] = [
-  {
-    heading: "여긴 어디?",
-    icon: "🏛️",
-    body: (
-      <>
-        다른 유저의 포켓몬센터를 둘러보는 페이지예요. 전시된 슬랩을 감상하거나,
-        부수기를 시도하거나, 조롱 메시지를 보낼 수 있어요.
-      </>
-    ),
-  },
-  {
-    heading: "부수기",
-    icon: "💥",
-    body: (
-      <>
-        보관함 위 슬랩을 눌러 시도. 성공 확률 = 30% − 보관함 방어(3/5/10/15%).
-        비용은 보관함 가격의 10%.
-        <ul className="mt-1.5">
-          <li>
-            성공 → 보관함·슬랩 영구 삭제 +{" "}
-            <b className="text-amber-200">보관함가 80%</b> 전리품 + 랭킹
-            +3,000점
-          </li>
-          <li>실패 → 비용 환불 없음. 단, 시도 사실은 디스코드에 자동 공지</li>
-          <li>
-            주인은 시도 결과와 무관하게{" "}
-            <b className="text-emerald-200">비용의 50%</b>를 자동 적립
-          </li>
-        </ul>
-      </>
-    ),
-  },
-  {
-    heading: "조롱하기",
-    icon: "🔥",
-    body: (
-      <>
-        우측 상단 🔥 버튼으로 200자 이내 메시지를 보낼 수 있어요. 받은 사람의
-        화면에 강제 팝업으로 떠요.
-      </>
-    ),
-  },
-];
 
 function VisitStatsPanel({ stats }: { stats: CenterVisitStats }) {
   const character = getCharacter(stats.character ?? null);

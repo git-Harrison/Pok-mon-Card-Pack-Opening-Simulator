@@ -109,6 +109,10 @@ export async function fetchMe(userId: string): Promise<DbUser | null> {
   return data as DbUser;
 }
 
+export async function touchLastSeen(userId: string) {
+  await supabase.rpc("touch_last_seen", { p_user_id: userId });
+}
+
 // ---------- Users directory ----------
 
 export interface UserListEntry {
@@ -413,6 +417,10 @@ export interface RankingRow {
   main_card_ids?: string[];
   /** Pet slabs (PCL10) in slot order, with rarity for thumbnails. */
   main_cards?: RankingMainCard[];
+  /** Pokedex registered count (for /users dropdown). */
+  pokedex_count?: number;
+  /** Seconds since last_seen_at — used to render the online dot. */
+  seconds_since_seen?: number;
   gradings: RankingPsaGrading[];
 }
 

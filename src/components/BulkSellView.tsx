@@ -21,7 +21,6 @@ import {
 import { PCL_SELL_PRICE, psaTone } from "@/lib/psa";
 import CoinIcon from "./CoinIcon";
 import PageHeader from "./PageHeader";
-import HelpButton from "./HelpButton";
 import type { PsaGrading, Rarity } from "@/lib/types";
 
 /**
@@ -185,105 +184,7 @@ export default function BulkSellView() {
       </div>
 
       <div className="mt-2">
-        <PageHeader
-          title="일괄 판매"
-          stats={
-            <HelpButton
-              size="sm"
-              title="일괄 판매"
-              sections={[
-                {
-                  heading: "일괄 판매란",
-                  icon: "💰",
-                  body: (
-                    <>
-                      지갑에 쌓인 일반 카드를 등급별로 묶어 한 번에 처분하는
-                      화면이에요. 단가가 낮은 대신 빠르게 정리할 수 있어요.
-                    </>
-                  ),
-                },
-                {
-                  heading: "등급별 단가",
-                  icon: "🪙",
-                  body: (
-                    <ul>
-                      <li>
-                        <b>MUR</b> · 10,000p
-                      </li>
-                      <li>
-                        <b>UR</b> · 5,000p
-                      </li>
-                      <li>
-                        <b>SAR</b> · 3,000p
-                      </li>
-                      <li>
-                        <b>SR · MA</b> · 1,000p
-                      </li>
-                      <li>
-                        <b>AR</b> · 500p
-                      </li>
-                      <li>
-                        <b>RR</b> · 200p
-                      </li>
-                      <li>
-                        <b>R</b> · 100p
-                      </li>
-                      <li>
-                        <b>U</b> · 50p
-                      </li>
-                      <li>
-                        <b>C</b> · 25p
-                      </li>
-                    </ul>
-                  ),
-                },
-                {
-                  heading: "추천 흐름",
-                  icon: "✨",
-                  body: (
-                    <ul>
-                      <li>
-                        <b>SR 이상</b>은 우선{" "}
-                        <Link
-                          href="/grading"
-                          className="underline text-amber-300"
-                        >
-                          PCL 감별
-                        </Link>
-                        에 도전 — 성공 시 슬랩 보너스가 일괄 판매보다 훨씬
-                        커요.
-                      </li>
-                      <li>
-                        <b>RR 이하 잡카드</b>만 일괄 판매로 정리하는 게
-                        효율적이에요.
-                      </li>
-                      <li>
-                        박스 개봉 화면의 <b>"AR 미만 자동 판매"</b> 옵션을
-                        켜두면 처음부터 지갑에 안 들어와요.
-                      </li>
-                    </ul>
-                  ),
-                },
-                {
-                  heading: "PCL 슬랩 일괄 판매",
-                  icon: "💎",
-                  body: (
-                    <>
-                      슬랩은 이 화면이 아니라{" "}
-                      <Link
-                        href="/wallet?tab=psa"
-                        className="underline text-amber-300"
-                      >
-                        지갑의 PCL 탭
-                      </Link>
-                      에서 별도로 처분해요.
-                    </>
-                  ),
-                },
-              ]}
-            />
-          }
-        />
+        <PageHeader title="일괄 판매" />
       </div>
 
       {/* Grand total summary */}

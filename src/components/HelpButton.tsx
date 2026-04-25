@@ -30,12 +30,15 @@ export default function HelpButton({
   title,
   sections,
   size = "md",
+  iconOnly = false,
   className,
 }: {
   /** Modal title — usually the page name. */
   title: string;
   sections: HelpSection[];
   size?: "sm" | "md";
+  /** Show only the ❓ glyph in a compact circular chip (used by the global header). */
+  iconOnly?: boolean;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -68,14 +71,19 @@ export default function HelpButton({
         onClick={() => setOpen(true)}
         aria-label="도움말"
         className={clsx(
-          "inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 hover:bg-white/10 active:bg-white/15 text-zinc-200 font-semibold transition",
-          size === "sm" ? "h-7 px-2.5 text-[10px]" : "h-8 px-3 text-[11px]",
+          "inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 hover:bg-white/10 active:bg-white/15 text-zinc-200 font-semibold transition",
+          iconOnly
+            ? "w-9 h-9 text-base"
+            : clsx(
+                "gap-1",
+                size === "sm" ? "h-7 px-2.5 text-[10px]" : "h-8 px-3 text-[11px]"
+              ),
           className
         )}
         style={{ touchAction: "manipulation" }}
       >
         <span aria-hidden>❓</span>
-        <span>도움말</span>
+        {!iconOnly && <span>도움말</span>}
       </button>
 
       <AnimatePresence>

@@ -26,92 +26,6 @@ import PsaSlab from "./PsaSlab";
 import CoinIcon from "./CoinIcon";
 import Portal from "./Portal";
 import NpcDialog, { type NpcMood } from "./NpcDialog";
-import PageHeader from "./PageHeader";
-import HelpButton, { type HelpSection } from "./HelpButton";
-
-const HELP_SECTIONS: HelpSection[] = [
-  {
-    heading: "PCL 감별이란",
-    icon: "🔎",
-    body: (
-      <>
-        모든 등급의 카드를 PCL 슬랩으로 감별할 수 있어요. 슬랩은 일반 카드보다
-        가치가 훨씬 높고,{" "}
-        <b>센터 전시</b>·<b>야생 배틀</b>·<b>랭킹 점수</b>의 핵심 자원이에요.
-      </>
-    ),
-  },
-  {
-    heading: "성공 확률",
-    icon: "🎲",
-    body: (
-      <>
-        <ul>
-          <li>실패 (슬랩 안 만들어짐) · <b>70%</b></li>
-          <li>PCL 6 · 8%</li>
-          <li>PCL 7 · 10%</li>
-          <li>PCL 8 · 8%</li>
-          <li>PCL 9 · 3.5%</li>
-          <li>PCL 10 · 0.5%</li>
-        </ul>
-        <p className="mt-1.5 text-zinc-400">실패해도 카드는 사라져요. 신중하게.</p>
-      </>
-    ),
-  },
-  {
-    heading: "지갑 보너스",
-    icon: "🪙",
-    body: (
-      <>
-        감별 성공 시 등급별 즉시 입금:
-        <ul className="mt-1.5">
-          <li>PCL 10 · <b className="text-amber-300">+50,000p</b></li>
-          <li>PCL 9 · +30,000p</li>
-          <li>PCL 8 · +10,000p</li>
-          <li>PCL 6·7 · +3,000p</li>
-        </ul>
-      </>
-    ),
-  },
-  {
-    heading: "랭킹 점수",
-    icon: "🏆",
-    body: (
-      <>
-        <b className="text-amber-300">PCL 10 성공만</b> 랭킹 점수 +500점
-        (누적). 슬랩이 부서지거나 팔려도 점수는 안 빠져요. PCL 6~9는 랭킹
-        점수에 들어가지 않지만 <b>전시 수익</b>과 <b>야생 배틀</b>에서는
-        활약해요.
-      </>
-    ),
-  },
-  {
-    heading: "일괄 감별",
-    icon: "📚",
-    body: (
-      <>
-        여러 장을 한 번에 감별하면 빠르고,{" "}
-        <b>&quot;PCL N 미만 자동 판매&quot;</b> 옵션을 켜두면 낮은 등급은
-        슬랩으로 만들지 않고 즉시 환산돼요. 슬랩 한도 500장에 가까울 때
-        유용해요.
-      </>
-    ),
-  },
-  {
-    heading: "한도와 주의",
-    icon: "⚠️",
-    body: (
-      <>
-        <ul>
-          <li>PCL 슬랩 보유 한도 <b>500장</b></li>
-          <li>한 번 감별한 카드는 결과와 무관하게 지갑에서 사라져요</li>
-          <li>슬랩은 <b>야생에서 패배</b>하면 영구 삭제</li>
-          <li>슬랩은 <b>센터 부수기 성공</b>으로도 영구 삭제</li>
-        </ul>
-      </>
-    ),
-  },
-];
 
 type Phase = "idle" | "animating" | "failing" | "revealed" | "failed";
 
@@ -237,7 +151,6 @@ export default function GradingView() {
               {caseId}
             </div>
           </div>
-          <HelpButton size="sm" title="PCL 감별" sections={HELP_SECTIONS} />
         </div>
       </div>
 

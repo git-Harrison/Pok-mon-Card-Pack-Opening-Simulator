@@ -85,7 +85,6 @@ import { BOX_COST, RARITY_STYLE } from "@/lib/rarity";
 import PackOpeningStage from "./PackOpeningStage";
 import RarityBadge from "./RarityBadge";
 import CoinIcon from "./CoinIcon";
-import HelpButton from "./HelpButton";
 
 // Persist an in-progress box across navigations so that pressing the
 // browser back button (e.g. from wallet → back to set) doesn't nuke
@@ -446,88 +445,6 @@ export default function SetView({ set }: { set: SetInfo }) {
             label="개봉"
             value={`${openedCount} / ${set.packsPerBox}`}
             highlight
-          />
-          <HelpButton
-            size="sm"
-            title="박스 개봉"
-            sections={[
-              {
-                heading: "박스 vs 팩",
-                icon: "📦",
-                body: (
-                  <>
-                    박스를 열면 그 안에서 <b>5팩</b>이 나와요. 각 팩에는{" "}
-                    <b>5장</b>의 카드가 들어 있고, 슬롯별로 등급 가중치가 달라
-                    마지막 슬롯은 보통 RR/AR/SR 이상 보장이에요.
-                  </>
-                ),
-              },
-              {
-                heading: "한 박스 가격",
-                icon: "🪙",
-                body: (
-                  <>
-                    세트마다 박스 가격이 다르게 책정돼요. 우측 상단에 보이는{" "}
-                    <b>박스당</b> 슬롯 표기와 같이, 자세한 단가는 박스 구매 버튼
-                    위 가격 칩에서 확인하세요.
-                  </>
-                ),
-              },
-              {
-                heading: "AR 미만 자동 판매",
-                icon: "💸",
-                body: (
-                  <>
-                    체크하면 C · U · R · RR 카드는 지갑에 저장하지 않고
-                    일괄판매 단가로 즉시 포인트로 환산돼요.
-                    <ul className="mt-1.5">
-                      <li>지갑 한도(10,000장)에 잘 안 닿게 해줘요</li>
-                      <li>박스 한 판 / 여러 박스 한번에 모두 적용</li>
-                      <li>설정은 자동 저장 (다음 박스 열 때도 유지)</li>
-                    </ul>
-                  </>
-                ),
-              },
-              {
-                heading: "여러 박스 한번에",
-                icon: "🚀",
-                body: (
-                  <>
-                    3 / 5 / 10박스를 한 번에 자동 개봉할 수 있어요. 결과 화면에
-                    모든 카드와 자동판매 수익이 합산돼서 표시돼요. 한 박스라도
-                    저장 실패 시 그 박스 비용만 환불, 그 전까지는 정상 저장.
-                  </>
-                ),
-              },
-              {
-                heading: "지갑이 가득 찰 때",
-                icon: "💼",
-                body: (
-                  <>
-                    일반 카드 <b>10,000장</b>을 넘기면 박스가 거부되고 비용이
-                    자동 환불돼요. 이럴 땐 자동 판매 옵션을 켜거나,{" "}
-                    <b>일괄 판매</b>로 잡카드를 정리한 뒤 다시 시도하세요.
-                  </>
-                ),
-              },
-              {
-                heading: "팁",
-                icon: "💡",
-                body: (
-                  <ul>
-                    <li>
-                      어떤 등급이든 <b>감별</b>해서 슬랩으로 만들 수 있어요 —
-                      일괄 판매보다 보너스가 훨씬 커요.
-                    </li>
-                    <li>감별 실패 시 카드가 사라지니 신중히 (실패 70%).</li>
-                    <li>
-                      박스 도중 페이지를 떠나도 깐 카드는 24시간 동안 자동
-                      복원돼요.
-                    </li>
-                  </ul>
-                ),
-              },
-            ]}
           />
         </div>
       </div>

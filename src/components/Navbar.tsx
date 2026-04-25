@@ -1,24 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
 import { fetchUnseenGiftCount } from "@/lib/db";
 import { getCharacter } from "@/lib/profile";
+import { resolvePageHelp } from "@/lib/page-help";
 import { useRealtimeInbox } from "@/lib/useRealtimeInbox";
 import { CharacterAvatar } from "./ProfileView";
+import HelpButton from "./HelpButton";
 import PointsChip from "./PointsChip";
 import {
   BookIcon,
   GiftIcon,
   HomeIcon,
   LeafIcon,
-  LogoutIcon,
   MagnifyIcon,
+  MuseumIcon,
   TrophyIcon,
   UserIcon,
+  WalletIcon,
 } from "./icons/NavIcons";
 
 const NAV_ITEMS = [
@@ -28,10 +31,12 @@ const NAV_ITEMS = [
   { href: "/pokedex", label: "도감", Icon: BookIcon },
   { href: "/users", label: "랭킹", Icon: TrophyIcon },
   { href: "/profile", label: "프로필", Icon: UserIcon },
+  { href: "/wallet", label: "지갑", Icon: WalletIcon },
+  { href: "/center", label: "센터", Icon: MuseumIcon },
   { href: "/gifts", label: "선물함", Icon: GiftIcon },
 ];
 
-// 지갑/센터는 프로필 페이지에서 진입. 도감/선물함은 더보기에서.
+// 지갑/센터/도감/선물함은 더보기 시트에서 진입.
 const MOBILE_PRIMARY = ["/", "/wild", "/grading", "/users", "/profile"];
 
 // Header title shown next to the logo. Mobile only — saves vertical
@@ -66,10 +71,34 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const isPublic = pathname === "/login" || pathname === "/signup";
   const [moreOpen, setMoreOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMoreOpen(false);
+    setUserMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (!userMenuRef.current) return;
+      if (!userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setUserMenuOpen(false);
+    };
+    window.addEventListener("mousedown", onDocClick);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", onDocClick);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [userMenuOpen]);
+
+  const pageHelp = useMemo(() => resolvePageHelp(pathname), [pathname]);
 
   // Gift badge: count of pending received gifts that haven't been
   // viewed yet. Refreshes on route change so visiting /gifts (which
@@ -144,6 +173,10 @@ export default function Navbar() {
                       ? "PCL 도감"
                       : label === "프로필"
                       ? "내 프로필"
+                      : label === "지갑"
+                      ? "내 카드지갑"
+                      : label === "센터"
+                      ? "내 포켓몬센터"
                       : label}
                     {showBadge && (
                       <span className="absolute -top-0.5 -right-1 min-w-[18px] h-[18px] rounded-full bg-rose-500 text-white text-[10px] font-black px-1 inline-flex items-center justify-center ring-2 ring-black/40">
@@ -156,7 +189,7 @@ export default function Navbar() {
             </nav>
           )}
 
-          {/* Right side: points + user + logout (always compact) */}
+          {/* Right side: points + user + help (always compact) */}
           {user ? (
             <div className="flex items-center gap-2">
               {user.user_id === "hun" && (
@@ -170,28 +203,84 @@ export default function Navbar() {
                 </Link>
               )}
               <PointsChip points={user.points} size="sm" />
-              {(() => {
-                const def = getCharacter(user.character);
-                return def ? (
-                  <Link
-                    href="/profile"
-                    aria-label="내 프로필"
-                    className="hidden sm:inline-flex items-center"
+              <div ref={userMenuRef} className="relative">
+                {(() => {
+                  const def = getCharacter(user.character);
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setUserMenuOpen((v) => !v)}
+                      aria-label="계정 메뉴"
+                      aria-haspopup="menu"
+                      aria-expanded={userMenuOpen}
+                      style={{ touchAction: "manipulation" }}
+                      className={clsx(
+                        "inline-flex items-center gap-1.5 rounded-full pl-1 pr-2 sm:pr-2.5 h-9 transition border",
+                        userMenuOpen
+                          ? "bg-white/10 border-white/20"
+                          : "bg-white/5 border-white/10 hover:bg-white/10"
+                      )}
+                    >
+                      {def ? (
+                        <CharacterAvatar def={def} size="xs" />
+                      ) : (
+                        <span className="w-7 h-7 rounded-full bg-white/10 inline-flex items-center justify-center text-[12px]">
+                          🙂
+                        </span>
+                      )}
+                      <span className="hidden sm:inline text-xs text-zinc-200 font-semibold max-w-[8rem] truncate">
+                        {user.display_name}
+                      </span>
+                      <span aria-hidden className="text-zinc-400 text-[10px]">
+                        ▾
+                      </span>
+                    </button>
+                  );
+                })()}
+                {userMenuOpen && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-[calc(100%+6px)] z-50 w-44 rounded-xl border border-white/10 bg-zinc-950/95 backdrop-blur shadow-2xl py-1.5"
                   >
-                    <CharacterAvatar def={def} size="xs" />
-                  </Link>
-                ) : null;
-              })()}
-              <span className="hidden sm:inline text-xs text-zinc-400">
-                <span className="text-zinc-200 font-semibold">{user.display_name}</span>
-              </span>
-              <button
-                onClick={logout}
-                aria-label="로그아웃"
-                className="w-9 h-9 flex items-center justify-center rounded-md text-zinc-400 hover:text-white hover:bg-white/5 transition"
-              >
-                <LogoutIcon />
-              </button>
+                    <Link
+                      href="/profile"
+                      role="menuitem"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block px-3 py-2 text-xs text-zinc-200 hover:bg-white/10"
+                    >
+                      내 프로필
+                    </Link>
+                    <Link
+                      href="/wallet"
+                      role="menuitem"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block px-3 py-2 text-xs text-zinc-200 hover:bg-white/10"
+                    >
+                      내 카드지갑
+                    </Link>
+                    <div className="my-1 h-px bg-white/10" />
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        logout();
+                      }}
+                      className="block w-full text-left px-3 py-2 text-xs text-rose-200 hover:bg-rose-500/15"
+                    >
+                      로그아웃
+                    </button>
+                  </div>
+                )}
+              </div>
+              {pageHelp && (
+                <HelpButton
+                  iconOnly
+                  size="sm"
+                  title={pageHelp.title}
+                  sections={pageHelp.sections}
+                />
+              )}
             </div>
           ) : (
             !isPublic && (

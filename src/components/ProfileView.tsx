@@ -26,104 +26,8 @@ import {
 } from "@/lib/profile";
 import { getCard, SETS } from "@/lib/sets";
 import PageHeader from "./PageHeader";
-import HelpButton, { type HelpSection } from "./HelpButton";
 import PsaSlab from "./PsaSlab";
 import Portal from "./Portal";
-
-const HELP_SECTIONS: HelpSection[] = [
-  {
-    heading: "캐릭터 선택",
-    icon: "🎭",
-    body: (
-      <>
-        애니메이션 1세대 관동 지방의 캐릭터 6명 중 한 명을 선택해 자신의
-        트레이너로 쓸 수 있어요. 모든 캐릭터는 도트 모션으로 움직여요.
-        <ul className="mt-1.5">
-          <li>
-            <b className="text-rose-300">지우</b> · 만년 10살 주인공
-          </li>
-          <li>
-            <b className="text-cyan-300">이슬</b> · 푸른 도시 체육관 관장
-          </li>
-          <li>
-            <b className="text-amber-300">웅</b> · 회색 시티 체육관 관장
-          </li>
-          <li>
-            <b className="text-zinc-200">오박사</b> · 태초마을 박사
-          </li>
-          <li>
-            <b className="text-emerald-300">그린</b> · 라이벌
-          </li>
-          <li>
-            <b className="text-rose-400">목호</b> · 사천왕 챔피언
-          </li>
-        </ul>
-        <p className="mt-2 text-rose-300 font-bold">
-          ⚠️ 캐릭터는 한 번 선택하면 변경할 수 없어요. 신중하게 골라주세요.
-        </p>
-      </>
-    ),
-  },
-  {
-    heading: "닉네임 변경",
-    icon: "✏️",
-    body: (
-      <>
-        프로필 배너의 <b className="text-amber-300">닉네임 변경</b> 버튼으로
-        언제든 새 닉네임으로 바꿀 수 있어요. 길이는 {DISPLAY_NAME_MIN}~
-        {DISPLAY_NAME_MAX}자, 다른 사용자와 중복은 불가.
-        <p className="mt-2 text-zinc-400">
-          랭킹 · 선물 · 도촬 등 닉네임이 표시되는 모든 곳에 즉시 반영돼요.
-          로그인 아이디는 바뀌지 않아요.
-        </p>
-      </>
-    ),
-  },
-  {
-    heading: "펫 시스템",
-    icon: "🐾",
-    body: (
-      <>
-        가장 자랑하고 싶은 슬랩 5장을 <b>메인 카드</b>(펫)로 등록할 수
-        있어요. 슬롯을 누르면 등록 가능한 슬랩 목록이 떠요. 등록한 슬랩은
-        프로필 점수와 펫 점수에 즉시 반영돼요.
-      </>
-    ),
-  },
-  {
-    heading: "PCL10 한정",
-    icon: "💎",
-    body: (
-      <>
-        펫으로 등록할 수 있는 슬랩은 <b className="text-amber-300">PCL10 GEM
-        MINT</b> 슬랩에 한정돼요. 9등급 이하 슬랩은 펫이 될 수 없으니
-        감별을 더 도전해보세요.
-      </>
-    ),
-  },
-  {
-    heading: "점수 산정",
-    icon: "📈",
-    body: (
-      <>
-        펫 점수 = (희귀도 점수 × 10) 의 합산.
-        <ul className="mt-1.5">
-          <li>SR · ×10 = 50</li>
-          <li>MA · ×10 = 60</li>
-          <li>SAR · ×10 = 70</li>
-          <li>UR · ×10 = 80</li>
-          <li>
-            <b className="text-amber-300">MUR · ×10 = 100</b>
-          </li>
-        </ul>
-        <p className="mt-2 text-zinc-400">
-          최대치는 MUR PCL10 5장 등록 시 <b className="text-white">500점</b>.
-          전당 입성을 노려보세요.
-        </p>
-      </>
-    ),
-  },
-];
 
 export default function ProfileView() {
   const { user, refreshMe } = useAuth();
@@ -244,12 +148,6 @@ export default function ProfileView() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 md:px-6 py-5 md:py-8 fade-in">
-      <div
-        className="fixed right-3 z-30"
-        style={{ top: "calc(env(safe-area-inset-top, 0px) + 64px)" }}
-      >
-        <HelpButton size="sm" title="내 프로필" sections={HELP_SECTIONS} />
-      </div>
       <PageHeader
         title="내 프로필"
         subtitle="트레이너 캐릭터를 고르고 자랑할 슬랩을 펫으로 등록하세요"
@@ -492,13 +390,13 @@ function ProfileBanner({
             🐾 펫
           </div>
           <div className="mt-0.5 text-sm md:text-base font-black tabular-nums text-amber-200 leading-tight">
-            {petScore.toLocaleString("ko-KR")}
+            {slotsUsed}
             <span className="text-[9px] text-amber-300/60 font-semibold">
-              {" "}/ {MAX_PET_SCORE}
+              {" "}/ {MAX_MAIN_CARDS}
             </span>
           </div>
           <div className="text-[9px] text-amber-300/60 tabular-nums">
-            {slotsUsed}/{MAX_MAIN_CARDS} 슬롯
+            점수 {petScore.toLocaleString("ko-KR")}
           </div>
         </div>
         <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 px-2 py-1.5 text-center">

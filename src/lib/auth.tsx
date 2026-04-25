@@ -9,7 +9,13 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import { fetchMe, rpcLogin, rpcSignup, type DbUser } from "./db";
+import {
+  fetchMe,
+  rpcLogin,
+  rpcSignup,
+  touchLastSeen,
+  type DbUser,
+} from "./db";
 
 const SESSION_KEY = "pokemon-tcg-sim:session:v2";
 
@@ -62,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const stored = loadSession();
     if (stored) {
       setUser(stored);
+      void touchLastSeen(stored.id);
       fetchMe(stored.id)
         .then((fresh) => {
           if (fresh) persist(fresh);
@@ -85,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const tick = async () => {
       if (!alive) return;
       if (typeof document !== "undefined" && document.hidden) return;
+      void touchLastSeen(userId);
       const fresh = await fetchMe(userId);
       if (alive && fresh) persist(fresh);
     };

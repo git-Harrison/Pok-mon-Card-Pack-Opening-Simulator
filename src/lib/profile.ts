@@ -76,8 +76,7 @@ export const CHARACTERS: readonly CharacterDef[] = [
     emoji: "🥼",
     gradient: "from-zinc-300 via-slate-200 to-zinc-400",
     ring: "ring-zinc-200/60",
-    spriteUrl:
-      "https://archives.bulbagarden.net/media/upload/f/fe/Spr_HGSS_Oak.png",
+    spriteUrl: "https://play.pokemonshowdown.com/sprites/trainers/oak-gen4.png",
     motion: "css-bob",
   },
   {

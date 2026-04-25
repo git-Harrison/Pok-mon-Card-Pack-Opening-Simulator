@@ -3,9 +3,35 @@
 import { createClient } from "@/utils/supabase/client";
 import { SETS, SET_ORDER } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
-import type { Card } from "@/lib/types";
+import type { Card, Rarity } from "@/lib/types";
 
 const supabase = createClient();
+
+export const RARITY_TOTALS: Record<Rarity, number> = {
+  MUR: 2,
+  UR: 14,
+  SAR: 70,
+  MA: 5,
+  SR: 85,
+  AR: 74,
+  RR: 95,
+  R: 98,
+  U: 199,
+  C: 405,
+};
+
+export const RARITY_COMPLETION_BONUS: Record<Rarity, number> = {
+  MUR: 10000,
+  UR: 6000,
+  SAR: 5000,
+  MA: 5000,
+  SR: 5000,
+  AR: 4000,
+  RR: 3000,
+  R: 2000,
+  U: 1500,
+  C: 1500,
+};
 
 export interface PokedexEntry {
   id: string;

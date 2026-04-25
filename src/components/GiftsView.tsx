@@ -19,7 +19,6 @@ import RarityBadge from "./RarityBadge";
 import PsaSlab from "./PsaSlab";
 import CoinIcon from "./CoinIcon";
 import PageHeader from "./PageHeader";
-import HelpButton from "./HelpButton";
 
 type Tab = "received" | "sent";
 
@@ -134,62 +133,12 @@ export default function GiftsView() {
       <PageHeader
         title="선물함"
         stats={
-          <div className="flex items-center gap-2 shrink-0">
-            <HelpButton
-              size="sm"
-              title="선물함"
-              sections={[
-                {
-                  heading: "선물 시스템",
-                  icon: "🎁",
-                  body: (
-                    <>
-                      <b>PCL 슬랩</b>(감별 6 이상)만 선물할 수 있어요. 받는 사람이 수락하면 슬랩 소유권이 그대로 이전돼요.
-                    </>
-                  ),
-                },
-                {
-                  heading: "받는 쪽",
-                  icon: "📥",
-                  body: (
-                    <ul>
-                      <li><b>수락</b> · 슬랩이 내 PCL 지갑으로 이전. 가격이 0p가 아니면 그 만큼 차감.</li>
-                      <li><b>거절</b> · 슬랩은 보낸 사람에게 그대로 남아요.</li>
-                      <li><b>방치</b> · 24시간 뒤 자동 만료, 슬랩은 보낸 사람 지갑에 그대로.</li>
-                    </ul>
-                  ),
-                },
-                {
-                  heading: "보내는 쪽",
-                  icon: "📤",
-                  body: (
-                    <ul>
-                      <li>하루 <b>5회</b> 한도 (24시간 슬라이딩)</li>
-                      <li>전시 중인 슬랩, 다른 선물에 묶인 슬랩은 못 보내요</li>
-                      <li>받는 사람을 사용자 목록에서 선택</li>
-                      <li>가격을 <b>0p</b>로 두면 무료 선물</li>
-                      <li>140자 메시지 첨부 가능 · 보내는 동안엔 회수 가능</li>
-                    </ul>
-                  ),
-                },
-                {
-                  heading: "주의",
-                  icon: "⚠️",
-                  body: (
-                    <>
-                      본인에게는 못 보내요. 만료·거절된 선물의 슬랩은 자동으로 보낸 사람에게 그대로 남아요.
-                    </>
-                  ),
-                },
-              ]}
-            />
-            <Link
-              href="/wallet?tab=psa"
-              className="h-9 px-3 rounded-full bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-[11px] inline-flex items-center gap-1 hover:scale-[1.02] active:scale-[0.98] transition shrink-0"
-            >
-              🎁 선물 보내기
-            </Link>
-          </div>
+          <Link
+            href="/wallet?tab=psa"
+            className="h-9 px-3 rounded-full bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-[11px] inline-flex items-center gap-1 hover:scale-[1.02] active:scale-[0.98] transition shrink-0"
+          >
+            🎁 선물 보내기
+          </Link>
         }
       />
 

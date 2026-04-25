@@ -10,7 +10,6 @@ import { getCard } from "@/lib/sets";
 import PointsChip from "./PointsChip";
 import PageHeader from "./PageHeader";
 import Portal from "./Portal";
-import HelpButton from "./HelpButton";
 import { getCharacter } from "@/lib/profile";
 import { CharacterAvatar } from "./ProfileView";
 
@@ -22,6 +21,7 @@ export default function UsersView() {
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<RankingMode>("rank");
   const [tauntTarget, setTauntTarget] = useState<RankingRow | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,114 +58,6 @@ export default function UsersView() {
       <PageHeader
         title="사용자 랭킹"
         subtitle="PCL 감별 성공 + 센터 전시로 점수를 쌓아 올라가세요"
-        stats={
-          <HelpButton
-            size="sm"
-            title="사용자 랭킹"
-            sections={[
-              {
-                heading: "세 가지 랭킹",
-                icon: "🏆",
-                body: (
-                  <>
-                    상단 탭에서 세 가지 모드를 전환할 수 있어요.
-                    <ul className="mt-1.5">
-                      <li>
-                        <b className="text-amber-300">🏆 랭킹 점수</b> · 누적 점수 경쟁. PCL10 감별, 부수기 성공/방어로 적립
-                      </li>
-                      <li>
-                        <b className="text-rose-300">⚔️ 전투력</b> · 지금 센터에 전시된 슬랩들의 합산 화력
-                      </li>
-                      <li>
-                        <b className="text-fuchsia-300">🐾 펫 랭킹</b> · 프로필에 등록한 펫(최대 5장) 의 펫 점수 합산
-                      </li>
-                    </ul>
-                  </>
-                ),
-              },
-              {
-                heading: "랭킹 점수 산정",
-                icon: "📈",
-                body: (
-                  <>
-                    <ul>
-                      <li>
-                        <b className="text-amber-300">PCL 10 감별 성공</b> · +500점 (누적, 슬랩 잃어도 그대로 유지)
-                      </li>
-                      <li>
-                        <b className="text-rose-300">남의 보관함 부수기 성공</b> · +3,000점
-                      </li>
-                      <li>
-                        <b className="text-emerald-300">내 보관함 부수기 방어</b> · +50점 (상대가 실패할 때마다)
-                      </li>
-                      <li>
-                        <b className="text-sky-300">야생 승리</b> · +50점
-                      </li>
-                    </ul>
-                    <p className="mt-1.5 text-zinc-400">
-                      PCL 6~9 슬랩, 전시, 카드 보유는 랭킹 점수에 들어가지 않아요.
-                    </p>
-                  </>
-                ),
-              },
-              {
-                heading: "전투력 산정",
-                icon: "⚔️",
-                body: (
-                  <>
-                    센터에 전시 중인 슬랩 한 장당:
-                    <p className="mt-1">
-                      희귀도 점수 (SR 5 · MA 6 · SAR 7 · UR 8 · MUR 10) × PCL 점수 (9 → 9 · 10 → 10)
-                    </p>
-                    <p className="mt-1.5 text-zinc-400">
-                      예: MUR PCL10 = 100. 슬랩이 부서지면 즉시 빠져요. 전투력은 누적이 아니라 &quot;지금&quot;의 지표.
-                    </p>
-                  </>
-                ),
-              },
-              {
-                heading: "펫 랭킹 산정",
-                icon: "🐾",
-                body: (
-                  <>
-                    프로필에서 PCL10 슬랩을 최대 5장까지 펫으로 등록할 수 있어요. 펫 한 장당:
-                    <p className="mt-1">
-                      희귀도 점수 (SR 5 · MA 6 · SAR 7 · UR 8 · MUR 10) × 10
-                    </p>
-                    <p className="mt-1.5 text-zinc-400">
-                      예: MUR PCL10 펫 = 100점. 5장 모두 MUR PCL10 이면{" "}
-                      <b className="text-fuchsia-300">최대 500점</b>. 펫 슬랩이 부서지면 점수에서 빠져요.
-                    </p>
-                  </>
-                ),
-              },
-              {
-                heading: "조롱하기 🔥",
-                icon: "🔥",
-                body: (
-                  <>
-                    다른 유저 행의 🔥 버튼으로 200자 메시지를 던질 수 있어요. 받은 사람 화면에 강제 팝업으로 떠요. 자기 자신에게는 못 보내요.
-                  </>
-                ),
-              },
-              {
-                heading: "지갑 보너스 (참고)",
-                icon: "🪙",
-                body: (
-                  <>
-                    감별 성공 즉시 지급되는 지갑 보너스 (랭킹 점수와는 별개):
-                    <ul className="mt-1.5">
-                      <li>PCL 10 · +50,000p</li>
-                      <li>PCL 9 · +30,000p</li>
-                      <li>PCL 8 · +10,000p</li>
-                      <li>PCL 6·7 · +3,000p</li>
-                    </ul>
-                  </>
-                ),
-              },
-            ]}
-          />
-        }
       />
 
       {/* Tab switcher: 랭킹 점수 / 전투력 */}
@@ -237,6 +129,9 @@ export default function UsersView() {
           {entries.map((e, rank) => {
             const isMe = currentUser?.id === e.id;
             const def = getCharacter(e.character);
+            const isOnline = (e.seconds_since_seen ?? Infinity) < 300;
+            const isExpanded = expandedId === e.id;
+            const petCount = e.main_card_ids?.length ?? 0;
 
             return (
               <motion.li
@@ -244,8 +139,22 @@ export default function UsersView() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(rank * 0.03, 0.3) }}
+                onClick={() =>
+                  setExpandedId((cur) => (cur === e.id ? null : e.id))
+                }
+                role="button"
+                tabIndex={0}
+                aria-expanded={isExpanded}
+                aria-label={`${e.display_name} 상세 통계 ${isExpanded ? "닫기" : "열기"}`}
+                onKeyDown={(ev) => {
+                  if (ev.key === "Enter" || ev.key === " ") {
+                    ev.preventDefault();
+                    setExpandedId((cur) => (cur === e.id ? null : e.id));
+                  }
+                }}
+                style={{ touchAction: "manipulation" }}
                 className={clsx(
-                  "rounded-2xl border overflow-hidden",
+                  "rounded-2xl border overflow-hidden cursor-pointer hover:bg-white/[0.02] transition-colors",
                   isMe
                     ? "bg-amber-400/5 border-amber-400/50 shadow-[0_0_24px_-6px_rgba(251,191,36,0.4)]"
                     : "bg-white/5 border-white/10"
@@ -269,6 +178,13 @@ export default function UsersView() {
                   {def ? <CharacterAvatar def={def} size="sm" /> : null}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
+                      {isOnline && (
+                        <span
+                          aria-label="온라인"
+                          title="5분 이내 활동"
+                          className="inline-block w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+                        />
+                      )}
                       <h2 className="text-base md:text-lg font-bold text-white truncate">
                         {e.display_name}
                       </h2>
@@ -332,7 +248,57 @@ export default function UsersView() {
                       </>
                     )}
                   </div>
+                  <span
+                    aria-hidden
+                    className={clsx(
+                      "shrink-0 text-zinc-500 text-xs transition-transform",
+                      isExpanded ? "rotate-180" : "rotate-0"
+                    )}
+                  >
+                    ▾
+                  </span>
                 </div>
+
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      key="stats"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-3 md:px-4 pb-3 grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                        <StatChip
+                          icon="⚔️"
+                          label="전투력"
+                          value={e.center_power ?? 0}
+                          accent="text-rose-300"
+                        />
+                        <StatChip
+                          icon="🐾"
+                          label="펫 개수"
+                          value={petCount}
+                          suffix=" / 6"
+                          accent="text-fuchsia-300"
+                        />
+                        <StatChip
+                          icon="📖"
+                          label="도감"
+                          value={e.pokedex_count ?? 0}
+                          accent="text-emerald-300"
+                        />
+                        <StatChip
+                          icon="🏆"
+                          label="PCL10"
+                          value={e.psa_10 ?? 0}
+                          accent="text-amber-300"
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {mode === "pet" && (e.main_cards?.length ?? 0) > 0 && (
                   <div className="px-3 md:px-4 pb-3 -mt-1 flex flex-wrap gap-1.5">
@@ -362,11 +328,15 @@ export default function UsersView() {
                   </div>
                 )}
 
-                <div className="px-3 md:px-4 pb-3 flex items-center gap-2">
+                <div
+                  className="px-3 md:px-4 pb-3 flex items-center gap-2"
+                  onClick={(ev) => ev.stopPropagation()}
+                >
                   <Link
                     href={`/center/${encodeURIComponent(e.user_id)}`}
                     aria-label={`${e.display_name}님의 포켓몬센터 방문`}
                     style={{ touchAction: "manipulation" }}
+                    onClick={(ev) => ev.stopPropagation()}
                     className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 px-3 rounded-xl bg-gradient-to-r from-fuchsia-500/90 to-indigo-500/90 hover:from-fuchsia-500 hover:to-indigo-500 active:scale-[0.98] text-white text-sm font-bold transition"
                   >
                     🏛️ 센터 방문
@@ -374,7 +344,10 @@ export default function UsersView() {
                   {!isMe && (
                     <button
                       type="button"
-                      onClick={() => setTauntTarget(e)}
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        setTauntTarget(e);
+                      }}
                       aria-label={`${e.display_name}에게 조롱 보내기`}
                       style={{ touchAction: "manipulation" }}
                       className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 px-3 rounded-xl bg-gradient-to-r from-rose-500/90 to-amber-500/90 hover:from-rose-500 hover:to-amber-500 active:scale-[0.98] text-white text-sm font-bold transition"
@@ -397,6 +370,36 @@ export default function UsersView() {
           />
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function StatChip({
+  icon,
+  label,
+  value,
+  suffix,
+  accent,
+}: {
+  icon: string;
+  label: string;
+  value: number;
+  suffix?: string;
+  accent: string;
+}) {
+  return (
+    <div className="flex flex-col items-start gap-0.5 px-2.5 py-2 rounded-xl bg-white/[0.03] border border-white/10">
+      <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+        {icon} {label}
+      </span>
+      <span className={clsx("text-sm md:text-base font-black tabular-nums", accent)}>
+        {value.toLocaleString("ko-KR")}
+        {suffix && (
+          <span className="text-[10px] text-zinc-500 font-semibold">
+            {suffix}
+          </span>
+        )}
+      </span>
     </div>
   );
 }

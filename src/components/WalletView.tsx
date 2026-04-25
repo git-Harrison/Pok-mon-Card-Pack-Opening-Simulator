@@ -25,7 +25,6 @@ import PokeCard from "./PokeCard";
 import PsaSlab from "./PsaSlab";
 import CoinIcon from "./CoinIcon";
 import PageHeader from "./PageHeader";
-import HelpButton from "./HelpButton";
 import UserSelect from "./UserSelect";
 
 type Mode = "cards" | "psa";
@@ -126,108 +125,6 @@ export default function WalletView() {
               label="PCL"
               value={`${psa.length} / 500`}
               highlight={psa.length >= 450}
-            />
-            <HelpButton
-              size="sm"
-              title="내 카드지갑"
-              sections={[
-                {
-                  heading: "지갑이란",
-                  icon: "🎴",
-                  body: (
-                    <>
-                      박스에서 뽑은 카드와 PCL 감별 슬랩이 모이는 곳이에요.
-                      카드를 누르면 상세 보기·선물·공유로 이동해요.
-                    </>
-                  ),
-                },
-                {
-                  heading: "상단 KPI",
-                  icon: "📊",
-                  body: (
-                    <ul>
-                      <li>
-                        <b>종류</b> · 보유한 서로 다른 카드 종 수
-                      </li>
-                      <li>
-                        <b>장수</b> · 총 카드 장수 (한도 10,000장)
-                      </li>
-                      <li>
-                        <b>개봉</b> · 지금까지 깐 팩 수
-                      </li>
-                      <li>
-                        <b>PCL</b> · 감별 완료된 슬랩 수 (한도 500장)
-                      </li>
-                    </ul>
-                  ),
-                },
-                {
-                  heading: "탭",
-                  icon: "🗂️",
-                  body: (
-                    <>
-                      <ul>
-                        <li>
-                          <b>카드</b> 탭 — 일반 보유 카드 격자
-                        </li>
-                        <li>
-                          <b>PCL</b> 탭 — 감별 슬랩 (등급별 정렬)
-                        </li>
-                      </ul>
-                      <p className="mt-1.5">
-                        희귀도 필터로 한 등급만 골라볼 수 있어요.
-                      </p>
-                    </>
-                  ),
-                },
-                {
-                  heading: "정리하고 싶을 때",
-                  icon: "🧹",
-                  body: (
-                    <>
-                      한도(10,000장)에 가까워지면 박스를 더 못 사요.{" "}
-                      <Link
-                        href="/wallet/bulk-sell"
-                        className="underline text-amber-300"
-                      >
-                        일괄 판매
-                      </Link>{" "}
-                      페이지에서 등급별로 한 번에 팔 수 있어요. <b>SR 이상</b>은{" "}
-                      <Link
-                        href="/grading"
-                        className="underline text-amber-300"
-                      >
-                        감별
-                      </Link>
-                      로 슬랩을 만드는 게 더 이득이에요.
-                    </>
-                  ),
-                },
-                {
-                  heading: "PCL 슬랩의 쓰임",
-                  icon: "💎",
-                  body: (
-                    <>
-                      슬랩은 <b>센터에 전시</b>해 시간당 수익을 받거나,{" "}
-                      <b>야생 배틀</b>에 출전시키거나, <b>일괄 판매</b>로 정리할
-                      수 있어요. 슬랩이 부서지거나 팔려도 PCL10 누적 랭킹 점수는
-                      사라지지 않아요.
-                    </>
-                  ),
-                },
-                {
-                  heading: "🏛️ 전시 중 슬랩",
-                  icon: "🔒",
-                  body: (
-                    <>
-                      <b>전시 중</b> 배지가 붙은 슬랩은 지금 센터에 전시돼
-                      있어요. 전시된 카드는 <b>일괄 판매 · 야생 배틀 · 재감별 ·
-                      선물</b>에 사용할 수 없고, 센터에서 꺼내거나 상대에게
-                      부서지기 전까지 잠겨있어요.
-                    </>
-                  ),
-                },
-              ]}
             />
           </>
         }

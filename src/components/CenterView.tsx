@@ -34,7 +34,6 @@ import RarityBadge from "./RarityBadge";
 import PsaSlab from "./PsaSlab";
 import Portal from "./Portal";
 import PageHeader from "./PageHeader";
-import HelpButton, { type HelpSection } from "./HelpButton";
 
 export default function CenterView() {
   const { user, setPoints } = useAuth();
@@ -217,11 +216,6 @@ export default function CenterView() {
             <>
               <Kpi label="보관함" value={`${showcases.length}`} />
               <Kpi label="전시" value={`${totalCards}`} highlight />
-              <HelpButton
-                size="sm"
-                title="포켓몬센터"
-                sections={CENTER_HELP_SECTIONS}
-              />
             </>
           }
         />
@@ -833,105 +827,6 @@ function SabotageLogModal({
     </ModalShell>
   );
 }
-
-const CENTER_HELP_SECTIONS: HelpSection[] = [
-  {
-    heading: "보관함 4종",
-    icon: "🏛️",
-    body: (
-      <>
-        슬랩 한 장을 전시하는 진열대예요. 등급이 높을수록 비싸지만 부수기
-        방어율이 높아 안전해요.
-        <ul className="mt-1.5">
-          <li>🪵 <b>기본</b> · 10,000p · 방어 3%</li>
-          <li>🔷 <b>유리</b> · 100,000p · 방어 5%</li>
-          <li>💠 <b>프리미엄</b> · 300,000p · 방어 10%</li>
-          <li>👑 <b>레전더리</b> · 1,000,000p · 방어 15%</li>
-        </ul>
-        <p className="mt-1.5">한 보관함에 슬랩 1장. 그리드 6×6에 자유 배치.</p>
-      </>
-    ),
-  },
-  {
-    heading: "전시 수익",
-    icon: "💰",
-    body: (
-      <>
-        전시 중인 슬랩은 <b>희귀도 × PCL 등급</b>에 따라 시간당 거래 포인트와
-        랭킹 점수가 동시에 자동 적립돼요. 센터에 접속할 때마다 자동 수령.
-        <ul className="mt-1.5">
-          <li>
-            <b className="text-amber-300">MUR PCL10</b> · 100,000p · 랭킹 +500점/hr
-          </li>
-          <li>
-            <b className="text-fuchsia-300">UR PCL10</b> · 60,000p · 랭킹 +300점/hr
-          </li>
-          <li>
-            <b className="text-rose-300">SAR PCL10</b> · 40,000p · 랭킹 +200점/hr
-          </li>
-          <li>
-            <b className="text-sky-300">MA PCL10</b> · 30,000p · 랭킹 +150점/hr
-          </li>
-          <li>
-            <b className="text-emerald-300">SR PCL10</b> · 20,000p · 랭킹 +100점/hr
-          </li>
-        </ul>
-        <p className="mt-1.5 text-zinc-400">
-          PCL 등급이 1단계 내려갈 때마다 보상은 절반(±) 수준으로 줄어들고,
-          PCL6까지 보상이 들어와요. 랭킹 점수는 거래 포인트의 1/200.
-        </p>
-      </>
-    ),
-  },
-  {
-    heading: "부수기",
-    icon: "💥",
-    body: (
-      <>
-        다른 유저의 보관함을 깨면 보관함과 슬랩이 영구 소멸하고 공격자가
-        보관함가의 80%를 전리품으로 가져가요.
-        <ul className="mt-1.5">
-          <li>
-            <b>기본 성공률 30%</b> − 보관함 방어 = 실제 확률
-          </li>
-          <li>
-            <b>부수기 비용 = 보관함 가격의 10%</b> (1k / 10k / 30k / 100k)
-          </li>
-          <li>
-            시도 결과와 무관하게{" "}
-            <b className="text-emerald-200">주인은 비용의 50%</b> 즉시 적립
-          </li>
-          <li>실패해도 공격 비용은 돌아오지 않아요</li>
-        </ul>
-      </>
-    ),
-  },
-  {
-    heading: "랭킹 점수",
-    icon: "🏆",
-    body: (
-      <ul>
-        <li>
-          <b className="text-amber-300">PCL 10 감별 성공</b> · +500점 (누적,
-          슬랩 잃어도 안 빠져요)
-        </li>
-        <li>
-          <b className="text-rose-300">남의 보관함 부수기 성공</b> · +3,000점
-        </li>
-        <li>
-          <b className="text-emerald-300">내 보관함 부수기 방어</b> · +50점
-        </li>
-        <li>
-          <b className="text-sky-300">야생 승리</b> · +50점
-        </li>
-        <li>
-          <b className="text-violet-300">전시 수익 적립</b> · 슬랩 희귀도×PCL
-          시간당 (최대 +500점/hr · MUR PCL10)
-        </li>
-      </ul>
-    ),
-  },
-];
 
 function Kpi({
   label,
