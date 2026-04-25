@@ -199,7 +199,7 @@ export default function UsersView() {
                     <p className="text-[11px] md:text-xs text-zinc-400 mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
                       전시 {e.showcase_count ?? 0}장 · 부수기{" "}
                       {e.sabotage_wins ?? 0}회
-                      {mode !== "rank" && (e.pet_score ?? 0) > 0 && (
+                      {mode === "pet" && (e.pet_score ?? 0) > 0 && (
                         <>
                           {" · "}
                           <span className="text-amber-300 font-semibold">
@@ -218,9 +218,6 @@ export default function UsersView() {
                         </div>
                         <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
                           전투력
-                        </div>
-                        <div className="mt-1 text-[10px] text-zinc-400 tabular-nums">
-                          랭킹 {e.rank_score.toLocaleString("ko-KR")}
                         </div>
                       </>
                     ) : mode === "pet" ? (
