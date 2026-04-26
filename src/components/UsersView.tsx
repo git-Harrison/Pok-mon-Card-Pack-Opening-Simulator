@@ -1,11 +1,20 @@
 "use client";
 
-import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import PokeLoader from "./PokeLoader";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import Link from "next/link";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
+import { useIsMobile } from "@/lib/useIsMobile";
 import {
   fetchUserActivity,
   fetchUserRankings,
@@ -28,10 +37,22 @@ type RankingMode = "rank" | "power" | "pet";
 export default function UsersView() {
   const { user: currentUser } = useAuth();
   const reduce = useReducedMotion();
+  const isMobile = useIsMobile();
   const onlineSet = usePresence(currentUser?.id);
   const [rows, setRows] = useState<RankingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<RankingMode>("rank");
+  // 탭 전환 시 랭킹 리스트 전체 재정렬 + framer-motion layout 애니메이션이
+  // 메인 스레드를 막아 클릭이 끊겨 보이는 문제 → useTransition 으로
+  // 우선순위를 낮춰서 탭 버튼 시각 피드백이 즉시 반영되게 한다.
+  const [, startTabTransition] = useTransition();
+  const switchMode = useCallback(
+    (next: RankingMode) => {
+      if (next === mode) return;
+      startTabTransition(() => setMode(next));
+    },
+    [mode]
+  );
   const [tauntTarget, setTauntTarget] = useState<RankingRow | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [activityCache, setActivityCache] = useState<
@@ -41,39 +62,40 @@ export default function UsersView() {
     Record<string, boolean>
   >({});
 
-  const activityKey = useCallback(
-    (uid: string, m: RankingMode) => `${uid}::${m}`,
-    []
-  );
+  // 캐시/in-flight 상태는 ref 로 관리. 이전엔 deps 에 activityCache /
+  // activityLoading state 객체가 있어서 setState 마다 effect 가 4회 재실행
+  // 됐었음 — 모바일에서 탭/펼치기 응답이 끊겨 보이는 보조 원인이었음.
+  // 이제 effect 는 expandedId / mode 변경에만 반응.
+  const cacheRef = useRef<Record<string, UserActivityEvent[]>>({});
+  const loadingRef = useRef<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!expandedId) return;
-    const key = activityKey(expandedId, mode);
-    // Cache hit — render the cached events without ever toggling
-    // activityLoading, so ActivityFeed skips the skeleton entirely.
-    // Previously we fell through to setActivityLoading(true) which
-    // produced a 200ms+ skeleton flash on every re-expand.
-    if (activityCache[key] !== undefined) return;
-    if (activityLoading[key]) return;
+    const key = `${expandedId}::${mode}`;
+    if (cacheRef.current[key] !== undefined) return;
+    if (loadingRef.current[key]) return;
+    loadingRef.current[key] = true;
     setActivityLoading((prev) => ({ ...prev, [key]: true }));
     let cancelled = false;
     fetchUserActivity(expandedId, mode)
       .then((events) => {
         if (cancelled) return;
+        cacheRef.current[key] = events;
+        loadingRef.current[key] = false;
         setActivityCache((prev) => ({ ...prev, [key]: events }));
         setActivityLoading((prev) => ({ ...prev, [key]: false }));
       })
       .catch(() => {
-        // Defensive: even if fetchUserActivity itself throws (already
-        // wrapped, but safety belt), make sure the skeleton clears.
         if (cancelled) return;
+        cacheRef.current[key] = [];
+        loadingRef.current[key] = false;
         setActivityCache((prev) => ({ ...prev, [key]: [] }));
         setActivityLoading((prev) => ({ ...prev, [key]: false }));
       });
     return () => {
       cancelled = true;
     };
-  }, [expandedId, mode, activityKey, activityCache, activityLoading]);
+  }, [expandedId, mode]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -172,7 +194,8 @@ export default function UsersView() {
       <div className="inline-flex items-stretch rounded-xl bg-white/5 border border-white/10 p-1">
         <button
           type="button"
-          onClick={() => setMode("rank")}
+          onClick={() => switchMode("rank")}
+          style={{ touchAction: "manipulation" }}
           className={clsx(
             "px-4 py-1.5 rounded-lg text-xs font-bold transition-colors",
             mode === "rank"
@@ -184,7 +207,8 @@ export default function UsersView() {
         </button>
         <button
           type="button"
-          onClick={() => setMode("power")}
+          onClick={() => switchMode("power")}
+          style={{ touchAction: "manipulation" }}
           className={clsx(
             "px-4 py-1.5 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1",
             mode === "power"
@@ -196,7 +220,8 @@ export default function UsersView() {
         </button>
         <button
           type="button"
-          onClick={() => setMode("pet")}
+          onClick={() => switchMode("pet")}
+          style={{ touchAction: "manipulation" }}
           className={clsx(
             "px-4 py-1.5 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1",
             mode === "pet"
@@ -225,7 +250,9 @@ export default function UsersView() {
       )}
 
       {loading ? (
-        <CenteredPokeLoader />
+        <div className="mt-12 flex items-center justify-center">
+          <PokeLoader size="md" label="랭킹 불러오는 중..." />
+        </div>
       ) : entries.length === 0 ? (
         <p className="mt-16 text-center text-zinc-400 text-sm">
           아직 사용자가 없습니다.
@@ -249,18 +276,15 @@ export default function UsersView() {
             return (
               <motion.li
                 key={e.id}
-                layout={reduce ? false : "position"}
-                // Cap stagger at 0.015/row and 0.2s total — short enough
-                // that even long ranking lists finish entering before the
-                // user can scroll. The layout transition was a default
-                // bouncy spring (stiffness 380) which compounded with
-                // LayoutGroup remounts to produce the visible jank;
-                // swapping to a fixed 0.18s easeOut keeps row reordering
-                // crisp and predictable on tab switch.
-                initial={reduce ? false : { opacity: 0, y: 8 }}
+                // 모바일에서는 layout="position" 을 끈다. 50+ 행을 한꺼번에
+                // 측정/리페인트하는 비용이 mid-tier 모바일 GPU 에서 200~400ms
+                // 스톨을 만들어 탭 응답이 끊겨 보이는 주범이었음. CSS 위치
+                // 점프로 즉시 재정렬되고, 데스크탑은 부드럽게 morph.
+                layout={reduce || isMobile ? false : "position"}
+                initial={reduce || isMobile ? false : { opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{
-                  delay: reduce ? 0 : Math.min(rank * 0.015, 0.2),
+                  delay: reduce || isMobile ? 0 : Math.min(rank * 0.015, 0.2),
                   layout: { duration: 0.18, ease: "easeOut" },
                 }}
                 onClick={() =>
@@ -389,10 +413,8 @@ export default function UsersView() {
                       className="overflow-hidden"
                     >
                       <ActivityFeed
-                        events={activityCache[activityKey(e.id, mode)]}
-                        loading={
-                          activityLoading[activityKey(e.id, mode)] === true
-                        }
+                        events={activityCache[`${e.id}::${mode}`]}
+                        loading={activityLoading[`${e.id}::${mode}`] === true}
                         mode={mode}
                       />
                     </motion.div>

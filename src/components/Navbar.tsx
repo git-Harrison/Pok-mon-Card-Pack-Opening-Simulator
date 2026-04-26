@@ -108,7 +108,7 @@ export default function Navbar() {
   return (
     <>
       {/* ─── Top bar (always sticky) ─── */}
-      <header className="sticky top-0 z-40 backdrop-blur-md bg-black/40 border-b border-white/10">
+      <header className="sticky top-0 z-40 bg-black/85 md:bg-black/40 md:backdrop-blur-md border-b border-white/10">
         <div className="max-w-6xl mx-auto px-3 md:px-6 h-14 flex items-center justify-between gap-2">
           <Link
             href={user ? "/" : "/login"}
@@ -205,7 +205,7 @@ export default function Navbar() {
       {user && (
         <>
           <nav
-            className="md:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-md bg-black/70 border-t border-white/10"
+            className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/92 border-t border-white/10"
             style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
           >
             <ul className="flex items-stretch justify-around h-16">
@@ -219,8 +219,10 @@ export default function Navbar() {
                   <li key={href} className="flex-1 min-w-0">
                     <Link
                       href={href}
+                      prefetch
+                      style={{ touchAction: "manipulation" }}
                       className={clsx(
-                        "relative h-full flex flex-col items-center justify-center gap-0.5 transition",
+                        "relative h-full flex flex-col items-center justify-center gap-0.5 transition-colors",
                         active
                           ? "text-amber-300"
                           : "text-zinc-400 hover:text-white"
@@ -267,7 +269,7 @@ export default function Navbar() {
 
           {moreOpen && (
             <div
-              className="md:hidden fixed inset-0 z-[60] bg-black/70 backdrop-blur-md flex items-end"
+              className="md:hidden fixed inset-0 z-[60] bg-black/85 flex items-end"
               onClick={() => setMoreOpen(false)}
             >
               <div
@@ -301,9 +303,11 @@ export default function Navbar() {
                       <li key={href}>
                         <Link
                           href={href}
+                          prefetch
                           onClick={() => setMoreOpen(false)}
+                          style={{ touchAction: "manipulation" }}
                           className={clsx(
-                            "relative h-14 px-3 rounded-xl flex items-center gap-2 border transition",
+                            "relative h-14 px-3 rounded-xl flex items-center gap-2 border transition-colors",
                             active
                               ? "bg-amber-400/15 border-amber-400/40 text-amber-200"
                               : "bg-white/5 border-white/10 text-zinc-200 hover:bg-white/10"

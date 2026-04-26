@@ -318,7 +318,7 @@ function SingleCardStage({
           }}
         >
           <img
-            src="/images/common/card-back.jpg"
+            src="/images/common/card-back.webp"
             alt=""
             className="w-full h-full object-cover select-none pointer-events-none"
             draggable={false}
@@ -427,7 +427,7 @@ function StageCard({
           {/* Back */}
           <div className="absolute inset-0 backface-hidden rounded-2xl overflow-hidden">
             <img
-              src="/images/common/card-back.jpg"
+              src="/images/common/card-back.webp"
               alt=""
               className="w-full h-full object-cover select-none pointer-events-none"
               draggable={false}

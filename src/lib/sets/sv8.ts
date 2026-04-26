@@ -16,8 +16,8 @@ export const sv8: SetInfo = {
   totalCards: 138,
   primaryColor: "#eab308",
   accentColor: "#fde047",
-  boxImage: "/images/sets/sv8/box.jpg",
-  packImage: "/images/sets/sv8/pack.png",
+  boxImage: "/images/sets/sv8/box.webp",
+  packImage: "/images/sets/sv8/pack.webp",
   slots: [
     { label: "C 1", weights: { C: 100 } },
     { label: "C 2", weights: { C: 100 } },

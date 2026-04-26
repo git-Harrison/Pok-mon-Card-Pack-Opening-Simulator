@@ -14,12 +14,12 @@ const CSP = [
 
 const nextConfig: NextConfig = {
   experimental: {
-    // Inline atomic Tailwind CSS into <style> tags instead of <link rel=preload>
-    // → eliminates the "preloaded but not used" console warning users were
-    //   seeing on /wallet, /profile, etc. Trade-off: returning visitors lose
-    //   the separate-stylesheet cache, but our CSS bundle is small (Tailwind
-    //   atomic) so the inlined HTML payload is still compact.
-    inlineCss: true,
+    // inlineCss 비활성화 — 매 라우트 HTML 응답에 Tailwind atomic CSS 30~40KB
+    // (gzip) 가 인라인되어 모바일 iOS 에서 (a) 매 nav 마다 동일한 CSS 를
+    // 다운로드, (b) 인터-페이지 stylesheet 캐시 무효화 (c) iOS Safari 가
+    // 큰 <style> 블록을 매번 파싱. "preloaded but not used" 경고는 무해.
+    // → 라우트 캐시 회복이 모바일 체감에 훨씬 큰 영향.
+    optimizePackageImports: ["framer-motion", "clsx"],
   },
   images: {
     remotePatterns: [

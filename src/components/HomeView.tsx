@@ -9,6 +9,7 @@ import { getCard, SET_ORDER, SETS } from "@/lib/sets";
 import { formatKoreanPoints } from "@/lib/format";
 import type { PsaGrading, SetCode } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
+import { useIsMobile } from "@/lib/useIsMobile";
 import {
   fetchPsaGradings,
   fetchUserActivity,
@@ -86,6 +87,7 @@ function startOfTodayKstISO(): string {
 
 export default function HomeView() {
   const reduce = useReducedMotion();
+  const isMobile = useIsMobile();
   const { user } = useAuth();
 
   const [stats, setStats] = useState<HomeStats>(FALLBACK_STATS);
@@ -249,37 +251,42 @@ export default function HomeView() {
   // Cap stagger at 0.025/child so 6-pack grid finishes within 0.15s and the
   // 7-tile quick-nav finishes within 0.18s — feels snappy on mid-tier mobile
   // devices where the previous 0.06 step caused a visible "rolling" delay.
+  // 모바일에서는 stagger / entry transform 을 끈다 — 6장 팩 + 7개 nav
+  // 타일이 매번 fade+rise 하면서 0.2~0.4s 동안 메인 스레드를 점유, 첫
+  // 진입 시 "끊기는" 인상을 주는 주범. 데스크탑에선 그대로 매끄러운
+  // stagger 유지.
+  const lightAnim = reduce || isMobile;
   const gridVariants: Variants = useMemo(
     () => ({
       hidden: {},
       show: {
         transition: {
-          staggerChildren: reduce ? 0 : 0.025,
-          delayChildren: reduce ? 0 : 0.06,
+          staggerChildren: lightAnim ? 0 : 0.025,
+          delayChildren: lightAnim ? 0 : 0.06,
         },
       },
     }),
-    [reduce]
+    [lightAnim]
   );
   const itemVariants: Variants = useMemo(
     () => ({
-      hidden: reduce
+      hidden: lightAnim
         ? { opacity: 1, y: 0 }
         : { opacity: 0, y: 14, scale: 0.97 },
       show: {
         opacity: 1,
         y: 0,
         scale: 1,
-        transition: { duration: 0.36, ease: [0.2, 0.8, 0.2, 1] },
+        transition: { duration: lightAnim ? 0 : 0.36, ease: [0.2, 0.8, 0.2, 1] },
       },
     }),
-    [reduce]
+    [lightAnim]
   );
 
   return (
     <div className="relative min-h-[calc(100vh-64px)] overflow-hidden">
       {/* ---------- Background ambience ---------- */}
-      <BackgroundFx reduce={!!reduce} />
+      <BackgroundFx reduce={!!reduce} mobile={isMobile} />
 
       <div className="relative max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-10">
         {/* ---------- Hero ---------- */}
@@ -917,9 +924,8 @@ const NavTile = memo(function NavTile({ href, label, Icon, tint }: NavItem) {
  * Background ambience
  * ============================================================ */
 
-function BackgroundFx({ reduce }: { reduce: boolean }) {
-  // Generate stars once. Fixed seed via deterministic spacing so SSR/CSR
-  // markup matches and React doesn't complain about hydration drift.
+function BackgroundFx({ reduce, mobile }: { reduce: boolean; mobile: boolean }) {
+  // 데스크탑 28개 별. 모바일은 어차피 마운트 안 됨.
   const stars = useMemo(() => {
     const out: { x: number; y: number; r: number; d: number; o: number }[] =
       [];
@@ -942,15 +948,18 @@ function BackgroundFx({ reduce }: { reduce: boolean }) {
     setMounted(true);
   }, []);
 
+  // 모바일에서는 홈 배경 레이어 자체를 마운트하지 않는다.
+  if (mobile) return null;
+
   return (
     <div
       aria-hidden
       className="pointer-events-none absolute inset-0 overflow-hidden"
     >
       {/* Aurora blobs */}
-      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[820px] h-[820px] rounded-full bg-fuchsia-500/10 blur-3xl" />
-      <div className="absolute top-40 -left-20 w-[420px] h-[420px] rounded-full bg-amber-400/8 blur-3xl" />
-      <div className="absolute top-20 -right-20 w-[420px] h-[420px] rounded-full bg-cyan-400/8 blur-3xl" />
+      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[820px] h-[820px] rounded-full bg-fuchsia-500/10 blur-2xl md:blur-3xl" />
+      <div className="absolute top-40 -left-20 w-[420px] h-[420px] rounded-full bg-amber-400/8 blur-2xl md:blur-3xl" />
+      <div className="absolute top-20 -right-20 w-[420px] h-[420px] rounded-full bg-cyan-400/8 blur-2xl md:blur-3xl" />
 
       {/* Pokeball pattern (subtle) */}
       <div

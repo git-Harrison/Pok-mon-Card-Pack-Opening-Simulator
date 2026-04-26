@@ -14,8 +14,8 @@ export const sv8a: SetInfo = {
   totalCards: 237,
   primaryColor: "#a855f7",
   accentColor: "#e9d5ff",
-  boxImage: "/images/sets/sv8a/box.png",
-  packImage: "/images/sets/sv8a/pack.png",
+  boxImage: "/images/sets/sv8a/box.webp",
+  packImage: "/images/sets/sv8a/pack.webp",
   slots: [
     { label: "C/U 1", weights: { C: 70, U: 30 } },
     { label: "C/U 2", weights: { C: 70, U: 30 } },

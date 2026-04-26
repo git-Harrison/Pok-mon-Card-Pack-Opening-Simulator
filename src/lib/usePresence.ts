@@ -18,7 +18,7 @@ export function usePresence(userId: string | null | undefined): Set<string> {
       setOnline(new Set<string>(Object.keys(state)));
     });
 
-    ch.subscribe(async (status) => {
+    ch.subscribe(async (status: string) => {
       if (status === "SUBSCRIBED") {
         await ch.track({ user_id: userId, at: Date.now() });
       }

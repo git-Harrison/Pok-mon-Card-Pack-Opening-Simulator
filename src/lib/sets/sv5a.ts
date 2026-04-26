@@ -14,8 +14,8 @@ export const sv5a: SetInfo = {
   totalCards: 96,
   primaryColor: "#dc2626",
   accentColor: "#fecaca",
-  boxImage: "/images/sets/sv5a/box.png",
-  packImage: "/images/sets/sv5a/pack.png",
+  boxImage: "/images/sets/sv5a/box.webp",
+  packImage: "/images/sets/sv5a/pack.webp",
   slots: [
     { label: "C 1", weights: { C: 100 } },
     { label: "C 2", weights: { C: 100 } },

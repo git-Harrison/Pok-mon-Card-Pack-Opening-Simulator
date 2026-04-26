@@ -16,8 +16,8 @@ export const m2: SetInfo = {
   totalCards: 116,
   primaryColor: "#dc2626",
   accentColor: "#fca5a5",
-  boxImage: "/images/sets/m2/box.png",
-  packImage: "/images/sets/m2/pack.png",
+  boxImage: "/images/sets/m2/box.webp",
+  packImage: "/images/sets/m2/pack.webp",
   // Standard 5-card expansion: first 3 = C, 4th = U/R, 5th = hit slot
   slots: [
     { label: "C 1", weights: { C: 100 } },

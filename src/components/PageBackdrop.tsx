@@ -27,6 +27,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useIsMobile } from "@/lib/useIsMobile";
 
 export type BackdropTone =
   | "amber"      // wallet — treasure / gold vault
@@ -146,9 +147,10 @@ const TONES: Record<BackdropTone, ToneSpec> = {
 
 export default function PageBackdrop({ tone }: { tone: BackdropTone }) {
   const reduce = useReducedMotion();
+  const isMobile = useIsMobile();
   const spec = TONES[tone];
 
-  // Deterministic sparkle positions so SSR/CSR markup matches.
+  // 데스크탑 sparkle 위치 (모바일에서는 어차피 마운트 안 됨).
   const sparkles = useMemo(() => {
     if (!spec.sparkles) return [];
     const out: { x: number; y: number; r: number; d: number; o: number }[] = [];
@@ -171,6 +173,12 @@ export default function PageBackdrop({ tone }: { tone: BackdropTone }) {
     setMounted(true);
   }, []);
 
+  // 모바일에서는 배경 레이어 자체를 마운트하지 않는다. body 의 단색 dark
+  // 배경만 보여주기로 합의 (PC 만 화려하게). 그라데이션 + blur blob +
+  // dot pattern + 톤별 데코(숲 실루엣, 격자, 책장 줄무늬, 별빛 sparkle)
+  // 가 모바일 GPU 합성기 부담을 주는 주범이었음.
+  if (isMobile) return null;
+
   // Pokedex tone gets a soft "library shelf" stripe near the top edge.
   const showBookshelf = tone === "parchment";
 
@@ -192,13 +200,13 @@ export default function PageBackdrop({ tone }: { tone: BackdropTone }) {
         className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
       >
         <div
-          className={`absolute -top-40 left-1/2 -translate-x-1/2 w-[820px] h-[820px] max-w-[120vw] rounded-full ${spec.blobs[0]} blur-3xl`}
+          className={`absolute -top-40 left-1/2 -translate-x-1/2 w-[820px] h-[820px] max-w-[120vw] rounded-full ${spec.blobs[0]} blur-2xl md:blur-3xl`}
         />
         <div
-          className={`absolute top-40 -left-20 w-[420px] h-[420px] max-w-[80vw] rounded-full ${spec.blobs[1]} blur-3xl`}
+          className={`absolute top-40 -left-20 w-[420px] h-[420px] max-w-[80vw] rounded-full ${spec.blobs[1]} blur-2xl md:blur-3xl`}
         />
         <div
-          className={`absolute top-20 -right-20 w-[420px] h-[420px] max-w-[80vw] rounded-full ${spec.blobs[2]} blur-3xl`}
+          className={`absolute top-20 -right-20 w-[420px] h-[420px] max-w-[80vw] rounded-full ${spec.blobs[2]} blur-2xl md:blur-3xl`}
         />
 
         {/* Dot pattern */}

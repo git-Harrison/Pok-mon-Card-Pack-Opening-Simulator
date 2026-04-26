@@ -18,11 +18,12 @@
  */
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { animate, motion, useReducedMotion } from "framer-motion";
 import clsx from "clsx";
 import CoinIcon from "./CoinIcon";
 import { formatKoreanPoints } from "@/lib/format";
+import { useIsMobile } from "@/lib/useIsMobile";
 
 function PulseSkeleton({ size }: { size: "sm" | "md" }) {
   return (
@@ -40,7 +41,7 @@ function PulseSkeleton({ size }: { size: "sm" | "md" }) {
   );
 }
 
-export default function WalletPill({
+function WalletPillImpl({
   points,
   size = "sm",
 }: {
@@ -48,6 +49,11 @@ export default function WalletPill({
   size?: "sm" | "md";
 }) {
   const reduce = useReducedMotion();
+  const isMobile = useIsMobile();
+  // 모바일 + 모션 감소 환경에서는 헤더 코인의 12초 무한 회전을 끈다.
+  // 모든 페이지의 navbar 에 항상 보이는 요소라 mobile GPU 합성기에 지속
+  // 부하를 주는데 비해 시각적 가치는 작음.
+  const animateCoin = !reduce && !isMobile;
   const [display, setDisplay] = useState<number>(points ?? 0);
   const prevRef = useRef<number | null>(null);
   const mountedRef = useRef(false);
@@ -125,15 +131,15 @@ export default function WalletPill({
           "[@media(max-width:359px)]:hidden"
         )}
         initial={false}
-        animate={reduce ? undefined : { rotate: [0, 360] }}
+        animate={animateCoin ? { rotate: [0, 360] } : undefined}
         transition={
-          reduce
-            ? undefined
-            : {
+          animateCoin
+            ? {
                 duration: 12,
                 ease: "linear",
                 repeat: Infinity,
               }
+            : undefined
         }
         style={{ transformStyle: "preserve-3d" }}
       >
@@ -146,3 +152,9 @@ export default function WalletPill({
     </Link>
   );
 }
+
+// memo 로 감싸서 navbar 가 다른 사유(라우트 변경, gift badge 변경 등)로
+// 리렌더돼도 points / size 가 동일하면 WalletPill 은 스킵. 안에 framer-motion
+// 무한 회전이 있어서 매 리렌더마다 motion 인스턴스가 재초기화되던 비용 제거.
+const WalletPill = memo(WalletPillImpl);
+export default WalletPill;

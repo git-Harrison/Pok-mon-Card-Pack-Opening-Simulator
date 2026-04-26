@@ -6,6 +6,7 @@ import Link from "next/link";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
+import { useIsMobile } from "@/lib/useIsMobile";
 import {
   bulkCreateShowcases,
   buyShowcase,
@@ -424,13 +425,16 @@ export default function CenterView() {
 /* ─────────────── reusable pieces (also used by the visit view) ─────────────── */
 
 export function CenterBackdrop() {
+  const isMobile = useIsMobile();
+  // 모바일은 배경 이미지 + 오버레이 둘 다 스킵 (body 단색 dark 만 노출).
+  if (isMobile) return null;
   return (
     <>
       <div
         aria-hidden
         className="fixed inset-0 -z-10 bg-cover bg-center"
         style={{
-          backgroundImage: "url(/images/common/center-bg.jpg)",
+          backgroundImage: "url(/images/common/center-bg.webp)",
         }}
       />
       <div

@@ -23,6 +23,7 @@ import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 import PageBackdrop from "./PageBackdrop";
 import PageHeader from "./PageHeader";
 import CoinIcon from "./CoinIcon";
+import { useIsMobile } from "@/lib/useIsMobile";
 
 type Phase =
   | "idle"
@@ -721,6 +722,11 @@ function IdleCTA({
 }) {
   const blocked = cooldownLeft > 0;
   const reduce = useReducedMotion();
+  const isMobile = useIsMobile();
+  // 외부 CDN(pokemonshowdown) 이 iOS 일부 환경에서 hotlink 차단되거나
+  // referer/HTTPS 핸드셰이크 이슈로 깨져 나오는 케이스가 있어, onError 시
+  // 이미지 자체를 숨기고 CSS 그라데이션 배경만 보이게 폴백한다.
+  const [imageBroken, setImageBroken] = useState(false);
   const flavor = useMemo(
     () => IDLE_FLAVORS[Math.floor(Math.random() * IDLE_FLAVORS.length)],
     []
@@ -728,6 +734,10 @@ function IdleCTA({
   // Random biome for hero background — locked at mount so the Ken Burns
   // pan stays consistent during this idle session.
   const heroBiome = useMemo(() => pickBiome(), []);
+  // 모바일에서는 Ken Burns 무한 pan 을 끈다 — 22초짜리 transform/scale
+  // 루프가 2개(idle hero + battle bg) 동시에 돌면 mid-tier Android 에서
+  // 메인 스레드 점유로 스크롤/탭 응답이 끊긴다.
+  const cinematic = !reduce && !isMobile;
   // 3 random distinct enemies "detected" — picked once at mount.
   const detected = useMemo(() => {
     const pool = [...WILD_POOL];
@@ -755,54 +765,68 @@ function IdleCTA({
         className="absolute inset-0 pointer-events-none"
         style={{ background: heroBiome.sky }}
       />
-      {heroBiome.image && (
+      {/* 모바일에서는 외부 CDN biome 이미지 + accent / vignette / scanline
+          합성 레이어를 모두 끄고 sky 그라데이션만 보여 끈김 제거. */}
+      {!isMobile && heroBiome.image && !imageBroken && (
         <motion.img
           aria-hidden
           src={heroBiome.image}
           alt=""
           draggable={false}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => setImageBroken(true)}
           className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none opacity-70"
           style={{ imageRendering: "pixelated" }}
-          initial={reduce ? false : { scale: 1.08, x: -10, y: -4 }}
+          initial={cinematic ? { scale: 1.08, x: -10, y: -4 } : false}
           animate={
-            reduce
-              ? {}
-              : { scale: [1.08, 1.16, 1.08], x: [-10, 10, -10], y: [-4, 4, -4] }
+            cinematic
+              ? { scale: [1.08, 1.16, 1.08], x: [-10, 10, -10], y: [-4, 4, -4] }
+              : {}
           }
           transition={
-            reduce
-              ? { duration: 0 }
-              : {
+            cinematic
+              ? {
                   duration: 22,
                   ease: "easeInOut",
                   repeat: Infinity,
                   repeatType: "loop",
                 }
+              : { duration: 0 }
           }
         />
       )}
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none"
-        style={{ background: heroBiome.accent }}
-      />
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(120% 80% at 50% 30%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.55) 80%, rgba(0,0,0,0.85) 100%)",
-        }}
-      />
-      {/* Scanline overlay — pure CSS so no asset cost. */}
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-40"
-        style={{
-          background:
-            "repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 3px)",
-        }}
-      />
+      {!isMobile && (
+        <>
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: heroBiome.accent }}
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(120% 80% at 50% 30%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.55) 80%, rgba(0,0,0,0.85) 100%)",
+            }}
+          />
+        </>
+      )}
+      {/* Scanline overlay — pure CSS so no asset cost.
+          모바일은 mix-blend-overlay + repeating-linear-gradient 합성 비용 발생,
+          끈김 제거 위해 데스크탑 전용. */}
+      {!isMobile && (
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-40"
+          style={{
+            background:
+              "repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 3px)",
+          }}
+        />
+      )}
 
       <div className="relative p-4 md:p-8 text-center">
         {/* Top sub-banner */}
@@ -909,7 +933,7 @@ function IdleCTA({
           style={{ touchAction: "manipulation" }}
           initial={reduce ? false : { opacity: 0, y: 12, scale: 0.96 }}
           animate={
-            blocked || reduce
+            blocked || !cinematic
               ? { opacity: 1, y: 0, scale: 1 }
               : {
                   opacity: 1,
@@ -923,7 +947,7 @@ function IdleCTA({
                 }
           }
           transition={
-            blocked || reduce
+            blocked || !cinematic
               ? { duration: 0.4, delay: 1.15 }
               : {
                   opacity: { duration: 0.4, delay: 1.15 },
@@ -955,7 +979,7 @@ function IdleCTA({
               ? `⏳ ${cooldownLeft}초 뒤 재도전`
               : "⚔️ 전투 시작"}
           </span>
-          {!blocked && !reduce && (
+          {!blocked && cinematic && (
             <motion.span
               aria-hidden
               className="absolute inset-y-0 -left-1/3 w-1/3 pointer-events-none"
@@ -1218,6 +1242,9 @@ function BattleScene({
   biome: Biome;
 }) {
   const reduce = useReducedMotion();
+  const isMobile = useIsMobile();
+  const cinematic = !reduce && !isMobile;
+  const [bgBroken, setBgBroken] = useState(false);
   const wildBubble = bubble?.side === "wild" ? bubble.text : "";
   const playerBubble = bubble?.side === "player" ? bubble.text : "";
   return (
@@ -1242,50 +1269,55 @@ function BattleScene({
         )}
         style={{ background: biome.sky }}
       >
-        {biome.image && (
+        {/* 모바일은 외부 CDN biome 이미지 + 4중 합성 레이어 모두 끄고
+            sky 그라데이션만. */}
+        {!isMobile && biome.image && !bgBroken && (
           <motion.img
             src={biome.image}
             alt=""
             draggable={false}
-            // Async decode + eager load — biome backdrop is critical chrome
-            // so we want the network request immediately, but decoding off
-            // the main thread keeps the encounter UI's first paint snappy.
             loading="eager"
             decoding="async"
+            referrerPolicy="no-referrer"
+            onError={() => setBgBroken(true)}
             className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
             style={{ imageRendering: "pixelated" }}
-            initial={reduce ? false : { scale: 1.06, x: -8 }}
-            animate={reduce ? {} : { scale: 1.06, x: [-8, 8, -8] }}
+            initial={cinematic ? { scale: 1.06, x: -8 } : false}
+            animate={cinematic ? { scale: 1.06, x: [-8, 8, -8] } : {}}
             transition={
-              reduce
-                ? { duration: 0 }
-                : {
+              cinematic
+                ? {
                     duration: 18,
                     ease: "easeInOut",
                     repeat: Infinity,
                     repeatType: "loop",
                   }
+                : { duration: 0 }
             }
           />
         )}
-        <div
-          aria-hidden
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.45) 100%)",
-          }}
-        />
-        <div
-          aria-hidden
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: biome.accent }}
-        />
-        <div
-          aria-hidden
-          className="absolute inset-x-0 bottom-0 h-1/3 pointer-events-none"
-          style={{ background: biome.ground }}
-        />
+        {!isMobile && (
+          <>
+            <div
+              aria-hidden
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.45) 100%)",
+              }}
+            />
+            <div
+              aria-hidden
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: biome.accent }}
+            />
+            <div
+              aria-hidden
+              className="absolute inset-x-0 bottom-0 h-1/3 pointer-events-none"
+              style={{ background: biome.ground }}
+            />
+          </>
+        )}
       </div>
       <div className="absolute top-2 left-2 md:top-3 md:left-3 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur text-[10px] md:text-[11px] text-white/90 border border-white/10 inline-flex items-center gap-1 pointer-events-none z-10">
         <span>{biome.emoji}</span>
@@ -1488,6 +1520,10 @@ const WildSprite = memo(function WildSprite({
 
 const PlayerSlab = memo(function PlayerSlab({ slab }: { slab: Slab }) {
   const rstyle = RARITY_STYLE[slab.rarity];
+  // 외부 Pokellector CDN 이 iOS Safari 에서 종종 hotlink 차단/CORS 실패로
+  // 깨지는 이미지(엑박)로 떨어지는 케이스가 있어 onError 시 카드명
+  // 텍스트 폴백으로 전환한다.
+  const [broken, setBroken] = useState(false);
   return (
     <div
       className={clsx(
@@ -1495,10 +1531,14 @@ const PlayerSlab = memo(function PlayerSlab({ slab }: { slab: Slab }) {
         rstyle.frame
       )}
     >
-      {slab.imageUrl ? (
+      {slab.imageUrl && !broken ? (
         <img
           src={slab.imageUrl}
           alt={slab.name}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => setBroken(true)}
           className="w-full h-full object-contain bg-zinc-900"
           draggable={false}
         />
@@ -1682,6 +1722,12 @@ function PickSlabPanel({
                     <img
                       src={s.imageUrl}
                       alt=""
+                      loading="lazy"
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
                       className="w-full h-full object-contain"
                       draggable={false}
                     />

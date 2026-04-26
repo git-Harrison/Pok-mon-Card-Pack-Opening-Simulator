@@ -120,8 +120,10 @@ function FlippableCard({
         {/* Back */}
         <div className="absolute inset-0 backface-hidden rounded-xl overflow-hidden">
           <img
-            src="/images/common/card-back.jpg"
+            src="/images/common/card-back.webp"
             alt=""
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover select-none pointer-events-none"
             draggable={false}
           />
@@ -133,6 +135,7 @@ function FlippableCard({
               src={card.imageUrl}
               alt={card.name}
               loading="lazy"
+              decoding="async"
               draggable={false}
               onError={() => setImgError(true)}
               className="w-full h-full object-contain bg-zinc-900 select-none pointer-events-none"

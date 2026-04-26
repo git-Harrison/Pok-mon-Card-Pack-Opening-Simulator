@@ -108,10 +108,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const fresh = await fetchMe(userId);
       if (alive && fresh) persist(fresh);
     };
-    // 4s ticker so admin grants / gifts / wild rewards reflect in the
-    // header WalletPill without users having to reload. The persist()
-    // shallow-skip below means identical refreshes are free.
-    const id = setInterval(tick, 4_000);
+    // 15s ticker. 이전엔 4초마다 fetchMe → JSON.stringify 비교가 모바일에서
+    // 메인 스레드를 자주 흔들어 스크롤이 1회씩 미세하게 끊김. 15초여도
+    // 어드민 보상 / 선물 / 야생 승리 반영에 체감 차이는 거의 없고,
+    // visibility 변경 시 즉시 tick 하도록 onVis 가 보강해 줘서 충분.
+    // realtime 채널 (gift/taunt INSERT) 은 별도로 즉시 알림이 옴.
+    const id = setInterval(tick, 15_000);
     const onVis = () => {
       if (typeof document !== "undefined" && !document.hidden) tick();
     };

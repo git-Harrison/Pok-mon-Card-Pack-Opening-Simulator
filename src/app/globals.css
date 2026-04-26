@@ -29,6 +29,17 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* 모바일은 페이지 전반의 배경 레이어를 모두 끄고 단색만. PageBackdrop /
+   BackgroundFx / CenterBackdrop 컴포넌트는 모바일에서 null 을 반환하지만
+   body 의 풀뷰포트 라디얼 그라데이션도 fixed-position 풀스크린 합성 비용을
+   유발하므로 같이 단색으로 대체. */
+@media (max-width: 767px) {
+  html,
+  body {
+    background: #06060a;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -139,6 +150,17 @@ samp {
   );
   mix-blend-mode: screen;
   animation: mur-foil 3.4s ease-in-out infinite;
+  will-change: transform;
+}
+/* 모바일 / 모션 감소 환경에서는 sweep 애니메이션을 끄고 정적 골드 톤만 노출.
+   카드 그리드 30+장이 동시에 mix-blend-mode + transform 루프를 돌면
+   mid-tier 모바일에서 GPU 합성 단계가 포화되어 스크롤이 멈칫함. */
+@media (max-width: 767px), (prefers-reduced-motion: reduce) {
+  .fx-mur::before {
+    animation: none;
+    transform: translateX(0) skewX(-18deg);
+    opacity: 0.35;
+  }
 }
 /* A permanent warm inset so the card feels like gold foil even between sweeps */
 .fx-mur::after {
@@ -184,6 +206,7 @@ samp {
   mix-blend-mode: screen;
   opacity: 0.65;
   animation: ring-spin 9s linear infinite;
+  will-change: transform;
 }
 /* Starfield — tiny static sparkle dots that gently pulse */
 .fx-sar::after {
@@ -200,6 +223,20 @@ samp {
     radial-gradient(1px 1px at 30% 48%, #fff 0, transparent 60%);
   mix-blend-mode: screen;
   animation: sar-twinkle 2.6s ease-in-out infinite;
+}
+/* 모바일 / 모션 감소 환경에서는 conic 회전 + blur 22px 합성 비용이 큰
+   ::before 와 트윙클 ::after 둘 다 정적으로 변경. 정지 상태에서도
+   오로라 톤은 유지된다. */
+@media (max-width: 767px), (prefers-reduced-motion: reduce) {
+  .fx-sar::before {
+    animation: none;
+    filter: blur(14px);
+    opacity: 0.45;
+  }
+  .fx-sar::after {
+    animation: none;
+    opacity: 0.6;
+  }
 }
 
 /* ---------- Pack foil shine ---------- */
@@ -308,6 +345,15 @@ samp {
 }
 .fade-in {
   animation: fade-in 0.35s ease-out both;
+}
+/* 모바일/모션 감소 환경에서는 페이지 진입 페이드를 끈다.
+   AuthGate + 각 View 루트 + 일부 하위 wrapper 가 모두 fade-in 을 갖고 있어
+   라우트 전환마다 0.35s 누적 페인트가 발생, "로딩 중인 듯한" 끈김 인상의
+   주범이었음. 데스크탑은 그대로 유지. */
+@media (max-width: 767px), (prefers-reduced-motion: reduce) {
+  .fade-in {
+    animation: none;
+  }
 }
 
 /* Focus ring */

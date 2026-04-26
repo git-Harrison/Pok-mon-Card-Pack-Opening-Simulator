@@ -40,6 +40,10 @@ export default function NotificationsOverlay() {
 
   useRealtimeInbox(user?.id ?? null, refresh);
 
+  // 폴링 간격 30s → 90s. 라우트 변경마다 useEffect[refresh, pathname] 가
+  // 즉시 fetch 하고, realtime INSERT 채널이 즉시 알림을 보내므로 90s 만으로
+  // 충분. 30s 는 모바일에서 auth ticker(15s) 와 합쳐 메인 스레드를 자주
+  // 흔드는 원인이었음.
   useEffect(() => {
     if (!user) return;
     let alive = true;
@@ -48,7 +52,7 @@ export default function NotificationsOverlay() {
       if (typeof document !== "undefined" && document.hidden) return;
       refresh();
     };
-    const id = setInterval(tick, 30_000);
+    const id = setInterval(tick, 90_000);
     const onVis = () => {
       if (typeof document !== "undefined" && !document.hidden) refresh();
     };
@@ -78,7 +82,7 @@ export default function NotificationsOverlay() {
     <Portal>
       <motion.div
         key={current.id}
-        className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-md flex items-center justify-center overflow-hidden"
+        className="fixed inset-0 z-[200] bg-black/92 md:bg-black/85 md:backdrop-blur-md flex items-center justify-center overflow-hidden"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}

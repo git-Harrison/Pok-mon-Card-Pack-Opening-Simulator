@@ -1,6 +1,6 @@
 "use client";
 
-import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
+import PokeLoader from "./PokeLoader";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
@@ -25,7 +25,6 @@ import {
   fetchProfile,
   getCharacter,
   MAX_MAIN_CARDS,
-  MAX_PET_SCORE,
   setCharacter as rpcSetCharacter,
   setMainCards as rpcSetMainCards,
   updateDisplayName as rpcUpdateDisplayName,
@@ -157,9 +156,6 @@ export default function ProfileView() {
     [user, profile, refresh]
   );
 
-  const petScore = profile?.pet_score ?? 0;
-  const scorePct = Math.min(100, (petScore / MAX_PET_SCORE) * 100);
-
   return (
     <div className="relative max-w-3xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
       <PageBackdrop tone="sky" />
@@ -169,14 +165,14 @@ export default function ProfileView() {
       />
 
       {loading ? (
-        <CenteredPokeLoader />
+        <div className="mt-12 flex items-center justify-center">
+          <PokeLoader size="md" label="불러오는 중..." />
+        </div>
       ) : (
         <>
           <ProfileBanner
             character={characterDef}
             displayName={user?.display_name ?? ""}
-            petScore={petScore}
-            scorePct={scorePct}
             slotsUsed={filledSlots.filter(Boolean).length}
             centerPower={profile?.center_power ?? 0}
             pokedexCount={profile?.pokedex_count ?? 0}
@@ -415,8 +411,6 @@ function CountUp({
 function ProfileBanner({
   character,
   displayName,
-  petScore,
-  scorePct,
   slotsUsed,
   centerPower,
   pokedexCount,
@@ -424,8 +418,6 @@ function ProfileBanner({
 }: {
   character: CharacterDef | null;
   displayName: string;
-  petScore: number;
-  scorePct: number;
   slotsUsed: number;
   centerPower: number;
   pokedexCount: number;
@@ -510,18 +502,6 @@ function ProfileBanner({
             </span>
           </div>
         </div>
-      </div>
-      <div className="mt-1.5 h-1 rounded-full bg-white/5 overflow-hidden">
-        <motion.div
-          className="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500"
-          initial={reduce ? { width: `${scorePct}%` } : { width: 0 }}
-          animate={{ width: `${scorePct}%` }}
-          transition={{
-            duration: reduce ? 0 : 0.7,
-            ease: [0.4, 0, 0.2, 1],
-            delay: reduce ? 0 : 0.1,
-          }}
-        />
       </div>
     </div>
   );

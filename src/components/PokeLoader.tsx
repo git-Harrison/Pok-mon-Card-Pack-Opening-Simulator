@@ -87,7 +87,7 @@ export function CenteredPokeLoader({
   return (
     <Portal>
       <div
-        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none"
+        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/55 md:bg-black/40 md:backdrop-blur-sm pointer-events-none"
         style={{
           paddingTop: "env(safe-area-inset-top, 0px)",
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
