@@ -385,6 +385,9 @@ export type UserActivityTab = "rank" | "power" | "pet";
 
 export interface UserActivityEvent {
   label: string;
+  /** 카드 코드 (예: "m2-086"). 클라이언트에서 포켓몬 한글 이름으로 치환. */
+  card_id?: string | null;
+  /** 양수 = 점수 획득, 음수 = 점수 손실 (사보타지 피해 등). */
   points: number;
   source: string;
   occurred_at: string;

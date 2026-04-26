@@ -377,7 +377,7 @@ export default function UsersView() {
                           {(e.pet_score ?? 0).toLocaleString("ko-KR")}
                         </div>
                         <div className="mt-1 text-[10px] text-fuchsia-300/70 uppercase tracking-wider">
-                          MAX 500
+                          MAX 1,000
                         </div>
                       </>
                     ) : (
@@ -549,27 +549,36 @@ const ActivityFeed = memo(function ActivityFeed({
   return (
     <div className="px-3 md:px-4 pb-3">
       <ul className="space-y-1">
-        {events.map((ev, idx) => (
-          <li
-            key={`${ev.source}-${ev.occurred_at}-${idx}`}
-            className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white/[0.03] border border-white/10"
-          >
-            <span className="flex-1 min-w-0 text-[12px] text-zinc-200 truncate">
-              {ev.label}
-            </span>
-            <span
-              className={clsx(
-                "shrink-0 text-[12px] font-black tabular-nums",
-                accent
-              )}
+        {events.map((ev, idx) => {
+          // 카드 코드(m2-086) → 포켓몬 한글 이름 치환. card_id 가 없거나
+          // (예: "?") 카드 카탈로그에 없으면 라벨만 노출.
+          const card = ev.card_id ? getCard(ev.card_id) : null;
+          const subject = card?.name ?? null;
+          const sign = ev.points >= 0 ? "+" : "";
+          const isLoss = ev.points < 0;
+          return (
+            <li
+              key={`${ev.source}-${ev.occurred_at}-${idx}`}
+              className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white/[0.03] border border-white/10"
             >
-              +{ev.points.toLocaleString("ko-KR")}p
-            </span>
-            <span className="shrink-0 text-[10px] text-zinc-500 tabular-nums">
-              {formatRelativeKo(ev.occurred_at)}
-            </span>
-          </li>
-        ))}
+              <span className="flex-1 min-w-0 text-[12px] text-zinc-200 truncate">
+                {subject ? `${ev.label} · ${subject}` : ev.label}
+              </span>
+              <span
+                className={clsx(
+                  "shrink-0 text-[12px] font-black tabular-nums",
+                  isLoss ? "text-rose-300" : accent
+                )}
+              >
+                {sign}
+                {ev.points.toLocaleString("ko-KR")}p
+              </span>
+              <span className="shrink-0 text-[10px] text-zinc-500 tabular-nums">
+                {formatRelativeKo(ev.occurred_at)}
+              </span>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

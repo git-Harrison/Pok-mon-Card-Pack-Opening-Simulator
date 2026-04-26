@@ -112,7 +112,7 @@ export default function GradingView() {
           하위 등급 즉시 환산
         </Tip>
         <Tip icon="🛡️" title="감별 한도">
-          PCL 10,000장
+          PCL 20,000장
         </Tip>
       </section>
 
@@ -995,7 +995,7 @@ function BulkResults({
         )}
         {capSkipped > 0 && (
           <p className="mt-2 text-[11px] text-rose-300 text-center font-bold">
-            ⚠️ PCL 한도(10,000장) 초과 — {capSkipped}장은 보유 한도에 막혀 감별 못 받았어요. 카드는 안전하게 지갑에 남아있어요.
+            ⚠️ PCL 한도(20,000장) 초과 — {capSkipped}장은 보유 한도에 막혀 감별 못 받았어요. 카드는 안전하게 지갑에 남아있어요.
           </p>
         )}
         {skipped > 0 && (
