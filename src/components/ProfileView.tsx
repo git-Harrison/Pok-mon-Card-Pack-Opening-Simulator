@@ -85,8 +85,16 @@ export default function ProfileView() {
     return out;
   }, [profile]);
 
+  // 펫 등록 후보 — 본인 PCL10 슬랩 전체. 전시 중인 슬랩은 SlabPicker
+  // 안에서 disabled 표시 (서버도 거부하므로 안전).
   const eligibleSlabs = useMemo(
     () => psa.filter((g) => g.grade === 10),
+    [psa]
+  );
+  // 전시 중인 슬랩 ID — 펫 등록 시도 시 클라이언트에서 미리 차단해
+  // 라운드트립 한 번 줄이고 사용자에게 즉시 안내.
+  const displayedIds = useMemo(
+    () => new Set(psa.filter((g) => g.displayed).map((g) => g.id)),
     [psa]
   );
 
@@ -114,19 +122,41 @@ export default function ProfileView() {
     [user, profile?.character_locked, refresh, savingChar]
   );
 
+  // 펫 등록/해제 시 항상 "살아있는" 슬랩 ID 만 base 로 사용한다. main_card_ids
+  // 에는 소실된 슬랩(예: 도감 일괄 등록 / 선물 / 일괄 판매로 사라진 PSA
+  // 기록) UUID 가 잔존할 수 있는데, 그대로 다시 보내면 서버 set_main_cards
+  // 의 "본인 PCL10 슬랩만 등록 가능" 검증에서 통째로 거부되어 펫 등록이
+  // 영구 실패하던 회귀의 원인. main_cards 는 get_profile 이 살아있는 PCL10
+  // 만 반환하므로 그 id 집합을 신뢰 소스로 사용.
+  const aliveIds = useMemo(
+    () =>
+      (profile?.main_card_ids ?? []).filter((id) =>
+        (profile?.main_cards ?? []).some((c) => c.id === id)
+      ),
+    [profile]
+  );
+
   const onSelectSlab = useCallback(
     async (slot: number, gradingId: string) => {
       if (!user || !profile) return;
-      const ids = [...profile.main_card_ids];
-      if (ids.includes(gradingId) && ids[slot] !== gradingId) {
+      // 클라이언트 사이드 가드 — 서버도 거부하지만 UX 즉시 안내.
+      if (displayedIds.has(gradingId)) {
+        setError(
+          "센터에 전시 중인 슬랩이에요. 센터에서 전시 해제 후 다시 시도하세요."
+        );
+        return;
+      }
+      const ids = [...aliveIds];
+      if (ids.includes(gradingId)) {
         setError("이미 다른 슬롯에 등록된 슬랩이에요.");
         return;
       }
-      while (ids.length < slot) ids.push("");
-      ids[slot] = gradingId;
-      const cleaned = ids.filter((x) => x);
+      // slot 위치에 끼워 넣되 최대 10 cap. 빈 자리(slot >= length) 면 push.
+      if (slot >= ids.length) ids.push(gradingId);
+      else ids.splice(slot, 0, gradingId);
+      if (ids.length > MAX_MAIN_CARDS) ids.length = MAX_MAIN_CARDS;
       setError(null);
-      const res = await rpcSetMainCards(user.id, cleaned);
+      const res = await rpcSetMainCards(user.id, ids);
       if (!res.ok) {
         setError(res.error ?? "펫을 등록하지 못했어요.");
         return;
@@ -134,13 +164,13 @@ export default function ProfileView() {
       setPickerSlot(null);
       await refresh();
     },
-    [user, profile, refresh]
+    [user, profile, aliveIds, displayedIds, refresh]
   );
 
   const onRemoveSlot = useCallback(
     async (slot: number) => {
       if (!user || !profile) return;
-      const ids = [...profile.main_card_ids];
+      const ids = [...aliveIds];
       if (slot >= ids.length) return;
       const ok = window.confirm("이 펫을 슬롯에서 빼시겠어요?");
       if (!ok) return;
@@ -153,7 +183,7 @@ export default function ProfileView() {
       }
       await refresh();
     },
-    [user, profile, refresh]
+    [user, profile, aliveIds, refresh]
   );
 
   return (
@@ -339,6 +369,7 @@ export default function ProfileView() {
           <SlabPicker
             slabs={eligibleSlabs}
             disabledIds={new Set(profile.main_card_ids)}
+            displayedIds={displayedIds}
             slotIndex={pickerSlot}
             onClose={() => setPickerSlot(null)}
             onPick={(id) => onSelectSlab(pickerSlot, id)}
@@ -666,12 +697,14 @@ function PetSlot({
 function SlabPicker({
   slabs,
   disabledIds,
+  displayedIds,
   slotIndex,
   onClose,
   onPick,
 }: {
   slabs: PsaGradingWithDisplay[];
   disabledIds: Set<string>;
+  displayedIds: Set<string>;
   slotIndex: number;
   onClose: () => void;
   onPick: (id: string) => void;
@@ -736,19 +769,28 @@ function SlabPicker({
                   const card = getCard(g.card_id);
                   if (!card) return null;
                   const taken = disabledIds.has(g.id);
+                  const onShowcase = displayedIds.has(g.id);
+                  const blocked = taken || onShowcase;
                   return (
                     <li key={g.id}>
                       <button
                         type="button"
-                        disabled={taken}
+                        disabled={blocked}
                         onClick={() => onPick(g.id)}
                         style={{ touchAction: "manipulation" }}
                         className={clsx(
                           "relative block w-full text-left rounded-xl p-1 transition",
-                          taken
+                          blocked
                             ? "opacity-40 cursor-not-allowed"
                             : "hover:bg-white/5 active:scale-[0.98]"
                         )}
+                        title={
+                          taken
+                            ? "이미 펫으로 등록된 슬랩이에요."
+                            : onShowcase
+                            ? "센터에 전시 중인 슬랩이에요. 전시 해제 후 등록 가능."
+                            : undefined
+                        }
                       >
                         <PsaSlab card={card} grade={g.grade} size="sm" />
                         <p className="mt-1 px-1 text-[10px] text-zinc-400 truncate">
@@ -757,6 +799,11 @@ function SlabPicker({
                         {taken && (
                           <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-300 ring-1 ring-white/10">
                             등록됨
+                          </span>
+                        )}
+                        {!taken && onShowcase && (
+                          <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/90 text-zinc-950 ring-1 ring-amber-300/60">
+                            전시 중
                           </span>
                         )}
                       </button>
