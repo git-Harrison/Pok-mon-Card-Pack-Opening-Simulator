@@ -249,10 +249,9 @@ export default function UsersView() {
       )}
       {mode === "pet" && (
         <p className="mt-2 text-[11px] text-zinc-400 leading-snug">
-          펫 점수 = 등록한 PCL10 펫 슬랩 (최대 10장) 의{" "}
+          펫 점수 = 등록한 PCL10 펫 슬랩 + 체육관 방어 덱 슬랩 의{" "}
           <b className="text-zinc-200">희귀도 점수</b>(SR 5·MA 6·SAR 7·UR 8·MUR
-          10) × 15 합산. 최대{" "}
-          <b className="text-fuchsia-300">1,500</b>점.
+          10) × 15 합산.
         </p>
       )}
 
@@ -408,7 +407,7 @@ export default function UsersView() {
                           {(e.pet_score ?? 0).toLocaleString("ko-KR")}
                         </div>
                         <div className="mt-1 text-[10px] text-fuchsia-300/70 uppercase tracking-wider">
-                          MAX 1,500
+                          펫 점수
                         </div>
                       </>
                     ) : (
@@ -443,14 +442,9 @@ export default function UsersView() {
                       transition={{ duration: 0.2, ease: "easeOut" }}
                       className="overflow-hidden"
                     >
-                      {/* 자산 요약 — 사용자 요청으로 포인트/랭킹점수/전투력/
-                          펫점수 노출 제거. 도감만 모든 탭에서 공통 표시. */}
+                      {/* 점수 출처 분해 — 탭별로 어디서 몇 점인지 노출. */}
                       <div className="px-3 md:px-4 pt-1 pb-2">
-                        <ProfileStatChip
-                          label="도감"
-                          value={`${e.pokedex_count ?? 0}`}
-                          tone="emerald"
-                        />
+                        <ScoreBreakdown row={e} mode={mode} />
                       </div>
                       {/* 펫 탭 — 등록된 펫 슬랩 카드 이미지 썸네일.
                           탭하면 카드 정보 모달이 뜸. 희귀도 내림차순
@@ -726,6 +720,105 @@ const STAT_TONES: Record<string, { bg: string; text: string }> = {
   violet: { bg: "bg-violet-400/10 border-violet-400/30", text: "text-violet-200" },
   emerald: { bg: "bg-emerald-400/10 border-emerald-400/30", text: "text-emerald-200" },
 };
+
+/** 탭별 점수 출처 분해. 각 항목 = 작은 칩 (라벨 + 점수). 0 인 항목은
+ *  생략. 모든 데이터는 RankingRow 의 raw 필드에서 가져옴 — 추가 RPC X. */
+function ScoreBreakdown({
+  row,
+  mode,
+}: {
+  row: RankingRow;
+  mode: RankingMode;
+}) {
+  type Item = { label: string; value: number; tone: "amber" | "rose" | "fuchsia" | "emerald" | "cyan" | "violet" };
+  const items: Item[] = [];
+
+  if (mode === "rank") {
+    // 알고있는 누계만 분해. 부수기는 grade-mix 라 정확히 분리 불가 →
+    // total - (known) 로 "부수기 ±" 카테고리에 합쳐 노출.
+    const wild = (row.wild_wins ?? 0) * 100;
+    const showcase = row.showcase_rank_pts ?? 0;
+    const daily = (row as { gym_daily_rank_pts?: number }).gym_daily_rank_pts ?? 0;
+    const sabotage = Math.max(0, (row.rank_score ?? 0) - wild - showcase - daily);
+    if (wild > 0)     items.push({ label: "야생 승리", value: wild, tone: "emerald" });
+    if (showcase > 0) items.push({ label: "전시 누적", value: showcase, tone: "fuchsia" });
+    if (daily > 0)    items.push({ label: "체육관 일일", value: daily, tone: "cyan" });
+    if (sabotage > 0) items.push({ label: "부수기 / 방어", value: sabotage, tone: "rose" });
+  } else if (mode === "power") {
+    const pokedex = (row as { pokedex_bonus?: number }).pokedex_bonus ?? 0;
+    const completion = (row as { pokedex_completion_bonus?: number }).pokedex_completion_bonus ?? 0;
+    const pet = row.pet_score ?? 0;
+    const gymCount = (row as { gym_count?: number }).gym_count ?? 0;
+    const gymBuff = gymCount * 10000;
+    const showcase = Math.max(
+      0,
+      (row.center_power ?? 0) - pokedex - completion - pet - gymBuff
+    );
+    if (showcase > 0)   items.push({ label: "전시", value: showcase, tone: "fuchsia" });
+    if (pokedex > 0)    items.push({ label: "도감", value: pokedex, tone: "emerald" });
+    if (completion > 0) items.push({ label: "도감 완성", value: completion, tone: "cyan" });
+    if (pet > 0)        items.push({ label: "펫", value: pet, tone: "amber" });
+    if (gymBuff > 0)    items.push({ label: `체육관 ×${gymCount}`, value: gymBuff, tone: "violet" });
+  } else {
+    // 펫 — main_cards 의 등급별 정액 합. (rarity_score × 15)
+    const cards = row.main_cards ?? [];
+    if (cards.length === 0) {
+      return (
+        <p className="text-[11px] text-zinc-500 text-center py-1">
+          등록된 펫이 없어요.
+        </p>
+      );
+    }
+    const RARITY_SCORE: Record<string, number> = {
+      MUR: 10, UR: 8, SAR: 7, MA: 6, SR: 5,
+      AR: 0, RR: 0, R: 0, U: 0, C: 0,
+    };
+    const counts: Record<string, number> = {};
+    for (const c of cards) {
+      counts[c.rarity] = (counts[c.rarity] ?? 0) + 1;
+    }
+    for (const [r, n] of Object.entries(counts)) {
+      const v = (RARITY_SCORE[r] ?? 0) * 15 * n;
+      if (v > 0) items.push({ label: `${r} × ${n}`, value: v, tone: "amber" });
+    }
+  }
+
+  if (items.length === 0) {
+    return (
+      <p className="text-[11px] text-zinc-500 text-center py-1">
+        점수 누계가 없어요.
+      </p>
+    );
+  }
+
+  const TONE_BG: Record<Item["tone"], string> = {
+    amber:   "bg-amber-400/10 border-amber-400/30 text-amber-200",
+    rose:    "bg-rose-500/10 border-rose-500/30 text-rose-200",
+    fuchsia: "bg-fuchsia-500/10 border-fuchsia-500/30 text-fuchsia-200",
+    emerald: "bg-emerald-500/10 border-emerald-500/30 text-emerald-200",
+    cyan:    "bg-cyan-500/10 border-cyan-500/30 text-cyan-200",
+    violet:  "bg-violet-500/10 border-violet-500/30 text-violet-200",
+  };
+
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {items.map((it) => (
+        <span
+          key={it.label}
+          className={clsx(
+            "inline-flex items-center gap-1 px-2 py-1 rounded-md border text-[10px] font-bold",
+            TONE_BG[it.tone]
+          )}
+        >
+          <span className="text-zinc-300/80">{it.label}</span>
+          <span className="font-black tabular-nums">
+            +{it.value.toLocaleString("ko-KR")}
+          </span>
+        </span>
+      ))}
+    </div>
+  );
+}
 
 function ProfileStatChip({
   label,

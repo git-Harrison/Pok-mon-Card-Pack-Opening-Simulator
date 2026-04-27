@@ -388,6 +388,18 @@ export interface RankingRow {
   main_cards?: RankingMainCard[];
   /** Pokedex registered count (for /users dropdown). */
   pokedex_count?: number;
+  /** Pokedex bonus (rarity_score-based sum). */
+  pokedex_bonus?: number;
+  /** Pokedex completion bonus (partial linear). */
+  pokedex_completion_bonus?: number;
+  /** Wild win count (×100 to rank_score). */
+  wild_wins?: number;
+  /** Showcase rank points cumulative. */
+  showcase_rank_pts?: number;
+  /** Gym daily claim cumulative rank points. */
+  gym_daily_rank_pts?: number;
+  /** Owned gyms count (each contributes +10,000 center_power buff). */
+  gym_count?: number;
   /** Seconds since last_seen_at — used to render the online dot. */
   seconds_since_seen?: number;
   gradings: RankingPclGrading[];
