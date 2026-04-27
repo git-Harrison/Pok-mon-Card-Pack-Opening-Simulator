@@ -16,22 +16,24 @@ export const sv8a: SetInfo = {
   accentColor: "#e9d5ff",
   boxImage: "/images/sets/sv8a/box.webp",
   packImage: "/images/sets/sv8a/pack.webp",
+  // sv8a 카드 분포는 다른 하이클래스팩과 다르게 U / AR / MA 등급이
+  // 0장 (C:144, R:8, RR:35, SR:12, SAR:33, UR:5). 슬롯 가중치를
+  // 실제 풀에 존재하는 등급으로만 구성. 예전엔 U/AR 가중치가 박혀
+  // 있어 fallbackDown 으로 의도치 않은 등급 카드가 나오던 문제를 해소.
   slots: [
-    { label: "C/U 1", weights: { C: 70, U: 30 } },
-    { label: "C/U 2", weights: { C: 70, U: 30 } },
-    { label: "C/U 3", weights: { C: 60, U: 40 } },
-    { label: "C/U 4", weights: { C: 60, U: 40 } },
-    { label: "U/R", weights: { U: 55, R: 45 } },
-    { label: "R/RR", weights: { R: 50, RR: 50 } },
-    { label: "RR/AR", weights: { RR: 55, AR: 45 } },
-    { label: "AR/SR", weights: { AR: 55, SR: 45 } },
-    // Keep rares concentrated in Hit so pack-level odds stay on-spec.
-    { label: "SR/SAR", weights: { SR: 90, SAR: 10 } },
+    { label: "C/R 1", weights: { C: 90, R: 10 } },
+    { label: "C/R 2", weights: { C: 90, R: 10 } },
+    { label: "C/R 3", weights: { C: 80, R: 20 } },
+    { label: "C/R 4", weights: { C: 80, R: 20 } },
+    { label: "R/RR 1", weights: { R: 55, RR: 45 } },
+    { label: "R/RR 2", weights: { R: 30, RR: 70 } },
+    { label: "RR/SR", weights: { RR: 55, SR: 45 } },
+    { label: "SR/SAR 1", weights: { SR: 70, SAR: 30 } },
+    { label: "SR/SAR 2", weights: { SR: 60, SAR: 40 } },
     {
-      // Pack-level odds (ratio AR 10 : SAR 5 : UR 1):
-      //   AR 10% · SR 7% · SAR 5% · UR 1% · RR fills the rest.
+      // Hit 슬롯 — 박스당 SAR 약 1~2장, UR 약 1장 페이스.
       label: "Hit",
-      weights: { RR: 30, AR: 10, SR: 7, SAR: 5, UR: 1 },
+      weights: { RR: 50, SR: 30, SAR: 15, UR: 5 },
     },
   ],
   cards: [
