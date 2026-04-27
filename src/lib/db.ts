@@ -171,13 +171,13 @@ export async function recordPackPullsBatch(
   userId: string,
   setCode: SetCode,
   pulls: BatchPullPack[],
-  autoSellSubAR: boolean
+  autoSellRarities: string[] | null
 ) {
   const { data, error } = await supabase.rpc("record_pack_pulls_batch", {
     p_user_id: userId,
     p_set_code: setCode,
     p_pulls: pulls,
-    p_auto_sell_sub_ar: autoSellSubAR,
+    p_auto_sell_rarities: autoSellRarities,
   });
   if (error) throw error;
   return data as {

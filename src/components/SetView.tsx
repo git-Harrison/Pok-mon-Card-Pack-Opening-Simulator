@@ -47,7 +47,7 @@ async function persistBatchWithRetry(
   userId: string,
   setCode: SetInfo["code"],
   pulls: BatchPullPack[],
-  autoSellSubAR: boolean,
+  autoSellRarities: string[] | null,
   tries = 3
 ): Promise<{
   total_sold_count: number;
@@ -62,7 +62,7 @@ async function persistBatchWithRetry(
         userId,
         setCode,
         pulls,
-        autoSellSubAR
+        autoSellRarities
       );
       return {
         total_sold_count: res.total_sold_count ?? 0,
@@ -131,22 +131,58 @@ export default function SetView({ set }: { set: SetInfo }) {
   // Separate channel for "wallet is full" so the UI can show a bigger
   // banner with a direct link to 일괄 판매 instead of a tiny tooltip.
   const [capError, setCapError] = useState<string | null>(null);
-  const [autoSellSubAR, setAutoSellSubAR] = useState(false);
+  const [autoSellRarities, setAutoSellRarities] = useState<string[]>([]);
   const [autoSellEarned, setAutoSellEarned] = useState(0);
+  const [autoSellSoldCount, setAutoSellSoldCount] = useState(0);
   // Guard so the initial restore doesn't write back over itself before
   // the user makes any change.
   const hydratedRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const v = window.localStorage.getItem("box-auto-sell-sub-ar");
-    if (v === "1") setAutoSellSubAR(true);
+    // Migrate the OLD single-bool key once, then read the new key.
+    const oldKey = "box-auto-sell-sub-ar";
+    const newKey = "box-auto-sell-rarities";
+    const oldVal = window.localStorage.getItem(oldKey);
+    if (oldVal === "1") {
+      const migrated = ["C", "U", "R", "RR"];
+      setAutoSellRarities(migrated);
+      try {
+        window.localStorage.setItem(newKey, JSON.stringify(migrated));
+      } catch {
+        // ignore storage failure
+      }
+      window.localStorage.removeItem(oldKey);
+      return;
+    }
+    if (oldVal !== null) {
+      // Old key existed but was "0" (off) — clear it so it doesn't keep
+      // re-running the migration check.
+      window.localStorage.removeItem(oldKey);
+    }
+    const raw = window.localStorage.getItem(newKey);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.every((x) => typeof x === "string")) {
+        setAutoSellRarities(parsed as string[]);
+      }
+    } catch {
+      // unparseable — leave default []
+    }
   }, []);
 
-  const toggleAutoSell = useCallback((next: boolean) => {
-    setAutoSellSubAR(next);
+  const updateAutoSellRarities = useCallback((next: string[]) => {
+    setAutoSellRarities(next);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem("box-auto-sell-sub-ar", next ? "1" : "0");
+      try {
+        window.localStorage.setItem(
+          "box-auto-sell-rarities",
+          JSON.stringify(next)
+        );
+      } catch {
+        // ignore storage failure
+      }
     }
   }, []);
 
@@ -226,6 +262,7 @@ export default function SetView({ set }: { set: SetInfo }) {
       setPhase("multi-buying");
       setMultiProgress({ done: 0, total: boxCount });
       setAutoSellEarned(0);
+      setAutoSellSoldCount(0);
 
       const allCards: Card[] = [];
       const batchPulls: BatchPullPack[] = [];
@@ -261,7 +298,7 @@ export default function SetView({ set }: { set: SetInfo }) {
           user.id,
           set.code,
           batchPulls,
-          autoSellSubAR
+          autoSellRarities.length > 0 ? autoSellRarities : null
         );
         if (typeof r.points === "number" && r.points > 0) {
           setPoints(r.points);
@@ -270,6 +307,7 @@ export default function SetView({ set }: { set: SetInfo }) {
           (a, b) => RARITY_STYLE[b.rarity].tier - RARITY_STYLE[a.rarity].tier
         );
         setAutoSellEarned(r.total_sold_earned);
+        setAutoSellSoldCount(r.total_sold_count);
         setMultiResult({ boxCount, totalSpent: spent, cards: allCards });
         setPhase("multi-result");
       } catch (e) {
@@ -303,7 +341,7 @@ export default function SetView({ set }: { set: SetInfo }) {
         setPhase("sealed");
       }
     },
-    [user, phase, set, cost, setPoints, clearErrors, autoSellSubAR]
+    [user, phase, set, cost, setPoints, clearErrors, autoSellRarities]
   );
 
   const closeMulti = useCallback(() => {
@@ -327,6 +365,7 @@ export default function SetView({ set }: { set: SetInfo }) {
     setOpenedMask(new Array(drawn.length).fill(false));
     setPhase("opening");
     setAutoSellEarned(0);
+    setAutoSellSoldCount(0);
     try {
       const batchPulls: BatchPullPack[] = drawn.map((pack) => ({
         card_ids: pack.map((c) => c.id),
@@ -336,10 +375,11 @@ export default function SetView({ set }: { set: SetInfo }) {
         user.id,
         set.code,
         batchPulls,
-        autoSellSubAR
+        autoSellRarities.length > 0 ? autoSellRarities : null
       );
       if (typeof r.points === "number" && r.points > 0) setPoints(r.points);
       setAutoSellEarned(r.total_sold_earned);
+      setAutoSellSoldCount(r.total_sold_count);
       setPhase("grid");
     } catch (e) {
       console.error("box persist failed", e);
@@ -365,7 +405,7 @@ export default function SetView({ set }: { set: SetInfo }) {
       setOpenedMask([]);
       setPhase("sealed");
     }
-  }, [user, phase, set, cost, setPoints, clearErrors, autoSellSubAR]);
+  }, [user, phase, set, cost, setPoints, clearErrors, autoSellRarities]);
 
   const choosePack = useCallback(
     (index: number) => {
@@ -461,8 +501,8 @@ export default function SetView({ set }: { set: SetInfo }) {
             loading={phase === "buying"}
             error={error}
             capError={capError}
-            autoSellSubAR={autoSellSubAR}
-            onToggleAutoSell={toggleAutoSell}
+            autoSellRarities={autoSellRarities}
+            onChangeAutoSellRarities={updateAutoSellRarities}
             onOpen={openBox}
             onOpenMulti={openMulti}
           />
@@ -548,6 +588,7 @@ export default function SetView({ set }: { set: SetInfo }) {
             totalSpent={multiResult.totalSpent}
             cards={multiResult.cards}
             autoSellEarned={autoSellEarned}
+            autoSellCount={autoSellSoldCount}
             onClose={closeMulti}
           />
         )}
@@ -582,6 +623,8 @@ function Stat({
   );
 }
 
+const AUTO_SELL_RARITY_OPTIONS = ["C", "U", "R", "RR", "AR"] as const;
+
 function SealedBox({
   set,
   cost,
@@ -590,8 +633,8 @@ function SealedBox({
   loading,
   error,
   capError,
-  autoSellSubAR,
-  onToggleAutoSell,
+  autoSellRarities,
+  onChangeAutoSellRarities,
   onOpen,
   onOpenMulti,
 }: {
@@ -602,11 +645,22 @@ function SealedBox({
   loading: boolean;
   error: string | null;
   capError: string | null;
-  autoSellSubAR: boolean;
-  onToggleAutoSell: (next: boolean) => void;
+  autoSellRarities: string[];
+  onChangeAutoSellRarities: (next: string[]) => void;
   onOpen: () => void;
   onOpenMulti: (n: number) => void;
 }) {
+  const autoSellOn = autoSellRarities.length > 0;
+  const toggleRarity = (r: string) => {
+    if (autoSellRarities.includes(r)) {
+      onChangeAutoSellRarities(autoSellRarities.filter((x) => x !== r));
+    } else {
+      onChangeAutoSellRarities([...autoSellRarities, r]);
+    }
+  };
+  const applyRecommended = () => {
+    onChangeAutoSellRarities(["C", "U", "R", "RR"]);
+  };
   return (
     <motion.div
       key="sealed"
@@ -639,45 +693,63 @@ function SealedBox({
         </div>
       </motion.div>
 
-      <label
+      <div
         className={clsx(
-          "w-full max-w-[420px] flex items-center justify-between gap-3 cursor-pointer select-none rounded-2xl border px-3.5 py-3 transition",
-          autoSellSubAR
+          "w-full max-w-[420px] select-none rounded-2xl border px-3.5 py-3 transition",
+          autoSellOn
             ? "border-amber-400/60 bg-amber-400/15 shadow-[0_0_18px_-6px_rgba(251,191,36,0.5)]"
-            : "border-white/10 bg-white/5 hover:bg-white/10"
+            : "border-white/10 bg-white/5"
         )}
       >
-        <div className="flex items-center gap-3 min-w-0">
-          <input
-            type="checkbox"
-            checked={autoSellSubAR}
-            onChange={(e) => onToggleAutoSell(e.target.checked)}
-            className="w-5 h-5 accent-amber-400 shrink-0"
-            style={{ touchAction: "manipulation" }}
-          />
-          <div className="min-w-0">
-            <div className="text-sm font-bold text-white inline-flex items-center gap-1.5 flex-wrap">
-              AR 미만 자동 판매
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-400 text-zinc-900">
-                💡 추천
-              </span>
-            </div>
-            <div className="text-[10px] md:text-[11px] text-zinc-400 mt-0.5">
-              C·U·R·RR 카드는 지갑에 저장 안 하고 일괄판매 단가로 즉시 환산
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-sm font-bold text-white">자동 판매 등급</div>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={applyRecommended}
+              className="text-[10px] font-bold px-2 py-1 rounded-full bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/40 text-amber-100 transition"
+              style={{ touchAction: "manipulation" }}
+            >
+              추천 (AR 미만)
+            </button>
+            <div
+              className={clsx(
+                "shrink-0 text-[10px] font-black px-2 py-1 rounded-full",
+                autoSellOn
+                  ? "bg-amber-400 text-zinc-950"
+                  : "bg-white/10 text-zinc-400"
+              )}
+            >
+              {autoSellOn ? "ON" : "OFF"}
             </div>
           </div>
         </div>
-        <div
-          className={clsx(
-            "shrink-0 text-[10px] font-black px-2 py-1 rounded-full",
-            autoSellSubAR
-              ? "bg-amber-400 text-zinc-950"
-              : "bg-white/10 text-zinc-400"
-          )}
-        >
-          {autoSellSubAR ? "ON" : "OFF"}
+        <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+          {AUTO_SELL_RARITY_OPTIONS.map((r) => {
+            const active = autoSellRarities.includes(r);
+            return (
+              <button
+                key={r}
+                type="button"
+                onClick={() => toggleRarity(r)}
+                className={clsx(
+                  "h-8 px-3 rounded-full text-xs font-bold border transition",
+                  active
+                    ? "bg-amber-400 text-zinc-950 border-amber-400"
+                    : "bg-white/5 text-zinc-300 border-white/10 hover:bg-white/10"
+                )}
+                style={{ touchAction: "manipulation" }}
+                aria-pressed={active}
+              >
+                {r}
+              </button>
+            );
+          })}
         </div>
-      </label>
+        <div className="mt-2 text-[10px] md:text-[11px] text-zinc-400">
+          선택한 등급 카드는 지갑 저장 없이 일괄 판매 단가로 즉시 환산돼요
+        </div>
+      </div>
 
       <button
         onClick={onOpen}
@@ -1050,6 +1122,7 @@ function MultiResultOverlay({
   totalSpent,
   cards,
   autoSellEarned,
+  autoSellCount,
   onClose,
 }: {
   setName: string;
@@ -1057,6 +1130,7 @@ function MultiResultOverlay({
   totalSpent: number;
   cards: Card[];
   autoSellEarned: number;
+  autoSellCount: number;
   onClose: () => void;
 }) {
   const byRarity = cards.reduce<Record<string, number>>((acc, c) => {
@@ -1095,7 +1169,8 @@ function MultiResultOverlay({
             <span>소비 {totalSpent.toLocaleString("ko-KR")}p</span>
             {autoSellEarned > 0 && (
               <span className="text-emerald-300">
-                · 자동판매 +{autoSellEarned.toLocaleString("ko-KR")}p
+                · 자동판매 {autoSellCount}장 +
+                {autoSellEarned.toLocaleString("ko-KR")}p
               </span>
             )}
           </div>
