@@ -34,10 +34,11 @@ export const m2a: SetInfo = {
       weights: { SR: 55, MA: 45 },
     },
     {
-      // Pack-level odds. MUR 가중치 0.25 → 0.125 로 또 한 번 절반
-      // 인하. 분모 ~59.125 기준 MUR ≈ 0.21%.
+      // Pack-level odds. 박스 단위 개봉 가정으로 또 한 번 절반
+      // (0.125 → 0.0625). 분모 ~59.0625 기준 MUR ≈ 0.106%, 10팩
+      // 박스당 ≈ 1.05%.
       label: "Hit",
-      weights: { RR: 30, AR: 10, SR: 7, MA: 7, SAR: 5, MUR: 0.125 },
+      weights: { RR: 30, AR: 10, SR: 7, MA: 7, SAR: 5, MUR: 0.0625 },
     },
   ],
   cards: [

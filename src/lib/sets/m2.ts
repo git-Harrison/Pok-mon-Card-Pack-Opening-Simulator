@@ -25,10 +25,11 @@ export const m2: SetInfo = {
     { label: "C/U", weights: { C: 60, U: 40 } },
     { label: "U/R", weights: { U: 70, R: 30 } },
     {
-      // Pack-level odds. MUR 가중치 0.25 → 0.125 로 또 한 번 절반
-      // 인하. 분모 ~82.125 기준 MUR ≈ 0.15%.
+      // Pack-level odds. 박스 단위 개봉 가정 시 박스당 MUR 기대치를
+      // 더 낮추기 위해 또 한 번 절반 (0.125 → 0.0625). 분모 ~82.0625
+      // 기준 MUR ≈ 0.076%, 30팩 박스당 ≈ 2.3%.
       label: "Hit",
-      weights: { R: 30, RR: 30, AR: 10, SR: 7, SAR: 5, MUR: 0.125 },
+      weights: { R: 30, RR: 30, AR: 10, SR: 7, SAR: 5, MUR: 0.0625 },
     },
   ],
   cards: [
