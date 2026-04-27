@@ -7,6 +7,7 @@ import { GRADE_BRAND, PCL_LABEL, pclTone } from "@/lib/pcl";
 import RarityBadge from "./RarityBadge";
 import { CARD_NAME_TO_TYPE } from "@/lib/wild/name-to-type";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
+import TypeIcon from "./TypeIcon";
 
 /** 카드 이름 → WildType. 메가/ex/V/VMAX/GX/BREAK/(골드)/(SV) 등 변형
  *  strip 후 매칭 시도. 매칭 실패시 null. */
@@ -114,9 +115,8 @@ export default function PclSlab({
             {GRADE_BRAND}
           </span>
         </div>
-        {/* Type badge column — 카드 이름/번호 대신 속성 노출 (사용자
-            요청 통일 변경). 매핑 없으면 "無속성" 칩. 모바일에서 잘 보이게
-            폰트 충분히 키움. */}
+        {/* Type badge column — 카드 이름/번호 대신 속성 노출. 아이콘 +
+            텍스트 칩, 줄바꿈 방지(whitespace-nowrap). */}
         {!compact && (() => {
           const ptype = resolveCardTypeForSlab(card.name);
           return (
@@ -124,14 +124,15 @@ export default function PclSlab({
               {ptype ? (
                 <span
                   className={clsx(
-                    "inline-flex items-center px-2.5 py-1 rounded-full text-[12px] md:text-[13px] font-black leading-none",
+                    "inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] md:text-[12px] font-black leading-none whitespace-nowrap",
                     TYPE_STYLE[ptype].badge
                   )}
                 >
-                  {ptype}
+                  <TypeIcon type={ptype} size={13} />
+                  <span>{ptype}</span>
                 </span>
               ) : (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] md:text-[13px] font-black leading-none bg-zinc-700 text-zinc-300">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] md:text-[12px] font-black leading-none whitespace-nowrap bg-zinc-700 text-zinc-300">
                   無속성
                 </span>
               )}
