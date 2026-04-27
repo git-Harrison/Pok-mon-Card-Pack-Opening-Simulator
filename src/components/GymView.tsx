@@ -22,6 +22,7 @@ import { CenteredPokeLoader } from "./PokeLoader";
 import PageHeader from "./PageHeader";
 import Portal from "./Portal";
 import GymChallengeOverlay from "./GymChallengeOverlay";
+import GymMedalIcon from "./GymMedalIcon";
 
 // 폴링 주기 — Phase 1 에서는 단순 setInterval. Phase 4 에서 Supabase
 // realtime 으로 격상 검토.
@@ -144,14 +145,7 @@ export default function GymView() {
         title="🏟️ 체육관 지도"
         subtitle="속성별 8개 체육관. 관장을 이기면 점령 + 메달."
         tone="amber"
-        stats={
-          <span className="px-2 py-1 rounded-full bg-amber-400/15 border border-amber-400/40 text-amber-100 text-[11px] font-bold">
-            Phase 1 미리보기
-          </span>
-        }
       />
-
-      <PhaseNotice />
 
       <GymTownMap
         gyms={gyms}
@@ -208,23 +202,6 @@ export default function GymView() {
           />
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-/** Phase 1 단계 안내 — 전투 시스템(펫 선택/배틀 연출/메달 지급)은
- *  Phase 2-4 에서 순차 출시 예정. 본 화면은 지도/상세/락 검증까지. */
-function PhaseNotice() {
-  return (
-    <div className="mt-3 rounded-xl border border-amber-400/30 bg-amber-400/[0.06] px-3 py-2 text-[11px] md:text-xs text-amber-100 leading-snug">
-      <div className="flex items-start gap-2">
-        <span aria-hidden className="text-base leading-none mt-[1px]">📣</span>
-        <div>
-          <b className="text-amber-200">Phase 1 미리보기</b> — 지도/체육관
-          상세/도전 락은 활성화. <b className="text-white">전투 / 펫 선택 /
-          메달 지급 / 보호 연장</b>은 다음 페이즈에서 순차 추가됩니다.
-        </div>
-      </div>
     </div>
   );
 }
@@ -675,7 +652,11 @@ function GymDetailModal({
       return `${gym.active_challenge?.display_name ?? "다른 트레이너"}가 도전 중이에요.`;
     if (status === "user_cooldown") return "재도전 쿨타임 중이에요.";
     if (status === "owned_by_me") return "내가 점령 중인 체육관이에요.";
-    if (underpowered) return pickLine(TAUNT_LINES);
+    if (underpowered) {
+      const my = (centerPower ?? 0).toLocaleString("ko-KR");
+      const need = gym.min_power.toLocaleString("ko-KR");
+      return `${pickLine(TAUNT_LINES)} (내 전투력 ${my} / 필요 ${need})`;
+    }
     return "";
   })();
 
@@ -807,9 +788,9 @@ function GymDetailModal({
                   지급 메달
                 </h3>
                 <div className="rounded-xl border border-amber-400/30 bg-amber-400/[0.06] px-3 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <span aria-hidden className="text-xl">🏅</span>
-                    <div>
+                  <div className="flex items-center gap-2.5">
+                    <GymMedalIcon type={gym.type} size={48} className="shrink-0" />
+                    <div className="min-w-0 flex-1">
                       <p className="text-[13px] font-black text-amber-100">
                         {gym.medal.name}
                       </p>
@@ -817,6 +798,11 @@ function GymDetailModal({
                         {gym.medal.description}
                       </p>
                     </div>
+                    {gym.has_my_medal && (
+                      <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-200 text-[9px] font-bold">
+                        보유 중
+                      </span>
+                    )}
                   </div>
                 </div>
               </section>

@@ -6,6 +6,7 @@ import { fetchUserGymMedals } from "@/lib/gym/db";
 import type { UserGymMedal } from "@/lib/gym/types";
 import { TYPE_STYLE } from "@/lib/wild/types";
 import { DIFFICULTY_STYLE } from "@/lib/gym/types";
+import GymMedalIcon from "./GymMedalIcon";
 
 /** 프로필/랭킹/방문 프로필에서 공통 사용 — 유저가 획득한 체육관 메달
  *  목록. 비어 있으면 placeholder 노출. */
@@ -51,21 +52,15 @@ export default function GymMedalsList({
   if (compact) {
     return (
       <div className="inline-flex items-center gap-1 flex-wrap">
-        {medals.map((m) => {
-          const ts = TYPE_STYLE[m.gym_type];
-          return (
-            <span
-              key={m.gym_id}
-              title={`${m.gym_name} (${m.gym_type})`}
-              className={clsx(
-                "px-1 py-[1px] rounded text-[8px] md:text-[9px] font-black inline-flex items-center gap-0.5",
-                ts.badge
-              )}
-            >
-              🏅 {m.gym_type}
-            </span>
-          );
-        })}
+        {medals.map((m) => (
+          <span
+            key={m.gym_id}
+            title={`${m.medal_name} — ${m.gym_name} (${m.gym_type})`}
+            className="inline-flex items-center"
+          >
+            <GymMedalIcon type={m.gym_type} size={20} />
+          </span>
+        ))}
       </div>
     );
   }
@@ -78,13 +73,10 @@ export default function GymMedalsList({
         return (
           <li
             key={m.gym_id}
-            className={clsx(
-              "relative rounded-xl border p-2 bg-zinc-900/60",
-              "border-amber-400/30"
-            )}
+            className="relative rounded-xl border p-2 bg-zinc-900/60 border-amber-400/30"
           >
-            <div className="flex items-center gap-1.5">
-              <span aria-hidden className="text-xl">🏅</span>
+            <div className="flex items-center gap-2">
+              <GymMedalIcon type={m.gym_type} size={42} className="shrink-0" />
               <div className="min-w-0 flex-1">
                 <p className="text-[12px] font-black text-amber-100 truncate">
                   {m.medal_name}
