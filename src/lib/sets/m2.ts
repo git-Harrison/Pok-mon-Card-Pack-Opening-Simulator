@@ -102,7 +102,7 @@ export const m2: SetInfo = {
     { id: "m2-068", setCode: "m2", number: "068", name: "루브도", rarity: "U", imageUrl: pokellector("Smeargle", "68", "59243") },
     { id: "m2-069", setCode: "m2", number: "069", name: "지그재구리", rarity: "U", imageUrl: pokellector("Zigzagoon", "69", "59244") },
     { id: "m2-070", setCode: "m2", number: "070", name: "직구리", rarity: "U", imageUrl: pokellector("Linoone", "70", "59245") },
-    { id: "m2-071", setCode: "m2", number: "071", name: "이어롭", rarity: "U", imageUrl: pokellector("Buneary", "71", "59246") },
+    { id: "m2-071", setCode: "m2", number: "071", name: "한방", rarity: "U", imageUrl: pokellector("Buneary", "71", "59246") },
     { id: "m2-072", setCode: "m2", number: "072", name: "메가 이어롭 ex", rarity: "RR", imageUrl: pokellector("Mega-Lopunny-ex", "72", "59247") },
     { id: "m2-073", setCode: "m2", number: "073", name: "점보 아이스크림", rarity: "U", imageUrl: pokellector("Jumbo-Ice-Cream", "73", "59248") },
     { id: "m2-074", setCode: "m2", number: "074", name: "히트 버너", rarity: "U", imageUrl: pokellector("Heat-Burner", "74", "59184") },

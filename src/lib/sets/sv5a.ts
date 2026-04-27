@@ -46,7 +46,7 @@ export const sv5a: SetInfo = {
     { id: "sv5a-015", setCode: "sv5a", number: "015", name: "불꽃숭이", rarity: "C", imageUrl: pk("Chimchar", "15", "52384") },
     { id: "sv5a-016", setCode: "sv5a", number: "016", name: "파이숭이", rarity: "C", imageUrl: pk("Monferno", "16", "52383") },
     { id: "sv5a-017", setCode: "sv5a", number: "017", name: "초염몽", rarity: "R", imageUrl: pk("Infernape", "17", "52382") },
-    { id: "sv5a-018", setCode: "sv5a", number: "018", name: "총지엔", rarity: "U", imageUrl: pk("Chi-Yu", "18", "52775") },
+    { id: "sv5a-018", setCode: "sv5a", number: "018", name: "파오젠", rarity: "U", imageUrl: pk("Chi-Yu", "18", "52775") },
     { id: "sv5a-019", setCode: "sv5a", number: "019", name: "가재군", rarity: "C", imageUrl: pk("Corphish", "19", "52776") },
     { id: "sv5a-020", setCode: "sv5a", number: "020", name: "가재장군", rarity: "C", imageUrl: pk("Crawdaunt", "20", "52777") },
     { id: "sv5a-021", setCode: "sv5a", number: "021", name: "글레이시아", rarity: "U", imageUrl: pk("Glaceon", "21", "52778") },
