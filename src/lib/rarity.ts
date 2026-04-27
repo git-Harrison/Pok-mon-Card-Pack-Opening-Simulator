@@ -103,15 +103,6 @@ export function compareRarity(a: Rarity, b: Rarity): number {
   return RARITY_ORDER.indexOf(a) - RARITY_ORDER.indexOf(b);
 }
 
-export function isHighRarity(r: Rarity): boolean {
-  return RARITY_STYLE[r].tier >= 4;
-}
-
-/**
- * Returns the CSS class name of the card-art effect overlay for a given
- * rarity, or null if no effect should render. Only MUR and SAR get
- * effects; every other rarity stays visually plain.
- */
 export function cardFxClass(r: Rarity): "fx-mur" | "fx-sar" | null {
   if (r === "MUR") return "fx-mur";
   if (r === "SAR") return "fx-sar";
