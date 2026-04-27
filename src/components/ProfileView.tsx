@@ -40,7 +40,9 @@ import PageHeader from "./PageHeader";
 import PageBackdrop from "./PageBackdrop";
 import PclSlab from "./PclSlab";
 import Portal from "./Portal";
-import GymMedalsList from "./GymMedalsList";
+import GymMedalIcon from "./GymMedalIcon";
+import { fetchUserGymMedals } from "@/lib/gym/db";
+import type { UserGymMedal } from "@/lib/gym/types";
 import { CARD_NAME_TO_TYPE } from "@/lib/wild/name-to-type";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 
@@ -272,6 +274,7 @@ export default function ProfileView() {
             centerPower={profile?.center_power ?? 0}
             pokedexCount={profile?.pokedex_count ?? 0}
             onEditName={() => setNameOpen(true)}
+            userId={userId}
           />
 
           <section className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2.5">
@@ -322,14 +325,6 @@ export default function ProfileView() {
               {error}
             </div>
           )}
-
-          {/* 체육관 메달 — 점령 + 획득 기록 */}
-          <section className="mt-6">
-            <h2 className="text-sm font-bold text-white inline-flex items-center gap-1.5 mb-2">
-              <span aria-hidden>🏅</span>체육관 메달
-            </h2>
-            <GymMedalsList userId={userId} />
-          </section>
 
           {!profile?.character_locked && (
           <section className="mt-7">
@@ -529,6 +524,7 @@ function ProfileBanner({
   centerPower,
   pokedexCount,
   onEditName,
+  userId,
 }: {
   character: CharacterDef | null;
   displayName: string;
@@ -536,8 +532,23 @@ function ProfileBanner({
   centerPower: number;
   pokedexCount: number;
   onEditName: () => void;
+  userId: string | null;
 }) {
   const reduce = useReducedMotion();
+  const [medals, setMedals] = useState<UserGymMedal[]>([]);
+  useEffect(() => {
+    if (!userId) {
+      setMedals([]);
+      return;
+    }
+    let alive = true;
+    fetchUserGymMedals(userId).then((m) => {
+      if (alive) setMedals(m);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [userId]);
   return (
     <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 via-white/[0.02] to-transparent p-3 md:p-4">
       <div className="flex items-center gap-3">
@@ -573,13 +584,26 @@ function ProfileBanner({
               ✏️
             </button>
           </div>
-          {character ? (
-            <span className="mt-0.5 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-400 text-zinc-900">
-              {character.name}
-            </span>
-          ) : (
+          {medals.length > 0 ? (
+            <div className="mt-1 flex items-center gap-1 flex-wrap">
+              {medals.map((m) => (
+                <span
+                  key={m.gym_id}
+                  className="inline-flex items-center gap-0.5 pl-0.5 pr-1.5 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/40 text-amber-100"
+                  title={`${m.gym_name} (${m.gym_type}) — ${m.gym_difficulty}`}
+                >
+                  <GymMedalIcon type={m.gym_type} size={18} />
+                  <span className="text-[10px] font-black">{m.medal_name}</span>
+                </span>
+              ))}
+            </div>
+          ) : !character ? (
             <p className="mt-0.5 text-[10px] text-zinc-400">
               캐릭터를 선택해주세요
+            </p>
+          ) : (
+            <p className="mt-1 text-[10px] text-zinc-500">
+              아직 보유한 체육관 메달이 없어요
             </p>
           )}
         </div>
