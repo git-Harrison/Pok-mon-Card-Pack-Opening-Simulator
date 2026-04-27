@@ -1,7 +1,7 @@
 "use client";
 
 import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useSearchParams } from "next/navigation";
 import clsx from "clsx";
@@ -300,6 +300,9 @@ function CardsMode({
   );
 }
 
+// 한 페이지에 보일 PCL 슬랩 수. 무한 스크롤로 30장씩 추가.
+const PSA_PAGE_SIZE = 30;
+
 function PsaMode({
   items,
   onAfterGift,
@@ -321,6 +324,42 @@ function PsaMode({
     grading: PsaGradingWithDisplay;
     card: Card;
   } | null>(null);
+
+  // 무한 스크롤 — 30장씩 점진적 로드.
+  const [visibleCount, setVisibleCount] = useState(PSA_PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // items 가 바뀌면 (gift / refresh / 정렬 변경 등) 첫 페이지로 리셋.
+  useEffect(() => {
+    setVisibleCount(PSA_PAGE_SIZE);
+  }, [items]);
+
+  // IntersectionObserver: sentinel 이 viewport 에 들어오면 다음 페이지 로드.
+  useEffect(() => {
+    if (items.length <= PSA_PAGE_SIZE) return;
+    const node = sentinelRef.current;
+    if (!node) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setVisibleCount((n) =>
+              n >= items.length ? n : Math.min(n + PSA_PAGE_SIZE, items.length)
+            );
+          }
+        }
+      },
+      { rootMargin: "200px 0px" }
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [items.length]);
+
+  const visibleItems = useMemo(
+    () => items.slice(0, visibleCount),
+    [items, visibleCount]
+  );
+  const hasMore = visibleCount < items.length;
 
   if (items.length === 0) {
     return (
@@ -357,7 +396,7 @@ function PsaMode({
           },
         }}
       >
-        {items.map(({ grading, card, isPet, isDisplayed }) => {
+        {visibleItems.map(({ grading, card, isPet, isDisplayed }) => {
           const locked = isPet || isDisplayed;
           const giftable = !locked && grading.grade >= 6;
           const badge = isDisplayed
@@ -437,6 +476,24 @@ function PsaMode({
           );
         })}
       </motion.div>
+
+      {hasMore && (
+        <div
+          ref={sentinelRef}
+          className="mt-6 flex items-center justify-center text-[11px] text-zinc-500"
+        >
+          <span className="inline-flex items-center gap-2">
+            <span className="w-3 h-3 border-2 border-fuchsia-400/40 border-t-fuchsia-300 rounded-full animate-spin" />
+            더 불러오는 중… ({visibleCount.toLocaleString("ko-KR")} /{" "}
+            {items.length.toLocaleString("ko-KR")})
+          </span>
+        </div>
+      )}
+      {!hasMore && items.length > PSA_PAGE_SIZE && (
+        <p className="mt-6 text-center text-[10px] text-zinc-600">
+          전체 {items.length.toLocaleString("ko-KR")}장 모두 표시
+        </p>
+      )}
 
       <SlabPreview
         target={previewTarget}
