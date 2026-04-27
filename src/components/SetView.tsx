@@ -303,12 +303,18 @@ export default function SetView({ set }: { set: SetInfo }) {
         if (typeof r.points === "number" && r.points > 0) {
           setPoints(r.points);
         }
-        allCards.sort(
-          (a, b) => RARITY_STYLE[b.rarity].tier - RARITY_STYLE[a.rarity].tier
-        );
+        // 자동판매 대상은 결과 모달 그리드에서 제외 — 보유로 저장된
+        // 카드만 노출. 박스 ×10 같은 케이스에서 1500+ 장이 통째로
+        // 렌더되던 비용을 절반 이하로 줄임.
+        const sellSet = new Set(autoSellRarities);
+        const keptCards = allCards
+          .filter((c) => !sellSet.has(c.rarity))
+          .sort(
+            (a, b) => RARITY_STYLE[b.rarity].tier - RARITY_STYLE[a.rarity].tier
+          );
         setAutoSellEarned(r.total_sold_earned);
         setAutoSellSoldCount(r.total_sold_count);
-        setMultiResult({ boxCount, totalSpent: spent, cards: allCards });
+        setMultiResult({ boxCount, totalSpent: spent, cards: keptCards });
         setPhase("multi-result");
       } catch (e) {
         console.error("multi-box batch persist failed", e);
@@ -430,15 +436,20 @@ export default function SetView({ set }: { set: SetInfo }) {
       .filter(({ i }) => !openedMask[i]);
     if (remaining.length === 0) return;
     setPhase("bulk");
+    // 자동판매 대상 등급은 결과 그리드에서 제외 — DB 에 보유로 들어가는
+    // 카드만 노출. (대량 박스에서 수백 장의 C/U 가 깔려 모달이 무거워지던
+    // 문제 해결.)
+    const sellSet = new Set(autoSellRarities);
     const allCards = remaining
       .flatMap(({ pack }) => pack)
+      .filter((c) => !sellSet.has(c.rarity))
       .sort(
         (a, b) => RARITY_STYLE[b.rarity].tier - RARITY_STYLE[a.rarity].tier
       );
     setBulkCards(allCards);
     setOpenedMask(new Array(packs.length).fill(true));
     setPhase("bulk-result");
-  }, [user, packs, openedMask]);
+  }, [user, packs, openedMask, autoSellRarities]);
 
   const backToGrid = useCallback(() => {
     setActivePack(null);
@@ -576,6 +587,8 @@ export default function SetView({ set }: { set: SetInfo }) {
             key="bulk"
             cards={bulkCards}
             setName={set.name}
+            autoSellEarned={autoSellEarned}
+            autoSellCount={autoSellSoldCount}
             onClose={closeBulk}
           />
         )}
@@ -922,10 +935,14 @@ function BulkLoading() {
 function BulkResultOverlay({
   cards,
   setName,
+  autoSellEarned,
+  autoSellCount,
   onClose,
 }: {
   cards: Card[];
   setName: string;
+  autoSellEarned: number;
+  autoSellCount: number;
   onClose: () => void;
 }) {
   return (
@@ -941,7 +958,13 @@ function BulkResultOverlay({
       >
         <div className="flex items-center justify-between gap-2 px-3 md:px-6 h-12">
           <div className="text-xs md:text-sm text-zinc-200 font-semibold truncate">
-            {setName} · 전체 개봉 결과 ({cards.length}장)
+            {setName} · 보유 카드 ({cards.length}장)
+            {autoSellCount > 0 && (
+              <span className="ml-2 text-emerald-300 text-[10px] md:text-xs font-bold">
+                · 자동판매 {autoSellCount}장 +
+                {autoSellEarned.toLocaleString("ko-KR")}p
+              </span>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -1158,7 +1181,7 @@ function MultiResultOverlay({
       >
         <div className="flex items-center justify-between gap-2 px-3 md:px-6 h-12">
           <div className="text-xs md:text-sm text-zinc-200 font-semibold truncate">
-            {setName} · 박스 ×{boxCount} 결과 ({cards.length}장)
+            {setName} · 박스 ×{boxCount} 보유 카드 ({cards.length}장)
           </div>
           <button
             onClick={onClose}

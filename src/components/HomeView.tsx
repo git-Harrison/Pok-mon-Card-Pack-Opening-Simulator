@@ -94,6 +94,10 @@ export default function HomeView() {
   const [stats, setStats] = useState<HomeStats>(FALLBACK_STATS);
   const [teasers, setTeasers] = useState<ActivityTeasers>(FALLBACK_TEASERS);
   const [topRankers, setTopRankers] = useState<RankingRow[]>([]);
+  // 시리즈 탭 — 박스 종류가 11개로 늘면서 한 화면에 다 띄우면 스크롤이
+  // 너무 길어져, MEGA / SV 두 그룹을 탭으로 분리해 한 번에 한 그룹만
+  // 노출. 모바일 우선. 기본값은 최신 라인업인 MEGA.
+  const [series, setSeries] = useState<"mega" | "sv">("mega");
 
   // Priority-staggered fetch. The previous version awaited
   // Promise.all([wallet, slabs, pokedex, activity]) — every quick-stats
@@ -302,109 +306,103 @@ export default function HomeView() {
           </p>
         )}
 
-        {/* ---------- Pack grid by series — 시리즈별 컬러 강조 ---------- */}
-        <section className="mt-10 md:mt-14 space-y-10 md:space-y-12">
+        {/* ---------- Pack grid — 시리즈 탭 ----------
+            박스 11종이 한 페이지에 깔리면 스크롤이 너무 길어, MEGA /
+            SV 탭으로 분리. 한 화면에 한 그룹만 노출 → 스크롤 절반 이하. */}
+        <section className="mt-8 md:mt-12">
           <SectionTitle
             label="팩 선택"
             sub="시리즈를 골라 박스를 까보세요"
             reduce={!!reduce}
           />
           {(() => {
-            // 시리즈 그룹화 + 시각적 강조. 10세트 한 줄 스택이 모바일
-            // 에서 너무 길어 시리즈 헤더에 컬러 / 아이콘 / 카운트 칩
-            // / 발매년 정보를 추가해 한눈에 파악 가능하게.
             const megaCodes = SET_ORDER.filter((c) => /^m/.test(c));
             const svCodes = SET_ORDER.filter((c) => /^sv/.test(c));
-            interface Group {
-              key: string;
-              label: string;
-              sub: string;
-              icon: string;
-              accent: string; // gradient
-              accentBorder: string;
-              accentText: string;
-              codes: typeof megaCodes;
-            }
-            const groups: Group[] = [];
-            if (megaCodes.length)
-              groups.push({
-                key: "mega",
+            const tabs = [
+              {
+                key: "mega" as const,
                 label: "MEGA 시리즈",
-                sub: "메가 진화 ex 카드 · 2025-08 ~ 진행 중",
+                short: "MEGA",
                 icon: "🔮",
-                accent: "from-fuchsia-500/80 via-violet-500/70 to-indigo-500/70",
-                accentBorder: "border-fuchsia-400/40",
-                accentText: "text-fuchsia-200",
+                count: megaCodes.length,
                 codes: megaCodes,
-              });
-            if (svCodes.length)
-              groups.push({
-                key: "sv",
+                activeClass:
+                  "bg-gradient-to-r from-fuchsia-500 to-violet-500 text-white shadow-[0_8px_24px_-12px_rgba(168,85,247,0.7)]",
+              },
+              {
+                key: "sv" as const,
                 label: "스칼렛 & 바이올렛",
-                sub: "Pokémon SV 본편 익스팬션 · 2023 ~ 2025",
+                short: "SV",
                 icon: "⚔️",
-                accent: "from-amber-400/80 via-orange-400/70 to-rose-400/70",
-                accentBorder: "border-amber-400/40",
-                accentText: "text-amber-200",
+                count: svCodes.length,
                 codes: svCodes,
-              });
-            return groups.map((g) => (
-              <div key={g.key}>
-                {/* 강조형 헤더 — 좌측 컬러 바 + 아이콘 + 라벨 + 카운트
-                    chip. 모바일에서도 한눈에 시리즈 구분되도록 시각적
-                    톤 분리. */}
+                activeClass:
+                  "bg-gradient-to-r from-amber-400 to-orange-400 text-zinc-950 shadow-[0_8px_24px_-12px_rgba(251,146,60,0.7)]",
+              },
+            ];
+            const active = tabs.find((t) => t.key === series) ?? tabs[0];
+            return (
+              <>
                 <div
-                  className={clsx(
-                    "mb-4 md:mb-5 relative overflow-hidden rounded-2xl border bg-gradient-to-r p-3 md:p-4",
-                    g.accentBorder,
-                    g.accent.replace(/\/(70|80)/g, "/15"),
-                  )}
+                  role="tablist"
+                  aria-label="박스 시리즈"
+                  className="grid grid-cols-2 gap-2 md:gap-3 rounded-2xl bg-white/5 border border-white/10 p-1.5"
                 >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={clsx(
-                        "shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br flex items-center justify-center text-xl md:text-2xl shadow-lg",
-                        g.accent
-                      )}
-                    >
-                      {g.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-base md:text-lg font-black text-white truncate">
-                          {g.label}
-                        </h3>
+                  {tabs.map((t) => {
+                    const isActive = t.key === series;
+                    return (
+                      <button
+                        key={t.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        onClick={() => setSeries(t.key)}
+                        style={{ touchAction: "manipulation" }}
+                        className={clsx(
+                          "relative h-12 md:h-14 rounded-xl px-3 inline-flex items-center justify-center gap-2 text-sm md:text-base font-black transition-colors",
+                          isActive
+                            ? t.activeClass
+                            : "text-zinc-300 hover:bg-white/5"
+                        )}
+                      >
+                        <span aria-hidden className="text-base md:text-lg">
+                          {t.icon}
+                        </span>
+                        <span className="truncate">
+                          <span className="hidden sm:inline">{t.label}</span>
+                          <span className="sm:hidden">{t.short}</span>
+                        </span>
                         <span
                           className={clsx(
-                            "shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-[11px] font-bold border",
-                            g.accentBorder,
-                            g.accentText
+                            "ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] md:text-[11px] font-bold tabular-nums",
+                            isActive
+                              ? "bg-black/30 text-white"
+                              : "bg-white/10 text-zinc-200"
                           )}
                         >
-                          {g.codes.length}종
+                          {t.count}종
                         </span>
-                      </div>
-                      <p className="mt-0.5 text-[10px] md:text-[11px] text-zinc-400 truncate">
-                        {g.sub}
-                      </p>
-                    </div>
-                  </div>
+                      </button>
+                    );
+                  })}
                 </div>
+
                 <motion.div
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
+                  key={active.key}
+                  className="mt-4 md:mt-6 grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5"
                   initial="hidden"
                   animate="show"
                   variants={gridVariants}
                 >
-                  {g.codes.map((code, i) => (
+                  {active.codes.map((code, i) => (
                     <motion.div
                       key={code}
                       variants={itemVariants}
                       className="relative"
                     >
-                      {g.codes[0] === code && i === 0 && (
+                      {i === 0 && (
                         <span
-                          className="absolute -top-2 -right-2 z-10 px-2 py-0.5 rounded-full bg-amber-400 text-zinc-950 text-[10px] font-black shadow-lg"
+                          className="absolute -top-1.5 -right-1.5 z-10 px-1.5 py-0.5 rounded-full bg-amber-400 text-zinc-950 text-[9px] font-black shadow-lg"
                           aria-label="최신 발매"
                         >
                           NEW
@@ -414,8 +412,8 @@ export default function HomeView() {
                     </motion.div>
                   ))}
                 </motion.div>
-              </div>
-            ));
+              </>
+            );
           })()}
         </section>
 
@@ -756,16 +754,12 @@ const PackTile = memo(function PackTile({ code }: { code: SetCode }) {
     <Link
       href={`/set/${set.code}`}
       id={set.code === SET_ORDER[0] ? "packs" : undefined}
-      className="group relative block rounded-3xl overflow-hidden border border-white/10 bg-zinc-900/50 hover:border-white/20 transition shadow-xl"
       style={{
-        boxShadow: `0 18px 50px -22px ${set.primaryColor}99`,
+        boxShadow: `0 12px 32px -16px ${set.primaryColor}99`,
+        touchAction: "manipulation",
       }}
+      className="group relative block rounded-2xl overflow-hidden border border-white/10 bg-zinc-900/50 hover:border-white/20 active:scale-[0.98] transition"
     >
-      {/* Single combined overlay — radial accent at rest, lightens on hover.
-          Previously two stacked absolute layers (radial + linear holographic)
-          per tile × 6 tiles = 12 compositor layers + 6 transition watchers
-          firing on every hover. Folding them halves the paint cost and
-          keeps the same look at rest where users actually see it. */}
       <div
         className="absolute inset-0 opacity-50 group-hover:opacity-90 transition-opacity pointer-events-none"
         style={{
@@ -773,13 +767,13 @@ const PackTile = memo(function PackTile({ code }: { code: SetCode }) {
         }}
       />
 
-      <div className="relative w-full aspect-[3/2] p-4 md:p-6">
+      <div className="relative w-full aspect-[4/3] p-2.5 md:p-4">
         <div className="relative w-full h-full animate-bob">
           <Image
             src={set.boxImage}
             alt={`${set.name} 박스`}
             fill
-            sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 30vw"
+            sizes="(max-width: 640px) 45vw, (max-width: 1024px) 33vw, 22vw"
             className="object-contain drop-shadow-2xl select-none pointer-events-none"
             priority={code === SET_ORDER[0]}
             draggable={false}
@@ -787,65 +781,26 @@ const PackTile = memo(function PackTile({ code }: { code: SetCode }) {
         </div>
       </div>
 
-      <div className="relative p-4 md:p-5 border-t border-white/5 bg-black/40">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="text-base md:text-lg font-bold text-white truncate">
-              {set.name}
-            </h3>
-            <p className="text-[11px] md:text-xs text-zinc-400 mt-0.5 truncate">
-              {set.subtitle}
-            </p>
-          </div>
+      <div className="relative px-2.5 py-2 md:px-3 md:py-2.5 border-t border-white/5 bg-black/40">
+        <div className="flex items-center justify-between gap-1.5">
+          <h3 className="min-w-0 text-[12px] md:text-sm font-bold text-white truncate">
+            {set.name}
+          </h3>
           <span
-            className="shrink-0 text-[10px] px-2 py-1 rounded-full border whitespace-nowrap"
+            className="shrink-0 text-[9px] md:text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap tabular-nums"
             style={{
               color: set.accentColor,
-              borderColor: `${set.primaryColor}66`,
               background: `${set.primaryColor}22`,
             }}
           >
             {set.releaseDate.slice(0, 4)}
           </span>
         </div>
-
-        <dl className="mt-3 grid grid-cols-3 gap-1.5 md:gap-2 text-center">
-          <Stat label="팩당" value={`${set.cardsPerPack}장`} />
-          <Stat label="박스당" value={`${set.packsPerBox}팩`} />
-          <Stat label="총" value={`${set.totalCards}종`} />
-        </dl>
-
-        <div
-          className="mt-3 inline-flex items-center justify-center w-full gap-1 px-3 py-2 rounded-full text-xs font-bold border transition group-hover:scale-[1.02]"
-          style={{
-            color: set.accentColor,
-            borderColor: `${set.primaryColor}88`,
-            background: `${set.primaryColor}26`,
-          }}
-        >
-          팩 열기 →
-        </div>
+        <p className="mt-0.5 text-[10px] md:text-[11px] text-zinc-500 truncate tabular-nums">
+          {set.packsPerBox}팩 · {set.cardsPerPack}장 · {set.totalCards}종
+        </p>
       </div>
     </Link>
-  );
-});
-
-const Stat = memo(function Stat({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-md bg-white/5 py-1.5 px-1 border border-white/5">
-      <dt className="text-[9px] uppercase tracking-wider text-zinc-500">
-        {label}
-      </dt>
-      <dd className="mt-0.5 text-xs md:text-sm font-semibold text-white">
-        {value}
-      </dd>
-    </div>
   );
 });
 
