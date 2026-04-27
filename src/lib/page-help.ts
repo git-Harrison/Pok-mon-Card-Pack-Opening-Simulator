@@ -1197,18 +1197,24 @@ const POKEDEX_SECTIONS: HelpSection[] = [
     body: h(
       "div",
       null,
-      "도감 보유 수에 따라 ",
+      "도감에 등록한 카드 ",
+      h("b", null, "한 장당 등급별 정액"),
+      "이 ",
       h("b", null, "센터 전투력"),
-      "에 보너스가 붙어요.",
+      "에 합산돼요.",
       h(
         "ul",
-        { className: "mt-1.5" },
-        h("li", { key: 1 }, "1장 ~ · 1장당 +100"),
-        h("li", { key: 2 }, "5장 → +500"),
-        h("li", { key: 3 }, "10장 → +1,200"),
-        h("li", { key: 4 }, "15장 → +2,000"),
-        h("li", { key: 5 }, "20장 → +3,000"),
-        h("li", { key: 6 }, "30장+ → +5,000 (이후 1장당 +100)")
+        { className: "mt-1.5 grid grid-cols-2 gap-x-3" },
+        h("li", { key: 1 }, h("b", null, "MUR"), " · +1,000"),
+        h("li", { key: 2 }, h("b", null, "UR"), " · +400"),
+        h("li", { key: 3 }, h("b", null, "SAR"), " · +250"),
+        h("li", { key: 4 }, h("b", null, "AR"), " · +180"),
+        h("li", { key: 5 }, h("b", null, "SR"), " · +130"),
+        h("li", { key: 6 }, h("b", null, "MA"), " · +100"),
+        h("li", { key: 7 }, h("b", null, "RR"), " · +50"),
+        h("li", { key: 8 }, h("b", null, "R"), " · +30"),
+        h("li", { key: 9 }, h("b", null, "U"), " · +15"),
+        h("li", { key: 10 }, h("b", null, "C"), " · +8")
       )
     ),
   },
