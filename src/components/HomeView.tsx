@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import clsx from "clsx";
 import { memo, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
@@ -301,49 +302,93 @@ export default function HomeView() {
           </p>
         )}
 
-        {/* ---------- Pack grid by series ---------- */}
-        <section className="mt-10 md:mt-14 space-y-8 md:space-y-10">
+        {/* ---------- Pack grid by series — 시리즈별 컬러 강조 ---------- */}
+        <section className="mt-10 md:mt-14 space-y-10 md:space-y-12">
           <SectionTitle
             label="팩 선택"
-            sub="시리즈별 박스를 골라 한 팩씩 까보세요"
+            sub="시리즈를 골라 박스를 까보세요"
             reduce={!!reduce}
           />
           {(() => {
-            // 시리즈별 그룹화. 10세트 한 줄 스택 (특히 모바일) 너무 길어
-            // 시리즈 별로 끊어 시각적 리듬 + 사용자가 원하는 시리즈로
-            // 빠르게 스크롤 가능. SET_ORDER 의 등장 순서 유지하되
-            // MEGA / SV 두 그룹으로 분류.
+            // 시리즈 그룹화 + 시각적 강조. 10세트 한 줄 스택이 모바일
+            // 에서 너무 길어 시리즈 헤더에 컬러 / 아이콘 / 카운트 칩
+            // / 발매년 정보를 추가해 한눈에 파악 가능하게.
             const megaCodes = SET_ORDER.filter((c) => /^m/.test(c));
             const svCodes = SET_ORDER.filter((c) => /^sv/.test(c));
-            const groups: Array<{
+            interface Group {
               key: string;
               label: string;
               sub: string;
+              icon: string;
+              accent: string; // gradient
+              accentBorder: string;
+              accentText: string;
               codes: typeof megaCodes;
-            }> = [];
+            }
+            const groups: Group[] = [];
             if (megaCodes.length)
               groups.push({
                 key: "mega",
                 label: "MEGA 시리즈",
-                sub: `${megaCodes.length}종 — 메가 진화 ex 카드`,
+                sub: "메가 진화 ex 카드 · 2025-08 ~ 진행 중",
+                icon: "🔮",
+                accent: "from-fuchsia-500/80 via-violet-500/70 to-indigo-500/70",
+                accentBorder: "border-fuchsia-400/40",
+                accentText: "text-fuchsia-200",
                 codes: megaCodes,
               });
             if (svCodes.length)
               groups.push({
                 key: "sv",
                 label: "스칼렛 & 바이올렛",
-                sub: `${svCodes.length}종 — Pokémon SV 본편 익스팬션`,
+                sub: "Pokémon SV 본편 익스팬션 · 2023 ~ 2025",
+                icon: "⚔️",
+                accent: "from-amber-400/80 via-orange-400/70 to-rose-400/70",
+                accentBorder: "border-amber-400/40",
+                accentText: "text-amber-200",
                 codes: svCodes,
               });
             return groups.map((g) => (
               <div key={g.key}>
-                <div className="mb-3 md:mb-4 flex items-baseline gap-2">
-                  <h3 className="text-sm md:text-base font-black text-white">
-                    {g.label}
-                  </h3>
-                  <span className="text-[10px] md:text-[11px] text-zinc-500">
-                    {g.sub}
-                  </span>
+                {/* 강조형 헤더 — 좌측 컬러 바 + 아이콘 + 라벨 + 카운트
+                    chip. 모바일에서도 한눈에 시리즈 구분되도록 시각적
+                    톤 분리. */}
+                <div
+                  className={clsx(
+                    "mb-4 md:mb-5 relative overflow-hidden rounded-2xl border bg-gradient-to-r p-3 md:p-4",
+                    g.accentBorder,
+                    g.accent.replace(/\/(70|80)/g, "/15"),
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={clsx(
+                        "shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br flex items-center justify-center text-xl md:text-2xl shadow-lg",
+                        g.accent
+                      )}
+                    >
+                      {g.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-base md:text-lg font-black text-white truncate">
+                          {g.label}
+                        </h3>
+                        <span
+                          className={clsx(
+                            "shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-[11px] font-bold border",
+                            g.accentBorder,
+                            g.accentText
+                          )}
+                        >
+                          {g.codes.length}종
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[10px] md:text-[11px] text-zinc-400 truncate">
+                        {g.sub}
+                      </p>
+                    </div>
+                  </div>
                 </div>
                 <motion.div
                   className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
@@ -351,8 +396,20 @@ export default function HomeView() {
                   animate="show"
                   variants={gridVariants}
                 >
-                  {g.codes.map((code) => (
-                    <motion.div key={code} variants={itemVariants}>
+                  {g.codes.map((code, i) => (
+                    <motion.div
+                      key={code}
+                      variants={itemVariants}
+                      className="relative"
+                    >
+                      {g.codes[0] === code && i === 0 && (
+                        <span
+                          className="absolute -top-2 -right-2 z-10 px-2 py-0.5 rounded-full bg-amber-400 text-zinc-950 text-[10px] font-black shadow-lg"
+                          aria-label="최신 발매"
+                        >
+                          NEW
+                        </span>
+                      )}
                       <PackTile code={code} />
                     </motion.div>
                   ))}

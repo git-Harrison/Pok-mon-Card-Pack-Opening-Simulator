@@ -19,13 +19,14 @@ import {
   fetchUserActivity,
   fetchUserRankings,
   sendTaunt,
+  type RankingMainCard,
   type RankingRow,
   type UserActivityEvent,
 } from "@/lib/db";
 import { notifyRankChange, notifyTaunt } from "@/lib/discord";
 import { usePresence } from "@/lib/usePresence";
-import { getCard } from "@/lib/sets";
-import { RARITY_STYLE } from "@/lib/rarity";
+import { getCard, SETS } from "@/lib/sets";
+import { RARITY_LABEL, RARITY_STYLE, cardFxClass } from "@/lib/rarity";
 import type { Rarity } from "@/lib/types";
 import PageBackdrop from "./PageBackdrop";
 import Portal from "./Portal";
@@ -54,6 +55,7 @@ export default function UsersView() {
     [mode]
   );
   const [tauntTarget, setTauntTarget] = useState<RankingRow | null>(null);
+  const [petDetail, setPetDetail] = useState<RankingMainCard | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [activityCache, setActivityCache] = useState<
     Record<string, UserActivityEvent[]>
@@ -418,61 +420,85 @@ export default function UsersView() {
                       transition={{ duration: 0.2, ease: "easeOut" }}
                       className="overflow-hidden"
                     >
-                      {/* 자산 요약 — 프로필 보기 핵심 정보 */}
-                      <div className="px-3 md:px-4 pt-1 pb-2 grid grid-cols-4 gap-2">
-                        <ProfileStatChip
-                          label="포인트"
-                          value={e.points.toLocaleString("ko-KR")}
-                          tone="amber"
-                        />
-                        <ProfileStatChip
-                          label="랭킹점수"
-                          value={e.rank_score.toLocaleString("ko-KR")}
-                          tone="rose"
-                        />
-                        <ProfileStatChip
-                          label="전투력"
-                          value={e.center_power.toLocaleString("ko-KR")}
-                          tone="violet"
-                        />
-                        <ProfileStatChip
-                          label="도감"
-                          value={`${e.pokedex_count ?? 0}`}
-                          tone="emerald"
-                        />
-                      </div>
-                      {/* 펫 탭 — 전체 등록된 펫 슬랩 큰 썸네일 표시 */}
+                      {/* 자산 요약 — 펫 탭에서는 등록된 펫 이미지만 노출
+                          하도록 4-stat 칩 행 숨김. */}
+                      {mode !== "pet" && (
+                        <div className="px-3 md:px-4 pt-1 pb-2 grid grid-cols-4 gap-2">
+                          <ProfileStatChip
+                            label="포인트"
+                            value={e.points.toLocaleString("ko-KR")}
+                            tone="amber"
+                          />
+                          <ProfileStatChip
+                            label="랭킹점수"
+                            value={e.rank_score.toLocaleString("ko-KR")}
+                            tone="rose"
+                          />
+                          <ProfileStatChip
+                            label="전투력"
+                            value={e.center_power.toLocaleString("ko-KR")}
+                            tone="violet"
+                          />
+                          <ProfileStatChip
+                            label="도감"
+                            value={`${e.pokedex_count ?? 0}`}
+                            tone="emerald"
+                          />
+                        </div>
+                      )}
+                      {/* 펫 탭 — 등록된 펫 슬랩 카드 이미지 썸네일.
+                          탭하면 카드 정보 모달이 뜸. */}
                       {mode === "pet" &&
                         (e.main_cards?.length ?? 0) > 0 && (
-                          <div className="px-3 md:px-4 pb-2">
-                            <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
-                              등록된 펫 ({e.main_cards?.length ?? 0}장)
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
+                          <div className="px-3 md:px-4 pt-2 pb-3">
+                            <div
+                              className="grid gap-2"
+                              style={{
+                                gridTemplateColumns:
+                                  "repeat(auto-fill, minmax(72px, 1fr))",
+                              }}
+                            >
                               {(e.main_cards ?? []).map((mc) => {
-                                const rstyle = RARITY_STYLE[mc.rarity as Rarity];
+                                const rstyle =
+                                  RARITY_STYLE[mc.rarity as Rarity];
                                 const card = getCard(mc.card_id);
                                 return (
-                                  <div
+                                  <button
                                     key={mc.id}
+                                    type="button"
+                                    onClick={(ev) => {
+                                      ev.stopPropagation();
+                                      setPetDetail(mc);
+                                    }}
+                                    aria-label={`${card?.name ?? mc.card_id} 카드 정보 보기`}
+                                    style={{ touchAction: "manipulation" }}
                                     className={clsx(
-                                      "shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg border",
-                                      "bg-white/5 border-white/10"
+                                      "relative aspect-[5/7] rounded-lg overflow-hidden ring-2 bg-zinc-900 active:scale-95 transition-transform",
+                                      rstyle?.frame ?? "ring-zinc-500/30"
                                     )}
-                                    title={`${card?.name ?? mc.card_id} · ${mc.rarity} PCL${mc.grade}`}
                                   >
-                                    <span
-                                      className={clsx(
-                                        "text-[9px] font-black px-1.5 py-0.5 rounded",
-                                        rstyle?.badge ?? "bg-white/10 text-zinc-200"
-                                      )}
-                                    >
-                                      {mc.rarity}
+                                    {card?.imageUrl ? (
+                                      <img
+                                        src={card.imageUrl}
+                                        alt={card.name}
+                                        loading="lazy"
+                                        decoding="async"
+                                        draggable={false}
+                                        className="absolute inset-0 w-full h-full object-contain bg-zinc-900 select-none pointer-events-none"
+                                        style={{
+                                          WebkitTouchCallout: "none",
+                                          WebkitUserSelect: "none",
+                                        }}
+                                      />
+                                    ) : (
+                                      <div className="absolute inset-0 flex items-center justify-center text-[10px] text-zinc-500 px-1 text-center">
+                                        {card?.name ?? mc.card_id}
+                                      </div>
+                                    )}
+                                    <span className="absolute top-1 left-1 text-[9px] font-black px-1 py-0.5 rounded bg-black/70 text-white">
+                                      PCL{mc.grade}
                                     </span>
-                                    <span className="text-[10px] font-semibold text-zinc-200 max-w-[80px] truncate">
-                                      {card?.name ?? mc.card_id}
-                                    </span>
-                                  </div>
+                                  </button>
                                 );
                               })}
                             </div>
@@ -530,7 +556,134 @@ export default function UsersView() {
           />
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {petDetail && (
+          <PetCardModal
+            entry={petDetail}
+            onClose={() => setPetDetail(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+function PetCardModal({
+  entry,
+  onClose,
+}: {
+  entry: RankingMainCard;
+  onClose: () => void;
+}) {
+  const card = getCard(entry.card_id);
+  const rarity = entry.rarity as Rarity;
+  const rstyle = RARITY_STYLE[rarity];
+  const fx = cardFxClass(rarity);
+  const setName = card ? SETS[card.setCode]?.name : null;
+
+  return (
+    <Portal>
+      <motion.div
+        className="fixed inset-0 z-[150] bg-black/85 backdrop-blur-md flex items-center justify-center overflow-hidden"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{
+          paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+          paddingLeft: "12px",
+          paddingRight: "12px",
+        }}
+      >
+        <motion.div
+          className="relative w-full max-w-sm bg-zinc-900 border border-fuchsia-500/40 rounded-2xl overflow-hidden shadow-2xl"
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={(ev) => ev.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="닫기"
+            className="absolute top-2 right-2 z-10 w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center text-base"
+          >
+            ✕
+          </button>
+
+          <div className="p-4">
+            <div
+              className={clsx(
+                "relative mx-auto rounded-xl overflow-hidden isolate ring-2 bg-zinc-900",
+                rstyle?.frame ?? "ring-zinc-500/30"
+              )}
+              style={{ aspectRatio: "5 / 7", maxWidth: "260px" }}
+            >
+              {card?.imageUrl ? (
+                <img
+                  src={card.imageUrl}
+                  alt={card.name}
+                  draggable={false}
+                  className="absolute inset-0 w-full h-full object-contain bg-zinc-900 select-none pointer-events-none"
+                  style={{
+                    WebkitTouchCallout: "none",
+                    WebkitUserSelect: "none",
+                  }}
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-sm text-zinc-400">
+                  이미지 없음
+                </div>
+              )}
+              {fx && <div className={fx} />}
+              <span className="absolute top-2 left-2 text-[11px] font-black px-2 py-0.5 rounded bg-black/75 text-white shadow-lg">
+                PCL{entry.grade}
+              </span>
+            </div>
+
+            <div className="mt-4 text-center">
+              <h3 className="text-base md:text-lg font-bold text-white break-words">
+                {card?.name ?? entry.card_id}
+              </h3>
+              <div className="mt-2 flex items-center justify-center gap-2 flex-wrap">
+                <span
+                  className={clsx(
+                    "text-[11px] font-black px-2 py-0.5 rounded",
+                    rstyle?.badge ?? "bg-white/10 text-zinc-200"
+                  )}
+                >
+                  {rarity}
+                </span>
+                <span className="text-[11px] text-zinc-400">
+                  {RARITY_LABEL[rarity] ?? rarity}
+                </span>
+                {card && (
+                  <span className="text-[11px] text-zinc-500">
+                    · #{card.number}
+                  </span>
+                )}
+              </div>
+              {setName && (
+                <p className="mt-1 text-[11px] text-zinc-500">{setName}</p>
+              )}
+            </div>
+
+            {card && (
+              <Link
+                href={`/card/${encodeURIComponent(card.id)}`}
+                onClick={onClose}
+                className="mt-4 w-full inline-flex items-center justify-center h-10 rounded-xl bg-gradient-to-r from-fuchsia-500/90 to-violet-500/90 hover:from-fuchsia-500 hover:to-violet-500 active:scale-[0.98] text-white text-sm font-bold transition"
+              >
+                카드 상세 페이지
+              </Link>
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
+    </Portal>
   );
 }
 
