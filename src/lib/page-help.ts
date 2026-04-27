@@ -774,8 +774,8 @@ const USERS_SECTIONS: HelpSection[] = [
         h("li", { key: 1 }, h("b", null, "MUR"), " · 100 / 90"),
         h("li", { key: 2 }, h("b", null, "UR"), " · 80 / 72"),
         h("li", { key: 3 }, h("b", null, "SAR"), " · 70 / 63"),
-        h("li", { key: 4 }, h("b", null, "AR"), " · 60 / 54"),
-        h("li", { key: 5 }, h("b", null, "SR"), " · 50 / 45"),
+        h("li", { key: 4 }, h("b", null, "SR"), " · 60 / 54"),
+        h("li", { key: 5 }, h("b", null, "AR"), " · 50 / 45"),
         h("li", { key: 6 }, h("b", null, "MA"), " · 40 / 36"),
         h("li", { key: 7 }, h("b", null, "RR"), " · 30 / 27"),
         h("li", { key: 8 }, h("b", null, "R"), " · 20 / 18"),
@@ -806,7 +806,7 @@ const USERS_SECTIONS: HelpSection[] = [
       h(
         "p",
         { className: "mt-1" },
-        "희귀도 점수 × 10 (SR 50 · MA 60 · SAR 70 · UR 80 · MUR 100)"
+        "희귀도 점수 × 10 (MA 40 · AR 50 · SR 60 · SAR 70 · UR 80 · MUR 100)"
       ),
       h(
         "p",
@@ -1214,8 +1214,8 @@ const POKEDEX_SECTIONS: HelpSection[] = [
         h("li", { key: 1 }, h("b", null, "MUR"), " · +1,000"),
         h("li", { key: 2 }, h("b", null, "UR"), " · +400"),
         h("li", { key: 3 }, h("b", null, "SAR"), " · +250"),
-        h("li", { key: 4 }, h("b", null, "AR"), " · +180"),
-        h("li", { key: 5 }, h("b", null, "SR"), " · +130"),
+        h("li", { key: 4 }, h("b", null, "SR"), " · +180"),
+        h("li", { key: 5 }, h("b", null, "AR"), " · +130"),
         h("li", { key: 6 }, h("b", null, "MA"), " · +100"),
         h("li", { key: 7 }, h("b", null, "RR"), " · +50"),
         h("li", { key: 8 }, h("b", null, "R"), " · +30"),

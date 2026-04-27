@@ -623,10 +623,10 @@ function Stat({
   );
 }
 
-// 사용자 정한 hierarchy (low → high): C, U, R, RR, MA, SR, AR.
-// AR 은 SAR 바로 아래라 자동판매 옵션에 포함. 그 위 (SAR/UR/MUR)
+// 사용자 정한 hierarchy (low → high): C, U, R, RR, MA, AR, SR.
+// SR 은 SAR 바로 아래라 자동판매 옵션에 포함. 그 위 (SAR/UR/MUR)
 // 는 너무 비싸서 자동판매 후보로 노출하지 않음.
-const AUTO_SELL_RARITY_OPTIONS = ["C", "U", "R", "RR", "MA", "SR", "AR"] as const;
+const AUTO_SELL_RARITY_OPTIONS = ["C", "U", "R", "RR", "MA", "AR", "SR"] as const;
 
 function SealedBox({
   set,
@@ -662,9 +662,9 @@ function SealedBox({
     }
   };
   const applyRecommended = () => {
-    // 사용자 정한 등급 순서: MUR > UR > SAR > AR > SR > MA > RR > R > U > C
-    // → "AR 미만" = SR, MA, RR, R, U, C (6등급).
-    onChangeAutoSellRarities(["C", "U", "R", "RR", "MA", "SR"]);
+    // 사용자 정한 등급 순서: MUR > UR > SAR > SR > AR > MA > RR > R > U > C
+    // → "AR 이하" = AR, MA, RR, R, U, C (6등급). SR 위는 보관.
+    onChangeAutoSellRarities(["C", "U", "R", "RR", "MA", "AR"]);
   };
   return (
     <motion.div
@@ -715,7 +715,7 @@ function SealedBox({
               className="text-[10px] font-bold px-2 py-1 rounded-full bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/40 text-amber-100 transition"
               style={{ touchAction: "manipulation" }}
             >
-              추천 (AR 미만)
+              추천 (AR 이하)
             </button>
             <div
               className={clsx(

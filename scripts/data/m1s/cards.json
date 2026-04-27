@@ -1,0 +1,774 @@
+{
+  "code": "m1s",
+  "name": "메가심포니아",
+  "subtitle": "MEGA 확장팩 · MEGA SYMPHONIA",
+  "releaseDate": "2025-09-26",
+  "cardsPerPack": 5,
+  "packsPerBox": 30,
+  "totalCards": 92,
+  "pokellector_folder": 417,
+  "pokellector_set_code": "M1S",
+  "primaryColor": "#ec4899",
+  "accentColor": "#f9a8d4",
+  "imageUrlPattern": "https://den-cards.pokellector.com/417/<pokellector_slug>.M1S.<jp_card_number>.<pokellector_asset_id>.png",
+  "imageUrlNote": "<jp_card_number> is the Japanese release number. KR↔JP swaps for trainers — see issues for the explicit swap table.",
+  "cards": [
+    {
+      "number": "001",
+      "name_en": "Tangela",
+      "name_ko": "덩쿠리",
+      "rarity": "C",
+      "pokellector_slug": "Tangela",
+      "pokellector_asset_id": "58891"
+    },
+    {
+      "number": "002",
+      "name_en": "Tangrowth",
+      "name_ko": "덩쿠림보",
+      "rarity": "U",
+      "pokellector_slug": "Tangrowth",
+      "pokellector_asset_id": "58892"
+    },
+    {
+      "number": "003",
+      "name_en": "Chikorita",
+      "name_ko": "치코리타",
+      "rarity": "C",
+      "pokellector_slug": "Chikorita",
+      "pokellector_asset_id": "58893"
+    },
+    {
+      "number": "004",
+      "name_en": "Bayleef",
+      "name_ko": "베이리프",
+      "rarity": "C",
+      "pokellector_slug": "Bayleef",
+      "pokellector_asset_id": "58894"
+    },
+    {
+      "number": "005",
+      "name_en": "Meganium",
+      "name_ko": "메가니움",
+      "rarity": "R",
+      "pokellector_slug": "Meganium",
+      "pokellector_asset_id": "58895"
+    },
+    {
+      "number": "006",
+      "name_en": "Shuckle",
+      "name_ko": "단단지",
+      "rarity": "U",
+      "pokellector_slug": "Shuckle",
+      "pokellector_asset_id": "58896"
+    },
+    {
+      "number": "007",
+      "name_en": "Nincada",
+      "name_ko": "토중몬",
+      "rarity": "C",
+      "pokellector_slug": "Nincada",
+      "pokellector_asset_id": "58897"
+    },
+    {
+      "number": "008",
+      "name_en": "Ninjask",
+      "name_ko": "아이스크",
+      "rarity": "U",
+      "pokellector_slug": "Ninjask",
+      "pokellector_asset_id": "58898"
+    },
+    {
+      "number": "009",
+      "name_en": "Dhelmise",
+      "name_ko": "타타륜",
+      "rarity": "C",
+      "pokellector_slug": "Dhelmise",
+      "pokellector_asset_id": "58899"
+    },
+    {
+      "number": "010",
+      "name_en": "Litleo",
+      "name_ko": "레오꼬",
+      "rarity": "C",
+      "pokellector_slug": "Litleo",
+      "pokellector_asset_id": "58900"
+    },
+    {
+      "number": "011",
+      "name_en": "Pyroar",
+      "name_ko": "화염레오",
+      "rarity": "U",
+      "pokellector_slug": "Pyroar",
+      "pokellector_asset_id": "58901"
+    },
+    {
+      "number": "012",
+      "name_en": "Sizzlipede",
+      "name_ko": "태우지네",
+      "rarity": "C",
+      "pokellector_slug": "Sizzlipede",
+      "pokellector_asset_id": "58902"
+    },
+    {
+      "number": "013",
+      "name_en": "Centiskorch",
+      "name_ko": "다태우지네",
+      "rarity": "U",
+      "pokellector_slug": "Centiskorch",
+      "pokellector_asset_id": "58903"
+    },
+    {
+      "number": "014",
+      "name_en": "Chi Yu",
+      "name_ko": "위유이",
+      "rarity": "U",
+      "pokellector_slug": "Chi-Yu",
+      "pokellector_asset_id": "58904"
+    },
+    {
+      "number": "015",
+      "name_en": "Mantine",
+      "name_ko": "만타인",
+      "rarity": "C",
+      "pokellector_slug": "Mantine",
+      "pokellector_asset_id": "58905"
+    },
+    {
+      "number": "016",
+      "name_en": "Kyogre",
+      "name_ko": "가이오가",
+      "rarity": "R",
+      "pokellector_slug": "Kyogre",
+      "pokellector_asset_id": "58906"
+    },
+    {
+      "number": "017",
+      "name_en": "Snover",
+      "name_ko": "눈쓰개",
+      "rarity": "C",
+      "pokellector_slug": "Snover",
+      "pokellector_asset_id": "58907"
+    },
+    {
+      "number": "018",
+      "name_en": "Mega Abomasnow ex",
+      "name_ko": "메가눈설왕",
+      "rarity": "RR",
+      "pokellector_slug": "Mega-Abomasnow-ex",
+      "pokellector_asset_id": "58908"
+    },
+    {
+      "number": "019",
+      "name_en": "Clauncher",
+      "name_ko": "완철포",
+      "rarity": "C",
+      "pokellector_slug": "Clauncher",
+      "pokellector_asset_id": "58909"
+    },
+    {
+      "number": "020",
+      "name_en": "Clawitzer",
+      "name_ko": "블로스터",
+      "rarity": "R",
+      "pokellector_slug": "Clawitzer",
+      "pokellector_asset_id": "58910"
+    },
+    {
+      "number": "021",
+      "name_en": "Sobble",
+      "name_ko": "울머기",
+      "rarity": "C",
+      "pokellector_slug": "Sobble",
+      "pokellector_asset_id": "57991"
+    },
+    {
+      "number": "022",
+      "name_en": "Drizzile",
+      "name_ko": "누겔레온",
+      "rarity": "C",
+      "pokellector_slug": "Drizzile",
+      "pokellector_asset_id": "57992"
+    },
+    {
+      "number": "023",
+      "name_en": "Inteleon",
+      "name_ko": "인텔리레온",
+      "rarity": "U",
+      "pokellector_slug": "Inteleon",
+      "pokellector_asset_id": "57993"
+    },
+    {
+      "number": "024",
+      "name_en": "Snom",
+      "name_ko": "누니머기",
+      "rarity": "C",
+      "pokellector_slug": "Snom",
+      "pokellector_asset_id": "58911"
+    },
+    {
+      "number": "025",
+      "name_en": "Frosmoth",
+      "name_ko": "모스노우",
+      "rarity": "U",
+      "pokellector_slug": "Frosmoth",
+      "pokellector_asset_id": "58912"
+    },
+    {
+      "number": "026",
+      "name_en": "Eiscue",
+      "name_ko": "빙큐보",
+      "rarity": "C",
+      "pokellector_slug": "Eiscue",
+      "pokellector_asset_id": "58913"
+    },
+    {
+      "number": "027",
+      "name_en": "Magnemite",
+      "name_ko": "코일",
+      "rarity": "C",
+      "pokellector_slug": "Magnemite",
+      "pokellector_asset_id": "58914"
+    },
+    {
+      "number": "028",
+      "name_en": "Magneton",
+      "name_ko": "레어코일",
+      "rarity": "C",
+      "pokellector_slug": "Magneton",
+      "pokellector_asset_id": "58915"
+    },
+    {
+      "number": "029",
+      "name_en": "Magnezone",
+      "name_ko": "자포코일",
+      "rarity": "U",
+      "pokellector_slug": "Magnezone",
+      "pokellector_asset_id": "58916"
+    },
+    {
+      "number": "030",
+      "name_en": "Raikou",
+      "name_ko": "라이코",
+      "rarity": "R",
+      "pokellector_slug": "Raikou",
+      "pokellector_asset_id": "58917"
+    },
+    {
+      "number": "031",
+      "name_en": "Electrike",
+      "name_ko": "썬더라이",
+      "rarity": "C",
+      "pokellector_slug": "Electrike",
+      "pokellector_asset_id": "58918"
+    },
+    {
+      "number": "032",
+      "name_en": "Mega Manectric ex",
+      "name_ko": "메가썬더볼트",
+      "rarity": "RR",
+      "pokellector_slug": "Mega-Manectric-ex",
+      "pokellector_asset_id": "58919"
+    },
+    {
+      "number": "033",
+      "name_en": "Pachirisu",
+      "name_ko": "파치리스",
+      "rarity": "C",
+      "pokellector_slug": "Pachirisu",
+      "pokellector_asset_id": "57994"
+    },
+    {
+      "number": "034",
+      "name_en": "Helioptile",
+      "name_ko": "목도리키텔",
+      "rarity": "C",
+      "pokellector_slug": "Helioptile",
+      "pokellector_asset_id": "58920"
+    },
+    {
+      "number": "035",
+      "name_en": "Heliolisk",
+      "name_ko": "일레도리자드",
+      "rarity": "C",
+      "pokellector_slug": "Heliolisk",
+      "pokellector_asset_id": "58921"
+    },
+    {
+      "number": "036",
+      "name_en": "Abra",
+      "name_ko": "캐이시",
+      "rarity": "C",
+      "pokellector_slug": "Abra",
+      "pokellector_asset_id": "58922"
+    },
+    {
+      "number": "037",
+      "name_en": "Kadabra",
+      "name_ko": "윤겔라",
+      "rarity": "U",
+      "pokellector_slug": "Kadabra",
+      "pokellector_asset_id": "58923"
+    },
+    {
+      "number": "038",
+      "name_en": "Alakazam",
+      "name_ko": "후딘",
+      "rarity": "R",
+      "pokellector_slug": "Alakazam",
+      "pokellector_asset_id": "58924"
+    },
+    {
+      "number": "039",
+      "name_en": "Jynx",
+      "name_ko": "루주라",
+      "rarity": "C",
+      "pokellector_slug": "Jynx",
+      "pokellector_asset_id": "58925"
+    },
+    {
+      "number": "040",
+      "name_en": "Ralts",
+      "name_ko": "랄토스",
+      "rarity": "C",
+      "pokellector_slug": "Ralts",
+      "pokellector_asset_id": "57982"
+    },
+    {
+      "number": "041",
+      "name_en": "Kirlia",
+      "name_ko": "킬리아",
+      "rarity": "C",
+      "pokellector_slug": "Kirlia",
+      "pokellector_asset_id": "57983"
+    },
+    {
+      "number": "042",
+      "name_en": "Mega Gardevoir ex",
+      "name_ko": "메가가디안",
+      "rarity": "RR",
+      "pokellector_slug": "Mega-Gardevoir-ex",
+      "pokellector_asset_id": "57984"
+    },
+    {
+      "number": "043",
+      "name_en": "Shedinja",
+      "name_ko": "껍질몬",
+      "rarity": "U",
+      "pokellector_slug": "Shedinja",
+      "pokellector_asset_id": "58926"
+    },
+    {
+      "number": "044",
+      "name_en": "Spoink",
+      "name_ko": "피그점프",
+      "rarity": "C",
+      "pokellector_slug": "Spoink",
+      "pokellector_asset_id": "58927"
+    },
+    {
+      "number": "045",
+      "name_en": "Grumpig",
+      "name_ko": "피그킹",
+      "rarity": "U",
+      "pokellector_slug": "Grumpig",
+      "pokellector_asset_id": "58928"
+    },
+    {
+      "number": "046",
+      "name_en": "Xerneas",
+      "name_ko": "제르네아스",
+      "rarity": "R",
+      "pokellector_slug": "Xerneas",
+      "pokellector_asset_id": "58929"
+    },
+    {
+      "number": "047",
+      "name_en": "Greavard",
+      "name_ko": "망망이",
+      "rarity": "C",
+      "pokellector_slug": "Greavard",
+      "pokellector_asset_id": "58930"
+    },
+    {
+      "number": "048",
+      "name_en": "Houndstone",
+      "name_ko": "묘두기",
+      "rarity": "U",
+      "pokellector_slug": "Houndstone",
+      "pokellector_asset_id": "58931"
+    },
+    {
+      "number": "049",
+      "name_en": "Mega Latias ex",
+      "name_ko": "메가라티아스",
+      "rarity": "RR",
+      "pokellector_slug": "Mega-Latias-ex",
+      "pokellector_asset_id": "57989"
+    },
+    {
+      "number": "050",
+      "name_en": "Latios",
+      "name_ko": "라티오스",
+      "rarity": "U",
+      "pokellector_slug": "Latios",
+      "pokellector_asset_id": "57988"
+    },
+    {
+      "number": "051",
+      "name_en": "Mega Kangaskhan ex",
+      "name_ko": "메가캥카",
+      "rarity": "RR",
+      "pokellector_slug": "Mega-Kangaskhan-ex",
+      "pokellector_asset_id": "58932"
+    },
+    {
+      "number": "052",
+      "name_en": "Delibird",
+      "name_ko": "딜리버드",
+      "rarity": "C",
+      "pokellector_slug": "Delibird",
+      "pokellector_asset_id": "58933"
+    },
+    {
+      "number": "053",
+      "name_en": "Buneary",
+      "name_ko": "이어롤",
+      "rarity": "C",
+      "pokellector_slug": "Buneary",
+      "pokellector_asset_id": "58934"
+    },
+    {
+      "number": "054",
+      "name_en": "Lopunny",
+      "name_ko": "이어롭",
+      "rarity": "C",
+      "pokellector_slug": "Lopunny",
+      "pokellector_asset_id": "58935"
+    },
+    {
+      "number": "055",
+      "name_en": "Stufful",
+      "name_ko": "포곰곰",
+      "rarity": "C",
+      "pokellector_slug": "Stufful",
+      "pokellector_asset_id": "58936"
+    },
+    {
+      "number": "056",
+      "name_en": "Bewear",
+      "name_ko": "이븐곰",
+      "rarity": "C",
+      "pokellector_slug": "Bewear",
+      "pokellector_asset_id": "58937"
+    },
+    {
+      "number": "057",
+      "name_en": "Suspicious Watch",
+      "name_ko": "괴상한 시계",
+      "rarity": "U",
+      "pokellector_slug": "Suspicious-Watch",
+      "pokellector_asset_id": "58938"
+    },
+    {
+      "number": "058",
+      "name_en": "Mega Signal",
+      "name_ko": "메가시그널",
+      "rarity": "U",
+      "pokellector_slug": "Mega-Signal",
+      "pokellector_asset_id": "57986"
+    },
+    {
+      "number": "059",
+      "name_en": "Wally's Compassion",
+      "name_ko": "민진의 헤아림",
+      "rarity": "U",
+      "pokellector_slug": "Wally",
+      "pokellector_asset_id": "57990"
+    },
+    {
+      "number": "060",
+      "name_en": "Acerola's Mischief",
+      "name_ko": "아세로라의 장난",
+      "rarity": "U",
+      "pokellector_slug": "Acerolas-Mischief",
+      "pokellector_asset_id": "58939"
+    },
+    {
+      "number": "061",
+      "name_en": "Mystery Garden",
+      "name_ko": "미스터리 가든",
+      "rarity": "U",
+      "pokellector_slug": "Mystery-Garden",
+      "pokellector_asset_id": "57985"
+    },
+    {
+      "number": "062",
+      "name_en": "Surfing Beach",
+      "name_ko": "파도타기 비치",
+      "rarity": "U",
+      "pokellector_slug": "Surfing-Beach",
+      "pokellector_asset_id": "58941"
+    },
+    {
+      "number": "063",
+      "name_en": "Vitality Forest",
+      "name_ko": "활력의 숲",
+      "rarity": "U",
+      "pokellector_slug": "Vitality-Forest",
+      "pokellector_asset_id": "58940"
+    },
+    {
+      "number": "064",
+      "name_en": "Shuckle",
+      "name_ko": "단단지",
+      "rarity": "AR",
+      "pokellector_slug": "Shuckle",
+      "pokellector_asset_id": "58942"
+    },
+    {
+      "number": "065",
+      "name_en": "Ninjask",
+      "name_ko": "아이스크",
+      "rarity": "AR",
+      "pokellector_slug": "Ninjask",
+      "pokellector_asset_id": "58943"
+    },
+    {
+      "number": "066",
+      "name_en": "Litleo",
+      "name_ko": "레오꼬",
+      "rarity": "AR",
+      "pokellector_slug": "Litleo",
+      "pokellector_asset_id": "58944"
+    },
+    {
+      "number": "067",
+      "name_en": "Snover",
+      "name_ko": "눈쓰개",
+      "rarity": "AR",
+      "pokellector_slug": "Snover",
+      "pokellector_asset_id": "58945"
+    },
+    {
+      "number": "068",
+      "name_en": "Clawitzer",
+      "name_ko": "블로스터",
+      "rarity": "AR",
+      "pokellector_slug": "Clawitzer",
+      "pokellector_asset_id": "58946"
+    },
+    {
+      "number": "069",
+      "name_en": "Inteleon",
+      "name_ko": "인텔리레온",
+      "rarity": "AR",
+      "pokellector_slug": "Inteleon",
+      "pokellector_asset_id": "57995"
+    },
+    {
+      "number": "070",
+      "name_en": "Helioptile",
+      "name_ko": "목도리키텔",
+      "rarity": "AR",
+      "pokellector_slug": "Helioptile",
+      "pokellector_asset_id": "58947"
+    },
+    {
+      "number": "071",
+      "name_en": "Alakazam",
+      "name_ko": "후딘",
+      "rarity": "AR",
+      "pokellector_slug": "Alakazam",
+      "pokellector_asset_id": "58948"
+    },
+    {
+      "number": "072",
+      "name_en": "Shedinja",
+      "name_ko": "껍질몬",
+      "rarity": "AR",
+      "pokellector_slug": "Shedinja",
+      "pokellector_asset_id": "58949"
+    },
+    {
+      "number": "073",
+      "name_en": "Houndstone",
+      "name_ko": "묘두기",
+      "rarity": "AR",
+      "pokellector_slug": "Houndstone",
+      "pokellector_asset_id": "58950"
+    },
+    {
+      "number": "074",
+      "name_en": "Delibird",
+      "name_ko": "딜리버드",
+      "rarity": "AR",
+      "pokellector_slug": "Delibird",
+      "pokellector_asset_id": "58951"
+    },
+    {
+      "number": "075",
+      "name_en": "Stufful",
+      "name_ko": "포곰곰",
+      "rarity": "AR",
+      "pokellector_slug": "Stufful",
+      "pokellector_asset_id": "58952"
+    },
+    {
+      "number": "076",
+      "name_en": "Mega Abomasnow ex",
+      "name_ko": "메가눈설왕",
+      "rarity": "SR",
+      "pokellector_slug": "Mega-Abomasnow-ex",
+      "pokellector_asset_id": "58953"
+    },
+    {
+      "number": "077",
+      "name_en": "Mega Manectric ex",
+      "name_ko": "메가썬더볼트",
+      "rarity": "SR",
+      "pokellector_slug": "Mega-Manectric-ex",
+      "pokellector_asset_id": "58954"
+    },
+    {
+      "number": "078",
+      "name_en": "Mega Gardevoir ex",
+      "name_ko": "메가가디안",
+      "rarity": "SR",
+      "pokellector_slug": "Mega-Gardevoir-ex",
+      "pokellector_asset_id": "58955"
+    },
+    {
+      "number": "079",
+      "name_en": "Mega Latias ex",
+      "name_ko": "메가라티아스",
+      "rarity": "SR",
+      "pokellector_slug": "Mega-Latias-ex",
+      "pokellector_asset_id": "58956"
+    },
+    {
+      "number": "080",
+      "name_en": "Mega Kangaskhan ex",
+      "name_ko": "메가캥카",
+      "rarity": "SR",
+      "pokellector_slug": "Mega-Kangaskhan-ex",
+      "pokellector_asset_id": "58957"
+    },
+    {
+      "number": "081",
+      "name_en": "Mega Signal",
+      "name_ko": "메가시그널",
+      "rarity": "SR",
+      "pokellector_slug": "Mega-Signal",
+      "pokellector_asset_id": "58959"
+    },
+    {
+      "number": "082",
+      "name_en": "Rare Candy",
+      "name_ko": "이상한사탕",
+      "rarity": "SR",
+      "pokellector_slug": "Rare-Candy",
+      "pokellector_asset_id": "57987"
+    },
+    {
+      "number": "083",
+      "name_en": "Buddy-Buddy Poffin",
+      "name_ko": "절친 포핀",
+      "rarity": "SR",
+      "pokellector_slug": "Buddy-Buddy-Poffin",
+      "pokellector_asset_id": "58958"
+    },
+    {
+      "number": "084",
+      "name_en": "Wally's Compassion",
+      "name_ko": "민진의 헤아림",
+      "rarity": "SR",
+      "pokellector_slug": "Wallys-Compassion",
+      "pokellector_asset_id": "58961"
+    },
+    {
+      "number": "085",
+      "name_en": "Acerola's Mischief",
+      "name_ko": "아세로라의 장난",
+      "rarity": "SR",
+      "pokellector_slug": "Acerolas-Mischief",
+      "pokellector_asset_id": "58960"
+    },
+    {
+      "number": "086",
+      "name_en": "Mystery Garden",
+      "name_ko": "미스터리 가든",
+      "rarity": "SR",
+      "pokellector_slug": "Mystery-Garden",
+      "pokellector_asset_id": "58962"
+    },
+    {
+      "number": "087",
+      "name_en": "Mega Gardevoir ex",
+      "name_ko": "메가가디안",
+      "rarity": "SAR",
+      "pokellector_slug": "Mega-Gardevoir-ex",
+      "pokellector_asset_id": "58963"
+    },
+    {
+      "number": "088",
+      "name_en": "Mega Latias ex",
+      "name_ko": "메가라티아스",
+      "rarity": "SAR",
+      "pokellector_slug": "Mega-Latias-ex",
+      "pokellector_asset_id": "58964"
+    },
+    {
+      "number": "089",
+      "name_en": "Mega Kangaskhan ex",
+      "name_ko": "메가캥카",
+      "rarity": "SAR",
+      "pokellector_slug": "Mega-Kangaskhan-ex",
+      "pokellector_asset_id": "58965"
+    },
+    {
+      "number": "090",
+      "name_en": "Wally's Compassion",
+      "name_ko": "민진의 헤아림",
+      "rarity": "SAR",
+      "pokellector_slug": "Wallys-Compassion",
+      "pokellector_asset_id": "58967"
+    },
+    {
+      "number": "091",
+      "name_en": "Acerola's Mischief",
+      "name_ko": "아세로라의 장난",
+      "rarity": "SAR",
+      "pokellector_slug": "Acerolas-Mischief",
+      "pokellector_asset_id": "58966"
+    },
+    {
+      "number": "092",
+      "name_en": "Mega Gardevoir ex",
+      "name_ko": "메가가디안",
+      "rarity": "MUR",
+      "pokellector_slug": "Mega-Gardevoir-ex",
+      "pokellector_asset_id": "58968"
+    }
+  ],
+  "issues": [
+    "KR↔JP swap (M1S 057-063 trainers): KR57=JP57(SuspiciousWatch/괴상한시계), KR58=JP58(MegaSignal/메가시그널), KR59=JP60(Wally/민진의헤아림), KR60=JP59(Acerola/아세로라의장난), KR61=JP63(MysteryGarden/미스터리가든), KR62=JP62(SurfingBeach/파도타기비치), KR63=JP61(VitalityForest/활력의숲)",
+    "KR↔JP swap (M1S 081-086 SR trainers): KR81=JP83(MegaSignal/메가시그널), KR82=JP82(RareCandy/이상한사탕), KR83=JP81(BuddyBuddyPoffin/절친포핀), KR84=JP85(Wally/민진의헤아림), KR85=JP84(Acerola/아세로라의장난), KR86=JP86(MysteryGarden/미스터리가든)",
+    "KR↔JP swap (M1S 087-091 SAR): KR87-89 same as JP. KR90=JP91(Wally/민진의헤아림), KR91=JP90(Acerola/아세로라의장난)",
+    "M1S #17 (눈쓰개/Snover) rarity disputed: Namu wiki says R, Fuji + Serebii say C — using C"
+  ],
+  "stats": {
+    "total": 92,
+    "name_ko_filled": 92,
+    "name_ko_null": 0,
+    "rarity_distribution": {
+      "C": 31,
+      "U": 21,
+      "R": 6,
+      "RR": 5,
+      "AR": 12,
+      "SR": 11,
+      "SAR": 5,
+      "MUR": 1
+    }
+  }
+}
