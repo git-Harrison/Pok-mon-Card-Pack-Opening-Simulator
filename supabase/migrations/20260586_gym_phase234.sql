@@ -111,8 +111,10 @@ as $$
 $$;
 
 -- 4) gym_compute_user_center_power — 기존 랭킹의 center_power 와 동일.
---    (showcase rarity_power × pcl_power) + pokedex_power_bonus +
+--    (showcase rarity_power × pcl_power) + pokedex_power_bonus(uuid) +
 --    pokedex_completion_bonus + pet_score.
+--    NOTE: 20260563 에서 pokedex_power_bonus 의 int 시그니처가 drop 되고
+--    uuid 시그니처로 교체됨. 반드시 uuid 인자 전달.
 create or replace function gym_compute_user_center_power(p_user_id uuid)
 returns int
 language sql
@@ -126,9 +128,7 @@ as $$
       join psa_gradings g2 on g2.id = sc.grading_id
      where us.user_id = p_user_id
   ), 0)
-  + pokedex_power_bonus(coalesce((
-      select pokedex_count from users where id = p_user_id
-    ), 0))
+  + coalesce(pokedex_power_bonus(p_user_id), 0)
   + coalesce(pokedex_completion_bonus(p_user_id), 0)
   + coalesce((select pet_score from users where id = p_user_id), 0);
 $$;

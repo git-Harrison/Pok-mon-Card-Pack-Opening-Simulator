@@ -739,22 +739,15 @@ begin
       limit 5
     ),
     pokedex as (
+      -- 20260563 에서 pokedex_power_bonus(int) 가 drop 되어, 누적 차분
+      -- 방식이 invalid. pokedex_rarity_score(text) 로 등급별 정액 사용.
       select
         ('도감 등록 (' || coalesce(p.rarity, '-') || ')') as label,
         p.card_id as card_id,
-        greatest(
-          pokedex_power_bonus(rn.idx::int)
-            - pokedex_power_bonus((rn.idx - 1)::int),
-          0
-        )::int as points,
+        coalesce(pokedex_rarity_score(coalesce(p.rarity, '')), 0) as points,
         'pokedex_register'::text as source,
         p.registered_at as occurred_at
       from pokedex_entries p
-      join (
-        select id, row_number() over (order by registered_at asc) as idx
-          from pokedex_entries
-         where user_id = p_user_id
-      ) rn on rn.id = p.id
       where p.user_id = p_user_id
       order by p.registered_at desc
       limit 5

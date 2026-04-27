@@ -592,26 +592,6 @@ function Hero({
         )}
       </motion.p>
 
-      <motion.div
-        className="mt-5 flex items-center justify-center gap-2 flex-wrap"
-        initial={reduce ? false : { opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut", delay: 0.26 }}
-      >
-        <a
-          href="#packs"
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold bg-amber-400 text-zinc-900 hover:bg-amber-300 active:scale-[0.98] transition shadow-[0_8px_30px_-10px_rgba(251,191,36,0.7)]"
-        >
-          🎁 박스 고르기
-        </a>
-        <Link
-          href="/grading"
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-white/5 border border-white/15 text-white hover:bg-white/10 transition"
-        >
-          🔎 감별하기
-        </Link>
-      </motion.div>
-
       {/* Local keyframes for the gradient sweep — safe to inline because Tailwind
           arbitrary-anim names just need the @keyframes to exist. */}
       <style jsx>{`
@@ -663,7 +643,6 @@ const PackTile = memo(function PackTile({ code }: { code: SetCode }) {
             fill
             sizes="(max-width: 640px) 45vw, (max-width: 1024px) 33vw, 22vw"
             className="object-contain drop-shadow-2xl select-none pointer-events-none"
-            priority={code === SET_ORDER[0]}
             draggable={false}
           />
         </div>

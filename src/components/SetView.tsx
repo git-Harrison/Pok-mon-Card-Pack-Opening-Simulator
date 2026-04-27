@@ -755,17 +755,17 @@ function SealedBox({
         className={clsx(
           "w-full max-w-[420px] select-none rounded-2xl border px-3.5 py-3 transition",
           autoSellOn
-            ? "border-amber-400/60 bg-amber-400/15 shadow-[0_0_18px_-6px_rgba(251,191,36,0.5)]"
+            ? "border-rose-400/60 bg-rose-400/10 shadow-[0_0_18px_-6px_rgba(244,114,128,0.45)]"
             : "border-white/10 bg-white/5"
         )}
       >
         <div className="flex items-center justify-between gap-3">
-          <div className="text-sm font-bold text-white">자동 판매 등급</div>
+          <div className="text-sm font-bold text-white">자동 삭제 등급</div>
           <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={applyRecommended}
-              className="text-[10px] font-bold px-2 py-1 rounded-full bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/40 text-amber-100 transition"
+              className="text-[10px] font-bold px-2 py-1 rounded-full bg-rose-400/20 hover:bg-rose-400/30 border border-rose-400/40 text-rose-100 transition"
               style={{ touchAction: "manipulation" }}
             >
               추천 (AR 이하)
@@ -774,7 +774,7 @@ function SealedBox({
               className={clsx(
                 "shrink-0 text-[10px] font-black px-2 py-1 rounded-full",
                 autoSellOn
-                  ? "bg-amber-400 text-zinc-950"
+                  ? "bg-rose-400 text-zinc-950"
                   : "bg-white/10 text-zinc-400"
               )}
             >
@@ -793,7 +793,7 @@ function SealedBox({
                 className={clsx(
                   "h-8 px-3 rounded-full text-xs font-bold border transition",
                   active
-                    ? "bg-amber-400 text-zinc-950 border-amber-400"
+                    ? "bg-rose-400 text-zinc-950 border-rose-400"
                     : "bg-white/5 text-zinc-300 border-white/10 hover:bg-white/10"
                 )}
                 style={{ touchAction: "manipulation" }}
@@ -804,8 +804,8 @@ function SealedBox({
             );
           })}
         </div>
-        <div className="mt-2 text-[10px] md:text-[11px] text-zinc-400">
-          선택한 등급 카드는 지갑 저장 없이 일괄 판매 단가로 즉시 환산돼요
+        <div className="mt-2 text-[10px] md:text-[11px] text-rose-200/85">
+          선택한 등급 카드는 지갑에 저장되지 않고 즉시 삭제돼요 (포인트 X)
         </div>
       </div>
 
@@ -967,9 +967,8 @@ function BulkResultOverlay({
           <div className="text-xs md:text-sm text-zinc-200 font-semibold truncate">
             {setName} · 보유 카드 ({cards.length}장)
             {autoSellCount > 0 && (
-              <span className="ml-2 text-emerald-300 text-[10px] md:text-xs font-bold">
-                · 자동판매 {autoSellCount}장 +
-                {autoSellEarned.toLocaleString("ko-KR")}p
+              <span className="ml-2 text-rose-300 text-[10px] md:text-xs font-bold">
+                · 자동삭제 {autoSellCount}장
               </span>
             )}
           </div>
@@ -1088,7 +1087,7 @@ function PackGrid({
             <img
               src={set.packImage}
               alt={`${set.name} 팩 ${i + 1}`}
-              className="w-full h-full object-contain bg-zinc-900"
+              className="w-full h-full object-cover bg-zinc-900"
             />
             {!opened && <div className="pack-shine absolute inset-0" />}
           </div>
@@ -1203,10 +1202,9 @@ function MultiResultOverlay({
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-3 flex-wrap">
           <div className="text-[11px] text-zinc-400 tabular-nums flex items-center gap-2">
             <span>소비 {totalSpent.toLocaleString("ko-KR")}p</span>
-            {autoSellEarned > 0 && (
-              <span className="text-emerald-300">
-                · 자동판매 {autoSellCount}장 +
-                {autoSellEarned.toLocaleString("ko-KR")}p
+            {autoSellCount > 0 && (
+              <span className="text-rose-300">
+                · 자동삭제 {autoSellCount}장
               </span>
             )}
           </div>
