@@ -13,6 +13,7 @@ import WalletPill from "./WalletPill";
 import {
   BookIcon,
   GiftIcon,
+  GymIcon,
   HomeIcon,
   LeafIcon,
   MagnifyIcon,
@@ -25,6 +26,7 @@ import {
 const NAV_ITEMS = [
   { href: "/", label: "홈", Icon: HomeIcon },
   { href: "/wild", label: "야생", Icon: LeafIcon },
+  { href: "/gym", label: "체육관", Icon: GymIcon },
   { href: "/grading", label: "등급", Icon: MagnifyIcon },
   { href: "/pokedex", label: "도감", Icon: BookIcon },
   { href: "/users", label: "랭킹", Icon: TrophyIcon },
@@ -34,7 +36,7 @@ const NAV_ITEMS = [
   { href: "/gifts", label: "선물함", Icon: GiftIcon },
 ];
 
-// 지갑/센터/도감/선물함은 더보기 시트에서 진입.
+// 지갑/센터/도감/선물함/체육관은 더보기 시트에서 진입.
 const MOBILE_PRIMARY = ["/", "/wild", "/grading", "/users", "/profile"];
 
 // Header title shown next to the logo. Mobile only — saves vertical
@@ -50,6 +52,7 @@ const HEADER_TITLE_OVERRIDES: Record<string, string> = {
   "/profile": "내 프로필",
   "/gifts": "선물함",
   "/wild": "야생 배틀",
+  "/gym": "체육관 지도",
   "/pokedex": "도감",
   "/admin": "관리자",
   "/login": "로그인",

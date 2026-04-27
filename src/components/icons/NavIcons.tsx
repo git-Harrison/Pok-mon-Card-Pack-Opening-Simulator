@@ -119,6 +119,28 @@ export function LeafIcon({ className = "w-6 h-6" }: IconProps) {
   );
 }
 
+export function GymIcon({ className = "w-6 h-6" }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {/* 체육관 — 첨탑형 건물 + 깃발. 포켓몬 게임 짐 룩. */}
+      <path d="M5 21V10l7-5 7 5v11" />
+      <path d="M5 21h14" />
+      <path d="M9 21v-5h6v5" />
+      <path d="M12 5V2" />
+      <path d="M12 2l3 1.5L12 5" />
+    </svg>
+  );
+}
+
 export function MuseumIcon({ className = "w-6 h-6" }: IconProps) {
   return (
     <svg
