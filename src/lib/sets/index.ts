@@ -5,6 +5,7 @@ import { sv8 } from "./sv8";
 import { sv2a } from "./sv2a";
 import { sv8a } from "./sv8a";
 import { sv5a } from "./sv5a";
+import { sv10 } from "./sv10";
 
 export const SETS: Record<SetCode, SetInfo> = {
   m2a,
@@ -13,12 +14,15 @@ export const SETS: Record<SetCode, SetInfo> = {
   sv2a,
   sv8a,
   sv5a,
+  sv10,
 };
 
+// 메인 페이지 카드 노출 순서 (최신 정발 → 옛 세트).
 export const SET_ORDER: SetCode[] = [
   "m2a",
   "sv8a",
   "m2",
+  "sv10",
   "sv8",
   "sv2a",
   "sv5a",
@@ -50,4 +54,4 @@ export function getCard(id: string): Card | null {
   return getCardIndex().get(id) ?? null;
 }
 
-export { m2a, m2, sv8, sv2a, sv8a, sv5a };
+export { m2a, m2, sv8, sv2a, sv8a, sv5a, sv10 };

@@ -29,7 +29,7 @@ const ALLOWED_RARITIES = new Set([
   "C", "U", "R", "RR", "AR", "SR", "SAR", "MA", "MUR", "UR",
 ]);
 
-const SET_CODES = ["m2a", "m2", "sv8", "sv2a", "sv5a", "sv8a"];
+const SET_CODES = ["m2a", "m2", "sv8", "sv2a", "sv5a", "sv8a", "sv10"];
 
 // --- 파서 -------------------------------------------------
 

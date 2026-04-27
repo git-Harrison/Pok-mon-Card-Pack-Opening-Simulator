@@ -16,7 +16,8 @@ export type SetCode =
   | "sv8"
   | "sv2a"
   | "sv8a"
-  | "sv5a";
+  | "sv5a"
+  | "sv10";
 
 export interface Card {
   id: string; // `${setCode}-${number}`

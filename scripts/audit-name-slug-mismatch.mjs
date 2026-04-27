@@ -20,7 +20,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const SETS_DIR = join(ROOT, "src", "lib", "sets");
 
-const SET_CODES = ["m2a", "m2", "sv8", "sv2a", "sv5a", "sv8a"];
+const SET_CODES = ["m2a", "m2", "sv8", "sv2a", "sv5a", "sv8a", "sv10"];
 
 // --- KR ↔ EN 사전 (확신 가능한 포켓몬만) ----------------------
 // 1세대 모두 + 일부 세대 2~9 인기 포켓몬.
