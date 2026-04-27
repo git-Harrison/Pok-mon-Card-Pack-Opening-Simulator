@@ -861,6 +861,7 @@ function SlabPicker({
   const [typeFilter, setTypeFilter] = useState<WildType | "ALL">("ALL");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -907,22 +908,26 @@ function SlabPicker({
   const visibleSlabs = filteredSlabs.slice(0, visibleCount);
   const hasMore = visibleCount < filteredSlabs.length;
 
-  // 무한 스크롤 — sentinel 이 viewport 진입하면 12개 더.
+  // 무한 스크롤 — sentinel 이 modal 의 스크롤 컨테이너 viewport 에 진입
+  // 하면 12 개 더. modal 자체가 fixed 라 IntersectionObserver root 기본
+  // (viewport) 으로 두면 sentinel 이 영원히 intersect 안 됨 → 첫 진입
+  // 에서 무한스크롤 발동 안 되던 버그. root 를 scrollRef 로 명시.
   useEffect(() => {
     if (!hasMore) return;
     const el = sentinelRef.current;
-    if (!el) return;
+    const root = scrollRef.current;
+    if (!el || !root) return;
     const obs = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
           setVisibleCount((v) => v + PAGE_SIZE);
         }
       },
-      { rootMargin: "200px", threshold: 0.1 }
+      { root, rootMargin: "200px", threshold: 0.01 }
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [hasMore, filteredSlabs.length]);
+  }, [hasMore, filteredSlabs.length, visibleCount]);
 
   return (
     <Portal>
@@ -1002,7 +1007,10 @@ function SlabPicker({
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
+          <div
+            ref={scrollRef}
+            className="flex-1 min-h-0 overflow-y-auto px-3 py-3"
+          >
             {filteredSlabs.length === 0 ? (
               <p className="px-2 py-10 text-center text-sm text-zinc-400">
                 {typeFilter === "ALL"
