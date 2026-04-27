@@ -137,7 +137,7 @@ const HOME_SECTIONS: HelpSection[] = [
       ") → 카드 → ",
       h("b", null, "전시 수익"),
       "(MUR PCL 10 시간당 ",
-      h("b", { className: "text-amber-300" }, "100,000p"),
+      h("b", { className: "text-amber-300" }, "200,000p"),
       "), ",
       h("b", null, "야생 승리"),
       " (",
@@ -521,7 +521,7 @@ const CENTER_SECTIONS: HelpSection[] = [
       null,
       h("b", null, "PCL 9·10"),
       " 슬랩만 시간당 거래 포인트와 랭킹 점수(거래 포인트의 ",
-      h("b", null, "1/200"),
+      h("b", null, "1/400"),
       ")를 자동 적립. 센터 페이지에 들를 때마다 자동 정산돼요.",
       h(
         "ul",
@@ -531,7 +531,7 @@ const CENTER_SECTIONS: HelpSection[] = [
           { key: 1 },
           h("b", { className: "text-amber-300" }, "MUR PCL 10"),
           " · ",
-          h("b", null, "100,000p"),
+          h("b", null, "200,000p"),
           " / 시간 · 랭킹 ",
           h("b", null, "+500")
         ),
@@ -540,7 +540,7 @@ const CENTER_SECTIONS: HelpSection[] = [
           { key: 2 },
           h("b", { className: "text-fuchsia-300" }, "UR PCL 10"),
           " · ",
-          h("b", null, "60,000p"),
+          h("b", null, "120,000p"),
           " · 랭킹 ",
           h("b", null, "+300")
         ),
@@ -549,7 +549,7 @@ const CENTER_SECTIONS: HelpSection[] = [
           { key: 3 },
           h("b", { className: "text-rose-300" }, "SAR PCL 10"),
           " · ",
-          h("b", null, "40,000p"),
+          h("b", null, "80,000p"),
           " · 랭킹 ",
           h("b", null, "+200")
         ),
@@ -558,7 +558,7 @@ const CENTER_SECTIONS: HelpSection[] = [
           { key: 4 },
           h("b", { className: "text-sky-300" }, "MA PCL 10"),
           " · ",
-          h("b", null, "30,000p"),
+          h("b", null, "60,000p"),
           " · 랭킹 ",
           h("b", null, "+150")
         ),
@@ -567,7 +567,7 @@ const CENTER_SECTIONS: HelpSection[] = [
           { key: 5 },
           h("b", { className: "text-emerald-300" }, "SR PCL 10"),
           " · ",
-          h("b", null, "20,000p"),
+          h("b", null, "40,000p"),
           " · 랭킹 ",
           h("b", null, "+100")
         )
@@ -974,14 +974,14 @@ const USERS_SECTIONS: HelpSection[] = [
         { key: 1 },
         h("b", { className: "text-sky-300" }, "야생 승리"),
         " · ",
-        h("b", null, "+50점")
+        h("b", null, "+100점")
       ),
       h(
         "li",
         { key: 2 },
         h("b", { className: "text-violet-300" }, "센터 전시 자동 적립"),
         " · 시간당 거래 포인트의 ",
-        h("b", null, "1/200"),
+        h("b", null, "1/400"),
         " (MUR PCL 10 = 시간당 +500점)"
       ),
       h(
@@ -1358,7 +1358,7 @@ const WILD_SECTIONS: HelpSection[] = [
       "내 PCL 슬랩 한 장으로 야생 포켓몬과 1:1 턴제 배틀. 이기면 ",
       h("b", { className: "text-amber-300" }, "+20,000p"),
       " · 랭킹 ",
-      h("b", { className: "text-amber-300" }, "+50점"),
+      h("b", { className: "text-amber-300" }, "+100점"),
       ", ",
       h("b", { className: "text-rose-300" }, "지면 그 슬랩은 영구 삭제"),
       ". 전시 중 슬랩과 펫 등록 슬랩은 출전 불가."
@@ -1458,7 +1458,7 @@ const WILD_SECTIONS: HelpSection[] = [
         " · ",
         h("b", null, "+20,000p"),
         " · 랭킹 ",
-        h("b", null, "+50점")
+        h("b", null, "+100점")
       ),
       h(
         "li",
