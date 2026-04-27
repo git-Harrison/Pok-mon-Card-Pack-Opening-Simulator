@@ -488,8 +488,13 @@ export default function UsersView() {
                                         {card?.name ?? mc.card_id}
                                       </div>
                                     )}
-                                    <span className="absolute top-1 left-1 text-[9px] font-black px-1 py-0.5 rounded bg-black/70 text-white">
-                                      PCL{mc.grade}
+                                    <span
+                                      className={clsx(
+                                        "absolute top-1 left-1 text-[9px] font-black px-1 py-0.5 rounded ring-1 ring-white/20 shadow",
+                                        rstyle?.badge ?? "bg-black/70 text-white"
+                                      )}
+                                    >
+                                      {mc.rarity}
                                     </span>
                                   </button>
                                 );
