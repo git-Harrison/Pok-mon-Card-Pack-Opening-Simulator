@@ -3,6 +3,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import NotificationsOverlay from "@/components/NotificationsOverlay";
 import ScrollTopButton from "@/components/ScrollTopButton";
+import UpdateAvailableModal from "@/components/UpdateAvailableModal";
 import { AuthProvider } from "@/lib/auth";
 
 export const metadata: Metadata = {
@@ -49,6 +50,7 @@ export default function RootLayout({
           </main>
           <NotificationsOverlay />
           <ScrollTopButton />
+          <UpdateAvailableModal />
         </AuthProvider>
       </body>
     </html>

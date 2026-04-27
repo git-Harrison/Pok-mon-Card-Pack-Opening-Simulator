@@ -12,7 +12,18 @@ const CSP = [
   "frame-ancestors 'none'",
 ].join("; ");
 
+// 새 배포 감지용: 빌드 시 Vercel 의 commit SHA 를 클라이언트
+// 번들에 NEXT_PUBLIC_BUILD_ID 로 동결. 런타임에는 같은 env 를
+// /api/build-id 가 매 요청마다 읽어서 둘이 다르면 모달.
+const BUILD_ID =
+  process.env.NEXT_PUBLIC_BUILD_ID ??
+  process.env.VERCEL_GIT_COMMIT_SHA ??
+  "dev";
+
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_BUILD_ID: BUILD_ID,
+  },
   experimental: {
     // inlineCss 비활성화 — 매 라우트 HTML 응답에 Tailwind atomic CSS 30~40KB
     // (gzip) 가 인라인되어 모바일 iOS 에서 (a) 매 nav 마다 동일한 CSS 를

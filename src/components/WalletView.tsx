@@ -133,11 +133,11 @@ export default function WalletView() {
         <div className="inline-flex items-stretch rounded-xl bg-white/5 border border-white/10 p-1">
           <ModeTab active={mode === "psa"} onClick={() => setMode("psa")}>
             PCL 감별
-            <CountBadge value={psaItems.length} />
+            <CountBadge value={psaItems.length} cap="2만" />
           </ModeTab>
           <ModeTab active={mode === "cards"} onClick={() => setMode("cards")}>
             보유 카드
-            <CountBadge value={snap.items.length} />
+            <CountBadge value={snap.totalCards} cap="2만" />
           </ModeTab>
         </div>
         {hasAny ? (
@@ -387,16 +387,37 @@ function PsaMode({
               }}
               className={clsx(
                 "relative flex flex-col items-center gap-1 w-full text-left active:scale-[0.98] transition",
-                locked && "opacity-70 cursor-not-allowed",
+                locked && "cursor-not-allowed",
                 !locked && !giftable && "cursor-not-allowed"
               )}
+              aria-disabled={locked || !giftable}
+              title={
+                isDisplayed
+                  ? "센터에 전시 중 — 선물·관리 불가"
+                  : isPet
+                  ? "펫으로 등록 중 — 선물·관리 불가"
+                  : undefined
+              }
             >
               <div className="relative w-full">
-                <PsaSlab card={card} grade={grading.grade} size="sm" compact />
+                <div
+                  className={clsx(
+                    "transition",
+                    locked && "opacity-45 grayscale saturate-50"
+                  )}
+                >
+                  <PsaSlab card={card} grade={grading.grade} size="sm" compact />
+                </div>
+                {locked && (
+                  <div
+                    aria-hidden
+                    className="absolute inset-0 rounded-md bg-zinc-950/35 ring-1 ring-inset ring-white/10 pointer-events-none"
+                  />
+                )}
                 {badge && (
                   <span
                     className={clsx(
-                      "absolute -top-1.5 left-1/2 -translate-x-1/2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black shadow-md whitespace-nowrap",
+                      "absolute -top-1.5 left-1/2 -translate-x-1/2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black shadow-md whitespace-nowrap z-10",
                       badge.cls
                     )}
                   >
@@ -404,7 +425,12 @@ function PsaMode({
                   </span>
                 )}
               </div>
-              <p className="w-full text-center text-[10px] text-zinc-300 leading-tight line-clamp-1 px-0.5">
+              <p
+                className={clsx(
+                  "w-full text-center text-[10px] leading-tight line-clamp-1 px-0.5",
+                  locked ? "text-zinc-500" : "text-zinc-300"
+                )}
+              >
                 {card.name}
               </p>
             </motion.button>
@@ -774,7 +800,7 @@ function Kpi({
   );
 }
 
-function CountBadge({ value }: { value: number }) {
+function CountBadge({ value, cap }: { value: number; cap?: string }) {
   const reduce = useReducedMotion();
   return (
     <span className="ml-1.5 text-[10px] opacity-70 inline-block tabular-nums">
@@ -790,6 +816,7 @@ function CountBadge({ value }: { value: number }) {
           {value}
         </motion.span>
       </AnimatePresence>
+      {cap && <span className="opacity-60"> / {cap}</span>}
     </span>
   );
 }
