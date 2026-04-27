@@ -34,10 +34,10 @@ export const m2a: SetInfo = {
       weights: { SR: 55, MA: 45 },
     },
     {
-      // Pack-level odds (ratio AR 10 : SAR 5 : MUR 0.5):
-      //   AR 10% · SR/MA 7% each · SAR 5% · MUR 0.5% · RR fills rest.
+      // Pack-level odds. MUR 가중치 0.5 → 0.25 로 절반 인하 (사용자
+      // 요청 — 메가 카드 희소성 강화). 분모 ~59.25 기준 MUR ≈ 0.42%.
       label: "Hit",
-      weights: { RR: 30, AR: 10, SR: 7, MA: 7, SAR: 5, MUR: 0.5 },
+      weights: { RR: 30, AR: 10, SR: 7, MA: 7, SAR: 5, MUR: 0.25 },
     },
   ],
   cards: [
