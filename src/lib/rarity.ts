@@ -1,12 +1,15 @@
 import type { Rarity } from "./types";
 
+// 등급 순서 (high → low). 사용자 정한 hierarchy:
+//   MUR > UR > SAR > AR > SR > MA > RR > R > U > C
+// 정렬 / 비교 / 컬렉션 표시에 모두 사용. tier 값과 일관성 유지.
 export const RARITY_ORDER: Rarity[] = [
-  "UR",
   "MUR",
+  "UR",
   "SAR",
-  "MA",
-  "SR",
   "AR",
+  "SR",
+  "MA",
   "RR",
   "R",
   "U",
@@ -54,10 +57,12 @@ export const RARITY_STYLE: Record<
     glow: "shadow-[0_0_12px_rgba(129,140,248,0.24)]",
     tier: 3,
   },
-  AR: {
-    badge: "bg-fuchsia-600 text-white",
-    frame: "ring-fuchsia-400/60",
-    glow: "shadow-[0_0_14px_rgba(232,121,249,0.28)]",
+  // 사용자 정한 hierarchy (low → high tier 값):
+  //   C(0) U(1) R(2) RR(3) MA(4) SR(5) AR(6) SAR(7) UR(8) MUR(9)
+  MA: {
+    badge: "bg-orange-500 text-white",
+    frame: "ring-orange-300/80",
+    glow: "shadow-[0_0_14px_rgba(251,146,60,0.28)]",
     tier: 4,
   },
   SR: {
@@ -66,10 +71,10 @@ export const RARITY_STYLE: Record<
     glow: "shadow-[0_0_16px_rgba(251,191,36,0.32)]",
     tier: 5,
   },
-  MA: {
-    badge: "bg-orange-500 text-white",
-    frame: "ring-orange-300/80",
-    glow: "shadow-[0_0_18px_rgba(251,146,60,0.32)]",
+  AR: {
+    badge: "bg-fuchsia-600 text-white",
+    frame: "ring-fuchsia-400/60",
+    glow: "shadow-[0_0_18px_rgba(232,121,249,0.32)]",
     tier: 6,
   },
   SAR: {
@@ -78,18 +83,18 @@ export const RARITY_STYLE: Record<
     glow: "shadow-[0_0_20px_rgba(236,72,153,0.38)]",
     tier: 7,
   },
-  MUR: {
-    badge:
-      "bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-zinc-950",
-    frame: "ring-amber-300/90",
-    glow: "shadow-[0_0_24px_rgba(251,191,36,0.45)]",
-    tier: 8,
-  },
   UR: {
     badge:
       "bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 text-zinc-950",
     frame: "ring-yellow-300/90",
-    glow: "shadow-[0_0_26px_rgba(250,204,21,0.5)]",
+    glow: "shadow-[0_0_24px_rgba(250,204,21,0.45)]",
+    tier: 8,
+  },
+  MUR: {
+    badge:
+      "bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-zinc-950",
+    frame: "ring-amber-300/90",
+    glow: "shadow-[0_0_26px_rgba(251,191,36,0.5)]",
     tier: 9,
   },
 };
@@ -114,14 +119,16 @@ export function cardFxClass(r: Rarity): "fx-mur" | "fx-sar" | null {
 }
 
 // Bulk-sell payout (지갑 → 일괄판매). 정리용 단가.
+// 사용자 hierarchy 와 정합: C < U < R < RR < MA < SR < AR < SAR < UR < MUR.
+// 서버 함수 bulk_sell_price() 와 mirror — 동기화 필수.
 export const BULK_SELL_PRICE: Record<Rarity, number> = {
   C: 25,
   U: 50,
   R: 100,
   RR: 200,
-  AR: 500,
-  SR: 1_000,
-  MA: 1_000,
+  MA: 500,
+  SR: 800,
+  AR: 1_500,
   SAR: 3_000,
   UR: 5_000,
   MUR: 10_000,

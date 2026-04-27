@@ -623,7 +623,10 @@ function Stat({
   );
 }
 
-const AUTO_SELL_RARITY_OPTIONS = ["C", "U", "R", "RR", "AR"] as const;
+// 사용자 정한 hierarchy (low → high): C, U, R, RR, MA, SR, AR.
+// AR 은 SAR 바로 아래라 자동판매 옵션에 포함. 그 위 (SAR/UR/MUR)
+// 는 너무 비싸서 자동판매 후보로 노출하지 않음.
+const AUTO_SELL_RARITY_OPTIONS = ["C", "U", "R", "RR", "MA", "SR", "AR"] as const;
 
 function SealedBox({
   set,
@@ -659,7 +662,9 @@ function SealedBox({
     }
   };
   const applyRecommended = () => {
-    onChangeAutoSellRarities(["C", "U", "R", "RR"]);
+    // 사용자 정한 등급 순서: MUR > UR > SAR > AR > SR > MA > RR > R > U > C
+    // → "AR 미만" = SR, MA, RR, R, U, C (6등급).
+    onChangeAutoSellRarities(["C", "U", "R", "RR", "MA", "SR"]);
   };
   return (
     <motion.div
