@@ -12,13 +12,21 @@ const CSP = [
   "frame-ancestors 'none'",
 ].join("; ");
 
-// 새 배포 감지용: 빌드 시 Vercel 의 commit SHA 를 클라이언트
-// 번들에 NEXT_PUBLIC_BUILD_ID 로 동결. 런타임에는 같은 env 를
+// 새 배포 감지용: 빌드 시 unique BUILD_ID 를 클라이언트 번들에
+// NEXT_PUBLIC_BUILD_ID 로 동결. 런타임에는 같은 env 를
 // /api/build-id 가 매 요청마다 읽어서 둘이 다르면 모달.
+//
+// fallback chain:
+//   1. 명시적 NEXT_PUBLIC_BUILD_ID (CI 등에서 박은 경우)
+//   2. VERCEL_DEPLOYMENT_ID (deploy 마다 변경 보장 — SHA 보다 강력)
+//   3. VERCEL_GIT_COMMIT_SHA (same-commit redeploy 시 유지)
+//   4. Date.now().toString() — Vercel 환경 아니어도 빌드마다 unique.
+//      이전엔 "dev" 로 떨어져 모달이 안 뜨던 이슈 fix.
 const BUILD_ID =
   process.env.NEXT_PUBLIC_BUILD_ID ??
+  process.env.VERCEL_DEPLOYMENT_ID ??
   process.env.VERCEL_GIT_COMMIT_SHA ??
-  "dev";
+  Date.now().toString();
 
 const nextConfig: NextConfig = {
   env: {

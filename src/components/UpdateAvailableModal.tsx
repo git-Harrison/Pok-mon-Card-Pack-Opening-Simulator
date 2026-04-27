@@ -31,11 +31,17 @@ export default function UpdateAvailableModal() {
         if (!res.ok) return;
         const data = (await res.json()) as { buildId?: string };
         const latest = data.buildId;
+        // 발화 조건: 양쪽 모두 정상 ID 이고 서로 다를 때만.
+        // BUILD_ID 가 unknown / 빈 값이면 빌드 환경 자체가 이상한 거라
+        // 모달 띄우지 않음 (false-positive 방지).
         if (
           !cancelled &&
           typeof latest === "string" &&
-          latest !== "dev" &&
-          BUILD_ID !== "dev" &&
+          latest.length > 0 &&
+          latest !== "unknown" &&
+          latest !== "runtime-no-build-id" &&
+          BUILD_ID.length > 0 &&
+          BUILD_ID !== "unknown" &&
           latest !== BUILD_ID
         ) {
           setStale(true);
