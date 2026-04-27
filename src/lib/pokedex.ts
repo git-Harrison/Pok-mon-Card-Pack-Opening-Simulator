@@ -45,46 +45,45 @@ export interface PokedexEntry {
   registered_at: string;
 }
 
-export interface PokedexBreakpoint {
-  count: number;
-  bonus: number;
-  label: string;
-}
+/** 서버 pokedex_rarity_score(text) 와 정확히 동일한 매핑.
+ *  20260563_pokedex_per_rarity_power.sql 와 sync 필수. */
+export const POKEDEX_RARITY_SCORE: Record<Rarity, number> = {
+  MUR: 1000,
+  UR:  400,
+  SAR: 250,
+  AR:  180,
+  SR:  130,
+  MA:  100,
+  RR:  50,
+  R:   30,
+  U:   15,
+  C:   8,
+};
 
-export const POKEDEX_BREAKPOINTS: PokedexBreakpoint[] = [
-  { count: 5,  bonus: 500,   label: "+500" },
-  { count: 10, bonus: 1200,  label: "+1,200" },
-  { count: 15, bonus: 2000,  label: "+2,000" },
-  { count: 20, bonus: 3000,  label: "+3,000" },
-  { count: 30, bonus: 5000,  label: "+5,000" },
-];
-
-export function pokedexPowerBonus(count: number): number {
-  const n = Math.max(0, count | 0);
-  if (n >= 30) return 5000 + (n - 30) * 100;
-  if (n >= 20) return 3000 + (n - 20) * 200;
-  if (n >= 15) return 2000 + (n - 15) * 200;
-  if (n >= 10) return 1200 + (n - 10) * 160;
-  if (n >= 5)  return 500  + (n - 5)  * 140;
-  if (n >= 1)  return n * 100;
-  return 0;
-}
-
-export function nextBreakpoint(count: number): {
-  remaining: number;
-  bonusAtNext: number;
-  delta: number;
-} | null {
-  for (const b of POKEDEX_BREAKPOINTS) {
-    if (count < b.count) {
-      return {
-        remaining: b.count - count,
-        bonusAtNext: b.bonus,
-        delta: b.bonus - pokedexPowerBonus(count),
-      };
-    }
+/** 등록된 도감 항목들의 rarity 별 정액 합계.
+ *  서버 pokedex_power_bonus(uuid) RPC 와 동일 공식 — 랭킹/프로필
+ *  center_power 의 도감 보너스 부분과 정합. (이전엔 클라가 count 기반
+ *  옛 공식을 사용해 /pokedex 페이지 표기와 랭킹 표기가 따로 놀았음.) */
+export function pokedexPowerBonus(entries: PokedexEntry[]): number {
+  let sum = 0;
+  for (const e of entries) {
+    const r = e.rarity as Rarity | null;
+    if (!r) continue;
+    sum += POKEDEX_RARITY_SCORE[r] ?? 0;
   }
-  return null;
+  return sum;
+}
+
+/** 다음 추가 등록으로 얻을 수 있는 rarity 별 잠재 보너스 (등급별 미보유
+ *  슬랩 1장 추가 시 환산값). UI 의 "어떤 등급을 더 모으면 +N" 안내용. */
+export function pokedexNextDelta(): {
+  rarity: Rarity;
+  bonus: number;
+}[] {
+  return (Object.keys(POKEDEX_RARITY_SCORE) as Rarity[]).map((r) => ({
+    rarity: r,
+    bonus: POKEDEX_RARITY_SCORE[r],
+  }));
 }
 
 export async function fetchPokedex(userId: string): Promise<PokedexEntry[]> {

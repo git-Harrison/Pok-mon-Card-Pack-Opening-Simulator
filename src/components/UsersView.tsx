@@ -249,8 +249,8 @@ export default function UsersView() {
         <p className="mt-2 text-[11px] text-zinc-400 leading-snug">
           펫 점수 = 등록한 PCL10 펫 슬랩 (최대 10장) 의{" "}
           <b className="text-zinc-200">희귀도 점수</b>(SR 5·MA 6·SAR 7·UR 8·MUR
-          10) × 10 합산. 최대{" "}
-          <b className="text-fuchsia-300">1,000</b>점.
+          10) × 15 합산. 최대{" "}
+          <b className="text-fuchsia-300">1,500</b>점.
         </p>
       )}
 
@@ -388,7 +388,7 @@ export default function UsersView() {
                           {(e.pet_score ?? 0).toLocaleString("ko-KR")}
                         </div>
                         <div className="mt-1 text-[10px] text-fuchsia-300/70 uppercase tracking-wider">
-                          MAX 1,000
+                          MAX 1,500
                         </div>
                       </>
                     ) : (

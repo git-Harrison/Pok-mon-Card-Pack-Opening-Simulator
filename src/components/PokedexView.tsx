@@ -8,8 +8,8 @@ import {
   bulkRegisterPokedex,
   fetchPokedex,
   getAllCatalogCards,
-  nextBreakpoint,
   pokedexPowerBonus,
+  POKEDEX_RARITY_SCORE,
   RARITY_COMPLETION_BONUS,
   RARITY_TOTALS,
   type PokedexEntry,
@@ -92,8 +92,7 @@ export default function PokedexView() {
   };
 
   const count = entries.length;
-  const bonus = pokedexPowerBonus(count);
-  const next = nextBreakpoint(count);
+  const bonus = pokedexPowerBonus(entries);
 
   const handleBulk = async () => {
     if (!user || submitting) return;
@@ -143,18 +142,13 @@ export default function PokedexView() {
       <div className="rounded-xl border border-white/10 bg-gradient-to-r from-amber-500/10 via-fuchsia-500/5 to-indigo-500/10 p-3 md:p-4 mb-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="text-[12px] md:text-[13px] text-zinc-200">
-            {next ? (
-              <>
-                앞으로 <b className="text-amber-200">{next.remaining}장</b> 더
-                등록하면{" "}
-                <b className="text-fuchsia-200">
-                  +{next.bonusAtNext.toLocaleString("ko-KR")}
-                </b>{" "}
-                구간 (현재 +{bonus.toLocaleString("ko-KR")})
-              </>
-            ) : (
-              <>최대 보너스 구간 도달. 1장당 +100씩 계속 누적돼요.</>
-            )}
+            등급별 정액 — MUR{" "}
+            <b className="text-amber-200">+{POKEDEX_RARITY_SCORE.MUR}</b>·UR{" "}
+            <b className="text-amber-200">+{POKEDEX_RARITY_SCORE.UR}</b>·SAR{" "}
+            <b className="text-amber-200">+{POKEDEX_RARITY_SCORE.SAR}</b>·SR{" "}
+            <b className="text-amber-200">+{POKEDEX_RARITY_SCORE.SR}</b>·R{" "}
+            <b className="text-amber-200">+{POKEDEX_RARITY_SCORE.R}</b>{" "}
+            (현재 합계 +{bonus.toLocaleString("ko-KR")})
           </div>
           <button
             type="button"

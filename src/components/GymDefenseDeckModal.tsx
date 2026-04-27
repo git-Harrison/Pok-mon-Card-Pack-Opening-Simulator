@@ -138,6 +138,13 @@ export default function GymDefenseDeckModal({
     });
   }, []);
 
+  // 체육관 속성 매칭 강제 — 같은 속성 펫만 노출.
+  const matchingPets = useMemo(
+    () => pets.filter((p) => p.type === gym.type),
+    [pets, gym.type]
+  );
+  const insufficient = !loading && matchingPets.length < 3;
+
   const orderedPets = useMemo(() => {
     const map = new Map(pets.map((p) => [p.grading_id, p]));
     return order
@@ -223,6 +230,15 @@ export default function GymDefenseDeckModal({
               관장 NPC 포켓몬 대신 이 3마리가 적으로 등장합니다. 패배 시
               덱은 자동 초기화돼요.
             </div>
+            <div className="rounded-xl border border-amber-400/40 bg-amber-400/[0.08] px-3 py-2 text-[11px] text-amber-100 leading-snug">
+              ⚡ <b className="text-white">{gym.type}</b> 속성 체육관 — 방어
+              펫 3마리 모두 <b>{gym.type}</b> 속성이어야 합니다.
+              {!loading && (
+                <span className="ml-1 text-amber-200/85">
+                  (보유 {gym.type} 펫 {matchingPets.length}/3+)
+                </span>
+              )}
+            </div>
 
             {/* 출전 순서 */}
             <section className="rounded-xl border border-amber-400/30 bg-amber-400/[0.06] p-2.5">
@@ -302,20 +318,21 @@ export default function GymDefenseDeckModal({
               </ul>
             </section>
 
-            {/* 펫 풀 */}
+            {/* 펫 풀 — 체육관 속성과 일치하는 펫만 */}
             <section className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
               <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-1.5">
-                내 펫 슬랩 (PCL10 · 펫 등록)
+                {gym.type} 속성 펫 (PCL10 · 펫 등록)
               </p>
               {loading ? (
                 <p className="text-[11px] text-zinc-500 py-3 text-center">로딩 중...</p>
-              ) : pets.length === 0 ? (
-                <p className="text-[11px] text-zinc-500 py-3 text-center">
-                  펫 등록된 PCL10 슬랩이 없어요.
+              ) : insufficient ? (
+                <p className="text-[11px] text-rose-300 py-3 text-center leading-snug">
+                  등록된 {gym.type} 속성 PCL10 펫이 부족해요 ({matchingPets.length}/3).<br/>
+                  프로필에서 {gym.type} 속성 펫을 더 등록한 뒤 다시 시도하세요.
                 </p>
               ) : (
                 <ul className="grid grid-cols-2 gap-1.5">
-                  {pets.map((p) => {
+                  {matchingPets.map((p) => {
                     const idx = order.indexOf(p.grading_id);
                     const selected = idx >= 0;
                     const eff = p.type ? effectiveness(p.type, gym.type) : 1;
