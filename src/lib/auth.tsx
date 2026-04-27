@@ -17,7 +17,11 @@ import {
   type DbUser,
 } from "./db";
 
-const SESSION_KEY = "pokemon-tcg-sim:session:v2";
+// v3 (2026-04-27) — 세션 키 bump 으로 전체 사용자 강제 로그아웃.
+// 이전 v2 localStorage 데이터는 그대로 두지만 (cleanup 은 브라우저
+// 자체 GC 에 위임), loadSession 이 새 키만 읽어서 자동 무시.
+const SESSION_KEY = "pokemon-tcg-sim:session:v3";
+const LEGACY_SESSION_KEYS = ["pokemon-tcg-sim:session:v2"];
 
 interface AuthContextValue {
   user: DbUser | null;
@@ -38,6 +42,16 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 function loadSession(): DbUser | null {
   try {
+    // 옛 세션 키들은 발견 즉시 정리 — localStorage 누적 방지.
+    for (const oldKey of LEGACY_SESSION_KEYS) {
+      try {
+        if (window.localStorage.getItem(oldKey) !== null) {
+          window.localStorage.removeItem(oldKey);
+        }
+      } catch {
+        // ignore
+      }
+    }
     const raw = window.localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as DbUser;
