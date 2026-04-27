@@ -734,12 +734,6 @@ const USERS_SECTIONS: HelpSection[] = [
         null,
         h(
           "li",
-          { key: 1 },
-          h("b", { className: "text-amber-300" }, "PCL 10 감별 성공"),
-          " · +500점 (누적, 슬랩 잃어도 유지)"
-        ),
-        h(
-          "li",
           { key: 2 },
           h("b", { className: "text-rose-300" }, "남의 보관함 부수기 성공"),
           " · +3,000점"
