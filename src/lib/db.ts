@@ -416,7 +416,7 @@ export async function fetchUserActivity(
 export interface BulkSellItem {
   card_id: string;
   count: number;
-  price: number;
+  rarity: string;
 }
 
 export async function bulkSellCards(userId: string, items: BulkSellItem[]) {

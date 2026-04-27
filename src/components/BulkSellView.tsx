@@ -124,7 +124,7 @@ export default function BulkSellView() {
       const payload = rarityItems.map((it) => ({
         card_id: it.card.id,
         count: it.count,
-        price: BULK_SELL_PRICE[rarity],
+        rarity: it.card.rarity,
       }));
       setSelling(true);
       setError(null);

@@ -40,14 +40,15 @@ export const PSA_LABEL: Record<number, string> = {
 
 /**
  * Bulk-sell price per PCL grade. Must mirror `pcl_sell_price()` in
- * supabase/migrations/20260502_wallet_sell_cut_v2.sql.
+ * supabase/migrations/20260569_secure_bulk_sell.sql (single source
+ * of truth). 이 표를 바꾸면 SQL 함수도 같이 바꿔야 함.
  */
 export const PCL_SELL_PRICE: Record<number, number> = {
-  10: 20_000,
-  9: 10_000,
-  8: 2_000,
-  7: 1_000,
-  6: 1_000,
+  10: 200_000,
+  9: 100_000,
+  8: 20_000,
+  7: 10_000,
+  6: 10_000,
 };
 
 /**
