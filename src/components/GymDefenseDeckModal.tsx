@@ -10,7 +10,7 @@ import {
   setGymDefenseDeck,
   type RawPetGrading,
 } from "@/lib/gym/db";
-import type { Gym } from "@/lib/gym/types";
+import type { DefenderPokemonInfo, Gym } from "@/lib/gym/types";
 import { effectiveness } from "@/lib/wild/typechart";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 import { CARD_NAME_TO_TYPE } from "@/lib/wild/name-to-type";
@@ -59,6 +59,28 @@ function mergePet(g: RawPetGrading): MyPet | null {
   };
 }
 
+/** 기존 방어덱 슬랩(defender_pokemon) 을 MyPet 으로 변환. main_card_ids
+ *  에서 빠진 슬랩이라 fetchMyPets 결과엔 안 들어옴 — 풀 합치기 위해. */
+function mergeFromDefender(d: DefenderPokemonInfo): MyPet | null {
+  if (!d.grading_id) return null;
+  const card = getCard(d.card_id);
+  const rarity = (card?.rarity ?? d.rarity) as keyof typeof RARITY_STYLE;
+  const name = card?.name ?? d.card_id;
+  const stats = slabStats(rarity, d.grade);
+  return {
+    grading_id: d.grading_id,
+    card_id: d.card_id,
+    card_name: name,
+    rarity,
+    grade: d.grade,
+    // 서버 저장된 type 우선, 없으면 카드명 기준 lookup.
+    type: d.type ?? (card ? resolvePetType(card.name) : null),
+    imageUrl: card?.imageUrl,
+    baseHp: stats.hp,
+    baseAtk: stats.atk,
+  };
+}
+
 /** 점령자가 자기 펫 3마리로 방어 덱 셋업하는 모달.
  *  GymChallengeOverlay 의 PickerPhase 와 거의 동일한 UX 지만, 도전이
  *  아니라 set_gym_defense_deck RPC 를 호출. 실패해도 챌린지 락은 안
@@ -94,14 +116,36 @@ export default function GymDefenseDeckModal({
       ]);
       if (!alive) return;
       const merged = raw.map(mergePet).filter((p): p is MyPet => p !== null);
+
+      // 기존 방어덱 슬랩도 풀에 합침 — main_card_ids 에선 빠진 상태라
+      // 이걸 안 합치면 펫 슬롯이 비어있을 때 편집 자체가 불가.
+      const existing = gym.ownership?.defender_pokemon ?? [];
+      const knownIds = new Set(merged.map((p) => p.grading_id));
+      for (const d of existing) {
+        if (!d.grading_id || knownIds.has(d.grading_id)) continue;
+        const pet = mergeFromDefender(d);
+        if (pet) merged.push(pet);
+      }
+
       setPets(merged);
       setCenterPower(cp);
+
+      // 이미 셋업된 방어덱이 있으면 슬롯 순서대로 pre-select.
+      if (existing.length === 3) {
+        const ids = existing
+          .filter((d) => d.grading_id)
+          .map((d) => d.grading_id as string);
+        if (ids.length === 3) setOrder(ids);
+      }
+
       setLoading(false);
     })();
     return () => {
       alive = false;
     };
-  }, [userId]);
+    // gym.id 가 같으면 재실행 안 함.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, gym.id]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

@@ -23,6 +23,8 @@ export interface GymMedal {
 
 export interface DefenderPokemonInfo {
   slot: number;
+  /** PCL 슬랩 uuid — 본인 소유자가 방어덱 편집 시 풀에 머지하기 위해. */
+  grading_id?: string;
   card_id: string;
   type: WildType;
   rarity: string;

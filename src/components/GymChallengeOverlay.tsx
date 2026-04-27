@@ -734,7 +734,7 @@ function BattlePlayback({
             align="left"
           />
           <motion.div
-            className="relative w-20 h-24 md:w-24 md:h-28"
+            className="relative w-16 h-20 md:w-20 md:h-24"
             animate={shake === "pet" ? { x: [0, -4, 4, -2, 2, 0], filter: ["brightness(1.3)", "brightness(1)"] } : { x: 0 }}
             transition={{ duration: 0.25 }}
           >
@@ -767,15 +767,15 @@ function HpBar({
   return (
     <div
       className={clsx(
-        "rounded-lg border border-white/15 bg-black/55 px-2 py-0.5 min-w-[120px]",
+        "rounded-lg border border-white/15 bg-black/55 px-2 py-0.5 min-w-[140px] max-w-[180px]",
         align === "left" ? "items-start" : "items-end"
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[9px] font-bold text-white truncate max-w-[70px]">
+        <span className="text-[10px] font-bold text-white truncate flex-1 min-w-0">
           {label}
         </span>
-        <span className={clsx("text-[7px] font-black px-1 py-[1px] rounded-full", TYPE_STYLE[type].badge)}>
+        <span className={clsx("shrink-0 text-[7px] font-black px-1 py-[1px] rounded-full", TYPE_STYLE[type].badge)}>
           {type}
         </span>
       </div>
