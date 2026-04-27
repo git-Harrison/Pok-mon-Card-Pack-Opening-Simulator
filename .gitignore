@@ -44,3 +44,4 @@ next-env.d.ts
 .claude/settings.local.json
 # Agent debug/temp files (download caches, partial scrapes, etc.)
 scripts/data/_*
+scripts/data/**/_*
