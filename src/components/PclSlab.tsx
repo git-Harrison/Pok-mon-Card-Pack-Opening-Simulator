@@ -5,23 +5,6 @@ import { motion } from "framer-motion";
 import type { Card } from "@/lib/types";
 import { GRADE_BRAND, PCL_LABEL, pclTone } from "@/lib/pcl";
 import RarityBadge from "./RarityBadge";
-import { CARD_NAME_TO_TYPE } from "@/lib/wild/name-to-type";
-import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
-import TypeIcon from "./TypeIcon";
-
-/** 카드 이름 → WildType. 메가/ex/V/VMAX/GX/BREAK/(골드)/(SV) 등 변형
- *  strip 후 매칭 시도. 매칭 실패시 null. */
-function resolveCardTypeForSlab(name: string): WildType | null {
-  if (CARD_NAME_TO_TYPE[name] !== undefined) return CARD_NAME_TO_TYPE[name];
-  let base = name
-    .replace(/\s*\(골드\)\s*$/, "")
-    .replace(/\s*\(SV\)\s*$/, "")
-    .replace(/\s+(ex|V|VMAX|GX|BREAK)\s*$/i, "")
-    .trim();
-  if (CARD_NAME_TO_TYPE[base] !== undefined) return CARD_NAME_TO_TYPE[base];
-  if (base.startsWith("메가 ")) base = base.slice(3).trim();
-  return CARD_NAME_TO_TYPE[base] ?? null;
-}
 
 /**
  * PCL grading slab. Mirrors a real grading slab's proportions — chunky
@@ -115,30 +98,17 @@ export default function PclSlab({
             {GRADE_BRAND}
           </span>
         </div>
-        {/* Type badge column — 카드 이름/번호 대신 속성 노출. 아이콘 +
-            텍스트 칩, 줄바꿈 방지(whitespace-nowrap). */}
-        {!compact && (() => {
-          const ptype = resolveCardTypeForSlab(card.name);
-          return (
-            <div className="flex-1 min-w-0 px-2 flex items-center justify-start">
-              {ptype ? (
-                <span
-                  className={clsx(
-                    "inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] md:text-[12px] font-black leading-none whitespace-nowrap",
-                    TYPE_STYLE[ptype].badge
-                  )}
-                >
-                  <TypeIcon type={ptype} size={13} />
-                  <span>{ptype}</span>
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] md:text-[12px] font-black leading-none whitespace-nowrap bg-zinc-700 text-zinc-300">
-                  無속성
-                </span>
-              )}
-            </div>
-          );
-        })()}
+        {/* Card info column — 원래대로 카드 이름 + 번호. */}
+        {!compact && (
+          <div className="flex-1 min-w-0 px-2 flex flex-col justify-center">
+            <p className="text-[11px] md:text-[12px] font-bold text-white leading-tight truncate">
+              {card.name}
+            </p>
+            <p className="text-[8px] md:text-[9px] uppercase tracking-[0.1em] text-white/70 truncate leading-tight mt-px">
+              #{card.number}
+            </p>
+          </div>
+        )}
         {compact && <div className="flex-1" />}
         {/* Grade banner */}
         <div
