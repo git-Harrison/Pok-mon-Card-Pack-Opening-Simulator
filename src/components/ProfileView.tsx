@@ -41,6 +41,21 @@ import PageBackdrop from "./PageBackdrop";
 import PclSlab from "./PclSlab";
 import Portal from "./Portal";
 import GymMedalsList from "./GymMedalsList";
+import { CARD_NAME_TO_TYPE } from "@/lib/wild/name-to-type";
+import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
+
+/** 카드 이름 → WildType. 메가/ex/V 등 카드 변형 strip 후 매칭. */
+function resolveCardType(name: string): WildType | null {
+  if (CARD_NAME_TO_TYPE[name] !== undefined) return CARD_NAME_TO_TYPE[name];
+  let base = name
+    .replace(/\s*\(골드\)\s*$/, "")
+    .replace(/\s*\(SV\)\s*$/, "")
+    .replace(/\s+(ex|V|VMAX|GX|BREAK)\s*$/i, "")
+    .trim();
+  if (CARD_NAME_TO_TYPE[base] !== undefined) return CARD_NAME_TO_TYPE[base];
+  if (base.startsWith("메가 ")) base = base.slice(3).trim();
+  return CARD_NAME_TO_TYPE[base] ?? null;
+}
 
 export default function ProfileView() {
   const { user, refreshMe, logout } = useAuth();
@@ -385,6 +400,9 @@ export default function ProfileView() {
               </span>
             </div>
 
+            {/* 등록 펫 속성 분포 — "풀 3 · 물 2 · 전기 5" 식 */}
+            <PetTypeBreakdown slots={filledSlots} />
+
             <LayoutGroup>
               <div className="mt-3 grid grid-cols-5 md:grid-cols-10 gap-1.5 md:gap-2">
                 {filledSlots.map((slot, i) => (
@@ -654,6 +672,44 @@ export function CharacterAvatar({
   );
 }
 
+/** 등록된 펫의 속성 분포 — type 별 count 칩 (풀 3 · 물 2 · 전기 5). */
+function PetTypeBreakdown({
+  slots,
+}: {
+  slots: (ProfileMainCard | null)[];
+}) {
+  const counts = useMemo(() => {
+    const map = new Map<WildType, number>();
+    for (const s of slots) {
+      if (!s) continue;
+      const card = getCard(s.card_id);
+      if (!card) continue;
+      const t = resolveCardType(card.name);
+      if (!t) continue;
+      map.set(t, (map.get(t) ?? 0) + 1);
+    }
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+  }, [slots]);
+
+  if (counts.length === 0) return null;
+  return (
+    <div className="mt-2 flex items-center gap-1 flex-wrap">
+      {counts.map(([type, count]) => (
+        <span
+          key={type}
+          className={clsx(
+            "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-black",
+            TYPE_STYLE[type].badge
+          )}
+        >
+          {type}
+          <span className="font-mono tabular-nums opacity-90">{count}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function PetSlot({
   index,
   card,
@@ -776,6 +832,12 @@ function SlabPicker({
   onClose: () => void;
   onPick: (id: string) => void;
 }) {
+  // 페이징 + 타입 필터 + 무한 스크롤 — 큰 슬랩 풀에서 렉 제거.
+  const PAGE_SIZE = 12;
+  const [typeFilter, setTypeFilter] = useState<WildType | "ALL">("ALL");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -783,6 +845,60 @@ function SlabPicker({
       document.body.style.overflow = prev;
     };
   }, []);
+
+  // 타입별 카운트 — 칩 옆 표기 + 필터 가용성.
+  const typeCounts = useMemo(() => {
+    const m = new Map<WildType, number>();
+    for (const g of slabs) {
+      const card = getCard(g.card_id);
+      if (!card) continue;
+      const t = resolveCardType(card.name);
+      if (!t) continue;
+      m.set(t, (m.get(t) ?? 0) + 1);
+    }
+    return m;
+  }, [slabs]);
+  const sortedTypes = useMemo(
+    () =>
+      (Array.from(typeCounts.entries()) as [WildType, number][])
+        .sort((a, b) => b[1] - a[1]),
+    [typeCounts]
+  );
+
+  // 필터 적용된 풀.
+  const filteredSlabs = useMemo(() => {
+    if (typeFilter === "ALL") return slabs;
+    return slabs.filter((g) => {
+      const card = getCard(g.card_id);
+      if (!card) return false;
+      return resolveCardType(card.name) === typeFilter;
+    });
+  }, [slabs, typeFilter]);
+
+  // 필터 변경 시 페이지 reset.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [typeFilter]);
+
+  const visibleSlabs = filteredSlabs.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredSlabs.length;
+
+  // 무한 스크롤 — sentinel 이 viewport 진입하면 12개 더.
+  useEffect(() => {
+    if (!hasMore) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((v) => v + PAGE_SIZE);
+        }
+      },
+      { rootMargin: "200px", threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [hasMore, filteredSlabs.length]);
 
   return (
     <Portal>
@@ -823,73 +939,140 @@ function SlabPicker({
             </button>
           </div>
 
+          {/* 타입 필터 칩 — 가로 스크롤 가능 */}
+          <div className="shrink-0 px-3 py-2 border-b border-white/10 bg-black/40">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1">
+              <button
+                type="button"
+                onClick={() => setTypeFilter("ALL")}
+                style={{ touchAction: "manipulation" }}
+                className={clsx(
+                  "shrink-0 h-8 px-2.5 rounded-full text-[11px] font-bold border transition",
+                  typeFilter === "ALL"
+                    ? "bg-white text-zinc-900 border-white"
+                    : "bg-white/5 text-zinc-300 border-white/10 hover:bg-white/10"
+                )}
+              >
+                전체
+                <span className="ml-1 text-[9px] opacity-75 tabular-nums">
+                  {slabs.length}
+                </span>
+              </button>
+              {sortedTypes.map(([t, n]) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTypeFilter(t)}
+                  style={{ touchAction: "manipulation" }}
+                  className={clsx(
+                    "shrink-0 h-8 px-2.5 rounded-full text-[11px] font-bold border transition inline-flex items-center gap-1",
+                    typeFilter === t
+                      ? clsx("border-white", TYPE_STYLE[t].badge)
+                      : "bg-white/5 text-zinc-300 border-white/10 hover:bg-white/10"
+                  )}
+                >
+                  {t}
+                  <span className="text-[9px] opacity-80 tabular-nums">{n}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
-            {slabs.length === 0 ? (
+            {filteredSlabs.length === 0 ? (
               <p className="px-2 py-10 text-center text-sm text-zinc-400">
-                등록 가능한 PCL10 슬랩이 없어요.
-                <br />
-                감별 페이지에서 도전해보세요.
+                {typeFilter === "ALL"
+                  ? "등록 가능한 PCL10 슬랩이 없어요."
+                  : `${typeFilter} 속성의 PCL10 슬랩이 없어요.`}
               </p>
             ) : (
-              <ul className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {slabs.map((g) => {
-                  const card = getCard(g.card_id);
-                  if (!card) return null;
-                  const taken = disabledIds.has(g.id);
-                  const onShowcase = displayedIds.has(g.id);
-                  const sameCardTaken =
-                    !taken && lockedCardIds.has(g.card_id);
-                  const blocked = taken || onShowcase || sameCardTaken;
-                  return (
-                    <li key={g.id}>
-                      <button
-                        type="button"
-                        disabled={blocked}
-                        onClick={() => onPick(g.id)}
-                        style={{ touchAction: "manipulation" }}
-                        className={clsx(
-                          "relative block w-full text-left rounded-xl p-1 transition",
-                          blocked
-                            ? "opacity-40 cursor-not-allowed"
-                            : "hover:bg-white/5 active:scale-[0.98]"
-                        )}
-                        title={
-                          taken
-                            ? "이미 펫으로 등록된 슬랩이에요."
-                            : onShowcase
-                            ? "센터에 전시 중인 슬랩이에요. 전시 해제 후 등록 가능."
-                            : sameCardTaken
-                            ? "이미 같은 카드가 펫으로 등록돼 있어요."
-                            : undefined
-                        }
-                      >
-                        <PclSlab card={card} grade={g.grade} size="sm" />
-                        <p className="mt-1 px-1 text-[11px] font-bold text-white truncate">
-                          {card.name}
-                        </p>
-                        <p className="px-1 text-[10px] text-zinc-400 truncate">
-                          {SETS[card.setCode].name} · #{card.number}
-                        </p>
-                        {taken && (
-                          <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-300 ring-1 ring-white/10">
-                            등록됨
-                          </span>
-                        )}
-                        {!taken && onShowcase && (
-                          <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/90 text-zinc-950 ring-1 ring-amber-300/60">
-                            전시 중
-                          </span>
-                        )}
-                        {sameCardTaken && (
-                          <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-fuchsia-500/90 text-white ring-1 ring-fuchsia-300/60">
-                            중복
-                          </span>
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+              <>
+                <ul className="grid grid-cols-3 gap-2">
+                  {visibleSlabs.map((g) => {
+                    const card = getCard(g.card_id);
+                    if (!card) return null;
+                    const taken = disabledIds.has(g.id);
+                    const onShowcase = displayedIds.has(g.id);
+                    const sameCardTaken =
+                      !taken && lockedCardIds.has(g.card_id);
+                    const blocked = taken || onShowcase || sameCardTaken;
+                    const ptype = resolveCardType(card.name);
+                    return (
+                      <li key={g.id}>
+                        <button
+                          type="button"
+                          disabled={blocked}
+                          onClick={() => onPick(g.id)}
+                          style={{ touchAction: "manipulation" }}
+                          className={clsx(
+                            "relative block w-full text-left rounded-xl p-1 transition",
+                            blocked
+                              ? "opacity-40 cursor-not-allowed"
+                              : "hover:bg-white/5 active:scale-[0.98]"
+                          )}
+                          title={
+                            taken
+                              ? "이미 펫으로 등록된 슬랩이에요."
+                              : onShowcase
+                              ? "센터에 전시 중인 슬랩이에요. 전시 해제 후 등록 가능."
+                              : sameCardTaken
+                              ? "이미 같은 카드가 펫으로 등록돼 있어요."
+                              : undefined
+                          }
+                        >
+                          <PclSlab card={card} grade={g.grade} size="sm" />
+                          <p className="mt-1 px-1 text-[10px] font-bold text-white truncate">
+                            {card.name}
+                          </p>
+                          <div className="px-1 flex items-center gap-1 mt-0.5">
+                            {ptype && (
+                              <span
+                                className={clsx(
+                                  "px-1 py-[1px] rounded text-[8px] font-black",
+                                  TYPE_STYLE[ptype].badge
+                                )}
+                              >
+                                {ptype}
+                              </span>
+                            )}
+                            <span className="text-[9px] text-zinc-500 truncate">
+                              #{card.number}
+                            </span>
+                          </div>
+                          {taken && (
+                            <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-300 ring-1 ring-white/10">
+                              등록됨
+                            </span>
+                          )}
+                          {!taken && onShowcase && (
+                            <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/90 text-zinc-950 ring-1 ring-amber-300/60">
+                              전시 중
+                            </span>
+                          )}
+                          {sameCardTaken && (
+                            <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-fuchsia-500/90 text-white ring-1 ring-fuchsia-300/60">
+                              중복
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {hasMore && (
+                  <div
+                    ref={sentinelRef}
+                    className="py-4 flex items-center justify-center text-[11px] text-zinc-500"
+                  >
+                    더 불러오는 중... ({visibleSlabs.length}/{filteredSlabs.length})
+                  </div>
+                )}
+                {!hasMore && filteredSlabs.length > PAGE_SIZE && (
+                  <p className="py-3 text-center text-[11px] text-zinc-500">
+                    모두 표시됨 ({filteredSlabs.length}장)
+                  </p>
+                )}
+              </>
             )}
           </div>
 
