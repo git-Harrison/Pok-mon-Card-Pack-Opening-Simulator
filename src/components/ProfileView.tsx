@@ -818,14 +818,6 @@ function SlabPicker({
                         }
                       >
                         <PclSlab card={card} grade={g.grade} size="sm" />
-                        <span
-                          className={clsx(
-                            "absolute top-2 right-2 text-[10px] font-black px-1.5 py-0.5 rounded ring-1 ring-white/20 shadow",
-                            RARITY_STYLE[card.rarity].badge
-                          )}
-                        >
-                          {card.rarity}
-                        </span>
                         <p className="mt-1 px-1 text-[11px] font-bold text-white truncate">
                           {card.name}
                         </p>

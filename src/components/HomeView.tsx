@@ -289,7 +289,7 @@ export default function HomeView() {
   );
 
   return (
-    <div className="relative min-h-[calc(100vh-64px)] overflow-hidden">
+    <div className="relative min-h-[calc(100vh-64px)] overflow-x-clip">
       {/* ---------- Background ambience ---------- */}
       <BackgroundFx reduce={!!reduce} mobile={isMobile} />
 

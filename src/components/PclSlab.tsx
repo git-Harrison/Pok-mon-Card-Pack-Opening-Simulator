@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { motion } from "framer-motion";
 import type { Card } from "@/lib/types";
 import { GRADE_BRAND, PCL_LABEL, pclTone } from "@/lib/pcl";
+import RarityBadge from "./RarityBadge";
 
 /**
  * PCL grading slab. Mirrors a real grading slab's proportions — chunky
@@ -163,6 +164,11 @@ export default function PclSlab({
                 "linear-gradient(135deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 45%)",
             }}
           />
+          {/* PokeCard 와 동일한 위치(좌하단) 에 희귀도 뱃지 — 펫 등록
+              picker 등에서 등급/희귀도 한눈 식별. */}
+          <div className="absolute left-1.5 bottom-1.5 pointer-events-none">
+            <RarityBadge rarity={card.rarity} size="xs" />
+          </div>
         </div>
       </div>
 
