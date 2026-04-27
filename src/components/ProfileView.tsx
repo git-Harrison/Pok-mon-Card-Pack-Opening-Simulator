@@ -133,6 +133,11 @@ export default function ProfileView() {
     () => new Set(pcl.filter((g) => g.displayed).map((g) => g.id)),
     [pcl]
   );
+  // 체육관 방어 덱에 등록된 슬랩 — picker 에서 "방어 덱" 라벨 + disabled.
+  const defenseIds = useMemo(
+    () => new Set(pcl.filter((g) => g.in_defense_deck).map((g) => g.id)),
+    [pcl]
+  );
 
   const onPickCharacter = useCallback(
     async (def: CharacterDef) => {
@@ -442,6 +447,7 @@ export default function ProfileView() {
           <SlabPicker
             slabs={eligibleSlabs}
             disabledIds={new Set(profile.main_card_ids)}
+            defenseIds={defenseIds}
             lockedCardIds={
               new Set(
                 (profile.main_cards ?? []).map((c) => c.card_id)
@@ -855,6 +861,7 @@ function SlabPicker({
   disabledIds,
   lockedCardIds,
   displayedIds,
+  defenseIds,
   slotIndex,
   onClose,
   onPick,
@@ -863,6 +870,7 @@ function SlabPicker({
   disabledIds: Set<string>;
   lockedCardIds: Set<string>;
   displayedIds: Set<string>;
+  defenseIds: Set<string>;
   slotIndex: number;
   onClose: () => void;
   onPick: (id: string) => void;
@@ -919,12 +927,14 @@ function SlabPicker({
   const visibleSlabs = filteredSlabs.slice(0, visibleCount);
   const hasMore = visibleCount < filteredSlabs.length;
 
-  // 무한 스크롤 — scroll 이벤트 기반. IntersectionObserver root 옵션이
-  // 일부 환경(motion.div 내부 + overflow-y-auto + dynamic viewport)
-  // 에서 sentinel 이 영영 intersect 안 되는 케이스가 있어 fallback.
-  // 매 visibleCount/filteredSlabs/typeFilter 변경 후에도 자동 한 번 더
-  // 체크 — 컨테이너가 짧아 sentinel 이 이미 보이는 상태(첫 12장이 다
-  // 들어오는 경우)에서도 페이지 자동 추가.
+  // 무한 스크롤 — scroll 이벤트 + IntersectionObserver(sentinel)
+  // + ResizeObserver(레이아웃 변경) 조합. 첫 mount(motion.div spring
+  // 애니메이션 직후) 에 layout 이 채 settle 되지 않은 케이스를 모두
+  // 커버하기 위해 multi-trigger.
+  // - scroll: 사용자 스크롤
+  // - IO(sentinel, root=scrollEl): sentinel 가 가까워지면 자동 페이지
+  // - RO(scrollEl): 레이아웃 변경(애니메이션, 이미지 로드) 후 재체크
+  // - rAF + setTimeout: 첫 commit 직후 + 후속 다중 체크
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -932,21 +942,50 @@ function SlabPicker({
     const check = () => {
       if (cancelled || !hasMore) return;
       const { scrollTop, scrollHeight, clientHeight } = el;
-      if (scrollTop + clientHeight >= scrollHeight - 200) {
+      if (scrollHeight <= clientHeight + 40) {
+        setVisibleCount((v) => v + PAGE_SIZE);
+        return;
+      }
+      if (scrollTop + clientHeight >= scrollHeight - 240) {
         setVisibleCount((v) => v + PAGE_SIZE);
       }
     };
     el.addEventListener("scroll", check, { passive: true });
-    // DOM commit 직후 한 번 트리거 — sentinel 가 viewport 안에 있으면
-    // 즉시 다음 페이지. 50ms 후로 또 체크 (motion 애니메이션/layout
-    // 안정화 후).
+
+    let io: IntersectionObserver | null = null;
+    const sentinel = sentinelRef.current;
+    if (sentinel && typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(
+        (entries) => {
+          if (cancelled || !hasMore) return;
+          if (entries.some((e) => e.isIntersecting)) {
+            setVisibleCount((v) => v + PAGE_SIZE);
+          }
+        },
+        { root: el, rootMargin: "240px 0px" }
+      );
+      io.observe(sentinel);
+    }
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(check);
+      ro.observe(el);
+    }
+
     const t1 = requestAnimationFrame(check);
-    const t2 = setTimeout(check, 80);
+    const t2 = setTimeout(check, 100);
+    const t3 = setTimeout(check, 350);
+    const t4 = setTimeout(check, 800);
     return () => {
       cancelled = true;
       el.removeEventListener("scroll", check);
+      io?.disconnect();
+      ro?.disconnect();
       cancelAnimationFrame(t1);
       clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
     };
   }, [hasMore, visibleCount, filteredSlabs.length, typeFilter]);
 
@@ -1046,9 +1085,10 @@ function SlabPicker({
                     if (!card) return null;
                     const taken = disabledIds.has(g.id);
                     const onShowcase = displayedIds.has(g.id);
+                    const onDefense = defenseIds.has(g.id);
                     const sameCardTaken =
-                      !taken && lockedCardIds.has(g.card_id);
-                    const blocked = taken || onShowcase || sameCardTaken;
+                      !taken && !onDefense && lockedCardIds.has(g.card_id);
+                    const blocked = taken || onShowcase || onDefense || sameCardTaken;
                     const ptype = resolveCardType(card.name);
                     return (
                       <li key={g.id}>
@@ -1068,6 +1108,8 @@ function SlabPicker({
                               ? "이미 펫으로 등록된 슬랩이에요."
                               : onShowcase
                               ? "센터에 전시 중인 슬랩이에요. 전시 해제 후 등록 가능."
+                              : onDefense
+                              ? "체육관 방어 덱에 등록된 슬랩이에요. 방어 덱에서 제외 후 등록 가능."
                               : sameCardTaken
                               ? "이미 같은 카드가 펫으로 등록돼 있어요."
                               : undefined
@@ -1100,6 +1142,11 @@ function SlabPicker({
                           {!taken && onShowcase && (
                             <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/90 text-zinc-950 ring-1 ring-amber-300/60">
                               전시 중
+                            </span>
+                          )}
+                          {!taken && !onShowcase && onDefense && (
+                            <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-fuchsia-500/90 text-white ring-1 ring-fuchsia-300/60">
+                              방어 덱
                             </span>
                           )}
                           {sameCardTaken && (

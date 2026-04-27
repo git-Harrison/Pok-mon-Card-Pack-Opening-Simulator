@@ -730,6 +730,8 @@ export async function fetchUndisplayedGradings(
 
 export interface PclGradingWithDisplay extends PclGrading {
   displayed: boolean;
+  /** 본인 소유 체육관의 방어 덱에 등록된 슬랩인지. */
+  in_defense_deck?: boolean;
 }
 
 export async function fetchAllGradingsWithDisplay(

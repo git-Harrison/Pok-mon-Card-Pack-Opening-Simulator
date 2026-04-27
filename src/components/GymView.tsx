@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
@@ -161,6 +161,10 @@ export default function GymView() {
         onSelect={setSelectedId}
         reduce={!!reduce}
       />
+
+      {/* 도움말 — 우하단 floating 버튼. 본문 영역 영향 X. */}
+      <GymHelpButton />
+
 
       <AnimatePresence>
         {selectedGym && !activeChallenge && !defenseGym && (
@@ -1142,7 +1146,7 @@ function PokemonStatCard({
         "border-white/10"
       )}
     >
-      <div className="relative w-14 h-14 flex items-center justify-center">
+      <div className="relative w-14 h-14 shrink-0 overflow-hidden flex items-center justify-center">
         {!broken && (
           <img
             src={wildSpriteUrl(pokemon.dex, true)}
@@ -1151,7 +1155,7 @@ function PokemonStatCard({
             decoding="async"
             referrerPolicy="no-referrer"
             onError={() => setBroken(true)}
-            className="w-full h-full object-contain"
+            className="max-w-full max-h-full object-contain"
             style={{ imageRendering: "pixelated" }}
           />
         )}
@@ -1208,7 +1212,7 @@ function DefenderStatCard({
   const [broken, setBroken] = useState(false);
   return (
     <div className="relative rounded-lg border bg-zinc-900/60 p-2 flex flex-col items-center gap-1 border-fuchsia-400/30">
-      <div className="relative w-14 h-14 flex items-center justify-center">
+      <div className="relative w-14 h-14 shrink-0 overflow-hidden flex items-center justify-center">
         {!broken && dex ? (
           <img
             src={wildSpriteUrl(dex, true)}
@@ -1217,7 +1221,7 @@ function DefenderStatCard({
             decoding="async"
             referrerPolicy="no-referrer"
             onError={() => setBroken(true)}
-            className="w-full h-full object-contain"
+            className="max-w-full max-h-full object-contain"
             style={{ imageRendering: "pixelated" }}
           />
         ) : !broken && card?.imageUrl ? (
@@ -1229,7 +1233,7 @@ function DefenderStatCard({
             decoding="async"
             referrerPolicy="no-referrer"
             onError={() => setBroken(true)}
-            className="w-full h-full object-contain"
+            className="max-w-full max-h-full object-contain"
           />
         ) : (
           <span className="text-[10px] text-zinc-400 text-center px-1">
@@ -1305,5 +1309,154 @@ function DailyClaimButton({
         ? "✅ 일일 보상 받음 — 24시간 후 다시 받을 수 있어요"
         : "🎁 일일 보상 받기 (+20,000,000P · 랭킹 +10,000)"}
     </button>
+  );
+}
+
+/** /gym 페이지 우하단 floating 도움말 버튼. position: fixed 라 본문
+ *  레이아웃에 영향 X. 클릭 시 전체 화면 모달로 시스템 안내. */
+function GymHelpButton() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="체육관 도움말"
+        style={{ touchAction: "manipulation" }}
+        className="fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:right-6 md:bottom-6 z-30 w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-rose-500 text-zinc-950 font-black text-lg shadow-[0_10px_28px_-8px_rgba(244,114,128,0.6)] flex items-center justify-center hover:scale-105 active:scale-95 transition"
+      >
+        ?
+      </button>
+      <AnimatePresence>
+        {open && <GymHelpModal onClose={() => setOpen(false)} />}
+      </AnimatePresence>
+    </>
+  );
+}
+
+/** 체육관 시스템 통합 안내 모달 — 처음 보는 사람도 이해할 수 있게.
+ *  도전 조건 / 점령 효과 / 방어 덱 / 메달 / 보상 / 일일 보상 등. */
+function GymHelpModal({ onClose }: { onClose: () => void }) {
+  const reduce = useReducedMotion();
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  return (
+    <Portal>
+      <motion.div
+        className="fixed inset-0 z-[140] bg-black/85 backdrop-blur-sm flex items-end md:items-center justify-center px-2 md:px-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+      >
+        <motion.div
+          className="relative w-full max-w-md bg-zinc-950 border border-white/10 rounded-2xl flex flex-col overflow-hidden max-h-[92vh]"
+          onClick={(e) => e.stopPropagation()}
+          initial={reduce ? false : { y: 24, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={reduce ? { opacity: 0 } : { y: 24, opacity: 0 }}
+        >
+          <div className="px-4 py-3 border-b border-white/10 flex items-center gap-2 bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-fuchsia-500/15">
+            <span aria-hidden className="text-base">📖</span>
+            <h2 className="text-sm font-black text-white flex-1">
+              체육관 시스템 — 처음이라면
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="닫기"
+              className="shrink-0 w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-sm"
+              style={{ touchAction: "manipulation" }}
+            >
+              ✕
+            </button>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3 text-[12px] leading-relaxed text-zinc-200">
+            <Section icon="⚔️" title="기본 — 도전과 점령">
+              체육관 8곳은 각자 고유 속성(풀/물/바위/전기/불꽃/땅/얼음/에스퍼).
+              관장 NPC 또는 점령자의 방어 덱과 3:3 펫 배틀로 도전 가능.
+              승리하면 그 체육관의 새 소유자가 됩니다.
+            </Section>
+            <Section icon="🎯" title="도전 조건">
+              • 도전 펫 3마리 모두 <b>체육관 속성과 동일</b>해야 합니다.<br />
+              • 내 <b>전투력(center_power)</b>이 체육관 최소치 이상.<br />
+              • 같은 체육관에 다른 사람이 도전 중이면 대기.<br />
+              • 패배 시 8분 재도전 쿨타임.
+            </Section>
+            <Section icon="🛡️" title="점령 효과 — 보호 시간">
+              점령 직후 <b>3시간 보호</b> — 다른 트레이너 도전 불가.
+              보호 끝난 뒤에는 누구나 도전 가능. 소유자는 10,000,000P 결제로
+              보호를 추가 3시간 연장 가능.
+            </Section>
+            <Section icon="🐾" title="방어 덱 (점령자 전용)">
+              내 PCL10 펫 3마리(체육관 속성 동일)를 <b>방어 덱</b>으로 셋업.
+              다른 트레이너가 도전하면 NPC 대신 이 3마리가 등장.<br />
+              • 방어 덱에 든 펫은 펫 슬롯에서 자동 빠짐 (전투력은 그대로 합산).<br />
+              • 방어 시 ratio/cap 통일 — 단, <b>MUR 카드는 효율 ×2</b>.<br />
+              • 다른 사람에게 점령당하면 방어 덱 슬랩 <b>영구 삭제</b> + pet_score
+              감소.
+            </Section>
+            <Section icon="💪" title="전투력(center_power) 버프">
+              체육관 1개 점령 = <b>전투력 +10,000</b> 자동 추가. 여러 곳을
+              점령할수록 누적 — 도감/펫/전시 외 별도 보너스.
+            </Section>
+            <Section icon="🏅" title="메달">
+              한 체육관을 처음 점령하면 그 속성의 고유 메달 획득. 메달은
+              영구 — 점령 잃어도 보존. 프로필 헤더 / 랭킹 행에 노출.
+            </Section>
+            <Section icon="🎁" title="일일 보상 — 24시간 쿨타임">
+              점령 중인 체육관에서 1일 1회 청구: <b>+20,000,000P · 랭킹 +10,000</b>.<br />
+              체육관 단위 24h 쿨타임 — 다른 사람이 점령해도 이전 청구 시점
+              부터 계산 유지.
+            </Section>
+            <Section icon="📊" title="전투 공식 요약">
+              펫 능력치 = 카드 기본 스탯(slabStats) + center_power 비례 보너스.
+              슬롯 1/2/3 = ATK 보너스 비율 10% / 8% / 6%, 캡 = 기본 ATK × 5
+              (방어 MUR 은 ×2 효율 + 캡 ×10). 속성 상성 표(2× / 0.5×) 적용.
+            </Section>
+            <Section icon="💡" title="팁">
+              • 첫 도전은 가장 약한 체육관 1개로 메달 + 점령 버프 +10,000 확보.<br />
+              • 점령 직후 일일 보상 1회 청구 → 랭킹 +10,000 즉시 반영.<br />
+              • MUR 슬랩이 있다면 방어 덱에 우선 배치 — 효율 2배.<br />
+              • 도감/펫/전시 전투력으로 min_power 부족 시 도감 채우기 우선.
+            </Section>
+          </div>
+        </motion.div>
+      </motion.div>
+    </Portal>
+  );
+}
+
+/** 도움말 모달 내부 카드 1개 — 아이콘 + 제목 + 본문. */
+function Section({
+  icon,
+  title,
+  children,
+}: {
+  icon: string;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+      <h3 className="text-[12px] font-black text-white mb-1 inline-flex items-center gap-1.5">
+        <span aria-hidden>{icon}</span>
+        {title}
+      </h3>
+      <div className="text-[11.5px] leading-relaxed text-zinc-300">
+        {children}
+      </div>
+    </section>
   );
 }
