@@ -81,6 +81,22 @@ export async function extendGymProtection(userId: string, gymId: string) {
   };
 }
 
+export async function claimGymDaily(userId: string, gymId: string) {
+  const { data, error } = await supabase.rpc("claim_gym_daily", {
+    p_user_id: userId,
+    p_gym_id: gymId,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    error?: string;
+    gym_id?: string;
+    money?: number;
+    rank_points?: number;
+    points?: number;
+  };
+}
+
 export async function setGymDefenseDeck(
   userId: string,
   gymId: string,

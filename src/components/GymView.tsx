@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
 import {
+  claimGymDaily,
   computeUserCenterPower,
   extendGymProtection,
   fetchGymsState,
@@ -198,6 +199,18 @@ export default function GymView() {
               } else {
                 alert(
                   "10,000,000P를 사용해 체육관 보호시간을 12시간 연장했습니다."
+                );
+              }
+              refresh();
+            }}
+            onClaimDaily={async () => {
+              if (!userId) return;
+              const res = await claimGymDaily(userId, selectedGym.id);
+              if (!res.ok) {
+                alert(res.error ?? "일일 보상 청구 실패");
+              } else {
+                alert(
+                  `+${(res.money ?? 0).toLocaleString("ko-KR")}P · 랭킹 +${(res.rank_points ?? 0).toLocaleString("ko-KR")}점 청구 완료!`
                 );
               }
               refresh();
@@ -611,6 +624,7 @@ function GymDetailModal({
   onStartChallenge,
   onExtend,
   onOpenDefense,
+  onClaimDaily,
 }: {
   gym: Gym;
   myUserId: string | null;
@@ -619,6 +633,7 @@ function GymDetailModal({
   onStartChallenge: () => void;
   onExtend: () => void;
   onOpenDefense: () => void;
+  onClaimDaily: () => void;
 }) {
   const reduce = useReducedMotion();
   const status = deriveGymStatus(gym, myUserId);
@@ -847,6 +862,24 @@ function GymDetailModal({
 
           {/* Footer — CTA */}
           <div className="border-t border-white/10 p-3 bg-zinc-950/95 space-y-2">
+            {status === "owned_by_me" && (
+              <button
+                type="button"
+                onClick={onClaimDaily}
+                disabled={gym.ownership?.daily_claimed_today ?? false}
+                style={{ touchAction: "manipulation" }}
+                className={clsx(
+                  "w-full h-11 rounded-xl font-black text-sm",
+                  gym.ownership?.daily_claimed_today
+                    ? "bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed"
+                    : "bg-gradient-to-r from-emerald-500 to-cyan-500 text-zinc-950 active:scale-[0.98]"
+                )}
+              >
+                {gym.ownership?.daily_claimed_today
+                  ? "✅ 오늘 일일 보상 받음"
+                  : "🎁 일일 보상 받기 (+20,000,000P · 랭킹 +10,000)"}
+              </button>
+            )}
             {status === "owned_by_me" && (
               <button
                 type="button"
