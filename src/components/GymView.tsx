@@ -16,7 +16,7 @@ import {
   type Gym,
   type GymStatus,
 } from "@/lib/gym/types";
-import { TYPE_STYLE } from "@/lib/wild/types";
+import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 import { wildSpriteUrl } from "@/lib/wild/pool";
 import { CenteredPokeLoader } from "./PokeLoader";
 import PageHeader from "./PageHeader";
@@ -637,28 +637,19 @@ function GymDetailModal({
     }, 1500);
   };
 
+  // 전투력 부족 — 버튼은 클릭 가능하게 두고, 클릭 시 NPC 도발 모달.
   const underpowered =
     centerPower !== null && centerPower < gym.min_power;
-  const challengeBlocked =
+  // 보호/도전 중/쿨타임/내 소유 → 버튼 자체 disable.
+  const challengeDisabled =
     status === "protected" ||
     status === "challenge_active" ||
     status === "user_cooldown" ||
-    status === "owned_by_me" ||
-    underpowered;
+    status === "owned_by_me";
 
-  const blockedMsg = (() => {
-    if (status === "protected") return pickLine(PROTECT_LINES);
-    if (status === "challenge_active")
-      return `${gym.active_challenge?.display_name ?? "다른 트레이너"}가 도전 중이에요.`;
-    if (status === "user_cooldown") return "재도전 쿨타임 중이에요.";
-    if (status === "owned_by_me") return "내가 점령 중인 체육관이에요.";
-    if (underpowered) {
-      const my = (centerPower ?? 0).toLocaleString("ko-KR");
-      const need = gym.min_power.toLocaleString("ko-KR");
-      return `${pickLine(TAUNT_LINES)} (내 전투력 ${my} / 필요 ${need})`;
-    }
-    return "";
-  })();
+  // 도발 모달 노출 상태 — 전투력 부족 클릭 시 set.
+  const [tauntOpen, setTauntOpen] = useState(false);
+  const [tauntLine, setTauntLine] = useState<string>("");
 
   // 보호 끝났고 내가 소유 중이면 보호 연장 가능.
   const canExtend = status === "owned_by_me" && (
@@ -808,12 +799,6 @@ function GymDetailModal({
               </section>
             )}
 
-            {/* 차단 사유 */}
-            {challengeBlocked && (
-              <div className="rounded-xl border border-rose-500/30 bg-rose-500/[0.07] px-3 py-2 text-[12px] text-rose-200 leading-snug">
-                💢 {blockedMsg}
-              </div>
-            )}
           </div>
 
           {/* Footer — CTA */}
@@ -839,12 +824,19 @@ function GymDetailModal({
               </button>
               <button
                 type="button"
-                disabled={challengeBlocked}
-                onClick={onStartChallenge}
+                disabled={challengeDisabled}
+                onClick={() => {
+                  if (underpowered) {
+                    setTauntLine(pickLine(TAUNT_LINES));
+                    setTauntOpen(true);
+                    return;
+                  }
+                  onStartChallenge();
+                }}
                 style={{ touchAction: "manipulation" }}
                 className={clsx(
                   "h-11 rounded-xl font-black text-sm",
-                  challengeBlocked
+                  challengeDisabled
                     ? "bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed"
                     : "bg-gradient-to-r from-rose-500 to-amber-500 text-zinc-950 active:scale-[0.98]"
                 )}
@@ -855,7 +847,138 @@ function GymDetailModal({
           </div>
         </motion.div>
       </motion.div>
+
+      {/* 전투력 부족 — 관장 NPC 도발 모달 (위 detail modal 위에 스택) */}
+      <AnimatePresence>
+        {tauntOpen && (
+          <UnderpoweredTauntDialog
+            gym={gym}
+            line={tauntLine}
+            centerPower={centerPower ?? 0}
+            onClose={() => setTauntOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </Portal>
+  );
+}
+
+/* ─────────────── Underpowered taunt dialog ─────────────── */
+
+function UnderpoweredTauntDialog({
+  gym,
+  line,
+  centerPower,
+  onClose,
+}: {
+  gym: Gym;
+  line: string;
+  centerPower: number;
+  onClose: () => void;
+}) {
+  const reduce = useReducedMotion();
+  const typeStyle = TYPE_STYLE[gym.type];
+  return (
+    <motion.div
+      className="fixed inset-0 z-[120] bg-black/80 flex items-center justify-center px-3"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.div
+        className="relative w-full max-w-sm bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+        initial={reduce ? false : { y: 12, opacity: 0, scale: 0.96 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        exit={reduce ? { opacity: 0 } : { y: 12, opacity: 0 }}
+      >
+        {/* 헤더 — 관장 정보 */}
+        <div
+          className={clsx(
+            "px-4 py-3 border-b border-white/10",
+            "bg-gradient-to-br from-zinc-900 to-zinc-950"
+          )}
+        >
+          <span aria-hidden className={clsx("absolute inset-0 opacity-30 pointer-events-none", typeStyle.glow)} />
+          <p className="text-[10px] uppercase tracking-wider text-rose-300/85 mb-0.5">
+            ▍{gym.name} 관장
+          </p>
+          <p className="text-base font-black text-white">{gym.leader_name}</p>
+        </div>
+
+        {/* NPC 도트 캐릭터 — 텍스트 + 풍선 */}
+        <div className="p-4 flex items-start gap-3">
+          <div className="shrink-0">
+            <NpcSprite type={gym.type} />
+          </div>
+          <div className="min-w-0 flex-1">
+            {/* 말풍선 */}
+            <div className="relative rounded-xl bg-white text-zinc-900 px-3 py-2 text-[12px] font-bold leading-snug">
+              {line}
+              <span
+                aria-hidden
+                className="absolute top-3 -left-1.5 w-0 h-0 border-y-[6px] border-y-transparent border-r-[7px] border-r-white"
+              />
+            </div>
+            <div className="mt-2 text-[10px] text-zinc-400 tabular-nums">
+              내 전투력{" "}
+              <b className="text-white">{centerPower.toLocaleString("ko-KR")}</b>
+              <span className="mx-1">/</span>
+              필요{" "}
+              <b className="text-rose-300">
+                {gym.min_power.toLocaleString("ko-KR")}
+              </b>
+            </div>
+          </div>
+        </div>
+
+        {/* CTA — 그냥 닫기 */}
+        <div className="border-t border-white/10 p-3">
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ touchAction: "manipulation" }}
+            className="w-full h-11 rounded-xl bg-white/10 border border-white/15 text-white font-bold text-sm active:scale-[0.98]"
+          >
+            물러난다
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/** 단순 도트 NPC 트레이너 — 모자 + 머리 + 몸. type 색 모자 + 빨간 옷.
+ *  이미지 에셋 없이 SVG 만으로. */
+function NpcSprite({ type }: { type: WildType }) {
+  const c = TYPE_STYLE[type as keyof typeof TYPE_STYLE];
+  void c;
+  return (
+    <svg viewBox="0 0 24 24" width={56} height={56} shapeRendering="crispEdges" aria-hidden>
+      {/* 모자 */}
+      <rect x="6"  y="3"  width="12" height="2" fill="#dc2626" />
+      <rect x="5"  y="5"  width="14" height="1" fill="#7f1d1d" />
+      <rect x="9"  y="6"  width="6"  height="1" fill="#fbbf24" />
+      {/* 머리 */}
+      <rect x="8"  y="6"  width="8"  height="6" fill="#fde68a" />
+      <rect x="9"  y="8"  width="1"  height="1" fill="#0f172a" />
+      <rect x="14" y="8"  width="1"  height="1" fill="#0f172a" />
+      <rect x="11" y="10" width="2"  height="1" fill="#7f1d1d" />
+      {/* 몸 (조끼) */}
+      <rect x="6"  y="12" width="12" height="6" fill="#dc2626" />
+      <rect x="6"  y="12" width="12" height="1" fill="#7f1d1d" />
+      <rect x="11" y="13" width="2"  height="4" fill="#fbbf24" />
+      {/* 팔 */}
+      <rect x="4"  y="13" width="2"  height="4" fill="#fde68a" />
+      <rect x="18" y="13" width="2"  height="4" fill="#fde68a" />
+      {/* 다리 */}
+      <rect x="8"  y="18" width="3"  height="4" fill="#1e3a8a" />
+      <rect x="13" y="18" width="3"  height="4" fill="#1e3a8a" />
+      {/* 신발 */}
+      <rect x="7"  y="22" width="4"  height="1" fill="#0f172a" />
+      <rect x="13" y="22" width="4"  height="1" fill="#0f172a" />
+    </svg>
   );
 }
 

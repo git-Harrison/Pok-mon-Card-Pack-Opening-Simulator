@@ -7,7 +7,6 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { getCard, SET_ORDER, SETS } from "@/lib/sets";
-import { formatKoreanPoints } from "@/lib/format";
 import type { SetCode } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { useIsMobile } from "@/lib/useIsMobile";
@@ -15,10 +14,8 @@ import {
   fetchPclGradings,
   fetchUserActivity,
   fetchUserRankings,
-  fetchWallet,
   type RankingRow,
   type UserActivityEvent,
-  type WalletSnapshot,
 } from "@/lib/db";
 import { fetchPokedex, type PokedexEntry } from "@/lib/pokedex";
 import {
@@ -37,12 +34,6 @@ type NavIconType = (props: { className?: string }) => React.JSX.Element;
 const ADMIN_LOGIN = "hun";
 
 interface HomeStats {
-  packsOpened: number;
-  cards: number;
-  // Each cell tracks its own loading flag so we can render the
-  // wallet-sourced numbers (packs/cards) the moment fetchWallet resolves
-  // without blocking on slabs/pokedex which come from heavier RPCs.
-  walletLoading: boolean;
   slabs: number;
   slabsLoading: boolean;
   pokedexCount: number;
@@ -57,9 +48,6 @@ interface ActivityTeasers {
 }
 
 const FALLBACK_STATS: HomeStats = {
-  packsOpened: 0,
-  cards: 0,
-  walletLoading: true,
   slabs: 0,
   slabsLoading: true,
   pokedexCount: 0,
@@ -99,41 +87,12 @@ export default function HomeView() {
   // 노출. 모바일 우선. 기본값은 최신 라인업인 MEGA.
   const [series, setSeries] = useState<"mega" | "sv">("mega");
 
-  // Priority-staggered fetch. The previous version awaited
-  // Promise.all([wallet, slabs, pokedex, activity]) — every quick-stats
-  // cell was stuck on "—" until the slowest RPC came back, which on cold
-  // mid-tier mobile pushed first-meaningful-paint past 1.5s. Now we:
-  //   1) await fetchWallet first → packs/cards numbers paint immediately,
-  //   2) defer slabs / pokedex / activity behind requestIdleCallback so
-  //      the hero + pack grid get to first paint without contention,
-  //   3) each cell maintains its own loading flag (skeleton → real value)
-  //      so non-blocking cards no longer hold up the visible ones.
+  // 슬랩 / 도감 / 최근 활동 — 메인 페이지 hero 와 팩 그리드 첫 페인트 후
+  // requestIdleCallback 로 deferred 페치. 셀 단위 loading 플래그.
   useEffect(() => {
     if (!user) return;
     let alive = true;
 
-    // --- Phase 1: above-the-fold wallet stats (highest priority) ---
-    (async () => {
-      try {
-        const wallet = await fetchWallet(user.id);
-        if (!alive) return;
-        const packs = Object.values(wallet.packsOpenedBySet).reduce(
-          (a, b) => a + b,
-          0
-        );
-        setStats((prev) => ({
-          ...prev,
-          packsOpened: packs,
-          cards: wallet.totalCards,
-          walletLoading: false,
-        }));
-      } catch {
-        if (!alive) return;
-        setStats((prev) => ({ ...prev, walletLoading: false }));
-      }
-    })();
-
-    // --- Phase 2: below-the-fold details after first paint ---
     const idle = (cb: () => void) => {
       type IdleWindow = Window & {
         requestIdleCallback?: (cb: () => void) => number;
@@ -296,15 +255,6 @@ export default function HomeView() {
       <div className="relative max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-10">
         {/* ---------- Hero ---------- */}
         <Hero reduce={!!reduce} displayName={user?.display_name ?? null} />
-
-        {/* ---------- Quick stats strip ---------- */}
-        {user ? (
-          <QuickStats stats={stats} points={user.points} reduce={!!reduce} />
-        ) : (
-          <p className="mt-6 text-center text-xs text-zinc-500">
-            로그인하면 내 카드·팩·슬랩 통계가 여기 표시돼요.
-          </p>
-        )}
 
         {/* ---------- Pack grid — 시리즈 탭 ----------
             박스 11종이 한 페이지에 깔리면 스크롤이 너무 길어, MEGA /
@@ -681,68 +631,6 @@ function Hero({
 /* ============================================================
  * Quick stats
  * ============================================================ */
-
-function QuickStats({
-  stats,
-  points,
-  reduce,
-}: {
-  stats: HomeStats;
-  points: number;
-  reduce: boolean;
-}) {
-  const items = [
-    { label: "지갑 포인트", value: formatKoreanPoints(points), tone: "amber" },
-    {
-      label: "개봉한 팩",
-      value: stats.walletLoading ? "—" : fmtNumber(stats.packsOpened),
-      tone: "fuchsia",
-    },
-    {
-      label: "보유 카드",
-      value: stats.walletLoading ? "—" : fmtNumber(stats.cards) + "장",
-      tone: "cyan",
-    },
-    {
-      label: "PCL 슬랩",
-      value: stats.slabsLoading ? "—" : fmtNumber(stats.slabs) + "장",
-      tone: "emerald",
-    },
-  ] as const;
-  return (
-    <motion.div
-      className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3"
-      initial={reduce ? false : { opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.36, ease: "easeOut", delay: 0.32 }}
-    >
-      {items.map((it) => (
-        <div
-          key={it.label}
-          className="rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur px-3 py-2.5 md:px-4 md:py-3"
-        >
-          <div className="text-[10px] uppercase tracking-wider text-zinc-500">
-            {it.label}
-          </div>
-          <div
-            className={
-              "mt-0.5 text-base md:text-xl font-extrabold " +
-              (it.tone === "amber"
-                ? "text-amber-200"
-                : it.tone === "fuchsia"
-                ? "text-fuchsia-200"
-                : it.tone === "cyan"
-                ? "text-cyan-200"
-                : "text-emerald-200")
-            }
-          >
-            {it.value}
-          </div>
-        </div>
-      ))}
-    </motion.div>
-  );
-}
 
 /* ============================================================
  * Pack tile (centerpiece)
