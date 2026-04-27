@@ -418,6 +418,66 @@ export default function UsersView() {
                       transition={{ duration: 0.2, ease: "easeOut" }}
                       className="overflow-hidden"
                     >
+                      {/* 자산 요약 — 프로필 보기 핵심 정보 */}
+                      <div className="px-3 md:px-4 pt-1 pb-2 grid grid-cols-4 gap-2">
+                        <ProfileStatChip
+                          label="포인트"
+                          value={e.points.toLocaleString("ko-KR")}
+                          tone="amber"
+                        />
+                        <ProfileStatChip
+                          label="랭킹점수"
+                          value={e.rank_score.toLocaleString("ko-KR")}
+                          tone="rose"
+                        />
+                        <ProfileStatChip
+                          label="전투력"
+                          value={e.center_power.toLocaleString("ko-KR")}
+                          tone="violet"
+                        />
+                        <ProfileStatChip
+                          label="도감"
+                          value={`${e.pokedex_count ?? 0}`}
+                          tone="emerald"
+                        />
+                      </div>
+                      {/* 펫 탭 — 전체 등록된 펫 슬랩 큰 썸네일 표시 */}
+                      {mode === "pet" &&
+                        (e.main_cards?.length ?? 0) > 0 && (
+                          <div className="px-3 md:px-4 pb-2">
+                            <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
+                              등록된 펫 ({e.main_cards?.length ?? 0}장)
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {(e.main_cards ?? []).map((mc) => {
+                                const rstyle = RARITY_STYLE[mc.rarity as Rarity];
+                                const card = getCard(mc.card_id);
+                                return (
+                                  <div
+                                    key={mc.id}
+                                    className={clsx(
+                                      "shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg border",
+                                      "bg-white/5 border-white/10"
+                                    )}
+                                    title={`${card?.name ?? mc.card_id} · ${mc.rarity} PCL${mc.grade}`}
+                                  >
+                                    <span
+                                      className={clsx(
+                                        "text-[9px] font-black px-1.5 py-0.5 rounded",
+                                        rstyle?.badge ?? "bg-white/10 text-zinc-200"
+                                      )}
+                                    >
+                                      {mc.rarity}
+                                    </span>
+                                    <span className="text-[10px] font-semibold text-zinc-200 max-w-[80px] truncate">
+                                      {card?.name ?? mc.card_id}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       <ActivityFeed
                         events={activityCache[`${e.id}::${mode}`]}
                         loading={activityLoading[`${e.id}::${mode}`] === true}
@@ -426,26 +486,6 @@ export default function UsersView() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-
-                {mode === "pet" && (e.main_cards?.length ?? 0) > 0 && (
-                  <div className="px-3 md:px-4 pb-3 -mt-1 flex flex-wrap gap-1.5">
-                    {(e.main_cards ?? []).map((mc) => {
-                      const rstyle = RARITY_STYLE[mc.rarity as Rarity];
-                      return (
-                        <span
-                          key={mc.id}
-                          className={clsx(
-                            "text-[10px] font-black px-2 py-1 rounded-md",
-                            rstyle?.badge ?? "bg-white/10 text-zinc-200"
-                          )}
-                          title={`${mc.rarity} PCL${mc.grade}`}
-                        >
-                          {mc.rarity}
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
 
                 <div
                   className="px-3 md:px-4 pb-3 flex items-center gap-2"
@@ -519,6 +559,45 @@ function modeAccent(mode: RankingMode): string {
   if (mode === "power") return "text-rose-300";
   if (mode === "pet") return "text-fuchsia-300";
   return "text-amber-300";
+}
+
+const STAT_TONES: Record<string, { bg: string; text: string }> = {
+  amber: { bg: "bg-amber-400/10 border-amber-400/30", text: "text-amber-200" },
+  rose: { bg: "bg-rose-400/10 border-rose-400/30", text: "text-rose-200" },
+  violet: { bg: "bg-violet-400/10 border-violet-400/30", text: "text-violet-200" },
+  emerald: { bg: "bg-emerald-400/10 border-emerald-400/30", text: "text-emerald-200" },
+};
+
+function ProfileStatChip({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: "amber" | "rose" | "violet" | "emerald";
+}) {
+  const t = STAT_TONES[tone];
+  return (
+    <div
+      className={clsx(
+        "rounded-lg border px-2 py-1.5 text-center min-w-0",
+        t.bg
+      )}
+    >
+      <div className="text-[9px] uppercase tracking-wider text-zinc-400 leading-tight">
+        {label}
+      </div>
+      <div
+        className={clsx(
+          "mt-0.5 text-[11px] md:text-xs font-black tabular-nums truncate",
+          t.text
+        )}
+      >
+        {value}
+      </div>
+    </div>
+  );
 }
 
 const ActivityFeed = memo(function ActivityFeed({
