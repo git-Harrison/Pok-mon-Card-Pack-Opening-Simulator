@@ -54,6 +54,8 @@ export interface Gym {
   active_challenge: GymActiveChallenge | null;
   /** 본인의 재도전 쿨타임 — null 이면 쿨타임 없음. */
   user_cooldown_until: string | null;
+  /** 본인이 이미 이 체육관 메달 보유 중인지 (Phase 3 +). */
+  has_my_medal?: boolean;
 }
 
 /** 클라이언트에서 즉시 분기 가능한 상태 라벨. */
@@ -96,3 +98,61 @@ export const DIFFICULTY_STYLE: Record<
   HARD:   { badge: "bg-orange-500 text-white",    label: "어려움", tone: "text-orange-200" },
   BOSS:   { badge: "bg-fuchsia-600 text-white",   label: "보스",   tone: "text-fuchsia-200" },
 };
+
+/* ── Phase 2-4 — battle / medal types ── */
+
+export interface BattleUnit {
+  slot: number;
+  name: string;
+  type: WildType;
+  rarity?: string;
+  grade?: number;
+  card_id?: string;
+  grading_id?: string;
+  dex?: number;
+  hp_max: number;
+  hp: number;
+  atk: number;
+}
+
+export interface BattleTurn {
+  turn: number;
+  side: "pet" | "enemy";
+  attacker_slot: number;
+  defender_slot: number;
+  damage: number;
+  eff: number;
+  crit: boolean;
+  enemy_hp_left: number;
+  pet_hp_left: number;
+}
+
+export interface GymBattleResult {
+  ok: boolean;
+  error?: string;
+  result?: "won" | "lost";
+  pets?: BattleUnit[];
+  enemies?: BattleUnit[];
+  turn_log?: BattleTurn[];
+  capture_reward?: number;
+  medal_id?: string | null;
+  protection_until?: string | null;
+  cooldown_until?: string | null;
+  points?: number;
+  center_power?: number;
+  /** Some error responses (under-power, etc) include extras. */
+  min_power?: number;
+}
+
+export interface UserGymMedal {
+  gym_id: string;
+  gym_name: string;
+  gym_type: WildType;
+  gym_difficulty: GymDifficulty;
+  medal_id: string;
+  medal_name: string;
+  medal_description: string;
+  earned_at: string;
+  used_pets: { pets: BattleUnit[] } | null;
+  currently_owned: boolean;
+}

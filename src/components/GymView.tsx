@@ -4,20 +4,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
-import { useIsMobile } from "@/lib/useIsMobile";
-import { fetchGymsState } from "@/lib/gym/db";
+import {
+  computeUserCenterPower,
+  extendGymProtection,
+  fetchGymsState,
+  startGymChallenge,
+} from "@/lib/gym/db";
 import {
   deriveGymStatus,
   DIFFICULTY_STYLE,
   type Gym,
   type GymStatus,
 } from "@/lib/gym/types";
-import { effectiveness } from "@/lib/wild/typechart";
 import { TYPE_STYLE } from "@/lib/wild/types";
 import { wildSpriteUrl } from "@/lib/wild/pool";
 import { CenteredPokeLoader } from "./PokeLoader";
 import PageHeader from "./PageHeader";
 import Portal from "./Portal";
+import GymChallengeOverlay from "./GymChallengeOverlay";
 
 // 폴링 주기 — Phase 1 에서는 단순 setInterval. Phase 4 에서 Supabase
 // realtime 으로 격상 검토.
@@ -77,11 +81,15 @@ const STATUS_PILL: Record<
 export default function GymView() {
   const { user } = useAuth();
   const reduce = useReducedMotion();
-  const isMobile = useIsMobile();
 
   const [gyms, setGyms] = useState<Gym[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [activeChallenge, setActiveChallenge] = useState<{
+    gym: Gym;
+    challengeId: string;
+  } | null>(null);
+  const [centerPower, setCenterPower] = useState<number | null>(null);
   // 매초 다시 그려 보호/쿨타임 카운트다운이 자연스럽게 줄어들도록.
   const [, force] = useState(0);
 
@@ -92,6 +100,18 @@ export default function GymView() {
     const list = await fetchGymsState(userId);
     setGyms(list);
     setLoading(false);
+  }, [userId]);
+
+  // center_power 도 함께 로드 (도전 자격 표시용).
+  useEffect(() => {
+    if (!userId) return;
+    let alive = true;
+    computeUserCenterPower(userId).then((cp) => {
+      if (alive) setCenterPower(cp);
+    });
+    return () => {
+      alive = false;
+    };
   }, [userId]);
 
   useEffect(() => {
@@ -133,20 +153,58 @@ export default function GymView() {
 
       <PhaseNotice />
 
-      <GymMap
+      <GymTownMap
         gyms={gyms}
         myUserId={userId}
         onSelect={setSelectedId}
         reduce={!!reduce}
-        isMobile={isMobile}
       />
 
       <AnimatePresence>
-        {selectedGym && (
+        {selectedGym && !activeChallenge && (
           <GymDetailModal
             gym={selectedGym}
             myUserId={userId}
+            centerPower={centerPower}
             onClose={() => setSelectedId(null)}
+            onStartChallenge={async () => {
+              if (!userId) return;
+              const res = await startGymChallenge(userId, selectedGym.id);
+              if (!res.ok || !res.challenge_id) {
+                alert(res.error ?? "도전을 시작할 수 없어요.");
+                refresh();
+                return;
+              }
+              setActiveChallenge({
+                gym: selectedGym,
+                challengeId: res.challenge_id,
+              });
+              setSelectedId(null);
+            }}
+            onExtend={async () => {
+              if (!userId) return;
+              const ok = window.confirm(
+                "10,000,000P를 사용해 보호를 12시간 연장할까요?"
+              );
+              if (!ok) return;
+              const res = await extendGymProtection(userId, selectedGym.id);
+              if (!res.ok) {
+                alert(res.error ?? "보호 연장 실패");
+              } else {
+                alert(
+                  "10,000,000P를 사용해 체육관 보호시간을 12시간 연장했습니다."
+                );
+              }
+              refresh();
+            }}
+          />
+        )}
+        {activeChallenge && (
+          <GymChallengeOverlay
+            gym={activeChallenge.gym}
+            challengeId={activeChallenge.challengeId}
+            onClose={() => setActiveChallenge(null)}
+            onResolved={refresh}
           />
         )}
       </AnimatePresence>
@@ -171,171 +229,37 @@ function PhaseNotice() {
   );
 }
 
-/* ─────────────── Map ─────────────── */
+/* ─────────────── Pixel Town Map ───────────────
+ * 포켓몬 GBA 도트 마을 풍 — 진짜 지도 아닌 픽셀 타일 배경.
+ * 모바일 우선. SVG (shape-rendering: crispEdges) + 정수 좌표만 써서
+ * 픽셀 아트 느낌. blur / backdrop-filter / 무한 framer 루프 없음 —
+ * mid-tier Android 에서도 60fps 유지가 목표.
+ */
 
-function GymMap({
+function GymTownMap({
   gyms,
   myUserId,
   onSelect,
   reduce,
-  isMobile,
 }: {
   gyms: Gym[];
   myUserId: string | null;
   onSelect: (id: string) => void;
   reduce: boolean;
-  isMobile: boolean;
 }) {
-  // 모바일에서는 절대 좌표 기반 픽셀 맵 대신 카드 그리드 (탭/시인성↑).
-  // 데스크탑은 좌표 기반 가상 지도 — 단, 사용자 정책 상 PC 가 모바일을
-  // 끌어내리면 안 되므로 이펙트는 가벼운 SVG 만.
-  if (isMobile) {
-    return (
-      <div className="mt-4 grid grid-cols-2 gap-2.5">
-        {gyms.map((g, i) => (
-          <GymCard
-            key={g.id}
-            gym={g}
-            myUserId={myUserId}
-            onClick={() => onSelect(g.id)}
-            index={i}
-            reduce={reduce}
-          />
-        ))}
-      </div>
-    );
-  }
   return (
-    <DesktopMap gyms={gyms} myUserId={myUserId} onSelect={onSelect} reduce={reduce} />
-  );
-}
-
-/* ─────────────── Mobile gym card ─────────────── */
-
-function GymCard({
-  gym,
-  myUserId,
-  onClick,
-  index,
-  reduce,
-}: {
-  gym: Gym;
-  myUserId: string | null;
-  onClick: () => void;
-  index: number;
-  reduce: boolean;
-}) {
-  const status = deriveGymStatus(gym, myUserId);
-  const pill = STATUS_PILL[status];
-  const diff = DIFFICULTY_STYLE[gym.difficulty];
-  const typeStyle = TYPE_STYLE[gym.type];
-
-  return (
-    <motion.button
-      type="button"
-      onClick={onClick}
-      style={{ touchAction: "manipulation" }}
-      initial={reduce ? false : { opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.28, delay: Math.min(index, 6) * 0.04 }}
-      className={clsx(
-        "relative rounded-2xl border bg-white/[0.04] p-3 text-left flex flex-col gap-2 active:scale-[0.98] transition",
-        "border-white/10 hover:bg-white/[0.07]"
-      )}
+    <div
+      className="mt-4 relative w-full max-w-md mx-auto aspect-[10/13] rounded-2xl overflow-hidden border-4 border-emerald-900 shadow-[0_0_0_2px_rgba(16,185,129,0.4),0_8px_24px_rgba(0,0,0,0.5)]"
+      style={{ imageRendering: "pixelated" }}
     >
-      {/* 속성 톤의 은은한 글로우 */}
-      <span
-        aria-hidden
-        className={clsx(
-          "absolute -inset-px rounded-2xl pointer-events-none opacity-30",
-          typeStyle.glow
-        )}
-      />
-      <div className="relative flex items-center gap-2">
-        <span
-          className={clsx(
-            "shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-base font-black",
-            typeStyle.badge
-          )}
-        >
-          🏟️
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[12px] md:text-sm font-black text-white truncate">
-            {gym.name}
-          </p>
-          <p className="text-[10px] text-zinc-400 truncate">
-            관장 {gym.leader_name}
-          </p>
-        </div>
-      </div>
+      <PixelTownBackground />
 
-      <div className="relative flex items-center gap-1 flex-wrap">
-        <span
-          className={clsx(
-            "px-1.5 py-0.5 rounded text-[9px] font-black",
-            typeStyle.badge
-          )}
-        >
-          {gym.type}
-        </span>
-        <span
-          className={clsx(
-            "px-1.5 py-0.5 rounded text-[9px] font-black",
-            diff.badge
-          )}
-        >
-          {diff.label}
-        </span>
-      </div>
+      {/* 동선 — 체육관 사이 path. SVG 위에 absolute 배치. */}
+      <PixelRoutes />
 
-      <div className="relative flex items-center justify-between gap-1">
-        <span
-          className={clsx(
-            "px-1.5 py-0.5 rounded-full border text-[9px] md:text-[10px] font-bold",
-            pill.cls
-          )}
-        >
-          {pill.label}
-        </span>
-        <span className="text-[9px] text-zinc-500 tabular-nums">
-          ≥ {gym.min_power.toLocaleString("ko-KR")}
-        </span>
-      </div>
-    </motion.button>
-  );
-}
-
-/* ─────────────── Desktop pseudo-map ─────────────── */
-
-function DesktopMap({
-  gyms,
-  myUserId,
-  onSelect,
-  reduce,
-}: {
-  gyms: Gym[];
-  myUserId: string | null;
-  onSelect: (id: string) => void;
-  reduce: boolean;
-}) {
-  // PC 전용 — sky/forest 톤의 가벼운 SVG 배경 + 좌표 기반 핀 배치.
-  // 사용자 명시: 모바일에 영향 주는 PC 효과는 금지. 이 컴포넌트는
-  // GymMap 에서 isMobile=false 일 때만 마운트되므로 모바일은 영향 없음.
-  return (
-    <div className="mt-4 relative w-full aspect-[4/3] rounded-2xl border border-emerald-500/20 overflow-hidden bg-gradient-to-b from-emerald-950/40 via-zinc-950 to-zinc-950">
-      {/* 가벼운 격자 — 지도 느낌 */}
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-20"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)",
-          backgroundSize: "32px 32px",
-        }}
-      />
+      {/* 체육관 핀 — HTML 버튼 (touch / accessibility 위해). */}
       {gyms.map((g) => (
-        <DesktopPin
+        <PixelGymPin
           key={g.id}
           gym={g}
           myUserId={myUserId}
@@ -347,7 +271,233 @@ function DesktopMap({
   );
 }
 
-function DesktopPin({
+/** 픽셀 마을 배경 — 단일 SVG. shape-rendering crispEdges + 정수 좌표.
+ *  영역 분포 (viewBox 100×130):
+ *    · 0-25 (Y)   : 하늘 / 눈 / 산
+ *    · 25-50      : 산악 / 평원 전이
+ *    · 50-72      : 평원 + 화산 + 바위지대
+ *    · 72-100     : 숲 + 호수 + 모래해변
+ */
+function PixelTownBackground() {
+  return (
+    <svg
+      className="absolute inset-0 w-full h-full"
+      viewBox="0 0 100 130"
+      preserveAspectRatio="none"
+      shapeRendering="crispEdges"
+      aria-hidden
+    >
+      {/* 하늘 (위) — 옅은 보라/푸른 톤 */}
+      <rect x="0" y="0" width="100" height="22" fill="#2a1f4a" />
+      <rect x="0" y="22" width="100" height="6" fill="#3b2d63" />
+      {/* 별 도트 (정수 좌표만) */}
+      {[
+        [10, 5], [22, 8], [34, 3], [48, 6], [60, 4], [74, 9], [86, 5], [94, 12],
+        [16, 14], [40, 16], [68, 14], [82, 18],
+      ].map(([x, y], i) => (
+        <rect key={`star-${i}`} x={x} y={y} width="1" height="1" fill="#fde68a" />
+      ))}
+
+      {/* 눈 산 (얼음 체육관 부근, 우상단) */}
+      <PixelMountain x={58} y={20} w={36} h={14} fill="#94a3b8" snow />
+      {/* 보랏빛 부유섬 (에스퍼 체육관, 좌상단) */}
+      <PixelFloatingIsland x={4} y={6} w={28} h={10} />
+
+      {/* 평원 — 진한 잔디 → 옅은 잔디 그라이언트 단계 (3 레이어) */}
+      <rect x="0" y="28" width="100" height="42" fill="#365b3b" />
+      <rect x="0" y="34" width="100" height="36" fill="#3f6e44" />
+      <rect x="0" y="40" width="100" height="30" fill="#4a834e" />
+      {/* 풀 잔무늬 도트 */}
+      {[
+        [6, 30], [14, 36], [26, 32], [38, 38], [44, 30], [56, 36], [62, 32], [74, 38], [86, 32], [92, 36],
+        [10, 50], [22, 54], [44, 50], [56, 54], [78, 50], [90, 54],
+      ].map(([x, y], i) => (
+        <rect key={`grass-${i}`} x={x} y={y} width="1" height="1" fill="#7cc88a" />
+      ))}
+
+      {/* 바위지대 (좌중단) — 회색 돌 더미 */}
+      <PixelRocks x={6} y={48} />
+
+      {/* 화산 (우중단, 불꽃 체육관 부근) */}
+      <PixelVolcano x={70} y={42} />
+
+      {/* 모래길 (path 본선) — 베이지 띠. 라우트는 위에 점선으로 또 그림. */}
+      <rect x="0" y="68" width="100" height="6" fill="#c8a16a" />
+      <rect x="0" y="68" width="100" height="1" fill="#a87a48" />
+      <rect x="0" y="73" width="100" height="1" fill="#a87a48" />
+
+      {/* 숲 — 좌하단 (잎새 체육관) */}
+      <rect x="0" y="74" width="48" height="56" fill="#2a4a2e" />
+      <rect x="0" y="74" width="48" height="1" fill="#1a3320" />
+      <PixelTrees x={2}  y={88} />
+      <PixelTrees x={14} y={96} />
+      <PixelTrees x={26} y={108} />
+      <PixelTrees x={6}  y={116} />
+      <PixelTrees x={36} y={114} />
+
+      {/* 호수 — 우하단 (파도 체육관) */}
+      <rect x="48" y="74" width="52" height="56" fill="#1e3a8a" />
+      <rect x="48" y="74" width="52" height="1" fill="#0f1f5a" />
+      <rect x="48" y="80" width="52" height="22" fill="#2c52bf" />
+      <rect x="48" y="102" width="52" height="28" fill="#1e3a8a" />
+      {/* 물결 라인 (수평 dash) */}
+      {[
+        [54, 86], [62, 90], [72, 88], [82, 92], [90, 86],
+        [50, 100], [60, 104], [70, 100], [82, 104], [92, 100],
+        [54, 116], [66, 118], [80, 116], [92, 118],
+      ].map(([x, y], i) => (
+        <g key={`wave-${i}`}>
+          <rect x={x}     y={y} width="2" height="1" fill="#7cc4ff" />
+          <rect x={x + 3} y={y} width="2" height="1" fill="#7cc4ff" />
+        </g>
+      ))}
+
+      {/* 모래사장 (호수와 잔디 경계) */}
+      <rect x="48" y="74" width="6" height="56" fill="#d8b27a" opacity="0.55" />
+    </svg>
+  );
+}
+
+/** 산봉우리 — 픽셀 계단 모양 + (snow=true 일 때) 정상에 흰 픽셀. */
+function PixelMountain({
+  x, y, w, h, fill, snow,
+}: { x: number; y: number; w: number; h: number; fill: string; snow?: boolean }) {
+  const cx = x + Math.floor(w / 2);
+  const peak = y;
+  return (
+    <g>
+      {Array.from({ length: h }, (_, i) => {
+        const ry = peak + i;
+        const half = Math.floor(((i + 1) / h) * (w / 2));
+        const rx = cx - half;
+        const rw = half * 2;
+        return (
+          <rect key={i} x={rx} y={ry} width={Math.max(rw, 1)} height="1" fill={fill} />
+        );
+      })}
+      {/* 하단 그림자 */}
+      <rect x={x} y={y + h - 1} width={w} height="1" fill="#475569" />
+      {snow && (
+        <>
+          <rect x={cx - 1} y={peak}     width="3" height="1" fill="#f1f5f9" />
+          <rect x={cx - 2} y={peak + 1} width="5" height="1" fill="#cbd5e1" />
+        </>
+      )}
+    </g>
+  );
+}
+
+/** 부유섬 — 보라/인디고 두 톤 그라데이션 + 별 1개. */
+function PixelFloatingIsland({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
+  return (
+    <g>
+      <rect x={x}     y={y}         width={w}     height={1}     fill="#7c3aed" />
+      <rect x={x + 1} y={y + 1}     width={w - 2} height={h - 2} fill="#5b21b6" />
+      <rect x={x + 2} y={y + h - 2} width={w - 4} height={1}     fill="#4c1d95" />
+      <rect x={x + 4} y={y + h - 1} width={w - 8} height={1}     fill="#3b0764" />
+      <rect x={x + Math.floor(w / 2)} y={y + 2} width={1} height={1} fill="#fde68a" />
+    </g>
+  );
+}
+
+/** 바위 더미 — 짙은 회색 큐브 3-4 개. */
+function PixelRocks({ x, y }: { x: number; y: number }) {
+  return (
+    <g>
+      <rect x={x}      y={y}      width={6} height={3} fill="#52525b" />
+      <rect x={x + 1}  y={y - 1}  width={4} height={1} fill="#71717a" />
+      <rect x={x + 8}  y={y + 1}  width={5} height={3} fill="#3f3f46" />
+      <rect x={x + 9}  y={y}      width={3} height={1} fill="#71717a" />
+      <rect x={x + 4}  y={y + 4}  width={7} height={2} fill="#3f3f46" />
+    </g>
+  );
+}
+
+/** 화산 — 검붉은 봉우리 + 정상 라바. */
+function PixelVolcano({ x, y }: { x: number; y: number }) {
+  return (
+    <g>
+      <rect x={x + 5} y={y}      width={6}  height={1} fill="#7c2d12" />
+      <rect x={x + 4} y={y + 1}  width={8}  height={1} fill="#9a3412" />
+      <rect x={x + 3} y={y + 2}  width={10} height={1} fill="#9a3412" />
+      <rect x={x + 2} y={y + 3}  width={12} height={1} fill="#7c2d12" />
+      <rect x={x + 1} y={y + 4}  width={14} height={1} fill="#7c2d12" />
+      <rect x={x}     y={y + 5}  width={16} height={2} fill="#451a03" />
+      {/* 라바 분출 */}
+      <rect x={x + 6} y={y - 2}  width={4}  height={1} fill="#fb923c" />
+      <rect x={x + 7} y={y - 3}  width={2}  height={1} fill="#fde047" />
+      <rect x={x + 5} y={y + 1}  width={2}  height={1} fill="#fb923c" />
+      <rect x={x + 9} y={y + 1}  width={2}  height={1} fill="#fb923c" />
+    </g>
+  );
+}
+
+/** 나무 한 그루 — 진녹 잎 더미 + 갈색 줄기. */
+function PixelTrees({ x, y }: { x: number; y: number }) {
+  return (
+    <g>
+      {/* 잎 */}
+      <rect x={x + 1} y={y}     width={4} height={1} fill="#15803d" />
+      <rect x={x}     y={y + 1} width={6} height={2} fill="#166534" />
+      <rect x={x + 1} y={y + 3} width={4} height={1} fill="#14532d" />
+      {/* 줄기 */}
+      <rect x={x + 2} y={y + 4} width={2} height={2} fill="#78350f" />
+    </g>
+  );
+}
+
+/** 체육관 사이 path 점선 — 위 SVG 배경 위에 한 번 더 SVG 레이어. */
+function PixelRoutes() {
+  // 정해진 좌표 사이를 점선 path 로 잇는다. 모든 좌표 정수.
+  // (psychic 18,10) → (ground 34,28) → (rock 18,52) → (electric 50,48) →
+  // (fire 80,50) → (ice 72,18) ↑↑
+  // (electric 50,48) → (grass 22,78) / (water 62,82)
+  return (
+    <svg
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      viewBox="0 0 100 130"
+      preserveAspectRatio="none"
+      shapeRendering="crispEdges"
+      aria-hidden
+    >
+      <g stroke="#fcd34d" strokeWidth="0.6" strokeDasharray="1.2 1.4" fill="none">
+        <path d="M18 10 L34 28" />
+        <path d="M34 28 L50 48" />
+        <path d="M50 48 L18 52" />
+        <path d="M50 48 L80 50" />
+        <path d="M50 48 L22 82" />
+        <path d="M50 48 L62 86" />
+        <path d="M72 18 L80 50" />
+      </g>
+    </svg>
+  );
+}
+
+/** 핀 지붕 색 — type 별 (light, dark) 한 쌍. SVG inline fill 로 쓰임. */
+const ROOF_COLORS: Record<string, { light: string; dark: string }> = {
+  "노말":   { light: "#a1a1aa", dark: "#52525b" },
+  "불꽃":   { light: "#f97316", dark: "#9a3412" },
+  "물":     { light: "#3b82f6", dark: "#1e3a8a" },
+  "풀":     { light: "#22c55e", dark: "#14532d" },
+  "전기":   { light: "#facc15", dark: "#a16207" },
+  "얼음":   { light: "#67e8f9", dark: "#0e7490" },
+  "격투":   { light: "#dc2626", dark: "#7f1d1d" },
+  "독":     { light: "#a855f7", dark: "#581c87" },
+  "땅":     { light: "#b45309", dark: "#78350f" },
+  "비행":   { light: "#818cf8", dark: "#3730a3" },
+  "에스퍼": { light: "#ec4899", dark: "#831843" },
+  "벌레":   { light: "#84cc16", dark: "#3f6212" },
+  "바위":   { light: "#78716c", dark: "#44403c" },
+  "고스트": { light: "#7c3aed", dark: "#3b0764" },
+  "드래곤": { light: "#4f46e5", dark: "#312e81" },
+  "악":     { light: "#27272a", dark: "#0a0a0a" },
+  "강철":   { light: "#94a3b8", dark: "#475569" },
+  "페어리": { light: "#f472b6", dark: "#9d174d" },
+};
+
+/** 픽셀 체육관 핀 — 작은 도트 건물 + 이름/상태. type 별 지붕 색 +
+ *  status 별 깃발 마크. 도트 느낌 위해 SVG crispEdges + 정수 좌표. */
+function PixelGymPin({
   gym,
   myUserId,
   onClick,
@@ -361,39 +511,95 @@ function DesktopPin({
   const status = deriveGymStatus(gym, myUserId);
   const pill = STATUS_PILL[status];
   const typeStyle = TYPE_STYLE[gym.type];
+  const roof = ROOF_COLORS[gym.type] ?? { light: "#a1a1aa", dark: "#52525b" };
+
+  // 상태별 깃발/마크.
+  const flag =
+    status === "owned_by_me" ? "👑" :
+    status === "protected"   ? "🛡️" :
+    status === "challenge_active" ? "⚔️" :
+    status === "user_cooldown" ? "⌛" :
+    null;
+
+  // 도전 가능 / 비점령 후 도전 가능 핀에만 살짝 떠오르는 bobbing.
+  const bobbing =
+    !reduce && (status === "open" || status === "owned_open");
 
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onClick}
-      className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1"
       style={{
         left: `${gym.location_x}%`,
         top: `${gym.location_y}%`,
+        touchAction: "manipulation",
       }}
+      className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 group"
+      whileTap={{ scale: 0.9 }}
+      animate={bobbing ? { y: [0, -1.5, 0] } : undefined}
+      transition={
+        bobbing
+          ? { duration: 1.6, repeat: Infinity, ease: "easeInOut" }
+          : { duration: 0 }
+      }
     >
-      <motion.span
-        className={clsx(
-          "relative w-10 h-10 rounded-xl flex items-center justify-center text-lg font-black border-2 border-white/30 shadow-lg",
-          typeStyle.badge
-        )}
-        whileHover={reduce ? undefined : { scale: 1.12 }}
-        whileTap={{ scale: 0.92 }}
+      <div
+        className="relative shrink-0"
+        style={{ width: 36, height: 38, imageRendering: "pixelated" }}
       >
-        🏟️
-      </motion.span>
-      <span
-        className={clsx(
-          "px-1.5 py-0.5 rounded-full border text-[9px] font-bold whitespace-nowrap",
-          pill.cls
-        )}
-      >
-        {pill.label}
-      </span>
-      <span className="text-[10px] text-white/90 font-bold drop-shadow whitespace-nowrap">
-        {gym.name}
-      </span>
-    </button>
+        <svg
+          viewBox="0 0 15 16"
+          width={36}
+          height={38}
+          shapeRendering="crispEdges"
+          aria-hidden
+        >
+          {/* 지붕 (type 색) — 위가 light, 처마는 dark */}
+          <rect x="3" y="0" width="9"  height="1" fill={roof.light} />
+          <rect x="2" y="1" width="11" height="1" fill={roof.light} />
+          <rect x="1" y="2" width="13" height="2" fill={roof.light} />
+          <rect x="0" y="4" width="15" height="1" fill={roof.dark} />
+          {/* 벽 */}
+          <rect x="1" y="5"  width="13" height="9" fill="#f5f5f4" />
+          <rect x="1" y="13" width="13" height="1" fill="#a8a29e" />
+          {/* 창 (양쪽) */}
+          <rect x="3"  y="7" width="2" height="2" fill="#7dd3fc" />
+          <rect x="10" y="7" width="2" height="2" fill="#7dd3fc" />
+          {/* 문 */}
+          <rect x="6" y="10" width="3" height="4" fill="#7c2d12" />
+          <rect x="7" y="12" width="1" height="1" fill="#fbbf24" />
+          {/* 바닥 */}
+          <rect x="0" y="14" width="15" height="2" fill="#57534e" />
+        </svg>
+      </div>
+
+      {/* 이름 + 상태 */}
+      <div className="flex flex-col items-center -mt-0.5">
+        <span
+          className="px-1 py-[1px] rounded text-[8px] md:text-[9px] font-black whitespace-nowrap bg-black/75 text-white border border-white/20"
+          style={{ textShadow: "0 1px 0 rgba(0,0,0,0.85)" }}
+        >
+          {gym.name}
+        </span>
+        <span
+          className={clsx(
+            "mt-0.5 inline-flex items-center gap-0.5 px-1 py-[1px] rounded-full border text-[8px] font-bold whitespace-nowrap",
+            pill.cls
+          )}
+        >
+          {flag && <span aria-hidden>{flag}</span>}
+          {pill.label}
+        </span>
+        <span
+          className={clsx(
+            "mt-[1px] px-1 rounded text-[7px] font-black whitespace-nowrap",
+            typeStyle.badge
+          )}
+        >
+          {gym.type}
+        </span>
+      </div>
+    </motion.button>
   );
 }
 
@@ -402,11 +608,17 @@ function DesktopPin({
 function GymDetailModal({
   gym,
   myUserId,
+  centerPower,
   onClose,
+  onStartChallenge,
+  onExtend,
 }: {
   gym: Gym;
   myUserId: string | null;
+  centerPower: number | null;
   onClose: () => void;
+  onStartChallenge: () => void;
+  onExtend: () => void;
 }) {
   const reduce = useReducedMotion();
   const status = deriveGymStatus(gym, myUserId);
@@ -448,13 +660,14 @@ function GymDetailModal({
     }, 1500);
   };
 
-  // Phase 1: 대결 요청 버튼은 "Phase 2 출시 예정" 안내. Phase 2 부터
-  // 펫 선택 화면으로 라우팅.
+  const underpowered =
+    centerPower !== null && centerPower < gym.min_power;
   const challengeBlocked =
     status === "protected" ||
     status === "challenge_active" ||
     status === "user_cooldown" ||
-    status === "owned_by_me";
+    status === "owned_by_me" ||
+    underpowered;
 
   const blockedMsg = (() => {
     if (status === "protected") return pickLine(PROTECT_LINES);
@@ -462,8 +675,15 @@ function GymDetailModal({
       return `${gym.active_challenge?.display_name ?? "다른 트레이너"}가 도전 중이에요.`;
     if (status === "user_cooldown") return "재도전 쿨타임 중이에요.";
     if (status === "owned_by_me") return "내가 점령 중인 체육관이에요.";
+    if (underpowered) return pickLine(TAUNT_LINES);
     return "";
   })();
+
+  // 보호 끝났고 내가 소유 중이면 보호 연장 가능.
+  const canExtend = status === "owned_by_me" && (
+    !gym.ownership ||
+    new Date(gym.ownership.protection_until).getTime() <= Date.now()
+  );
 
   return (
     <Portal>
@@ -611,26 +831,41 @@ function GymDetailModal({
           </div>
 
           {/* Footer — CTA */}
-          <div className="border-t border-white/10 p-3 grid grid-cols-2 gap-2 bg-zinc-950/95">
-            <button
-              type="button"
-              onClick={handleHello}
-              style={{ touchAction: "manipulation" }}
-              className="h-11 rounded-xl bg-white/5 border border-white/15 text-white font-bold text-sm active:scale-[0.98]"
-            >
-              👋 인사만 하고 나오기
-            </button>
-            <button
-              type="button"
-              disabled
-              title="Phase 2 출시 예정"
-              className="h-11 rounded-xl bg-white/5 border border-white/10 text-zinc-500 font-bold text-sm cursor-not-allowed inline-flex flex-col items-center justify-center"
-            >
-              <span>⚔️ 대결 요청</span>
-              <span className="text-[9px] text-zinc-600 leading-none">
-                Phase 2 출시 예정
-              </span>
-            </button>
+          <div className="border-t border-white/10 p-3 bg-zinc-950/95 space-y-2">
+            {canExtend && (
+              <button
+                type="button"
+                onClick={onExtend}
+                style={{ touchAction: "manipulation" }}
+                className="w-full h-11 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-zinc-950 font-black text-sm active:scale-[0.98]"
+              >
+                🛡️ 12시간 보호 연장 (10,000,000P)
+              </button>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={handleHello}
+                style={{ touchAction: "manipulation" }}
+                className="h-11 rounded-xl bg-white/5 border border-white/15 text-white font-bold text-sm active:scale-[0.98]"
+              >
+                👋 인사만 하고 나오기
+              </button>
+              <button
+                type="button"
+                disabled={challengeBlocked}
+                onClick={onStartChallenge}
+                style={{ touchAction: "manipulation" }}
+                className={clsx(
+                  "h-11 rounded-xl font-black text-sm",
+                  challengeBlocked
+                    ? "bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed"
+                    : "bg-gradient-to-r from-rose-500 to-amber-500 text-zinc-950 active:scale-[0.98]"
+                )}
+              >
+                ⚔️ 대결 요청
+              </button>
+            </div>
           </div>
         </motion.div>
       </motion.div>
@@ -762,9 +997,3 @@ function PokemonStatCard({
   );
 }
 
-/* ─────────────── (export) — 미사용 effectiveness import 가드 ─────────────── */
-// 향후 Phase 2 의 펫 선택 / 전투 화면에서 effectiveness 를 직접 사용하기
-// 위해 import 만 유지. 트리쉐이커가 빈 import 라고 잘못 잡아내지 않도록
-// 명시적 const 1 회 참조.
-const _phase2Reserved = effectiveness;
-void _phase2Reserved;

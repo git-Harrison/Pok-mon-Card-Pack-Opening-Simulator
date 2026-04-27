@@ -40,6 +40,7 @@ import PageHeader from "./PageHeader";
 import PageBackdrop from "./PageBackdrop";
 import PclSlab from "./PclSlab";
 import Portal from "./Portal";
+import GymMedalsList from "./GymMedalsList";
 
 export default function ProfileView() {
   const { user, refreshMe, logout } = useAuth();
@@ -306,6 +307,14 @@ export default function ProfileView() {
               {error}
             </div>
           )}
+
+          {/* 체육관 메달 — 점령 + 획득 기록 */}
+          <section className="mt-6">
+            <h2 className="text-sm font-bold text-white inline-flex items-center gap-1.5 mb-2">
+              <span aria-hidden>🏅</span>체육관 메달
+            </h2>
+            <GymMedalsList userId={userId} />
+          </section>
 
           {!profile?.character_locked && (
           <section className="mt-7">
