@@ -5,6 +5,22 @@ import { motion } from "framer-motion";
 import type { Card } from "@/lib/types";
 import { GRADE_BRAND, PCL_LABEL, pclTone } from "@/lib/pcl";
 import RarityBadge from "./RarityBadge";
+import { CARD_NAME_TO_TYPE } from "@/lib/wild/name-to-type";
+import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
+
+/** 카드 이름 → WildType. 메가/ex/V/VMAX/GX/BREAK/(골드)/(SV) 등 변형
+ *  strip 후 매칭 시도. 매칭 실패시 null. */
+function resolveCardTypeForSlab(name: string): WildType | null {
+  if (CARD_NAME_TO_TYPE[name] !== undefined) return CARD_NAME_TO_TYPE[name];
+  let base = name
+    .replace(/\s*\(골드\)\s*$/, "")
+    .replace(/\s*\(SV\)\s*$/, "")
+    .replace(/\s+(ex|V|VMAX|GX|BREAK)\s*$/i, "")
+    .trim();
+  if (CARD_NAME_TO_TYPE[base] !== undefined) return CARD_NAME_TO_TYPE[base];
+  if (base.startsWith("메가 ")) base = base.slice(3).trim();
+  return CARD_NAME_TO_TYPE[base] ?? null;
+}
 
 /**
  * PCL grading slab. Mirrors a real grading slab's proportions — chunky
@@ -98,17 +114,30 @@ export default function PclSlab({
             {GRADE_BRAND}
           </span>
         </div>
-        {/* Card info column */}
-        {!compact && (
-          <div className="flex-1 min-w-0 px-2 flex flex-col justify-center">
-            <p className="text-[11px] md:text-[12px] font-bold text-white leading-tight truncate">
-              {card.name}
-            </p>
-            <p className="text-[8px] md:text-[9px] uppercase tracking-[0.1em] text-white/70 truncate leading-tight mt-px">
-              #{card.number}
-            </p>
-          </div>
-        )}
+        {/* Type badge column — 카드 이름/번호 대신 속성 노출 (사용자
+            요청 통일 변경). 매핑 없으면 "無속성" 칩. 모바일에서 잘 보이게
+            폰트 충분히 키움. */}
+        {!compact && (() => {
+          const ptype = resolveCardTypeForSlab(card.name);
+          return (
+            <div className="flex-1 min-w-0 px-2 flex items-center justify-start">
+              {ptype ? (
+                <span
+                  className={clsx(
+                    "inline-flex items-center px-2.5 py-1 rounded-full text-[12px] md:text-[13px] font-black leading-none",
+                    TYPE_STYLE[ptype].badge
+                  )}
+                >
+                  {ptype}
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] md:text-[13px] font-black leading-none bg-zinc-700 text-zinc-300">
+                  無속성
+                </span>
+              )}
+            </div>
+          );
+        })()}
         {compact && <div className="flex-1" />}
         {/* Grade banner */}
         <div

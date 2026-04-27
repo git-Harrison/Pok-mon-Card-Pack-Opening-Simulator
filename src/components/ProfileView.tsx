@@ -822,9 +822,20 @@ function PetSlot({
         >
           {cardDef.rarity}
         </span>
-        <span className="absolute bottom-0.5 right-0.5 text-[8px] font-black px-1 py-0.5 rounded leading-none bg-amber-300 text-zinc-950 tabular-nums">
-          {card.grade}
-        </span>
+        {(() => {
+          const ptype = resolveCardType(cardDef.name);
+          if (!ptype) return null;
+          return (
+            <span
+              className={clsx(
+                "absolute bottom-1 right-1 text-[10px] md:text-[11px] font-black px-1.5 py-0.5 rounded leading-none shadow",
+                TYPE_STYLE[ptype].badge
+              )}
+            >
+              {ptype}
+            </span>
+          );
+        })()}
       </motion.button>
       <button
         type="button"
@@ -908,26 +919,36 @@ function SlabPicker({
   const visibleSlabs = filteredSlabs.slice(0, visibleCount);
   const hasMore = visibleCount < filteredSlabs.length;
 
-  // 무한 스크롤 — sentinel 이 modal 의 스크롤 컨테이너 viewport 에 진입
-  // 하면 12 개 더. modal 자체가 fixed 라 IntersectionObserver root 기본
-  // (viewport) 으로 두면 sentinel 이 영원히 intersect 안 됨 → 첫 진입
-  // 에서 무한스크롤 발동 안 되던 버그. root 를 scrollRef 로 명시.
+  // 무한 스크롤 — scroll 이벤트 기반. IntersectionObserver root 옵션이
+  // 일부 환경(motion.div 내부 + overflow-y-auto + dynamic viewport)
+  // 에서 sentinel 이 영영 intersect 안 되는 케이스가 있어 fallback.
+  // 매 visibleCount/filteredSlabs/typeFilter 변경 후에도 자동 한 번 더
+  // 체크 — 컨테이너가 짧아 sentinel 이 이미 보이는 상태(첫 12장이 다
+  // 들어오는 경우)에서도 페이지 자동 추가.
   useEffect(() => {
-    if (!hasMore) return;
-    const el = sentinelRef.current;
-    const root = scrollRef.current;
-    if (!el || !root) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setVisibleCount((v) => v + PAGE_SIZE);
-        }
-      },
-      { root, rootMargin: "200px", threshold: 0.01 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [hasMore, filteredSlabs.length, visibleCount]);
+    const el = scrollRef.current;
+    if (!el) return;
+    let cancelled = false;
+    const check = () => {
+      if (cancelled || !hasMore) return;
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      if (scrollTop + clientHeight >= scrollHeight - 200) {
+        setVisibleCount((v) => v + PAGE_SIZE);
+      }
+    };
+    el.addEventListener("scroll", check, { passive: true });
+    // DOM commit 직후 한 번 트리거 — sentinel 가 viewport 안에 있으면
+    // 즉시 다음 페이지. 50ms 후로 또 체크 (motion 애니메이션/layout
+    // 안정화 후).
+    const t1 = requestAnimationFrame(check);
+    const t2 = setTimeout(check, 80);
+    return () => {
+      cancelled = true;
+      el.removeEventListener("scroll", check);
+      cancelAnimationFrame(t1);
+      clearTimeout(t2);
+    };
+  }, [hasMore, visibleCount, filteredSlabs.length, typeFilter]);
 
   return (
     <Portal>
