@@ -184,11 +184,10 @@ export default function PokedexView() {
           </h2>
         </div>
         <p className="text-[12px] text-zinc-300 leading-relaxed mb-2">
-          한 등급의 <b className="text-white">모든 카드를 도감에 박제</b>
-          하면 추가 <b className="text-fuchsia-200">전투력 보너스</b>가
-          영구 적용돼요. 신규 세트가 추가되어 등급별 카드 수가 늘어나면
-          미완성 상태가 되어 보너스가 즉시 빠지니, 신규 세트 카드도
-          꾸준히 박제해 주세요.
+          등급별 <b className="text-white">진행률 비례</b>로 전투력 보너스가
+          즉시 적립돼요. 등급의 모든 카드를 박제하면 아래 표시된{" "}
+          <b className="text-fuchsia-200">최대 보너스</b>를 받습니다. 부분
+          진행도 비례 가산 (예: 절반 모으면 절반 보너스).
         </p>
         <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1 text-[11px] tabular-nums">
           {RARITY_ORDER.map((r) => (
@@ -207,7 +206,7 @@ export default function PokedexView() {
               <span className="text-zinc-200">
                 <b className="text-white">{RARITY_TOTALS[r]}</b>장 →
                 <b className="text-fuchsia-300 ml-0.5">
-                  +{RARITY_COMPLETION_BONUS[r].toLocaleString("ko-KR")}
+                  최대 +{RARITY_COMPLETION_BONUS[r].toLocaleString("ko-KR")}
                 </b>
               </span>
             </li>
