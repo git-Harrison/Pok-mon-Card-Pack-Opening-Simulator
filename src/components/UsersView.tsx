@@ -663,16 +663,6 @@ function PetCardModal({
                 <p className="mt-1 text-[11px] text-zinc-500">{setName}</p>
               )}
             </div>
-
-            {card && (
-              <Link
-                href={`/card/${encodeURIComponent(card.id)}`}
-                onClick={onClose}
-                className="mt-4 w-full inline-flex items-center justify-center h-10 rounded-xl bg-gradient-to-r from-fuchsia-500/90 to-violet-500/90 hover:from-fuchsia-500 hover:to-violet-500 active:scale-[0.98] text-white text-sm font-bold transition"
-              >
-                카드 상세 페이지
-              </Link>
-            )}
           </div>
         </motion.div>
       </motion.div>
