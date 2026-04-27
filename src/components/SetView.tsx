@@ -980,7 +980,7 @@ function BulkResultOverlay({
         <div
           className="grid gap-3 md:gap-4 px-4 md:px-6 py-4 md:py-6 mx-auto max-w-5xl"
           style={{
-            gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
           }}
         >
           {cards.map((card, i) => (
@@ -1225,7 +1225,7 @@ function MultiResultOverlay({
         <div
           className="grid gap-3 md:gap-4 px-4 md:px-6 py-4 md:py-6 mx-auto max-w-5xl"
           style={{
-            gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))",
           }}
         >
           {cards.map((card, i) => (

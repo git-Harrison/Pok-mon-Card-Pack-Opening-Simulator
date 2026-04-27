@@ -482,7 +482,7 @@ function GridStage({ pack }: { pack: Card[] }) {
       <div
         className="grid gap-4 md:gap-6 mx-auto"
         style={{
-          gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
           maxWidth: "640px",
         }}
       >
