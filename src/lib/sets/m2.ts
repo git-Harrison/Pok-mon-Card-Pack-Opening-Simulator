@@ -25,10 +25,10 @@ export const m2: SetInfo = {
     { label: "C/U", weights: { C: 60, U: 40 } },
     { label: "U/R", weights: { U: 70, R: 30 } },
     {
-      // Pack-level odds. MUR 가중치 0.5 → 0.25 로 절반 인하 (사용자
-      // 요청 — 메가 카드 희소성 강화). 분모 ~82.25 기준 MUR ≈ 0.30%.
+      // Pack-level odds. MUR 가중치 0.25 → 0.125 로 또 한 번 절반
+      // 인하. 분모 ~82.125 기준 MUR ≈ 0.15%.
       label: "Hit",
-      weights: { R: 30, RR: 30, AR: 10, SR: 7, SAR: 5, MUR: 0.25 },
+      weights: { R: 30, RR: 30, AR: 10, SR: 7, SAR: 5, MUR: 0.125 },
     },
   ],
   cards: [

@@ -798,7 +798,7 @@ const GRADING_SECTIONS: HelpSection[] = [
     ),
   },
   {
-    heading: "확률 (등급 무관)",
+    heading: "확률",
     icon: "🎲",
     body: h(
       "div",
@@ -820,20 +820,23 @@ const GRADING_SECTIONS: HelpSection[] = [
           { key: 5 },
           h("b", { className: "text-slate-100" }, "PCL 9 (MINT)"),
           " · ",
-          h("b", null, "3.7%")
+          h("b", null, "3.7%"),
+          " (MUR 카드: 3.9%)"
         ),
         h(
           "li",
           { key: 6 },
           h("b", { className: "text-amber-300" }, "PCL 10 (GEM MINT)"),
           " · ",
-          h("b", null, "0.3%")
+          h("b", null, "0.3%"),
+          " · ",
+          h("b", { className: "text-rose-300" }, "MUR 카드는 0.1%")
         )
       ),
       h(
         "p",
         { className: "mt-1.5 text-zinc-400" },
-        "확률은 카드 등급과 무관해요. C든 MUR이든 동일."
+        "MUR 만 PCL 10 확률이 1/3 (희소성). 나머지 등급은 동일."
       )
     ),
   },

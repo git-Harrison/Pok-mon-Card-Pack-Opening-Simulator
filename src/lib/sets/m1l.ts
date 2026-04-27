@@ -26,7 +26,7 @@ export const m1l: SetInfo = {
     { label: "C 2", weights: { C: 100 } },
     { label: "C/U", weights: { C: 55, U: 45 } },
     { label: "U/R", weights: { U: 70, R: 30 } },
-    { label: "Hit", weights: { R: 30, RR: 30, AR: 10, SR: 7, SAR: 5, MUR: 0.5 } },
+    { label: "Hit", weights: { R: 30, RR: 30, AR: 10, SR: 7, SAR: 5, MUR: 0.25 } },
   ],
   cards: [
     { id: "m1l-001", setCode: "m1l", number: "001", name: "이상해씨", rarity: "C", imageUrl: pk("Bulbasaur", "001", "57972") },
