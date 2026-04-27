@@ -85,14 +85,16 @@ export default function ProfileView() {
     return out;
   }, [profile]);
 
-  // 펫 등록 후보 — 본인 PCL10 슬랩 전체. 전시 중인 슬랩은 SlabPicker
-  // 안에서 disabled 표시 (서버도 거부하므로 안전).
+  // 펫 등록 후보 — 본인 PCL10 슬랩 중 전시 중이 아닌 것만 노출.
+  // 전시 중 슬랩은 picker 에서 아예 보이지 않도록 (서버도 상호배타
+  // 거부하므로 클라 필터는 UX 일관성 + 라운드트립 절감).
   const eligibleSlabs = useMemo(
-    () => psa.filter((g) => g.grade === 10),
+    () => psa.filter((g) => g.grade === 10 && !g.displayed),
     [psa]
   );
-  // 전시 중인 슬랩 ID — 펫 등록 시도 시 클라이언트에서 미리 차단해
-  // 라운드트립 한 번 줄이고 사용자에게 즉시 안내.
+  // 전시 중인 슬랩 ID — 위에서 이미 필터되긴 하지만, 동시 등록
+  // 레이스(다른 탭에서 전시 시도) 대비로 picker 에 disabled 표시도
+  // 같이 유지.
   const displayedIds = useMemo(
     () => new Set(psa.filter((g) => g.displayed).map((g) => g.id)),
     [psa]

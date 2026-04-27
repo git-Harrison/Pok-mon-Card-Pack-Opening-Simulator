@@ -767,14 +767,20 @@ const USERS_SECTIONS: HelpSection[] = [
       null,
       "센터에 ",
       h("b", null, "지금"),
-      " 전시 중인 슬랩 한 장당:",
+      " 전시 중인 슬랩 한 장당 (PCL 10 / PCL 9):",
       h(
-        "p",
-        { className: "mt-1" },
-        h("b", null, "희귀도 점수"),
-        " (SR 5 · MA 6 · SAR 7 · UR 8 · MUR 10) × ",
-        h("b", null, "PCL 점수"),
-        " (9→9 · 10→10)"
+        "ul",
+        { className: "mt-1.5 grid grid-cols-2 gap-x-3 text-[12px]" },
+        h("li", { key: 1 }, h("b", null, "MUR"), " · 100 / 90"),
+        h("li", { key: 2 }, h("b", null, "UR"), " · 80 / 72"),
+        h("li", { key: 3 }, h("b", null, "SAR"), " · 70 / 63"),
+        h("li", { key: 4 }, h("b", null, "AR"), " · 60 / 54"),
+        h("li", { key: 5 }, h("b", null, "SR"), " · 50 / 45"),
+        h("li", { key: 6 }, h("b", null, "MA"), " · 40 / 36"),
+        h("li", { key: 7 }, h("b", null, "RR"), " · 30 / 27"),
+        h("li", { key: 8 }, h("b", null, "R"), " · 20 / 18"),
+        h("li", { key: 9 }, h("b", null, "U"), " · 10 / 9"),
+        h("li", { key: 10 }, h("b", null, "C"), " · 6 / 5")
       ),
       h(
         "p",
