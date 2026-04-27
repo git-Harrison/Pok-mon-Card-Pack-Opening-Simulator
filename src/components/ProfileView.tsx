@@ -34,7 +34,8 @@ import {
 } from "@/lib/profile";
 import { getCard, SETS } from "@/lib/sets";
 import { getAllCatalogCards } from "@/lib/pokedex";
-import { RARITY_STYLE } from "@/lib/rarity";
+import { RARITY_STYLE, compareRarity } from "@/lib/rarity";
+import type { Rarity } from "@/lib/types";
 import PageHeader from "./PageHeader";
 import PageBackdrop from "./PageBackdrop";
 import PclSlab from "./PclSlab";
@@ -74,22 +75,37 @@ export default function ProfileView() {
     [profile?.character]
   );
 
+  // 등록된 펫은 희귀도 내림차순(MUR → C) 정렬, 빈 슬롯은 뒤쪽으로.
+  // 슬롯 위치 의미는 더이상 사용 안 함 (set_main_cards 가 어차피
+  // ids 배열을 통째로 갱신하고 pet_score 도 순서 무관).
   const filledSlots: (ProfileMainCard | null)[] = useMemo(() => {
     const ids = profile?.main_card_ids ?? [];
     const cards = profile?.main_cards ?? [];
     const byId = new Map(cards.map((c) => [c.id, c]));
-    const out: (ProfileMainCard | null)[] = [];
-    for (let i = 0; i < MAX_MAIN_CARDS; i++) {
-      out.push(i < ids.length ? byId.get(ids[i]) ?? null : null);
-    }
+    const filled = ids
+      .map((id) => byId.get(id) ?? null)
+      .filter((c): c is ProfileMainCard => c !== null)
+      .sort((a, b) =>
+        compareRarity(a.rarity as Rarity, b.rarity as Rarity)
+      );
+    const out: (ProfileMainCard | null)[] = [...filled];
+    while (out.length < MAX_MAIN_CARDS) out.push(null);
     return out;
   }, [profile]);
 
   // 펫 등록 후보 — 본인 PCL10 슬랩 중 전시 중이 아닌 것만 노출.
-  // 전시 중 슬랩은 picker 에서 아예 보이지 않도록 (서버도 상호배타
-  // 거부하므로 클라 필터는 UX 일관성 + 라운드트립 절감).
+  // 희귀도 내림차순(MUR → C) 정렬. PclGrading 자체에는 rarity 가
+  // 없어 카드 카탈로그(getCard) 로 lookup.
   const eligibleSlabs = useMemo(
-    () => pcl.filter((g) => g.grade === 10 && !g.displayed),
+    () =>
+      pcl
+        .filter((g) => g.grade === 10 && !g.displayed)
+        .sort((a, b) => {
+          const ra = getCard(a.card_id)?.rarity;
+          const rb = getCard(b.card_id)?.rarity;
+          if (!ra || !rb) return 0;
+          return compareRarity(ra, rb);
+        }),
     [pcl]
   );
   // 전시 중인 슬랩 ID — 위에서 이미 필터되긴 하지만, 동시 등록
@@ -182,13 +198,12 @@ export default function ProfileView() {
   );
 
   const onRemoveSlot = useCallback(
-    async (slot: number) => {
+    async (gradingId: string) => {
       if (!user || !profile) return;
-      const ids = [...aliveIds];
-      if (slot >= ids.length) return;
+      const ids = aliveIds.filter((id) => id !== gradingId);
+      if (ids.length === aliveIds.length) return;
       const ok = window.confirm("이 펫을 슬롯에서 빼시겠어요?");
       if (!ok) return;
-      ids.splice(slot, 1);
       setError(null);
       const res = await rpcSetMainCards(user.id, ids);
       if (!res.ok) {
@@ -349,7 +364,9 @@ export default function ProfileView() {
                     index={i}
                     card={slot}
                     onPick={() => setPickerSlot(i)}
-                    onRemove={() => onRemoveSlot(i)}
+                    onRemove={
+                      slot ? () => onRemoveSlot(slot.id) : () => undefined
+                    }
                   />
                 ))}
               </div>

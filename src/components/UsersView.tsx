@@ -26,7 +26,12 @@ import {
 import { notifyRankChange, notifyTaunt } from "@/lib/discord";
 import { usePresence } from "@/lib/usePresence";
 import { getCard, SETS } from "@/lib/sets";
-import { RARITY_LABEL, RARITY_STYLE, cardFxClass } from "@/lib/rarity";
+import {
+  RARITY_LABEL,
+  RARITY_STYLE,
+  cardFxClass,
+  compareRarity,
+} from "@/lib/rarity";
 import type { Rarity } from "@/lib/types";
 import PageBackdrop from "./PageBackdrop";
 import Portal from "./Portal";
@@ -420,34 +425,18 @@ export default function UsersView() {
                       transition={{ duration: 0.2, ease: "easeOut" }}
                       className="overflow-hidden"
                     >
-                      {/* 자산 요약 — 펫 탭에서는 등록된 펫 이미지만 노출
-                          하도록 4-stat 칩 행 숨김. */}
-                      {mode !== "pet" && (
-                        <div className="px-3 md:px-4 pt-1 pb-2 grid grid-cols-4 gap-2">
-                          <ProfileStatChip
-                            label="포인트"
-                            value={e.points.toLocaleString("ko-KR")}
-                            tone="amber"
-                          />
-                          <ProfileStatChip
-                            label="랭킹점수"
-                            value={e.rank_score.toLocaleString("ko-KR")}
-                            tone="rose"
-                          />
-                          <ProfileStatChip
-                            label="전투력"
-                            value={e.center_power.toLocaleString("ko-KR")}
-                            tone="violet"
-                          />
-                          <ProfileStatChip
-                            label="도감"
-                            value={`${e.pokedex_count ?? 0}`}
-                            tone="emerald"
-                          />
-                        </div>
-                      )}
+                      {/* 자산 요약 — 사용자 요청으로 포인트/랭킹점수/전투력/
+                          펫점수 노출 제거. 도감만 모든 탭에서 공통 표시. */}
+                      <div className="px-3 md:px-4 pt-1 pb-2">
+                        <ProfileStatChip
+                          label="도감"
+                          value={`${e.pokedex_count ?? 0}`}
+                          tone="emerald"
+                        />
+                      </div>
                       {/* 펫 탭 — 등록된 펫 슬랩 카드 이미지 썸네일.
-                          탭하면 카드 정보 모달이 뜸. */}
+                          탭하면 카드 정보 모달이 뜸. 희귀도 내림차순
+                          정렬 (MUR → C). */}
                       {mode === "pet" &&
                         (e.main_cards?.length ?? 0) > 0 && (
                           <div className="px-3 md:px-4 pt-2 pb-3">
@@ -458,7 +447,11 @@ export default function UsersView() {
                                   "repeat(auto-fill, minmax(72px, 1fr))",
                               }}
                             >
-                              {(e.main_cards ?? []).map((mc) => {
+                              {[...(e.main_cards ?? [])]
+                                .sort((a, b) =>
+                                  compareRarity(a.rarity as Rarity, b.rarity as Rarity)
+                                )
+                                .map((mc) => {
                                 const rstyle =
                                   RARITY_STYLE[mc.rarity as Rarity];
                                 const card = getCard(mc.card_id);

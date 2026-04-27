@@ -101,6 +101,8 @@ export default function WalletView() {
         const ar = a.isDisplayed || a.isPet ? 1 : 0;
         const br = b.isDisplayed || b.isPet ? 1 : 0;
         if (ar !== br) return ar - br;
+        const rd = compareRarity(a.card.rarity, b.card.rarity);
+        if (rd !== 0) return rd;
         return b.grading.grade - a.grading.grade;
       });
   }, [pcl, petIds]);
