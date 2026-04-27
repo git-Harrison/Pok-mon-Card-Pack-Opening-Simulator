@@ -863,22 +863,10 @@ function GymDetailModal({
           {/* Footer — CTA */}
           <div className="border-t border-white/10 p-3 bg-zinc-950/95 space-y-2">
             {status === "owned_by_me" && (
-              <button
-                type="button"
-                onClick={onClaimDaily}
-                disabled={gym.ownership?.daily_claimed_today ?? false}
-                style={{ touchAction: "manipulation" }}
-                className={clsx(
-                  "w-full h-11 rounded-xl font-black text-sm",
-                  gym.ownership?.daily_claimed_today
-                    ? "bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed"
-                    : "bg-gradient-to-r from-emerald-500 to-cyan-500 text-zinc-950 active:scale-[0.98]"
-                )}
-              >
-                {gym.ownership?.daily_claimed_today
-                  ? "✅ 오늘 일일 보상 받음"
-                  : "🎁 일일 보상 받기 (+20,000,000P · 랭킹 +10,000)"}
-              </button>
+              <DailyClaimButton
+                gym={gym}
+                onClaimDaily={onClaimDaily}
+              />
             )}
             {status === "owned_by_me" && (
               <button
@@ -1268,5 +1256,49 @@ function DefenderStatCard({
         </li>
       </ul>
     </div>
+  );
+}
+
+/** 일일 보상 버튼 — 24h cooldown 지속, 1초마다 카운트다운 갱신. */
+function DailyClaimButton({
+  gym,
+  onClaimDaily,
+}: {
+  gym: Gym;
+  onClaimDaily: () => void;
+}) {
+  const [, force] = useState(0);
+  const claimed = gym.ownership?.daily_claimed_today ?? false;
+  const nextAt = gym.ownership?.daily_next_claim_at ?? null;
+  const remainingMs = nextAt
+    ? new Date(nextAt).getTime() - Date.now()
+    : 0;
+  const inCooldown = claimed && remainingMs > 0;
+
+  // 1초마다 재렌더 — 남은 시간 라이브 카운트다운.
+  useEffect(() => {
+    if (!inCooldown) return;
+    const t = setInterval(() => force((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [inCooldown]);
+
+  const remain = formatRemaining(remainingMs);
+  return (
+    <button
+      type="button"
+      onClick={onClaimDaily}
+      disabled={inCooldown}
+      style={{ touchAction: "manipulation" }}
+      className={clsx(
+        "w-full h-11 rounded-xl font-black text-sm",
+        inCooldown
+          ? "bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed"
+          : "bg-gradient-to-r from-emerald-500 to-cyan-500 text-zinc-950 active:scale-[0.98]"
+      )}
+    >
+      {inCooldown
+        ? `⏳ 다음 보상까지 ${remain}`
+        : "🎁 일일 보상 받기 (+20,000,000P · 랭킹 +10,000)"}
+    </button>
   );
 }

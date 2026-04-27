@@ -40,9 +40,12 @@ export interface GymOwnership {
   has_defense_deck: boolean;
   /** 방어 덱 셋업되어 있을 때 사용자 펫 3마리 정보. NPC 모드면 null. */
   defender_pokemon: DefenderPokemonInfo[] | null;
-  /** 본인 소유 체육관일 때 — 오늘(KST) 일일 보상 청구 여부.
-   *  null = 본인 소유 아님. */
+  /** 본인 소유 체육관일 때 — 24h 안에 (누군가) 일일 보상 받았는지.
+   *  null = 본인 소유 아님. 점령자 변경되어도 cooldown 유지. */
   daily_claimed_today: boolean | null;
+  /** 다음 일일 보상 청구 가능 시점 (ISO timestamp). null = 즉시 가능
+   *  또는 본인 소유 아님. */
+  daily_next_claim_at: string | null;
 }
 
 export interface GymActiveChallenge {
