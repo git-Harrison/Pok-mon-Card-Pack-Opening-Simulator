@@ -736,13 +736,13 @@ const USERS_SECTIONS: HelpSection[] = [
           "li",
           { key: 2 },
           h("b", { className: "text-rose-300" }, "남의 보관함 부수기 성공"),
-          " · +3,000점"
+          " · PCL10 파괴 +1,000점 / 그 외 +500점"
         ),
         h(
           "li",
           { key: 3 },
           h("b", { className: "text-emerald-300" }, "내 보관함 부수기 방어"),
-          " · +50점 (상대가 실패할 때마다)"
+          " · +150점 (상대가 실패할 때마다)"
         ),
         h(
           "li",
