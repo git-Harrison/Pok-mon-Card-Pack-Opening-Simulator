@@ -1,0 +1,1098 @@
+{
+  "code": "sv10",
+  "name": "로켓단의 영광",
+  "subtitle": "확장팩 · GLORY OF TEAM ROCKET",
+  "releaseDate": "2025-06-20",
+  "cardsPerPack": 5,
+  "packsPerBox": 30,
+  "totalCards": 132,
+  "pokellector_folder": 413,
+  "pokellector_set_code": "SV10",
+  "imageUrlPattern": "https://den-cards.pokellector.com/413/<pokellector_slug>.SV10.<jp_card_number>.<pokellector_asset_id>.png",
+  "imageUrlNote": "<jp_card_number> is the Japanese release number (1-132 without leading zeros). For all but the reordered trainer/item slots (KR 087-090, 091/092/094/095, 119/120/122/123, 128/129) it equals the 'number' field. See 'issues' for the explicit KR->JP swap table.",
+  "cards": [
+    {
+      "number": "001",
+      "name_en": "Pineco",
+      "name_ko": "피콘",
+      "rarity": "C",
+      "pokellector_slug": "Pineco",
+      "pokellector_asset_id": "57080"
+    },
+    {
+      "number": "002",
+      "name_en": "Shroomish",
+      "name_ko": "버섯꼬",
+      "rarity": "C",
+      "pokellector_slug": "Shroomish",
+      "pokellector_asset_id": "57081"
+    },
+    {
+      "number": "003",
+      "name_en": "Breloom",
+      "name_ko": "버섯모",
+      "rarity": "C",
+      "pokellector_slug": "Breloom",
+      "pokellector_asset_id": "57082"
+    },
+    {
+      "number": "004",
+      "name_en": "Mow Rotom",
+      "name_ko": "커트로토무",
+      "rarity": "C",
+      "pokellector_slug": "Mow-Rotom",
+      "pokellector_asset_id": "57083"
+    },
+    {
+      "number": "005",
+      "name_en": "Fomantis",
+      "name_ko": "짜랑랑",
+      "rarity": "C",
+      "pokellector_slug": "Fomantis",
+      "pokellector_asset_id": "57084"
+    },
+    {
+      "number": "006",
+      "name_en": "Lurantis",
+      "name_ko": "라란티스",
+      "rarity": "U",
+      "pokellector_slug": "Lurantis",
+      "pokellector_asset_id": "57085"
+    },
+    {
+      "number": "007",
+      "name_en": "Team Rocket's Blipbug",
+      "name_ko": "로켓단의 두루지벌레",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Blipbug",
+      "pokellector_asset_id": "57074"
+    },
+    {
+      "number": "008",
+      "name_en": "Team Rocket's Tarountula",
+      "name_ko": "로켓단의 타랜툴라",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Tarountula",
+      "pokellector_asset_id": "56885"
+    },
+    {
+      "number": "009",
+      "name_en": "Team Rocket's Spidops",
+      "name_ko": "로켓단의 트래피더",
+      "rarity": "R",
+      "pokellector_slug": "Team-Rockets-Spidops",
+      "pokellector_asset_id": "56886"
+    },
+    {
+      "number": "010",
+      "name_en": "Smoliv",
+      "name_ko": "미니브",
+      "rarity": "C",
+      "pokellector_slug": "Smoliv",
+      "pokellector_asset_id": "57086"
+    },
+    {
+      "number": "011",
+      "name_en": "Dolliv",
+      "name_ko": "올리뇨",
+      "rarity": "C",
+      "pokellector_slug": "Dolliv",
+      "pokellector_asset_id": "57087"
+    },
+    {
+      "number": "012",
+      "name_en": "Arboliva ex",
+      "name_ko": "올리르바ex",
+      "rarity": "RR",
+      "pokellector_slug": "Arboliva-ex",
+      "pokellector_asset_id": "57088"
+    },
+    {
+      "number": "013",
+      "name_en": "Growlithe",
+      "name_ko": "가디",
+      "rarity": "C",
+      "pokellector_slug": "Growlithe",
+      "pokellector_asset_id": "57089"
+    },
+    {
+      "number": "014",
+      "name_en": "Arcanine",
+      "name_ko": "윈디",
+      "rarity": "U",
+      "pokellector_slug": "Arcanine",
+      "pokellector_asset_id": "57090"
+    },
+    {
+      "number": "015",
+      "name_en": "Team Rocket's Moltres ex",
+      "name_ko": "로켓단의 파이어ex",
+      "rarity": "RR",
+      "pokellector_slug": "Team-Rockets-Moltres-ex",
+      "pokellector_asset_id": "57053"
+    },
+    {
+      "number": "016",
+      "name_en": "Team Rocket's Houndour",
+      "name_ko": "로켓단의 델빌",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Houndour",
+      "pokellector_asset_id": "57091"
+    },
+    {
+      "number": "017",
+      "name_en": "Team Rocket's Houndoom",
+      "name_ko": "로켓단의 헬가",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Houndoom",
+      "pokellector_asset_id": "57092"
+    },
+    {
+      "number": "018",
+      "name_en": "Torchic",
+      "name_ko": "아차모",
+      "rarity": "C",
+      "pokellector_slug": "Torchic",
+      "pokellector_asset_id": "56873"
+    },
+    {
+      "number": "019",
+      "name_en": "Combusken",
+      "name_ko": "영치코",
+      "rarity": "C",
+      "pokellector_slug": "Combusken",
+      "pokellector_asset_id": "56874"
+    },
+    {
+      "number": "020",
+      "name_en": "Blaziken",
+      "name_ko": "번치코",
+      "rarity": "R",
+      "pokellector_slug": "Blaziken",
+      "pokellector_asset_id": "56875"
+    },
+    {
+      "number": "021",
+      "name_en": "Heat Rotom",
+      "name_ko": "히트로토무",
+      "rarity": "C",
+      "pokellector_slug": "Heat-Rotom",
+      "pokellector_asset_id": "57093"
+    },
+    {
+      "number": "022",
+      "name_en": "Team Rocket's Articuno",
+      "name_ko": "로켓단의 프리져",
+      "rarity": "R",
+      "pokellector_slug": "Team-Rockets-Articuno",
+      "pokellector_asset_id": "57054"
+    },
+    {
+      "number": "023",
+      "name_en": "Clamperl",
+      "name_ko": "진주몽",
+      "rarity": "C",
+      "pokellector_slug": "Clampearl",
+      "pokellector_asset_id": "57055"
+    },
+    {
+      "number": "024",
+      "name_en": "Huntail",
+      "name_ko": "헌테일",
+      "rarity": "U",
+      "pokellector_slug": "Huntail",
+      "pokellector_asset_id": "57056"
+    },
+    {
+      "number": "025",
+      "name_en": "Gorebyss",
+      "name_ko": "분홍장이",
+      "rarity": "R",
+      "pokellector_slug": "Gorebyss",
+      "pokellector_asset_id": "57057"
+    },
+    {
+      "number": "026",
+      "name_en": "Snover",
+      "name_ko": "눈쓰개",
+      "rarity": "C",
+      "pokellector_slug": "Snover",
+      "pokellector_asset_id": "57094"
+    },
+    {
+      "number": "027",
+      "name_en": "Abomasnow",
+      "name_ko": "눈설왕",
+      "rarity": "U",
+      "pokellector_slug": "Abomasnow",
+      "pokellector_asset_id": "57095"
+    },
+    {
+      "number": "028",
+      "name_en": "Wash Rotom",
+      "name_ko": "워시로토무",
+      "rarity": "C",
+      "pokellector_slug": "Wash-Rotom",
+      "pokellector_asset_id": "57096"
+    },
+    {
+      "number": "029",
+      "name_en": "Arrokuda",
+      "name_ko": "찌로꼬치",
+      "rarity": "C",
+      "pokellector_slug": "Arrokuda",
+      "pokellector_asset_id": "57097"
+    },
+    {
+      "number": "030",
+      "name_en": "Barraskewda",
+      "name_ko": "꼬치조",
+      "rarity": "U",
+      "pokellector_slug": "Barraskewda",
+      "pokellector_asset_id": "57098"
+    },
+    {
+      "number": "031",
+      "name_en": "Cetoddle",
+      "name_ko": "터벅고래",
+      "rarity": "C",
+      "pokellector_slug": "Cetoddle",
+      "pokellector_asset_id": "56879"
+    },
+    {
+      "number": "032",
+      "name_en": "Cetitan ex",
+      "name_ko": "우락고래ex",
+      "rarity": "RR",
+      "pokellector_slug": "Cetitan-ex",
+      "pokellector_asset_id": "56880"
+    },
+    {
+      "number": "033",
+      "name_en": "Team Rocket's Zapdos",
+      "name_ko": "로켓단의 썬더",
+      "rarity": "R",
+      "pokellector_slug": "Team-Rockets-Zapdos",
+      "pokellector_asset_id": "57058"
+    },
+    {
+      "number": "034",
+      "name_en": "Team Rocket's Mareep",
+      "name_ko": "로켓단의 메리프",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Mareep",
+      "pokellector_asset_id": "56882"
+    },
+    {
+      "number": "035",
+      "name_en": "Team Rocket's Flaaffy",
+      "name_ko": "로켓단의 보송송",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Flaafy",
+      "pokellector_asset_id": "56883"
+    },
+    {
+      "number": "036",
+      "name_en": "Team Rocket's Ampharos",
+      "name_ko": "로켓단의 전룡",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Ampharos",
+      "pokellector_asset_id": "56884"
+    },
+    {
+      "number": "037",
+      "name_en": "Team Rocket's Drowzee",
+      "name_ko": "로켓단의 슬리프",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Drowzee",
+      "pokellector_asset_id": "57078"
+    },
+    {
+      "number": "038",
+      "name_en": "Team Rocket's Hypno",
+      "name_ko": "로켓단의 슬리퍼",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Hypno",
+      "pokellector_asset_id": "57079"
+    },
+    {
+      "number": "039",
+      "name_en": "Team Rocket's Mewtwo ex",
+      "name_ko": "로켓단의 뮤츠ex",
+      "rarity": "RR",
+      "pokellector_slug": "Team-Rockets-Mewtwo-ex",
+      "pokellector_asset_id": "56866"
+    },
+    {
+      "number": "040",
+      "name_en": "Team Rocket's Wobbuffet",
+      "name_ko": "로켓단의 마자용",
+      "rarity": "R",
+      "pokellector_slug": "Team-Rockets-Wobbuffet",
+      "pokellector_asset_id": "56881"
+    },
+    {
+      "number": "041",
+      "name_en": "Team Rocket's Chingling",
+      "name_ko": "로켓단의 랑딸랑",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Chingling",
+      "pokellector_asset_id": "57099"
+    },
+    {
+      "number": "042",
+      "name_en": "Team Rocket's Mimikyu",
+      "name_ko": "로켓단의 따라큐",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Mimikyu",
+      "pokellector_asset_id": "57100"
+    },
+    {
+      "number": "043",
+      "name_en": "Team Rocket's Dottler",
+      "name_ko": "로켓단의 레돔벌레",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Dottler",
+      "pokellector_asset_id": "57075"
+    },
+    {
+      "number": "044",
+      "name_en": "Team Rocket's Orbeetle",
+      "name_ko": "로켓단의 이올브",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Orbeetle",
+      "pokellector_asset_id": "57076"
+    },
+    {
+      "number": "045",
+      "name_en": "Mankey",
+      "name_ko": "망키",
+      "rarity": "C",
+      "pokellector_slug": "Mankey",
+      "pokellector_asset_id": "56905"
+    },
+    {
+      "number": "046",
+      "name_en": "Primeape",
+      "name_ko": "성원숭",
+      "rarity": "C",
+      "pokellector_slug": "Primeape",
+      "pokellector_asset_id": "56906"
+    },
+    {
+      "number": "047",
+      "name_en": "Annihilape",
+      "name_ko": "저승갓숭",
+      "rarity": "R",
+      "pokellector_slug": "Annihilape",
+      "pokellector_asset_id": "56907"
+    },
+    {
+      "number": "048",
+      "name_en": "Team Rocket's Larvitar",
+      "name_ko": "로켓단의 애버라스",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Larvitar",
+      "pokellector_asset_id": "57070"
+    },
+    {
+      "number": "049",
+      "name_en": "Team Rocket's Pupitar",
+      "name_ko": "로켓단의 데기라스",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Pupitar",
+      "pokellector_asset_id": "57071"
+    },
+    {
+      "number": "050",
+      "name_en": "Team Rocket's Tyranitar",
+      "name_ko": "로켓단의 마기라스",
+      "rarity": "R",
+      "pokellector_slug": "Team-Rockets-Tyranitar",
+      "pokellector_asset_id": "57072"
+    },
+    {
+      "number": "051",
+      "name_en": "Nosepass",
+      "name_ko": "코코파스",
+      "rarity": "C",
+      "pokellector_slug": "Nosepass",
+      "pokellector_asset_id": "57101"
+    },
+    {
+      "number": "052",
+      "name_en": "Probopass",
+      "name_ko": "대코파스",
+      "rarity": "U",
+      "pokellector_slug": "Probopass",
+      "pokellector_asset_id": "57102"
+    },
+    {
+      "number": "053",
+      "name_en": "Meditite",
+      "name_ko": "요가랑",
+      "rarity": "C",
+      "pokellector_slug": "Meditite",
+      "pokellector_asset_id": "57103"
+    },
+    {
+      "number": "054",
+      "name_en": "Medicham",
+      "name_ko": "요가램",
+      "rarity": "U",
+      "pokellector_slug": "Medicham",
+      "pokellector_asset_id": "57104"
+    },
+    {
+      "number": "055",
+      "name_en": "Regirock ex",
+      "name_ko": "레지락ex",
+      "rarity": "RR",
+      "pokellector_slug": "Regirock-ex",
+      "pokellector_asset_id": "57052"
+    },
+    {
+      "number": "056",
+      "name_en": "Team Rocket's Ekans",
+      "name_ko": "로켓단의 아보",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Ekans",
+      "pokellector_asset_id": "57105"
+    },
+    {
+      "number": "057",
+      "name_en": "Team Rocket's Arbok",
+      "name_ko": "로켓단의 아보크",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Arbok",
+      "pokellector_asset_id": "57106"
+    },
+    {
+      "number": "058",
+      "name_en": "Team Rocket's Nidoran♀",
+      "name_ko": "로켓단의 니드런♀",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Nidoran",
+      "pokellector_asset_id": "57107"
+    },
+    {
+      "number": "059",
+      "name_en": "Team Rocket's Nidorina",
+      "name_ko": "로켓단의 니드리나",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Nidorina",
+      "pokellector_asset_id": "57108"
+    },
+    {
+      "number": "060",
+      "name_en": "Team Rocket's Nidoqueen",
+      "name_ko": "로켓단의 니드퀸",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Nidoqueen",
+      "pokellector_asset_id": "57109"
+    },
+    {
+      "number": "061",
+      "name_en": "Team Rocket's Nidoran♂",
+      "name_ko": "로켓단의 니드런♂",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Nidoran",
+      "pokellector_asset_id": "57110"
+    },
+    {
+      "number": "062",
+      "name_en": "Team Rocket's Nidorino",
+      "name_ko": "로켓단의 니드리노",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Nidorino",
+      "pokellector_asset_id": "57111"
+    },
+    {
+      "number": "063",
+      "name_en": "Team Rocket's Nidoking ex",
+      "name_ko": "로켓단의 니드킹ex",
+      "rarity": "RR",
+      "pokellector_slug": "Team-Rockets-Nidoking-ex",
+      "pokellector_asset_id": "57112"
+    },
+    {
+      "number": "064",
+      "name_en": "Team Rocket's Zubat",
+      "name_ko": "로켓단의 주뱃",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Zubat",
+      "pokellector_asset_id": "57059"
+    },
+    {
+      "number": "065",
+      "name_en": "Team Rocket's Golbat",
+      "name_ko": "로켓단의 골뱃",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Golbat",
+      "pokellector_asset_id": "57060"
+    },
+    {
+      "number": "066",
+      "name_en": "Team Rocket's Crobat ex",
+      "name_ko": "로켓단의 크로뱃ex",
+      "rarity": "RR",
+      "pokellector_slug": "Team-Rockets-Crobat-ex",
+      "pokellector_asset_id": "57061"
+    },
+    {
+      "number": "067",
+      "name_en": "Team Rocket's Grimer",
+      "name_ko": "로켓단의 질퍽이",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Grimer",
+      "pokellector_asset_id": "57113"
+    },
+    {
+      "number": "068",
+      "name_en": "Team Rocket's Muk",
+      "name_ko": "로켓단의 질뻐기",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Muk",
+      "pokellector_asset_id": "57114"
+    },
+    {
+      "number": "069",
+      "name_en": "Team Rocket's Koffing",
+      "name_ko": "로켓단의 또가스",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Koffing",
+      "pokellector_asset_id": "57062"
+    },
+    {
+      "number": "070",
+      "name_en": "Team Rocket's Weezing",
+      "name_ko": "로켓단의 또도가스",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Weezing",
+      "pokellector_asset_id": "57063"
+    },
+    {
+      "number": "071",
+      "name_en": "Team Rocket's Murkrow",
+      "name_ko": "로켓단의 니로우",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Murkrow",
+      "pokellector_asset_id": "57115"
+    },
+    {
+      "number": "072",
+      "name_en": "Team Rocket's Sneasel",
+      "name_ko": "로켓단의 포푸니",
+      "rarity": "R",
+      "pokellector_slug": "Team-Rockets-Sneasel",
+      "pokellector_asset_id": "57064"
+    },
+    {
+      "number": "073",
+      "name_en": "Forretress",
+      "name_ko": "쏘콘",
+      "rarity": "U",
+      "pokellector_slug": "Forretress",
+      "pokellector_asset_id": "57116"
+    },
+    {
+      "number": "074",
+      "name_en": "Skarmory",
+      "name_ko": "무장조",
+      "rarity": "C",
+      "pokellector_slug": "Skarmory",
+      "pokellector_asset_id": "57117"
+    },
+    {
+      "number": "075",
+      "name_en": "Zamazenta",
+      "name_ko": "자마젠타",
+      "rarity": "R",
+      "pokellector_slug": "Zamazenta",
+      "pokellector_asset_id": "56876"
+    },
+    {
+      "number": "076",
+      "name_en": "Team Rocket's Rattata",
+      "name_ko": "로켓단의 꼬렛",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Rattata",
+      "pokellector_asset_id": "57118"
+    },
+    {
+      "number": "077",
+      "name_en": "Team Rocket's Raticate",
+      "name_ko": "로켓단의 레트라",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Raticate",
+      "pokellector_asset_id": "57119"
+    },
+    {
+      "number": "078",
+      "name_en": "Team Rocket's Meowth",
+      "name_ko": "로켓단의 나옹",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Meowth",
+      "pokellector_asset_id": "57120"
+    },
+    {
+      "number": "079",
+      "name_en": "Team Rocket's Persian ex",
+      "name_ko": "로켓단의 페르시온ex",
+      "rarity": "RR",
+      "pokellector_slug": "Team-Rockets-Persian-ex",
+      "pokellector_asset_id": "56868"
+    },
+    {
+      "number": "080",
+      "name_en": "Kangaskhan",
+      "name_ko": "캥카",
+      "rarity": "C",
+      "pokellector_slug": "Kangaskhan",
+      "pokellector_asset_id": "57121"
+    },
+    {
+      "number": "081",
+      "name_en": "Team Rocket's Porygon",
+      "name_ko": "로켓단의 폴리곤",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Porygon",
+      "pokellector_asset_id": "56869"
+    },
+    {
+      "number": "082",
+      "name_en": "Team Rocket's Porygon2",
+      "name_ko": "로켓단의 폴리곤2",
+      "rarity": "C",
+      "pokellector_slug": "Team-Rockets-Porygon-2",
+      "pokellector_asset_id": "56870"
+    },
+    {
+      "number": "083",
+      "name_en": "Team Rocket's Porygon-Z",
+      "name_ko": "로켓단의 폴리곤Z",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Porygon-Z",
+      "pokellector_asset_id": "56871"
+    },
+    {
+      "number": "084",
+      "name_en": "Taillow",
+      "name_ko": "테일로",
+      "rarity": "C",
+      "pokellector_slug": "Taillow",
+      "pokellector_asset_id": "57122"
+    },
+    {
+      "number": "085",
+      "name_en": "Swellow",
+      "name_ko": "스왈로",
+      "rarity": "C",
+      "pokellector_slug": "Swellow",
+      "pokellector_asset_id": "57123"
+    },
+    {
+      "number": "086",
+      "name_en": "Squawkabilly",
+      "name_ko": "시비꼬",
+      "rarity": "C",
+      "pokellector_slug": "Squawkabilly",
+      "pokellector_asset_id": "57124"
+    },
+    {
+      "number": "087",
+      "name_en": "Team Rocket's Venture Bomb",
+      "name_ko": "로켓단의 깜짝봄",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Venture-Bomb",
+      "pokellector_asset_id": "57066"
+    },
+    {
+      "number": "088",
+      "name_en": "Team Rocket's Receiver",
+      "name_ko": "로켓단의 리시버",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Receiver",
+      "pokellector_asset_id": "56887"
+    },
+    {
+      "number": "089",
+      "name_en": "Team Rocket's Pester-Bot",
+      "name_ko": "로켓단의 방해로봇",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Hindering-Robo",
+      "pokellector_asset_id": "57125"
+    },
+    {
+      "number": "090",
+      "name_en": "Team Rocket's Great Ball",
+      "name_ko": "로켓단의 슈퍼볼",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Great-Ball",
+      "pokellector_asset_id": "57065"
+    },
+    {
+      "number": "091",
+      "name_en": "Team Rocket's Petrel",
+      "name_ko": "로켓단의 람다",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Petrel",
+      "pokellector_asset_id": "57067"
+    },
+    {
+      "number": "092",
+      "name_en": "Team Rocket's Proton",
+      "name_ko": "로켓단의 랜스",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Proton",
+      "pokellector_asset_id": "57068"
+    },
+    {
+      "number": "093",
+      "name_en": "Team Rocket's Giovanni",
+      "name_ko": "로켓단의 비주기",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Giovanni",
+      "pokellector_asset_id": "56890"
+    },
+    {
+      "number": "094",
+      "name_en": "Team Rocket's Ariana",
+      "name_ko": "로켓단의 아테나",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Ariana",
+      "pokellector_asset_id": "56888"
+    },
+    {
+      "number": "095",
+      "name_en": "Team Rocket's Archer",
+      "name_ko": "로켓단의 아폴로",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Archer",
+      "pokellector_asset_id": "56889"
+    },
+    {
+      "number": "096",
+      "name_en": "Team Rocket's Watchtower",
+      "name_ko": "로켓단의 감시탑",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Watchtower",
+      "pokellector_asset_id": "57126"
+    },
+    {
+      "number": "097",
+      "name_en": "Team Rocket's Factory",
+      "name_ko": "로켓단의 팩토리",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rockets-Factory",
+      "pokellector_asset_id": "57127"
+    },
+    {
+      "number": "098",
+      "name_en": "Team Rocket Energy",
+      "name_ko": "로켓단 에너지",
+      "rarity": "U",
+      "pokellector_slug": "Team-Rocket-Energy",
+      "pokellector_asset_id": "56891"
+    },
+    {
+      "number": "099",
+      "name_en": "Team Rocket's Spidops",
+      "name_ko": "로켓단의 트래피더",
+      "rarity": "AR",
+      "pokellector_slug": "Team-Rockets-Spidops-ex",
+      "pokellector_asset_id": "57139"
+    },
+    {
+      "number": "100",
+      "name_en": "Team Rocket's Houndoom",
+      "name_ko": "로켓단의 헬가",
+      "rarity": "AR",
+      "pokellector_slug": "Team-Rockets-Houndoom",
+      "pokellector_asset_id": "57140"
+    },
+    {
+      "number": "101",
+      "name_en": "Blaziken",
+      "name_ko": "번치코",
+      "rarity": "AR",
+      "pokellector_slug": "Blaziken",
+      "pokellector_asset_id": "57141"
+    },
+    {
+      "number": "102",
+      "name_en": "Clamperl",
+      "name_ko": "진주몽",
+      "rarity": "AR",
+      "pokellector_slug": "Clampearl",
+      "pokellector_asset_id": "57069"
+    },
+    {
+      "number": "103",
+      "name_en": "Team Rocket's Wobbuffet",
+      "name_ko": "로켓단의 마자용",
+      "rarity": "AR",
+      "pokellector_slug": "Team-Rockets-Wobbuffet",
+      "pokellector_asset_id": "56878"
+    },
+    {
+      "number": "104",
+      "name_en": "Team Rocket's Orbeetle",
+      "name_ko": "로켓단의 이올브",
+      "rarity": "AR",
+      "pokellector_slug": "Team-Rockets-Orbeetle",
+      "pokellector_asset_id": "57077"
+    },
+    {
+      "number": "105",
+      "name_en": "Team Rocket's Weezing",
+      "name_ko": "로켓단의 또도가스",
+      "rarity": "AR",
+      "pokellector_slug": "Team-Rockets-Weezing",
+      "pokellector_asset_id": "57142"
+    },
+    {
+      "number": "106",
+      "name_en": "Team Rocket's Murkrow",
+      "name_ko": "로켓단의 니로우",
+      "rarity": "AR",
+      "pokellector_slug": "Team-Rockets-Murkrow",
+      "pokellector_asset_id": "57130"
+    },
+    {
+      "number": "107",
+      "name_en": "Zamazenta",
+      "name_ko": "자마젠타",
+      "rarity": "AR",
+      "pokellector_slug": "Zamazenta",
+      "pokellector_asset_id": "56877"
+    },
+    {
+      "number": "108",
+      "name_en": "Team Rocket's Raticate",
+      "name_ko": "로켓단의 레트라",
+      "rarity": "AR",
+      "pokellector_slug": "Team-Rockets-Raticate",
+      "pokellector_asset_id": "57143"
+    },
+    {
+      "number": "109",
+      "name_en": "Team Rocket's Meowth",
+      "name_ko": "로켓단의 나옹",
+      "rarity": "AR",
+      "pokellector_slug": "Team-Rockets-Meowth",
+      "pokellector_asset_id": "56872"
+    },
+    {
+      "number": "110",
+      "name_en": "Kangaskhan",
+      "name_ko": "캥카",
+      "rarity": "AR",
+      "pokellector_slug": "Kangaskhan",
+      "pokellector_asset_id": "57129"
+    },
+    {
+      "number": "111",
+      "name_en": "Arboliva ex",
+      "name_ko": "올리르바ex",
+      "rarity": "SR",
+      "pokellector_slug": "Arboliva-ex",
+      "pokellector_asset_id": "57144"
+    },
+    {
+      "number": "112",
+      "name_en": "Team Rocket's Moltres ex",
+      "name_ko": "로켓단의 파이어ex",
+      "rarity": "SR",
+      "pokellector_slug": "Team-Rockets-Moltres-ex",
+      "pokellector_asset_id": "57073"
+    },
+    {
+      "number": "113",
+      "name_en": "Cetitan ex",
+      "name_ko": "우락고래ex",
+      "rarity": "SR",
+      "pokellector_slug": "Cetitan-ex",
+      "pokellector_asset_id": "57145"
+    },
+    {
+      "number": "114",
+      "name_en": "Team Rocket's Mewtwo ex",
+      "name_ko": "로켓단의 뮤츠ex",
+      "rarity": "SR",
+      "pokellector_slug": "Team-Rockets-Mewtwo-ex",
+      "pokellector_asset_id": "57146"
+    },
+    {
+      "number": "115",
+      "name_en": "Regirock ex",
+      "name_ko": "레지락ex",
+      "rarity": "SR",
+      "pokellector_slug": "Regirock-ex",
+      "pokellector_asset_id": "57147"
+    },
+    {
+      "number": "116",
+      "name_en": "Team Rocket's Nidoking ex",
+      "name_ko": "로켓단의 니드킹ex",
+      "rarity": "SR",
+      "pokellector_slug": "Team-Rockets-Nidoking-ex",
+      "pokellector_asset_id": "57128"
+    },
+    {
+      "number": "117",
+      "name_en": "Team Rocket's Crobat ex",
+      "name_ko": "로켓단의 크로뱃ex",
+      "rarity": "SR",
+      "pokellector_slug": "Team-Rockets-Crobat-ex",
+      "pokellector_asset_id": "57148"
+    },
+    {
+      "number": "118",
+      "name_en": "Team Rocket's Persian ex",
+      "name_ko": "로켓단의 페르시온ex",
+      "rarity": "SR",
+      "pokellector_slug": "Team-Rockets-Persian-ex",
+      "pokellector_asset_id": "57149"
+    },
+    {
+      "number": "119",
+      "name_en": "Team Rocket's Petrel",
+      "name_ko": "로켓단의 람다",
+      "rarity": "SR",
+      "pokellector_slug": "Team-Rockets-Petrel",
+      "pokellector_asset_id": "57153"
+    },
+    {
+      "number": "120",
+      "name_en": "Team Rocket's Proton",
+      "name_ko": "로켓단의 랜스",
+      "rarity": "SR",
+      "pokellector_slug": "Team-Rockets-Proton",
+      "pokellector_asset_id": "57154"
+    },
+    {
+      "number": "121",
+      "name_en": "Team Rocket's Giovanni",
+      "name_ko": "로켓단의 비주기",
+      "rarity": "SR",
+      "pokellector_slug": "Team-Rockets-Giovanni",
+      "pokellector_asset_id": "57152"
+    },
+    {
+      "number": "122",
+      "name_en": "Team Rocket's Ariana",
+      "name_ko": "로켓단의 아테나",
+      "rarity": "SR",
+      "pokellector_slug": "Team-Rockets-Ariana",
+      "pokellector_asset_id": "57150"
+    },
+    {
+      "number": "123",
+      "name_en": "Team Rocket's Archer",
+      "name_ko": "로켓단의 아폴로",
+      "rarity": "SR",
+      "pokellector_slug": "Team-Rockets-Archer",
+      "pokellector_asset_id": "57151"
+    },
+    {
+      "number": "124",
+      "name_en": "Team Rocket's Moltres ex",
+      "name_ko": "로켓단의 파이어ex",
+      "rarity": "SAR",
+      "pokellector_slug": "Team-Rockets-Moltres-ex",
+      "pokellector_asset_id": "57155"
+    },
+    {
+      "number": "125",
+      "name_en": "Team Rocket's Mewtwo ex",
+      "name_ko": "로켓단의 뮤츠ex",
+      "rarity": "SAR",
+      "pokellector_slug": "Team-Rockets-Mewtwo-ex",
+      "pokellector_asset_id": "57156"
+    },
+    {
+      "number": "126",
+      "name_en": "Team Rocket's Nidoking ex",
+      "name_ko": "로켓단의 니드킹ex",
+      "rarity": "SAR",
+      "pokellector_slug": "Team-Rockets-Nidoking-ex",
+      "pokellector_asset_id": "57157"
+    },
+    {
+      "number": "127",
+      "name_en": "Team Rocket's Crobat ex",
+      "name_ko": "로켓단의 크로뱃ex",
+      "rarity": "SAR",
+      "pokellector_slug": "Team-Rockets-Crobat-ex",
+      "pokellector_asset_id": "57158"
+    },
+    {
+      "number": "128",
+      "name_en": "Team Rocket's Giovanni",
+      "name_ko": "로켓단의 비주기",
+      "rarity": "SAR",
+      "pokellector_slug": "Team-Rockets-Giovanni",
+      "pokellector_asset_id": "57160"
+    },
+    {
+      "number": "129",
+      "name_en": "Team Rocket's Ariana",
+      "name_ko": "로켓단의 아테나",
+      "rarity": "SAR",
+      "pokellector_slug": "Team-Rockets-Ariana",
+      "pokellector_asset_id": "57159"
+    },
+    {
+      "number": "130",
+      "name_en": "Team Rocket's Mewtwo ex",
+      "name_ko": "로켓단의 뮤츠ex",
+      "rarity": "UR",
+      "pokellector_slug": "Team-Rockets-Mewtwo-ex",
+      "pokellector_asset_id": "57161"
+    },
+    {
+      "number": "131",
+      "name_en": "Team Rocket's Crobat ex",
+      "name_ko": "로켓단의 크로뱃ex",
+      "rarity": "UR",
+      "pokellector_slug": "Team-Rockets-Crobat-ex",
+      "pokellector_asset_id": "57162"
+    },
+    {
+      "number": "132",
+      "name_en": "Jamming Tower",
+      "name_ko": "재밍타워",
+      "rarity": "UR",
+      "pokellector_slug": "Jamming-Tower",
+      "pokellector_asset_id": "57163"
+    }
+  ],
+  "issues": [
+    "Cards 087-090 (items) and 091-095 (Team Rocket Boss/Admin trainers) are reordered between Japanese and Korean releases. The Korean numbering is canonical for this JSON. Pokellector image assets follow the JP numbering, so the slug+asset pair recorded for each KR number points to the correct character/item printed on the Korean card (verified by direct visual comparison of Korean card scans from tcgbox.co.kr against the Pokellector den-cards CDN images).",
+    "KR-to-JP item swap: KR 087 깜짝봄 = JP 089 Venture-Bomb; KR 088 리시버 = JP 090 Receiver; KR 089 방해로봇 = JP 087 Pester-Bot/Hindering-Robo; KR 090 슈퍼볼 = JP 088 Great-Ball.",
+    "KR-to-JP supporter swap: KR 091 람다 = JP 094 Petrel; KR 092 랜스 = JP 095 Proton; KR 093 비주기 = JP 093 Giovanni (no swap); KR 094 아테나 = JP 091 Ariana; KR 095 아폴로 = JP 092 Archer. Same pattern applies to 119-123 SR trainers (KR 119/120/121/122/123 = JP 122/123/121/119/120) and 128-129 SAR trainers (KR 128 비주기 SAR = JP 129 Giovanni SAR; KR 129 아테나 SAR = JP 128 Ariana SAR).",
+    "The image URL for each card is constructed as https://den-cards.pokellector.com/413/<pokellector_slug>.SV10.<JP_NUMBER>.<pokellector_asset_id>.png . Because the JSON uses Korean numbering, do NOT splice the 'number' field directly into the URL for the reordered slots; consumers should derive the JP number from the slug or use a lookup table. For all non-reordered cards the JP number equals the KR number.",
+    "Card 099 Pokellector slug is 'Team-Rockets-Spidops-ex' — this is a Pokellector slug typo; the actual card is the non-ex Illustration Rare of #009 Team Rocket's Spidops. Slug retained as-is so the image URL resolves.",
+    "Card 035 Pokellector slug is 'Team-Rockets-Flaafy' (Pokellector typo for Flaaffy). Slug retained as-is so the image URL resolves.",
+    "Cards 023 and 102 Pokellector slug is 'Clampearl' (Pokellector typo for Clamperl). Slug retained as-is so the image URL resolves.",
+    "Card 132 Jamming Tower carries the ACE SPEC mechanic (visible badge on the Korean scan), but its print rarity per Pokellector and Bulbapedia is UR (Hyper Rare), not ACE SPEC Rare. Recorded as 'UR'. The set has no separate ACE SPEC Rare entries.",
+    "Korean names for trainer SR (119-123) and SAR (128-129) cards verified by downloading and visually inspecting Korean card scans from tcgbox.co.kr (cards 119/120/121/122/123/128/129).",
+    "Korean names for items 087-090 verified by downloading and visually inspecting Korean card scans from tcgbox.co.kr (cards 087/088/089/090)."
+  ],
+  "stats": {
+    "total": 132,
+    "name_ko_filled": 132,
+    "name_ko_null": 0,
+    "rarity_distribution": {
+      "C": 47,
+      "U": 33,
+      "R": 10,
+      "RR": 8,
+      "AR": 12,
+      "SR": 13,
+      "SAR": 6,
+      "UR": 3
+    }
+  }
+}

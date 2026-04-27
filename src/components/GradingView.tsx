@@ -948,7 +948,6 @@ function BulkResults({
   const fail = result.fail_count ?? 0;
   const skipped = result.skipped_count ?? 0;
   const capSkipped = result.cap_skipped_count ?? 0;
-  const bonus = result.bonus ?? 0;
   const autoSoldCount = result.auto_sold_count ?? 0;
   const autoSoldEarned = result.auto_sold_earned ?? 0;
 
@@ -969,8 +968,12 @@ function BulkResults({
           <SummaryChip label="성공" value={`${success}`} tone="emerald" />
           <SummaryChip label="실패" value={`${fail}`} tone="rose" />
           <SummaryChip
-            label="보너스"
-            value={`+${bonus.toLocaleString("ko-KR")}p`}
+            label="자동판매"
+            value={
+              autoSoldCount > 0
+                ? `+${autoSoldEarned.toLocaleString("ko-KR")}p`
+                : "—"
+            }
             tone="amber"
           />
         </div>
@@ -1073,7 +1076,9 @@ function BulkResultRow({
             ? "감별 실패 · 카드 소실"
             : isGraded
             ? `${PSA_LABEL[row.grade as number] ?? ""}${
-                row.bonus ? ` · +${row.bonus.toLocaleString("ko-KR")}p` : ""
+                row.sell_payout
+                  ? ` · 자동판매 +${row.sell_payout.toLocaleString("ko-KR")}p`
+                  : ""
               }`
             : row.error === "not_owned"
             ? "보유하지 않아 건너뜀"
