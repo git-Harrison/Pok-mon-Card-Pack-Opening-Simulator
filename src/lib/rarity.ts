@@ -138,4 +138,5 @@ export const BOX_COST: Record<string, number> = {
   m1l: 45_000,
   m1s: 45_000,
   m3: 50_000,
+  m4: 50_000,
 };

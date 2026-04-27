@@ -166,6 +166,7 @@ export async function fetchWallet(userId: string): Promise<WalletSnapshot> {
     m1l: 0,
     m1s: 0,
     m3: 0,
+    m4: 0,
   };
   let totalCards = 0;
   for (const row of packsRes.data ?? []) {

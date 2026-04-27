@@ -8,16 +8,16 @@ import type { Card, Rarity } from "@/lib/types";
 const supabase = createClient();
 
 export const RARITY_TOTALS: Record<Rarity, number> = {
-  MUR: 2,
+  MUR: 3,
   UR: 14,
-  SAR: 70,
+  SAR: 79,
   MA: 5,
-  SR: 85,
-  AR: 74,
-  RR: 95,
-  R: 98,
-  U: 199,
-  C: 405,
+  SR: 100,
+  AR: 86,
+  RR: 103,
+  R: 104,
+  U: 234,
+  C: 439,
 };
 
 export const RARITY_COMPLETION_BONUS: Record<Rarity, number> = {

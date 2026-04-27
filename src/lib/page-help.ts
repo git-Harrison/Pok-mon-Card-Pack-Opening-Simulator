@@ -1660,16 +1660,17 @@ const SET_SECTIONS: HelpSection[] = [
     body: h(
       "ul",
       { className: "grid grid-cols-2 gap-x-3" },
-      h("li", { key: 1 }, h("b", null, "m3"), " · 50,000p"),
-      h("li", { key: 2 }, h("b", null, "m2a"), " · 50,000p"),
-      h("li", { key: 3 }, h("b", null, "m1l"), " · 45,000p"),
-      h("li", { key: 4 }, h("b", null, "m1s"), " · 45,000p"),
-      h("li", { key: 5 }, h("b", null, "m2"), " · 40,000p"),
-      h("li", { key: 6 }, h("b", null, "sv8a"), " · 40,000p"),
-      h("li", { key: 7 }, h("b", null, "sv2a"), " · 35,000p"),
-      h("li", { key: 8 }, h("b", null, "sv10"), " · 35,000p"),
-      h("li", { key: 9 }, h("b", null, "sv8"), " · 30,000p"),
-      h("li", { key: 10 }, h("b", null, "sv5a"), " · 30,000p")
+      h("li", { key: 1 }, h("b", null, "m4"), " · 50,000p"),
+      h("li", { key: 2 }, h("b", null, "m3"), " · 50,000p"),
+      h("li", { key: 3 }, h("b", null, "m2a"), " · 50,000p"),
+      h("li", { key: 4 }, h("b", null, "m1l"), " · 45,000p"),
+      h("li", { key: 5 }, h("b", null, "m1s"), " · 45,000p"),
+      h("li", { key: 6 }, h("b", null, "m2"), " · 40,000p"),
+      h("li", { key: 7 }, h("b", null, "sv8a"), " · 40,000p"),
+      h("li", { key: 8 }, h("b", null, "sv2a"), " · 35,000p"),
+      h("li", { key: 9 }, h("b", null, "sv10"), " · 35,000p"),
+      h("li", { key: 10 }, h("b", null, "sv8"), " · 30,000p"),
+      h("li", { key: 11 }, h("b", null, "sv5a"), " · 30,000p")
     ),
   },
   {
