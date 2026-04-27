@@ -1,0 +1,428 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import clsx from "clsx";
+import { useAuth } from "@/lib/auth";
+import {
+  computeUserCenterPower,
+  fetchMyPets,
+  setGymDefenseDeck,
+  type RawPetGrading,
+} from "@/lib/gym/db";
+import type { Gym } from "@/lib/gym/types";
+import { effectiveness } from "@/lib/wild/typechart";
+import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
+import { CARD_NAME_TO_TYPE } from "@/lib/wild/name-to-type";
+import { getCard } from "@/lib/sets";
+import { RARITY_STYLE } from "@/lib/rarity";
+import { slabStats } from "@/lib/wild/stats";
+import Portal from "./Portal";
+
+interface MyPet {
+  grading_id: string;
+  card_id: string;
+  card_name: string;
+  rarity: keyof typeof RARITY_STYLE;
+  grade: number;
+  type: WildType | null;
+  imageUrl?: string;
+  baseHp: number;
+  baseAtk: number;
+}
+
+function resolvePetType(name: string): WildType | null {
+  if (CARD_NAME_TO_TYPE[name] !== undefined) return CARD_NAME_TO_TYPE[name];
+  const base = name
+    .replace(/\s*\(골드\)\s*$/, "")
+    .replace(/\s*\(SV\)\s*$/, "")
+    .replace(/\s+(ex|V|VMAX|GX|BREAK)\s*$/i, "")
+    .trim();
+  return CARD_NAME_TO_TYPE[base] ?? null;
+}
+
+function mergePet(g: RawPetGrading): MyPet | null {
+  const card = getCard(g.card_id);
+  const rarity = (card?.rarity ?? g.rarity) as keyof typeof RARITY_STYLE;
+  const name = card?.name ?? g.card_id;
+  const stats = slabStats(rarity, g.grade);
+  return {
+    grading_id: g.grading_id,
+    card_id: g.card_id,
+    card_name: name,
+    rarity,
+    grade: g.grade,
+    type: card ? resolvePetType(card.name) : null,
+    imageUrl: card?.imageUrl,
+    baseHp: stats.hp,
+    baseAtk: stats.atk,
+  };
+}
+
+/** 점령자가 자기 펫 3마리로 방어 덱 셋업하는 모달.
+ *  GymChallengeOverlay 의 PickerPhase 와 거의 동일한 UX 지만, 도전이
+ *  아니라 set_gym_defense_deck RPC 를 호출. 실패해도 챌린지 락은 안
+ *  잡으므로 더 가벼움. */
+export default function GymDefenseDeckModal({
+  gym,
+  onClose,
+  onSaved,
+}: {
+  gym: Gym;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { user } = useAuth();
+  const reduce = useReducedMotion();
+
+  const [pets, setPets] = useState<MyPet[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [centerPower, setCenterPower] = useState<number>(0);
+  const [order, setOrder] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const userId = user?.id ?? null;
+
+  useEffect(() => {
+    if (!userId) return;
+    let alive = true;
+    (async () => {
+      const [raw, cp] = await Promise.all([
+        fetchMyPets(userId),
+        computeUserCenterPower(userId),
+      ]);
+      if (!alive) return;
+      const merged = raw.map(mergePet).filter((p): p is MyPet => p !== null);
+      setPets(merged);
+      setCenterPower(cp);
+      setLoading(false);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  const togglePet = useCallback((id: string) => {
+    setOrder((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= 3) return prev;
+      return [...prev, id];
+    });
+  }, []);
+
+  const movePet = useCallback((id: string, dir: -1 | 1) => {
+    setOrder((prev) => {
+      const idx = prev.indexOf(id);
+      if (idx < 0) return prev;
+      const next = [...prev];
+      const target = idx + dir;
+      if (target < 0 || target >= next.length) return prev;
+      const t = next[target];
+      next[target] = next[idx];
+      next[idx] = t;
+      return next;
+    });
+  }, []);
+
+  const orderedPets = useMemo(() => {
+    const map = new Map(pets.map((p) => [p.grading_id, p]));
+    return order
+      .map((id) => map.get(id))
+      .filter((p): p is MyPet => Boolean(p));
+  }, [order, pets]);
+
+  const previewBonus = useCallback(
+    (slot: number, basePet: MyPet) => {
+      const ratio = slot === 1 ? 0.10 : slot === 2 ? 0.08 : 0.06;
+      const raw = Math.round((centerPower ?? 0) * ratio);
+      const cap = Math.round(basePet.baseAtk * 1.5);
+      return Math.min(raw, cap);
+    },
+    [centerPower]
+  );
+
+  const onSave = useCallback(async () => {
+    if (!userId) return;
+    if (order.length !== 3) {
+      setError("펫 3마리를 선택해주세요.");
+      return;
+    }
+    setError(null);
+    setSaving(true);
+
+    const idMap = new Map(pets.map((p) => [p.grading_id, p]));
+    const selected = order
+      .map((id) => idMap.get(id))
+      .filter((p): p is MyPet => Boolean(p));
+    if (selected.length !== 3) {
+      setError("펫 정보가 일치하지 않아요.");
+      setSaving(false);
+      return;
+    }
+
+    const gradingIds = selected.map((p) => p.grading_id);
+    const petTypes = selected.map((p) => p.type ?? "노말");
+    const res = await setGymDefenseDeck(userId, gym.id, gradingIds, petTypes);
+    setSaving(false);
+    if (!res.ok) {
+      setError(res.error ?? "방어 덱 설정 실패");
+      return;
+    }
+    onSaved();
+  }, [userId, order, pets, gym.id, onSaved]);
+
+  return (
+    <Portal>
+      <motion.div
+        className="fixed inset-0 z-[110] bg-black/90 flex items-end md:items-center justify-center px-2 md:px-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+      >
+        <motion.div
+          className="relative w-full max-w-md bg-zinc-950 border border-white/10 rounded-2xl flex flex-col overflow-hidden max-h-[92vh]"
+          onClick={(e) => e.stopPropagation()}
+          initial={reduce ? false : { y: 24, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={reduce ? { opacity: 0 } : { y: 24, opacity: 0 }}
+        >
+          <div className="px-3 py-2 border-b border-white/10 flex items-center gap-2">
+            <span aria-hidden className="text-base">🛡️</span>
+            <h2 className="text-sm font-black text-white truncate flex-1">
+              {gym.name} · 방어 덱 설정
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="shrink-0 w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-sm"
+              aria-label="닫기"
+              style={{ touchAction: "manipulation" }}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-3">
+            <div className="rounded-xl border border-fuchsia-400/30 bg-fuchsia-400/[0.06] px-3 py-2 text-[11px] text-fuchsia-100 leading-snug">
+              내 펫 3마리를 골라 슬롯을 정하세요. 다른 트레이너가 도전하면
+              관장 NPC 포켓몬 대신 이 3마리가 적으로 등장합니다. 패배 시
+              덱은 자동 초기화돼요.
+            </div>
+
+            {/* 출전 순서 */}
+            <section className="rounded-xl border border-amber-400/30 bg-amber-400/[0.06] p-2.5">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[11px] uppercase tracking-wider text-amber-200">
+                  방어 순서 ({order.length}/3)
+                </p>
+                <p className="text-[10px] text-zinc-400 tabular-nums">
+                  내 전투력 {centerPower.toLocaleString("ko-KR")}
+                </p>
+              </div>
+              {orderedPets.length === 0 && (
+                <p className="text-[11px] text-zinc-500 text-center py-2">
+                  아래에서 펫 3마리를 선택하세요.
+                </p>
+              )}
+              <ul className="flex flex-col gap-1">
+                {orderedPets.map((p, idx) => {
+                  const slot = idx + 1;
+                  const bonus = previewBonus(slot, p);
+                  return (
+                    <li
+                      key={p.grading_id}
+                      className="rounded-lg bg-zinc-900/70 border border-white/10 px-2 py-1.5 flex items-center gap-2"
+                    >
+                      <span className="text-[10px] font-black text-amber-200 w-6 text-center">
+                        #{slot}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[12px] font-bold text-white truncate">
+                          {p.card_name}
+                        </p>
+                        <p className="text-[9px] text-zinc-400">
+                          HP {p.baseHp} · ATK {p.baseAtk}
+                          {bonus > 0 && (
+                            <span className="text-amber-300"> (+{bonus})</span>
+                          )}
+                          {p.type && (
+                            <>
+                              {" · "}
+                              <span className="text-zinc-200">{p.type}</span>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => movePet(p.grading_id, -1)}
+                          disabled={idx === 0}
+                          className="w-6 h-6 rounded bg-white/5 disabled:opacity-30 text-white text-[10px]"
+                          aria-label="앞 슬롯으로"
+                        >
+                          ▲
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => movePet(p.grading_id, +1)}
+                          disabled={idx === orderedPets.length - 1}
+                          className="w-6 h-6 rounded bg-white/5 disabled:opacity-30 text-white text-[10px]"
+                          aria-label="뒤 슬롯으로"
+                        >
+                          ▼
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => togglePet(p.grading_id)}
+                          className="w-6 h-6 rounded bg-rose-500/30 hover:bg-rose-500/50 text-white text-[10px]"
+                          aria-label="제거"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+
+            {/* 펫 풀 */}
+            <section className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
+              <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-1.5">
+                내 펫 슬랩 (PCL10 · 펫 등록)
+              </p>
+              {loading ? (
+                <p className="text-[11px] text-zinc-500 py-3 text-center">로딩 중...</p>
+              ) : pets.length === 0 ? (
+                <p className="text-[11px] text-zinc-500 py-3 text-center">
+                  펫 등록된 PCL10 슬랩이 없어요.
+                </p>
+              ) : (
+                <ul className="grid grid-cols-2 gap-1.5">
+                  {pets.map((p) => {
+                    const idx = order.indexOf(p.grading_id);
+                    const selected = idx >= 0;
+                    const eff = p.type ? effectiveness(p.type, gym.type) : 1;
+                    return (
+                      <li key={p.grading_id}>
+                        <button
+                          type="button"
+                          onClick={() => togglePet(p.grading_id)}
+                          style={{ touchAction: "manipulation" }}
+                          className={clsx(
+                            "relative w-full rounded-lg border p-1.5 text-left flex items-center gap-1.5 transition active:scale-[0.98]",
+                            selected
+                              ? "border-fuchsia-400/60 bg-fuchsia-400/10"
+                              : "border-white/10 bg-zinc-900/60 hover:bg-white/5"
+                          )}
+                        >
+                          {selected && (
+                            <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-fuchsia-500 text-white text-[10px] font-black flex items-center justify-center">
+                              {idx + 1}
+                            </span>
+                          )}
+                          <div
+                            className={clsx(
+                              "w-8 h-11 rounded overflow-hidden ring-1 bg-zinc-900 shrink-0",
+                              RARITY_STYLE[p.rarity].frame
+                            )}
+                          >
+                            {p.imageUrl && (
+                              <img
+                                src={p.imageUrl}
+                                alt=""
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                                className="w-full h-full object-contain"
+                                draggable={false}
+                              />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] font-bold text-white truncate">
+                              {p.card_name}
+                            </p>
+                            <p className="text-[9px] text-zinc-400 leading-tight">
+                              HP {p.baseHp} · ATK {p.baseAtk}
+                            </p>
+                            <div className="flex items-center gap-0.5 mt-0.5">
+                              {p.type ? (
+                                <span
+                                  className={clsx(
+                                    "px-1 py-[1px] rounded text-[8px] font-black",
+                                    TYPE_STYLE[p.type].badge
+                                  )}
+                                >
+                                  {p.type}
+                                </span>
+                              ) : (
+                                <span className="text-[8px] text-zinc-500">無속성</span>
+                              )}
+                              {p.type && eff !== 1 && (
+                                <span
+                                  className={clsx(
+                                    "text-[8px] font-black",
+                                    eff > 1 ? "text-emerald-300" : "text-rose-300"
+                                  )}
+                                >
+                                  ×{eff}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+
+            {error && (
+              <p className="text-[11px] text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">
+                {error}
+              </p>
+            )}
+          </div>
+
+          <div className="border-t border-white/10 p-3 bg-zinc-950/95">
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={order.length !== 3 || saving}
+              style={{ touchAction: "manipulation" }}
+              className={clsx(
+                "w-full h-11 rounded-xl font-black text-sm",
+                order.length === 3 && !saving
+                  ? "bg-gradient-to-r from-fuchsia-500 to-violet-500 text-white active:scale-[0.98]"
+                  : "bg-white/5 text-zinc-500 cursor-not-allowed"
+              )}
+            >
+              {saving ? "저장 중..." : "🛡️ 방어 덱 저장"}
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </Portal>
+  );
+}

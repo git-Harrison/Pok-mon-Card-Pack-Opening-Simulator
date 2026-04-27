@@ -608,11 +608,14 @@ function BattlePlayback({
 
   useEffect(() => {
     if (turnIdx >= turns.length) {
-      // 마지막 턴까지 다 본 후 짧게 대기 후 result 화면.
-      const t = setTimeout(onEnd, 900);
+      // 마지막 턴까지 다 본 후 결과 화면 전환 — 사용자가 마지막 데미지/HP
+      // 변화를 체감할 시간을 주기 위해 1.4s 대기.
+      const t = setTimeout(onEnd, 1400);
       return () => clearTimeout(t);
     }
-    const speed = reduce ? 250 : 700;
+    // 첫 턴은 등장 연출 + 사용자 인지 시간 위해 1.5s 추가 대기.
+    // 이후 턴은 1200ms 간격 — 데미지 부유 / HP 감소 / 흔들림 다 보기 충분.
+    const speed = reduce ? 350 : turnIdx === 0 ? 1500 : 1200;
     const t = setTimeout(() => {
       const turn: BattleTurn = turns[turnIdx];
       // 데미지 표기 + HP 업데이트
@@ -679,17 +682,7 @@ function BattlePlayback({
             animate={shake === "enemy" ? { x: [0, -6, 6, -3, 3, 0], filter: ["brightness(1.3)", "brightness(1)"] } : { x: 0 }}
             transition={{ duration: 0.25 }}
           >
-            {activeEnemy && (
-              <img
-                src={wildSpriteUrl((activeEnemy as { dex?: number }).dex ?? 1, true)}
-                alt=""
-                draggable={false}
-                decoding="async"
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-contain"
-                style={{ imageRendering: "pixelated" }}
-              />
-            )}
+            {activeEnemy && <EnemySprite enemy={activeEnemy} />}
             <AnimatePresence>
               {floater?.side === "enemy" && (
                 <FloaterText key={`f-e-${turnIdx}`} f={floater} />
@@ -698,8 +691,17 @@ function BattlePlayback({
           </motion.div>
         </div>
 
-        {/* 펫 — 좌하단 */}
+        {/* 펫 — 좌하단. HpBar 가 카드 위에 오도록 순서 조정 (이전엔
+            카드 아래에 있어 카드 사이즈가 크면 화면 밖으로 잘리거나
+            카드와 겹쳐 안 보이는 이슈). */}
         <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
+          <HpBar
+            label={activePet?.name ?? "?"}
+            hp={activePet?.hp ?? 0}
+            max={activePet?.hp_max ?? 1}
+            type={(activePet?.type as WildType) ?? "노말"}
+            align="left"
+          />
           <motion.div
             className="relative w-20 h-24 md:w-24 md:h-28"
             animate={shake === "pet" ? { x: [0, -4, 4, -2, 2, 0], filter: ["brightness(1.3)", "brightness(1)"] } : { x: 0 }}
@@ -712,13 +714,6 @@ function BattlePlayback({
               )}
             </AnimatePresence>
           </motion.div>
-          <HpBar
-            label={activePet?.name ?? "?"}
-            hp={activePet?.hp ?? 0}
-            max={activePet?.hp_max ?? 1}
-            type={(activePet?.type as WildType) ?? "노말"}
-            align="left"
-          />
         </div>
       </div>
 
@@ -787,6 +782,48 @@ function FloaterText({
     >
       {txt}
     </motion.span>
+  );
+}
+
+/** 적 sprite — NPC (dex 기반 PokeAPI sprite) vs 방어덱 (card_id 기반
+ *  카드 이미지) 자동 분기. 방어덱이면 펫 카드, 아니면 BW 픽셀 sprite. */
+function EnemySprite({ enemy }: { enemy: BattleUnit }) {
+  const [broken, setBroken] = useState(false);
+  // 방어 덱이면 카드 이미지 우선
+  if (enemy.is_defender || (enemy.card_id && !enemy.dex)) {
+    const card = enemy.card_id ? getCard(enemy.card_id) : null;
+    if (!broken && card?.imageUrl) {
+      return (
+        <img
+          src={card.imageUrl}
+          alt={card.name}
+          draggable={false}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => setBroken(true)}
+          className="w-full h-full object-contain rounded-md"
+        />
+      );
+    }
+    return (
+      <div className="w-full h-full flex items-center justify-center text-[10px] text-white text-center bg-zinc-900 rounded-md p-1">
+        {enemy.name}
+      </div>
+    );
+  }
+  // NPC 모드 — dex 기반 sprite
+  return (
+    <img
+      src={wildSpriteUrl(enemy.dex ?? 1, true)}
+      alt=""
+      draggable={false}
+      decoding="async"
+      referrerPolicy="no-referrer"
+      onError={() => setBroken(true)}
+      className="w-full h-full object-contain"
+      style={{ imageRendering: "pixelated" }}
+    />
   );
 }
 

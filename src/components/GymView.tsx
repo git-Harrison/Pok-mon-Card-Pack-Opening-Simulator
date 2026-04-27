@@ -23,6 +23,8 @@ import PageHeader from "./PageHeader";
 import Portal from "./Portal";
 import GymChallengeOverlay from "./GymChallengeOverlay";
 import GymMedalIcon from "./GymMedalIcon";
+import GymDefenseDeckModal from "./GymDefenseDeckModal";
+import { getCharacter } from "@/lib/profile";
 
 // 폴링 주기 — Phase 1 에서는 단순 setInterval. Phase 4 에서 Supabase
 // realtime 으로 격상 검토.
@@ -90,6 +92,7 @@ export default function GymView() {
     gym: Gym;
     challengeId: string;
   } | null>(null);
+  const [defenseGym, setDefenseGym] = useState<Gym | null>(null);
   const [centerPower, setCenterPower] = useState<number | null>(null);
   // 매초 다시 그려 보호/쿨타임 카운트다운이 자연스럽게 줄어들도록.
   const [, force] = useState(0);
@@ -155,12 +158,16 @@ export default function GymView() {
       />
 
       <AnimatePresence>
-        {selectedGym && !activeChallenge && (
+        {selectedGym && !activeChallenge && !defenseGym && (
           <GymDetailModal
             gym={selectedGym}
             myUserId={userId}
             centerPower={centerPower}
             onClose={() => setSelectedId(null)}
+            onOpenDefense={() => {
+              setDefenseGym(selectedGym);
+              setSelectedId(null);
+            }}
             onStartChallenge={async () => {
               if (!userId) return;
               const res = await startGymChallenge(userId, selectedGym.id);
@@ -199,6 +206,16 @@ export default function GymView() {
             challengeId={activeChallenge.challengeId}
             onClose={() => setActiveChallenge(null)}
             onResolved={refresh}
+          />
+        )}
+        {defenseGym && (
+          <GymDefenseDeckModal
+            gym={defenseGym}
+            onClose={() => setDefenseGym(null)}
+            onSaved={() => {
+              setDefenseGym(null);
+              refresh();
+            }}
           />
         )}
       </AnimatePresence>
@@ -589,6 +606,7 @@ function GymDetailModal({
   onClose,
   onStartChallenge,
   onExtend,
+  onOpenDefense,
 }: {
   gym: Gym;
   myUserId: string | null;
@@ -596,6 +614,7 @@ function GymDetailModal({
   onClose: () => void;
   onStartChallenge: () => void;
   onExtend: () => void;
+  onOpenDefense: () => void;
 }) {
   const reduce = useReducedMotion();
   const status = deriveGymStatus(gym, myUserId);
@@ -704,6 +723,15 @@ function GymDetailModal({
                 <p className="text-[10px] text-zinc-400 truncate">
                   관장 {gym.leader_name}
                 </p>
+                {gym.ownership && (
+                  <p className="text-[10px] text-fuchsia-200 truncate mt-0.5">
+                    🏆 점령한 체육관장:{" "}
+                    {gym.ownership.character && (
+                      <CharacterTag characterKey={gym.ownership.character} />
+                    )}{" "}
+                    <b className="text-white">{gym.ownership.display_name}</b>
+                  </p>
+                )}
               </div>
               <button
                 type="button"
@@ -803,6 +831,19 @@ function GymDetailModal({
 
           {/* Footer — CTA */}
           <div className="border-t border-white/10 p-3 bg-zinc-950/95 space-y-2">
+            {status === "owned_by_me" && (
+              <button
+                type="button"
+                onClick={onOpenDefense}
+                style={{ touchAction: "manipulation" }}
+                className="w-full h-11 rounded-xl bg-gradient-to-r from-fuchsia-500 to-violet-500 text-white font-black text-sm active:scale-[0.98]"
+              >
+                🛡️ 방어 덱 설정 (관장 포켓몬 = 내 펫 3마리)
+                {gym.ownership?.has_defense_deck && (
+                  <span className="ml-1.5 text-[10px] font-bold opacity-90">· 설정 중</span>
+                )}
+              </button>
+            )}
             {canExtend && (
               <button
                 type="button"
@@ -1106,3 +1147,15 @@ function PokemonStatCard({
   );
 }
 
+
+/** 점령자 캐릭터 표시 — character key → 한국어 이름. */
+function CharacterTag({ characterKey }: { characterKey: string }) {
+  const def = getCharacter(characterKey);
+  if (!def) return null;
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      <span aria-hidden>{def.gender === "여" ? "👩" : "🧑"}</span>
+      <span className="text-zinc-300">{def.name}</span>
+    </span>
+  );
+}

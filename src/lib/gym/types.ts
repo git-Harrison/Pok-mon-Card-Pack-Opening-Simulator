@@ -24,8 +24,12 @@ export interface GymMedal {
 export interface GymOwnership {
   user_id: string;
   display_name: string;
+  /** 점령자 캐릭터 키 (red/leaf/ethan/lyra/hilbert/hilda 또는 null). */
+  character: string | null;
   captured_at: string;
   protection_until: string;
+  /** 점령자가 자기 펫 3마리로 방어 덱을 셋업했는지. */
+  has_defense_deck: boolean;
 }
 
 export interface GymActiveChallenge {
@@ -109,7 +113,10 @@ export interface BattleUnit {
   grade?: number;
   card_id?: string;
   grading_id?: string;
+  /** NPC 적 모드 — PokeAPI sprite. */
   dex?: number;
+  /** 방어 덱 모드인 경우 true (적도 카드 이미지 사용). */
+  is_defender?: boolean;
   hp_max: number;
   hp: number;
   atk: number;
