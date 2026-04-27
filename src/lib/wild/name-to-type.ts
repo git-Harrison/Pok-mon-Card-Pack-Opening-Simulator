@@ -766,4 +766,9 @@ export const CARD_NAME_TO_TYPE: Record<string, WildType | null> = {
   "히스이 윈디": "불꽃",
   "히카리": null,
   "히트 버너": null,
+  // MUR 카드 — 카드 이름 직매핑 (strip 없이 즉시 lookup).
+  "메가루카리오": "격투",
+  "메가가디안": "에스퍼",
+  "메가지가르데 ex": "드래곤",
+  "메가 개굴닌자 ex": "물",
 };

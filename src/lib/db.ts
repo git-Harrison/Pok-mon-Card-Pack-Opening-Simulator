@@ -357,6 +357,15 @@ export interface RankingMainCard {
   rarity: string;
 }
 
+export interface RankingGymMedal {
+  gym_id: string;
+  gym_name: string;
+  gym_type: string;
+  gym_difficulty: string;
+  medal_name: string;
+  earned_at: string;
+}
+
 export interface RankingRow {
   id: string;
   user_id: string;
@@ -382,6 +391,8 @@ export interface RankingRow {
   /** Seconds since last_seen_at — used to render the online dot. */
   seconds_since_seen?: number;
   gradings: RankingPclGrading[];
+  /** Gym medals earned (sorted newest first). */
+  gym_medals?: RankingGymMedal[];
 }
 
 export async function fetchUserRankings(): Promise<RankingRow[]> {

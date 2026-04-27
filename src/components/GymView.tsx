@@ -1273,14 +1273,17 @@ function DailyClaimButton({
   const remainingMs = nextAt
     ? new Date(nextAt).getTime() - Date.now()
     : 0;
-  const inCooldown = claimed && remainingMs > 0;
+  const showCountdown = remainingMs > 0;
+  // claimed 가 true 면 무조건 cooldown — 백엔드 마이그레이션 적용 전
+  // 환경(daily_next_claim_at 미반환)도 안전하게 disable 유지.
+  const inCooldown = claimed || showCountdown;
 
   // 1초마다 재렌더 — 남은 시간 라이브 카운트다운.
   useEffect(() => {
-    if (!inCooldown) return;
+    if (!showCountdown) return;
     const t = setInterval(() => force((n) => n + 1), 1000);
     return () => clearInterval(t);
-  }, [inCooldown]);
+  }, [showCountdown]);
 
   const remain = formatRemaining(remainingMs);
   return (
@@ -1296,8 +1299,10 @@ function DailyClaimButton({
           : "bg-gradient-to-r from-emerald-500 to-cyan-500 text-zinc-950 active:scale-[0.98]"
       )}
     >
-      {inCooldown
+      {showCountdown
         ? `⏳ 다음 보상까지 ${remain}`
+        : claimed
+        ? "✅ 일일 보상 받음 — 24시간 후 다시 받을 수 있어요"
         : "🎁 일일 보상 받기 (+20,000,000P · 랭킹 +10,000)"}
     </button>
   );

@@ -33,10 +33,12 @@ import {
   compareRarity,
 } from "@/lib/rarity";
 import type { Rarity } from "@/lib/types";
+import type { WildType } from "@/lib/wild/types";
 import PageBackdrop from "./PageBackdrop";
 import Portal from "./Portal";
 import { getCharacter } from "@/lib/profile";
 import { CharacterAvatar } from "./ProfileView";
+import GymMedalIcon from "./GymMedalIcon";
 
 type RankingMode = "rank" | "power" | "pet";
 
@@ -369,6 +371,24 @@ export default function UsersView() {
                       전시 {e.showcase_count ?? 0}장 · 부수기{" "}
                       {e.sabotage_wins ?? 0}회
                     </p>
+                    {/* 체육관 메달 — 모든 탭 공통 노출. 각 메달 = type
+                        색 SVG 아이콘. 호버 시 상세 (체육관/난이도). */}
+                    {e.gym_medals && e.gym_medals.length > 0 && (
+                      <div className="mt-1 flex items-center gap-0.5 flex-wrap">
+                        {e.gym_medals.map((m) => (
+                          <span
+                            key={m.gym_id}
+                            title={`${m.medal_name} — ${m.gym_name} (${m.gym_type})`}
+                            className="inline-flex items-center"
+                          >
+                            <GymMedalIcon
+                              type={m.gym_type as WildType}
+                              size={18}
+                            />
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="text-right shrink-0">
                     {mode === "power" ? (
