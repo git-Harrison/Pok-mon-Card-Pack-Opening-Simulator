@@ -589,6 +589,19 @@ function PickerPhase({
 
 /* ─────────────── Battle Playback ─────────────── */
 
+/** 서버는 펫/방어덱 단위의 name 필드에 card_id (예: "m4-001") 를 그대로
+ *  실어 보낸다 (DB 에 카드 카탈로그가 없음). 화면 표기용 이름은 클라가
+ *  getCard(card_id).name 으로 룩업해 한국어 이름으로 치환. NPC 적은
+ *  card_id 가 없고 미리 정해진 한국어 name 을 받으므로 그대로 사용. */
+function unitDisplayName(unit: BattleUnit | undefined | null): string {
+  if (!unit) return "?";
+  if (unit.card_id) {
+    const card = getCard(unit.card_id);
+    if (card?.name) return card.name;
+  }
+  return unit.name || "?";
+}
+
 function BattlePlayback({
   battle,
   gym,
@@ -690,7 +703,7 @@ function BattlePlayback({
         {/* 적 — 우상단 */}
         <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
           <HpBar
-            label={activeEnemy?.name ?? "?"}
+            label={unitDisplayName(activeEnemy)}
             hp={activeEnemy?.hp ?? 0}
             max={activeEnemy?.hp_max ?? 1}
             type={(activeEnemy?.type as WildType) ?? gym.type}
@@ -714,7 +727,7 @@ function BattlePlayback({
             카드와 겹쳐 안 보이는 이슈). */}
         <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
           <HpBar
-            label={activePet?.name ?? "?"}
+            label={unitDisplayName(activePet)}
             hp={activePet?.hp ?? 0}
             max={activePet?.hp_max ?? 1}
             type={(activePet?.type as WildType) ?? "노말"}
@@ -869,14 +882,14 @@ function EnemySprite({ enemy }: { enemy: BattleUnit }) {
     <CardOrDexSprite
       cardId={enemy.card_id}
       fallbackDex={enemy.dex}
-      name={enemy.name}
+      name={unitDisplayName(enemy)}
     />
   );
 }
 
 function PetCardArt({ pet }: { pet: BattleUnit | undefined }) {
   if (!pet) return null;
-  return <CardOrDexSprite cardId={pet.card_id} name={pet.name} />;
+  return <CardOrDexSprite cardId={pet.card_id} name={unitDisplayName(pet)} />;
 }
 
 /* ─────────────── Result ─────────────── */
