@@ -820,14 +820,14 @@ const GRADING_SECTIONS: HelpSection[] = [
           { key: 5 },
           h("b", { className: "text-slate-100" }, "PCL 9 (MINT)"),
           " · ",
-          h("b", null, "3.5%")
+          h("b", null, "3.7%")
         ),
         h(
           "li",
           { key: 6 },
           h("b", { className: "text-amber-300" }, "PCL 10 (GEM MINT)"),
           " · ",
-          h("b", null, "0.5%")
+          h("b", null, "0.3%")
         )
       ),
       h(
