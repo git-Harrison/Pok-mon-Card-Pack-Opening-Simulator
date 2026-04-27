@@ -125,7 +125,7 @@ export function CardActions({
   return (
     <div className="mt-auto flex flex-col gap-2">
       <Link
-        href="/wallet?tab=psa"
+        href="/wallet?tab=pcl"
         style={{ touchAction: "manipulation" }}
         className="h-12 rounded-xl bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition inline-flex items-center justify-center"
       >

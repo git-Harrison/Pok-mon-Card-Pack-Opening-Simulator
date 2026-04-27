@@ -1,0 +1,938 @@
+[
+  {
+    "number": "001",
+    "slugPath": "Spinarak-Card-1",
+    "slug": "Spinarak",
+    "cardNum": "1",
+    "asset_id": "60195",
+    "url": "https://den-cards.pokellector.com/428/Spinarak.M3.1.60195.png"
+  },
+  {
+    "number": "002",
+    "slugPath": "Ariados-Card-2",
+    "slug": "Ariados",
+    "cardNum": "2",
+    "asset_id": "60196",
+    "url": "https://den-cards.pokellector.com/428/Ariados.M3.2.60196.png"
+  },
+  {
+    "number": "003",
+    "slugPath": "Shaymin-Card-3",
+    "slug": "Shaymin",
+    "cardNum": "3",
+    "asset_id": "60197",
+    "url": "https://den-cards.pokellector.com/428/Shaymin.M3.3.60197.png"
+  },
+  {
+    "number": "004",
+    "slugPath": "Snivy-Card-4",
+    "slug": "Snivy",
+    "cardNum": "4",
+    "asset_id": "60198",
+    "url": "https://den-cards.pokellector.com/428/Snivy.M3.4.60198.png"
+  },
+  {
+    "number": "005",
+    "slugPath": "Servine-Card-5",
+    "slug": "Servine",
+    "cardNum": "5",
+    "asset_id": "60199",
+    "url": "https://den-cards.pokellector.com/428/Servine.M3.5.60199.png"
+  },
+  {
+    "number": "006",
+    "slugPath": "Serperior-Card-6",
+    "slug": "Serperior",
+    "cardNum": "6",
+    "asset_id": "60200",
+    "url": "https://den-cards.pokellector.com/428/Serperior.M3.6.60200.png"
+  },
+  {
+    "number": "007",
+    "slugPath": "Scatterbug-Card-7",
+    "slug": "Scatterbug",
+    "cardNum": "7",
+    "asset_id": "60201",
+    "url": "https://den-cards.pokellector.com/428/Scatterbug.M3.7.60201.png"
+  },
+  {
+    "number": "008",
+    "slugPath": "Spewpa-Card-8",
+    "slug": "Spewpa",
+    "cardNum": "8",
+    "asset_id": "60202",
+    "url": "https://den-cards.pokellector.com/428/Spewpa.M3.8.60202.png"
+  },
+  {
+    "number": "009",
+    "slugPath": "Vivillon-Card-9",
+    "slug": "Vivillon",
+    "cardNum": "9",
+    "asset_id": "60203",
+    "url": "https://den-cards.pokellector.com/428/Vivillon.M3.9.60203.png"
+  },
+  {
+    "number": "010",
+    "slugPath": "Rowlet-Card-10",
+    "slug": "Rowlet",
+    "cardNum": "10",
+    "asset_id": "60204",
+    "url": "https://den-cards.pokellector.com/428/Rowlet.M3.10.60204.png"
+  },
+  {
+    "number": "011",
+    "slugPath": "Dartrix-Card-11",
+    "slug": "Dartrix",
+    "cardNum": "11",
+    "asset_id": "60205",
+    "url": "https://den-cards.pokellector.com/428/Dartrix.M3.11.60205.png"
+  },
+  {
+    "number": "012",
+    "slugPath": "Decidueye-ex-Card-12",
+    "slug": "Decidueye-ex",
+    "cardNum": "12",
+    "asset_id": "60206",
+    "url": "https://den-cards.pokellector.com/428/Decidueye-ex.M3.12.60206.png"
+  },
+  {
+    "number": "013",
+    "slugPath": "Fletchinder-Card-13",
+    "slug": "Fletchinder",
+    "cardNum": "13",
+    "asset_id": "60183",
+    "url": "https://den-cards.pokellector.com/428/Fletchinder.M3.13.60183.png"
+  },
+  {
+    "number": "014",
+    "slugPath": "Talonflame-Card-14",
+    "slug": "Talonflame",
+    "cardNum": "14",
+    "asset_id": "60207",
+    "url": "https://den-cards.pokellector.com/428/Talonflame.M3.14.60207.png"
+  },
+  {
+    "number": "015",
+    "slugPath": "Salandit-Card-15",
+    "slug": "Salandit",
+    "cardNum": "15",
+    "asset_id": "60208",
+    "url": "https://den-cards.pokellector.com/428/Salandit.M3.15.60208.png"
+  },
+  {
+    "number": "016",
+    "slugPath": "Salazzle-ex-Card-16",
+    "slug": "Salazzle-ex",
+    "cardNum": "16",
+    "asset_id": "60184",
+    "url": "https://den-cards.pokellector.com/428/Salazzle-ex.M3.16.60184.png"
+  },
+  {
+    "number": "017",
+    "slugPath": "Turtonator-Card-17",
+    "slug": "Turtonator",
+    "cardNum": "17",
+    "asset_id": "60209",
+    "url": "https://den-cards.pokellector.com/428/Turtonator.M3.17.60209.png"
+  },
+  {
+    "number": "018",
+    "slugPath": "Seel-Card-18",
+    "slug": "Seel",
+    "cardNum": "18",
+    "asset_id": "60210",
+    "url": "https://den-cards.pokellector.com/428/Seel.M3.18.60210.png"
+  },
+  {
+    "number": "019",
+    "slugPath": "Dewgong-Card-19",
+    "slug": "Dewgong",
+    "cardNum": "19",
+    "asset_id": "60211",
+    "url": "https://den-cards.pokellector.com/428/Dewgong.M3.19.60211.png"
+  },
+  {
+    "number": "020",
+    "slugPath": "Staryu-Card-20",
+    "slug": "Staryu",
+    "cardNum": "20",
+    "asset_id": "60212",
+    "url": "https://den-cards.pokellector.com/428/Staryu.M3.20.60212.png"
+  },
+  {
+    "number": "021",
+    "slugPath": "Mega-Starmie-ex-Card-21",
+    "slug": "Mega-Starmie-ex",
+    "cardNum": "21",
+    "asset_id": "60213",
+    "url": "https://den-cards.pokellector.com/428/Mega-Starmie-ex.M3.21.60213.png"
+  },
+  {
+    "number": "022",
+    "slugPath": "Amaura-Card-22",
+    "slug": "Amaura",
+    "cardNum": "22",
+    "asset_id": "60169",
+    "url": "https://den-cards.pokellector.com/428/Amaura.M3.22.60169.png"
+  },
+  {
+    "number": "023",
+    "slugPath": "Aurorus-Card-23",
+    "slug": "Aurorus",
+    "cardNum": "23",
+    "asset_id": "60168",
+    "url": "https://den-cards.pokellector.com/428/Aurorus.M3.23.60168.png"
+  },
+  {
+    "number": "024",
+    "slugPath": "Volcanion-Card-24",
+    "slug": "Volcanion",
+    "cardNum": "24",
+    "asset_id": "60214",
+    "url": "https://den-cards.pokellector.com/428/Volcanion.M3.24.60214.png"
+  },
+  {
+    "number": "025",
+    "slugPath": "Shinx-Card-25",
+    "slug": "Shinx",
+    "cardNum": "25",
+    "asset_id": "60215",
+    "url": "https://den-cards.pokellector.com/428/Shinx.M3.25.60215.png"
+  },
+  {
+    "number": "026",
+    "slugPath": "Luxio-Card-26",
+    "slug": "Luxio",
+    "cardNum": "26",
+    "asset_id": "60216",
+    "url": "https://den-cards.pokellector.com/428/Luxio.M3.26.60216.png"
+  },
+  {
+    "number": "027",
+    "slugPath": "Luxray-Card-27",
+    "slug": "Luxray",
+    "cardNum": "27",
+    "asset_id": "60217",
+    "url": "https://den-cards.pokellector.com/428/Luxray.M3.27.60217.png"
+  },
+  {
+    "number": "028",
+    "slugPath": "Dedenne-Card-28",
+    "slug": "Dedenne",
+    "cardNum": "28",
+    "asset_id": "60218",
+    "url": "https://den-cards.pokellector.com/428/Dedenne.M3.28.60218.png"
+  },
+  {
+    "number": "029",
+    "slugPath": "Clefairy-Card-29",
+    "slug": "Clefairy",
+    "cardNum": "29",
+    "asset_id": "60219",
+    "url": "https://den-cards.pokellector.com/428/Clefairy.M3.29.60219.png"
+  },
+  {
+    "number": "030",
+    "slugPath": "Mega-Clefable-ex-Card-30",
+    "slug": "Mega-Clefable-ex",
+    "cardNum": "30",
+    "asset_id": "60220",
+    "url": "https://den-cards.pokellector.com/428/Mega-Clefable-ex.M3.30.60220.png"
+  },
+  {
+    "number": "031",
+    "slugPath": "Mawile-Card-31",
+    "slug": "Mawile",
+    "cardNum": "31",
+    "asset_id": "60221",
+    "url": "https://den-cards.pokellector.com/428/Mawile.M3.31.60221.png"
+  },
+  {
+    "number": "032",
+    "slugPath": "Espurr-Card-32",
+    "slug": "Espurr",
+    "cardNum": "32",
+    "asset_id": "60222",
+    "url": "https://den-cards.pokellector.com/428/Espurr.M3.32.60222.png"
+  },
+  {
+    "number": "033",
+    "slugPath": "Meowstic-Card-33",
+    "slug": "Meowstic",
+    "cardNum": "33",
+    "asset_id": "60223",
+    "url": "https://den-cards.pokellector.com/428/Meowstic.M3.33.60223.png"
+  },
+  {
+    "number": "034",
+    "slugPath": "Spritzee-Card-34",
+    "slug": "Spritzee",
+    "cardNum": "34",
+    "asset_id": "60224",
+    "url": "https://den-cards.pokellector.com/428/Spritzee.M3.34.60224.png"
+  },
+  {
+    "number": "035",
+    "slugPath": "Aromatisse-Card-35",
+    "slug": "Aromatisse",
+    "cardNum": "35",
+    "asset_id": "60225",
+    "url": "https://den-cards.pokellector.com/428/Aromatisse.M3.35.60225.png"
+  },
+  {
+    "number": "036",
+    "slugPath": "Nosepass-Card-36",
+    "slug": "Nosepass",
+    "cardNum": "36",
+    "asset_id": "60226",
+    "url": "https://den-cards.pokellector.com/428/Nosepass.M3.36.60226.png"
+  },
+  {
+    "number": "037",
+    "slugPath": "Probopass-Card-37",
+    "slug": "Probopass",
+    "cardNum": "37",
+    "asset_id": "60227",
+    "url": "https://den-cards.pokellector.com/428/Probopass.M3.37.60227.png"
+  },
+  {
+    "number": "038",
+    "slugPath": "Hippopotas-Card-38",
+    "slug": "Hippopotas",
+    "cardNum": "38",
+    "asset_id": "60228",
+    "url": "https://den-cards.pokellector.com/428/Hippopotas.M3.38.60228.png"
+  },
+  {
+    "number": "039",
+    "slugPath": "Hippowdon-Card-39",
+    "slug": "Hippowdon",
+    "cardNum": "39",
+    "asset_id": "60229",
+    "url": "https://den-cards.pokellector.com/428/Hippowdon.M3.39.60229.png"
+  },
+  {
+    "number": "040",
+    "slugPath": "Landorus-Card-40",
+    "slug": "Landorus",
+    "cardNum": "40",
+    "asset_id": "60230",
+    "url": "https://den-cards.pokellector.com/428/Landorus.M3.40.60230.png"
+  },
+  {
+    "number": "041",
+    "slugPath": "Binacle-Card-41",
+    "slug": "Binacle",
+    "cardNum": "41",
+    "asset_id": "60156",
+    "url": "https://den-cards.pokellector.com/428/Binacle.M3.41.60156.png"
+  },
+  {
+    "number": "042",
+    "slugPath": "Barbaracle-Card-42",
+    "slug": "Barbaracle",
+    "cardNum": "42",
+    "asset_id": "60157",
+    "url": "https://den-cards.pokellector.com/428/Barbaracle.M3.42.60157.png"
+  },
+  {
+    "number": "043",
+    "slugPath": "Tyrunt-Card-43",
+    "slug": "Tyrunt",
+    "cardNum": "43",
+    "asset_id": "60166",
+    "url": "https://den-cards.pokellector.com/428/Tyrunt.M3.43.60166.png"
+  },
+  {
+    "number": "044",
+    "slugPath": "Tyrantrum-Card-44",
+    "slug": "Tyrantrum",
+    "cardNum": "44",
+    "asset_id": "60165",
+    "url": "https://den-cards.pokellector.com/428/Tyrantrum.M3.44.60165.png"
+  },
+  {
+    "number": "045",
+    "slugPath": "Hawlucha-Card-45",
+    "slug": "Hawlucha",
+    "cardNum": "45",
+    "asset_id": "60231",
+    "url": "https://den-cards.pokellector.com/428/Hawlucha.M3.45.60231.png"
+  },
+  {
+    "number": "046",
+    "slugPath": "Mega-Zygarde-ex-Card-46",
+    "slug": "Mega-Zygarde-ex",
+    "cardNum": "46",
+    "asset_id": "60155",
+    "url": "https://den-cards.pokellector.com/428/Mega-Zygarde-ex.M3.46.60155.png"
+  },
+  {
+    "number": "047",
+    "slugPath": "Gastly-Card-47",
+    "slug": "Gastly",
+    "cardNum": "47",
+    "asset_id": "60232",
+    "url": "https://den-cards.pokellector.com/428/Gastly.M3.47.60232.png"
+  },
+  {
+    "number": "048",
+    "slugPath": "Haunter-Card-48",
+    "slug": "Haunter",
+    "cardNum": "48",
+    "asset_id": "60233",
+    "url": "https://den-cards.pokellector.com/428/Haunter.M3.48.60233.png"
+  },
+  {
+    "number": "049",
+    "slugPath": "Gengar-Card-49",
+    "slug": "Gengar",
+    "cardNum": "49",
+    "asset_id": "60234",
+    "url": "https://den-cards.pokellector.com/428/Gengar.M3.49.60234.png"
+  },
+  {
+    "number": "050",
+    "slugPath": "Skorupi-Card-50",
+    "slug": "Skorupi",
+    "cardNum": "50",
+    "asset_id": "60235",
+    "url": "https://den-cards.pokellector.com/428/Skorupi.M3.50.60235.png"
+  },
+  {
+    "number": "051",
+    "slugPath": "Drapion-Card-51",
+    "slug": "Drapion",
+    "cardNum": "51",
+    "asset_id": "60236",
+    "url": "https://den-cards.pokellector.com/428/Drapion.M3.51.60236.png"
+  },
+  {
+    "number": "052",
+    "slugPath": "Yveltal-ex-Card-52",
+    "slug": "Yveltal-ex",
+    "cardNum": "52",
+    "asset_id": "60237",
+    "url": "https://den-cards.pokellector.com/428/Yveltal-ex.M3.52.60237.png"
+  },
+  {
+    "number": "053",
+    "slugPath": "Chien-Pao-Card-53",
+    "slug": "Chien-Pao",
+    "cardNum": "53",
+    "asset_id": "60238",
+    "url": "https://den-cards.pokellector.com/428/Chien-Pao.M3.53.60238.png"
+  },
+  {
+    "number": "054",
+    "slugPath": "Mega-Skarmory-ex-Card-54",
+    "slug": "Mega-Skarmory-ex",
+    "cardNum": "54",
+    "asset_id": "60171",
+    "url": "https://den-cards.pokellector.com/428/Mega-Skarmory-ex.M3.54.60171.png"
+  },
+  {
+    "number": "055",
+    "slugPath": "Honedge-Card-55",
+    "slug": "Honedge",
+    "cardNum": "55",
+    "asset_id": "60180",
+    "url": "https://den-cards.pokellector.com/428/Honedge.M3.55.60180.png"
+  },
+  {
+    "number": "056",
+    "slugPath": "Doublade-Card-56",
+    "slug": "Doublade",
+    "cardNum": "56",
+    "asset_id": "60179",
+    "url": "https://den-cards.pokellector.com/428/Doublade.M3.56.60179.png"
+  },
+  {
+    "number": "057",
+    "slugPath": "Aegislash-Card-57",
+    "slug": "Aegislash",
+    "cardNum": "57",
+    "asset_id": "60178",
+    "url": "https://den-cards.pokellector.com/428/Aegislash.M3.57.60178.png"
+  },
+  {
+    "number": "058",
+    "slugPath": "Klefki-Card-58",
+    "slug": "Klefki",
+    "cardNum": "58",
+    "asset_id": "60239",
+    "url": "https://den-cards.pokellector.com/428/Klefki.M3.58.60239.png"
+  },
+  {
+    "number": "059",
+    "slugPath": "Rattata-Card-59",
+    "slug": "Rattata",
+    "cardNum": "59",
+    "asset_id": "60240",
+    "url": "https://den-cards.pokellector.com/428/Rattata.M3.59.60240.png"
+  },
+  {
+    "number": "060",
+    "slugPath": "Raticate-Card-60",
+    "slug": "Raticate",
+    "cardNum": "60",
+    "asset_id": "60241",
+    "url": "https://den-cards.pokellector.com/428/Raticate.M3.60.60241.png"
+  },
+  {
+    "number": "061",
+    "slugPath": "Meowth-ex-Card-61",
+    "slug": "Meowth-ex",
+    "cardNum": "61",
+    "asset_id": "60154",
+    "url": "https://den-cards.pokellector.com/428/Meowth-ex.M3.61.60154.png"
+  },
+  {
+    "number": "062",
+    "slugPath": "Snorlax-Card-62",
+    "slug": "Snorlax",
+    "cardNum": "62",
+    "asset_id": "60242",
+    "url": "https://den-cards.pokellector.com/428/Snorlax.M3.62.60242.png"
+  },
+  {
+    "number": "063",
+    "slugPath": "Bunnelby-Card-63",
+    "slug": "Bunnelby",
+    "cardNum": "63",
+    "asset_id": "60243",
+    "url": "https://den-cards.pokellector.com/428/Bunnelby.M3.63.60243.png"
+  },
+  {
+    "number": "064",
+    "slugPath": "Diggersby-Card-64",
+    "slug": "Diggersby",
+    "cardNum": "64",
+    "asset_id": "60244",
+    "url": "https://den-cards.pokellector.com/428/Diggersby.M3.64.60244.png"
+  },
+  {
+    "number": "065",
+    "slugPath": "Fletchling-Card-65",
+    "slug": "Fletchling",
+    "cardNum": "65",
+    "asset_id": "60245",
+    "url": "https://den-cards.pokellector.com/428/Fletchling.M3.65.60245.png"
+  },
+  {
+    "number": "066",
+    "slugPath": "Furfrou-Card-66",
+    "slug": "Furfrou",
+    "cardNum": "66",
+    "asset_id": "60246",
+    "url": "https://den-cards.pokellector.com/428/Furfrou.M3.66.60246.png"
+  },
+  {
+    "number": "067",
+    "slugPath": "Energy-Swatter-Card-67",
+    "slug": "Energy-Swatter",
+    "cardNum": "67",
+    "asset_id": "60247",
+    "url": "https://den-cards.pokellector.com/428/Energy-Swatter.M3.67.60247.png"
+  },
+  {
+    "number": "068",
+    "slugPath": "Jaw-Fossil-Card-68",
+    "slug": "Jaw-Fossil",
+    "cardNum": "68",
+    "asset_id": "60167",
+    "url": "https://den-cards.pokellector.com/428/Jaw-Fossil.M3.68.60167.png"
+  },
+  {
+    "number": "069",
+    "slugPath": "Antique-Sail-Fossil-Card-69",
+    "slug": "Antique-Sail-Fossil",
+    "cardNum": "69",
+    "asset_id": "60170",
+    "url": "https://den-cards.pokellector.com/428/Antique-Sail-Fossil.M3.69.60170.png"
+  },
+  {
+    "number": "070",
+    "slugPath": "Pokepad-Card-70",
+    "slug": "Pokepad",
+    "cardNum": "70",
+    "asset_id": "60163",
+    "url": "https://den-cards.pokellector.com/428/Pokepad.M3.70.60163.png"
+  },
+  {
+    "number": "071",
+    "slugPath": "Lumiose-Galette-Card-71",
+    "slug": "Lumiose-Galette",
+    "cardNum": "71",
+    "asset_id": "60248",
+    "url": "https://den-cards.pokellector.com/428/Lumiose-Galette.M3.71.60248.png"
+  },
+  {
+    "number": "072",
+    "slugPath": "Core-Memory-Card-72",
+    "slug": "Core-Memory",
+    "cardNum": "72",
+    "asset_id": "60162",
+    "url": "https://den-cards.pokellector.com/428/Core-Memory.M3.72.60162.png"
+  },
+  {
+    "number": "073",
+    "slugPath": "Tarragon-Card-73",
+    "slug": "Tarragon",
+    "cardNum": "73",
+    "asset_id": "60158",
+    "url": "https://den-cards.pokellector.com/428/Tarragon.M3.73.60158.png"
+  },
+  {
+    "number": "074",
+    "slugPath": "Naveen-Card-74",
+    "slug": "Naveen",
+    "cardNum": "74",
+    "asset_id": "60159",
+    "url": "https://den-cards.pokellector.com/428/Naveen.M3.74.60159.png"
+  },
+  {
+    "number": "075",
+    "slugPath": "Rosas-Encouragement-Card-75",
+    "slug": "Rosas-Encouragement",
+    "cardNum": "75",
+    "asset_id": "60249",
+    "url": "https://den-cards.pokellector.com/428/Rosas-Encouragement.M3.75.60249.png"
+  },
+  {
+    "number": "076",
+    "slugPath": "Jacinthe-Card-76",
+    "slug": "Jacinthe",
+    "cardNum": "76",
+    "asset_id": "60250",
+    "url": "https://den-cards.pokellector.com/428/Jacinthe.M3.76.60250.png"
+  },
+  {
+    "number": "077",
+    "slugPath": "Lumiose-City-Card-77",
+    "slug": "Lumiose-City",
+    "cardNum": "77",
+    "asset_id": "60160",
+    "url": "https://den-cards.pokellector.com/428/Lumiose-City.M3.77.60160.png"
+  },
+  {
+    "number": "078",
+    "slugPath": "Grow-Energy-Card-78",
+    "slug": "Grow-Energy",
+    "cardNum": "78",
+    "asset_id": "60251",
+    "url": "https://den-cards.pokellector.com/428/Grow-Energy.M3.78.60251.png"
+  },
+  {
+    "number": "079",
+    "slugPath": "Telepath-Energy-Card-79",
+    "slug": "Telepath-Energy",
+    "cardNum": "79",
+    "asset_id": "60252",
+    "url": "https://den-cards.pokellector.com/428/Telepath-Energy.M3.79.60252.png"
+  },
+  {
+    "number": "080",
+    "slugPath": "Rock-Fighting-Energy-Card-80",
+    "slug": "Rock-Fighting-Energy",
+    "cardNum": "80",
+    "asset_id": "60161",
+    "url": "https://den-cards.pokellector.com/428/Rock-Fighting-Energy.M3.80.60161.png"
+  },
+  {
+    "number": "081",
+    "slugPath": "Spewpa-Card-81",
+    "slug": "Spewpa",
+    "cardNum": "81",
+    "asset_id": "60253",
+    "url": "https://den-cards.pokellector.com/428/Spewpa.M3.81.60253.png"
+  },
+  {
+    "number": "082",
+    "slugPath": "Rowlet-Card-82",
+    "slug": "Rowlet",
+    "cardNum": "82",
+    "asset_id": "60254",
+    "url": "https://den-cards.pokellector.com/428/Rowlet.M3.82.60254.png"
+  },
+  {
+    "number": "083",
+    "slugPath": "Talonflame-Card-83",
+    "slug": "Talonflame",
+    "cardNum": "83",
+    "asset_id": "60191",
+    "url": "https://den-cards.pokellector.com/428/Talonflame.M3.83.60191.png"
+  },
+  {
+    "number": "084",
+    "slugPath": "Aurorus-Card-84",
+    "slug": "Aurorus",
+    "cardNum": "84",
+    "asset_id": "60255",
+    "url": "https://den-cards.pokellector.com/428/Aurorus.M3.84.60255.png"
+  },
+  {
+    "number": "085",
+    "slugPath": "Dedenne-Card-85",
+    "slug": "Dedenne",
+    "cardNum": "85",
+    "asset_id": "60256",
+    "url": "https://den-cards.pokellector.com/428/Dedenne.M3.85.60256.png"
+  },
+  {
+    "number": "086",
+    "slugPath": "Clefairy-Card-86",
+    "slug": "Clefairy",
+    "cardNum": "86",
+    "asset_id": "60193",
+    "url": "https://den-cards.pokellector.com/428/Clefairy.M3.86.60193.png"
+  },
+  {
+    "number": "087",
+    "slugPath": "Espurr-Card-87",
+    "slug": "Espurr",
+    "cardNum": "87",
+    "asset_id": "60192",
+    "url": "https://den-cards.pokellector.com/428/Espurr.M3.87.60192.png"
+  },
+  {
+    "number": "088",
+    "slugPath": "Probopass-Card-88",
+    "slug": "Probopass",
+    "cardNum": "88",
+    "asset_id": "60257",
+    "url": "https://den-cards.pokellector.com/428/Probopass.M3.88.60257.png"
+  },
+  {
+    "number": "089",
+    "slugPath": "Tyrunt-Card-89",
+    "slug": "Tyrunt",
+    "cardNum": "89",
+    "asset_id": "60258",
+    "url": "https://den-cards.pokellector.com/428/Tyrunt.M3.89.60258.png"
+  },
+  {
+    "number": "090",
+    "slugPath": "Drapion-Card-90",
+    "slug": "Drapion",
+    "cardNum": "90",
+    "asset_id": "60259",
+    "url": "https://den-cards.pokellector.com/428/Drapion.M3.90.60259.png"
+  },
+  {
+    "number": "091",
+    "slugPath": "Doublade-Card-91",
+    "slug": "Doublade",
+    "cardNum": "91",
+    "asset_id": "60260",
+    "url": "https://den-cards.pokellector.com/428/Doublade.M3.91.60260.png"
+  },
+  {
+    "number": "092",
+    "slugPath": "Raticate-Card-92",
+    "slug": "Raticate",
+    "cardNum": "92",
+    "asset_id": "60261",
+    "url": "https://den-cards.pokellector.com/428/Raticate.M3.92.60261.png"
+  },
+  {
+    "number": "093",
+    "slugPath": "Decidueye-ex-Card-93",
+    "slug": "Decidueye-ex",
+    "cardNum": "93",
+    "asset_id": "60262",
+    "url": "https://den-cards.pokellector.com/428/Decidueye-ex.M3.93.60262.png"
+  },
+  {
+    "number": "094",
+    "slugPath": "Salazzle-ex-Card-94",
+    "slug": "Salazzle-ex",
+    "cardNum": "94",
+    "asset_id": "60263",
+    "url": "https://den-cards.pokellector.com/428/Salazzle-ex.M3.94.60263.png"
+  },
+  {
+    "number": "095",
+    "slugPath": "Mega-Starmie-ex-Card-95",
+    "slug": "Mega-Starmie-ex",
+    "cardNum": "95",
+    "asset_id": "60264",
+    "url": "https://den-cards.pokellector.com/428/Mega-Starmie-ex.M3.95.60264.png"
+  },
+  {
+    "number": "096",
+    "slugPath": "Mega-Clefable-ex-Card-96",
+    "slug": "Mega-Clefable-ex",
+    "cardNum": "96",
+    "asset_id": "60265",
+    "url": "https://den-cards.pokellector.com/428/Mega-Clefable-ex.M3.96.60265.png"
+  },
+  {
+    "number": "097",
+    "slugPath": "Mega-Zygarde-ex-Card-97",
+    "slug": "Mega-Zygarde-ex",
+    "cardNum": "97",
+    "asset_id": "60266",
+    "url": "https://den-cards.pokellector.com/428/Mega-Zygarde-ex.M3.97.60266.png"
+  },
+  {
+    "number": "098",
+    "slugPath": "Yveltal-ex-Card-98",
+    "slug": "Yveltal-ex",
+    "cardNum": "98",
+    "asset_id": "60267",
+    "url": "https://den-cards.pokellector.com/428/Yveltal-ex.M3.98.60267.png"
+  },
+  {
+    "number": "099",
+    "slugPath": "Mega-Skarmory-ex-Card-99",
+    "slug": "Mega-Skarmory-ex",
+    "cardNum": "99",
+    "asset_id": "60268",
+    "url": "https://den-cards.pokellector.com/428/Mega-Skarmory-ex.M3.99.60268.png"
+  },
+  {
+    "number": "100",
+    "slugPath": "Meowth-ex-Card-100",
+    "slug": "Meowth-ex",
+    "cardNum": "100",
+    "asset_id": "60269",
+    "url": "https://den-cards.pokellector.com/428/Meowth-ex.M3.100.60269.png"
+  },
+  {
+    "number": "101",
+    "slugPath": "Energy-Recycler-Card-101",
+    "slug": "Energy-Recycler",
+    "cardNum": "101",
+    "asset_id": "60270",
+    "url": "https://den-cards.pokellector.com/428/Energy-Recycler.M3.101.60270.png"
+  },
+  {
+    "number": "102",
+    "slugPath": "Sacred-Ash-Card-102",
+    "slug": "Sacred-Ash",
+    "cardNum": "102",
+    "asset_id": "60271",
+    "url": "https://den-cards.pokellector.com/428/Sacred-Ash.M3.102.60271.png"
+  },
+  {
+    "number": "103",
+    "slugPath": "Pok-Pad-Card-103",
+    "slug": "Pok-Pad",
+    "cardNum": "103",
+    "asset_id": "60272",
+    "url": "https://den-cards.pokellector.com/428/Pok-Pad.M3.103.60272.png"
+  },
+  {
+    "number": "104",
+    "slugPath": "Wondrous-Patch-Card-104",
+    "slug": "Wondrous-Patch",
+    "cardNum": "104",
+    "asset_id": "60273",
+    "url": "https://den-cards.pokellector.com/428/Wondrous-Patch.M3.104.60273.png"
+  },
+  {
+    "number": "105",
+    "slugPath": "Tarragon-Card-105",
+    "slug": "Tarragon",
+    "cardNum": "105",
+    "asset_id": "60274",
+    "url": "https://den-cards.pokellector.com/428/Tarragon.M3.105.60274.png"
+  },
+  {
+    "number": "106",
+    "slugPath": "Naveen-Card-106",
+    "slug": "Naveen",
+    "cardNum": "106",
+    "asset_id": "60275",
+    "url": "https://den-cards.pokellector.com/428/Naveen.M3.106.60275.png"
+  },
+  {
+    "number": "107",
+    "slugPath": "Rosas-Encouragement-Card-107",
+    "slug": "Rosas-Encouragement",
+    "cardNum": "107",
+    "asset_id": "60276",
+    "url": "https://den-cards.pokellector.com/428/Rosas-Encouragement.M3.107.60276.png"
+  },
+  {
+    "number": "108",
+    "slugPath": "Jacinthe-Card-108",
+    "slug": "Jacinthe",
+    "cardNum": "108",
+    "asset_id": "60277",
+    "url": "https://den-cards.pokellector.com/428/Jacinthe.M3.108.60277.png"
+  },
+  {
+    "number": "109",
+    "slugPath": "Forest-of-Vitality-Card-109",
+    "slug": "Forest-of-Vitality",
+    "cardNum": "109",
+    "asset_id": "60278",
+    "url": "https://den-cards.pokellector.com/428/Forest-of-Vitality.M3.109.60278.png"
+  },
+  {
+    "number": "110",
+    "slugPath": "Lumiose-City-Card-110",
+    "slug": "Lumiose-City",
+    "cardNum": "110",
+    "asset_id": "60279",
+    "url": "https://den-cards.pokellector.com/428/Lumiose-City.M3.110.60279.png"
+  },
+  {
+    "number": "111",
+    "slugPath": "Mega-Starmie-ex-Card-111",
+    "slug": "Mega-Starmie-ex",
+    "cardNum": "111",
+    "asset_id": "60280",
+    "url": "https://den-cards.pokellector.com/428/Mega-Starmie-ex.M3.111.60280.png"
+  },
+  {
+    "number": "112",
+    "slugPath": "Mega-Clefable-ex-Card-112",
+    "slug": "Mega-Clefable-ex",
+    "cardNum": "112",
+    "asset_id": "60281",
+    "url": "https://den-cards.pokellector.com/428/Mega-Clefable-ex.M3.112.60281.png"
+  },
+  {
+    "number": "113",
+    "slugPath": "Mega-Zygarde-ex-Card-113",
+    "slug": "Mega-Zygarde-ex",
+    "cardNum": "113",
+    "asset_id": "60282",
+    "url": "https://den-cards.pokellector.com/428/Mega-Zygarde-ex.M3.113.60282.png"
+  },
+  {
+    "number": "114",
+    "slugPath": "Meowth-ex-Card-114",
+    "slug": "Meowth-ex",
+    "cardNum": "114",
+    "asset_id": "60283",
+    "url": "https://den-cards.pokellector.com/428/Meowth-ex.M3.114.60283.png"
+  },
+  {
+    "number": "115",
+    "slugPath": "Rosas-Encouragement-Card-115",
+    "slug": "Rosas-Encouragement",
+    "cardNum": "115",
+    "asset_id": "60284",
+    "url": "https://den-cards.pokellector.com/428/Rosas-Encouragement.M3.115.60284.png"
+  },
+  {
+    "number": "116",
+    "slugPath": "Jacinthe-Card-116",
+    "slug": "Jacinthe",
+    "cardNum": "116",
+    "asset_id": "60285",
+    "url": "https://den-cards.pokellector.com/428/Jacinthe.M3.116.60285.png"
+  },
+  {
+    "number": "117",
+    "slugPath": "Mega-Zygarde-ex-Card-117",
+    "slug": "Mega-Zygarde-ex",
+    "cardNum": "117",
+    "asset_id": "60286",
+    "url": "https://den-cards.pokellector.com/428/Mega-Zygarde-ex.M3.117.60286.png"
+  }
+]

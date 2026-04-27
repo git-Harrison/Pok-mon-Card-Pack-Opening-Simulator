@@ -7,11 +7,11 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { getCard, SET_ORDER, SETS } from "@/lib/sets";
 import { formatKoreanPoints } from "@/lib/format";
-import type { PsaGrading, SetCode } from "@/lib/types";
+import type { SetCode } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { useIsMobile } from "@/lib/useIsMobile";
 import {
-  fetchPsaGradings,
+  fetchPclGradings,
   fetchUserActivity,
   fetchUserRankings,
   fetchWallet,
@@ -142,7 +142,7 @@ export default function HomeView() {
     idle(() => {
       if (!alive) return;
       // Slabs (drives PCL count + latest slab teaser)
-      fetchPsaGradings(user.id)
+      fetchPclGradings(user.id)
         .then((slabs) => {
           if (!alive) return;
           const sortedSlabs = [...slabs].sort((a, b) =>
@@ -333,7 +333,7 @@ export default function HomeView() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
               <ActivityCard
                 tone="amber"
-                href="/wallet?tab=psa"
+                href="/wallet?tab=pcl"
                 title="최신 PCL 슬랩"
                 emoji="💎"
                 body={
@@ -357,7 +357,7 @@ export default function HomeView() {
                   )
                 }
                 cta={teasers.latestSlab ? "지갑에서 보기" : "감별하러 가기"}
-                ctaHref={teasers.latestSlab ? "/wallet?tab=psa" : "/grading"}
+                ctaHref={teasers.latestSlab ? "/wallet?tab=pcl" : "/grading"}
               />
               <ActivityCard
                 tone="rose"

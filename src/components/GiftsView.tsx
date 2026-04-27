@@ -17,7 +17,7 @@ import {
 import { getCard, SETS } from "@/lib/sets";
 import type { GiftStatus } from "@/lib/types";
 import RarityBadge from "./RarityBadge";
-import PsaSlab from "./PsaSlab";
+import PclSlab from "./PclSlab";
 import CoinIcon from "./CoinIcon";
 import PageBackdrop from "./PageBackdrop";
 import PageHeader from "./PageHeader";
@@ -137,7 +137,7 @@ export default function GiftsView() {
         title="선물함"
         stats={
           <Link
-            href="/wallet?tab=psa"
+            href="/wallet?tab=pcl"
             className="h-9 px-3 rounded-full bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-bold text-[11px] inline-flex items-center gap-1 hover:scale-[1.02] active:scale-[0.98] transition shrink-0"
           >
             🎁 선물 보내기
@@ -219,7 +219,7 @@ export default function GiftsView() {
                     <div className="shrink-0">
                       {g.grade != null ? (
                         <div className="w-[120px] md:w-[140px]">
-                          <PsaSlab
+                          <PclSlab
                             card={card}
                             grade={g.grade}
                             size="sm"

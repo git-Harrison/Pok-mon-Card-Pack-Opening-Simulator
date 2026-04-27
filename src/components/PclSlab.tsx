@@ -3,16 +3,15 @@
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import type { Card } from "@/lib/types";
-import { GRADE_BRAND, PSA_LABEL, psaTone } from "@/lib/psa";
-import { SETS } from "@/lib/sets";
+import { GRADE_BRAND, PCL_LABEL, pclTone } from "@/lib/pcl";
 
 /**
- * PCL grading slab. Mirrors a real PSA slab's proportions — chunky
+ * PCL grading slab. Mirrors a real grading slab's proportions — chunky
  * header that reads [brand stack] [card info] [grade number], a
  * recessed card window, and a minimal bottom band with cert + barcode.
- * The whole slab glows in the grade's palette via `psaTone(grade)`.
+ * The whole slab glows in the grade's palette via `pclTone(grade)`.
  */
-export default function PsaSlab({
+export default function PclSlab({
   card,
   grade,
   size = "md",
@@ -26,8 +25,8 @@ export default function PsaSlab({
   /** When true, hides the header card-info column and the bottom cert+barcode band. */
   compact?: boolean;
 }) {
-  const tone = psaTone(grade);
-  const label = PSA_LABEL[grade] ?? "";
+  const tone = pclTone(grade);
+  const label = PCL_LABEL[grade] ?? "";
 
   // Responsive: slab fits its container up to the size cap so it never
   // overflows narrow modal grid columns.

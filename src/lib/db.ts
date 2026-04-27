@@ -5,7 +5,7 @@ import type {
   Card,
   GiftQuota,
   GiftStatus,
-  PsaGrading,
+  PclGrading,
   SetCode,
 } from "./types";
 import { getCard } from "./sets";
@@ -153,6 +153,9 @@ export async function fetchWallet(userId: string): Promise<WalletSnapshot> {
     sv8a: 0,
     sv5a: 0,
     sv10: 0,
+    m1l: 0,
+    m1s: 0,
+    m3: 0,
   };
   let totalCards = 0;
   for (const row of packsRes.data ?? []) {
@@ -286,7 +289,7 @@ async function expirePendingGifts() {
   await supabase.rpc("expire_pending_gifts");
 }
 
-// ---------- PSA grading ----------
+// ---------- PCL grading ----------
 
 export interface BulkGradingResultItem {
   card_id: string;
@@ -313,13 +316,13 @@ export interface BulkGradingResult {
   points?: number;
 }
 
-export async function bulkSubmitPsaGrading(
+export async function bulkSubmitPclGrading(
   userId: string,
   cardIds: string[],
   rarities: string[],
   autoSellBelowGrade: number | null = null
 ): Promise<BulkGradingResult> {
-  const { data, error } = await supabase.rpc("bulk_submit_psa_grading", {
+  const { data, error } = await supabase.rpc("bulk_submit_pcl_grading", {
     p_user_id: userId,
     p_card_ids: cardIds,
     p_rarities: rarities,
@@ -329,7 +332,7 @@ export async function bulkSubmitPsaGrading(
   return data as BulkGradingResult;
 }
 
-export interface RankingPsaGrading {
+export interface RankingPclGrading {
   id: string;
   card_id: string;
   grade: number;
@@ -350,12 +353,6 @@ export interface RankingRow {
   age: number;
   points: number;
   rank_score: number;
-  psa_count: number;
-  psa_10: number;
-  psa_9: number;
-  psa_8: number;
-  psa_7: number;
-  psa_6: number;
   showcase_count: number;
   /** Successful sabotage attempts by this user (each worth +100 rank). */
   sabotage_wins: number;
@@ -365,7 +362,7 @@ export interface RankingRow {
   character: string | null;
   /** Σ rarity_score × 10 across registered pet slabs. Max 500. */
   pet_score: number;
-  /** Pet slot order — uuid[] of psa_gradings.id. */
+  /** Pet slot order — uuid[] of grading rows. */
   main_card_ids?: string[];
   /** Pet slabs (PCL10) in slot order, with rarity for thumbnails. */
   main_cards?: RankingMainCard[];
@@ -373,7 +370,7 @@ export interface RankingRow {
   pokedex_count?: number;
   /** Seconds since last_seen_at — used to render the online dot. */
   seconds_since_seen?: number;
-  gradings: RankingPsaGrading[];
+  gradings: RankingPclGrading[];
 }
 
 export async function fetchUserRankings(): Promise<RankingRow[]> {
@@ -435,9 +432,9 @@ export async function bulkSellCards(userId: string, items: BulkSellItem[]) {
   };
 }
 
-export async function fetchPsaGradings(
+export async function fetchPclGradings(
   userId: string
-): Promise<PsaGrading[]> {
+): Promise<PclGrading[]> {
   // Uses the v4 helper that excludes slabs currently on display in
   // the user's museum — those are considered 전시 중이라 지갑에서 제외.
   return fetchUndisplayedGradings(userId);
@@ -689,26 +686,26 @@ export async function bulkCreateShowcases(
 
 export async function fetchUndisplayedGradings(
   userId: string
-): Promise<PsaGrading[]> {
+): Promise<PclGrading[]> {
   const { data, error } = await supabase.rpc("get_undisplayed_gradings", {
     p_user_id: userId,
   });
   if (error) return [];
-  return (data ?? []) as PsaGrading[];
+  return (data ?? []) as PclGrading[];
 }
 
-export interface PsaGradingWithDisplay extends PsaGrading {
+export interface PclGradingWithDisplay extends PclGrading {
   displayed: boolean;
 }
 
 export async function fetchAllGradingsWithDisplay(
   userId: string
-): Promise<PsaGradingWithDisplay[]> {
+): Promise<PclGradingWithDisplay[]> {
   const { data, error } = await supabase.rpc("get_all_gradings_with_display", {
     p_user_id: userId,
   });
   if (error) return [];
-  return (data ?? []) as PsaGradingWithDisplay[];
+  return (data ?? []) as PclGradingWithDisplay[];
 }
 
 export async function wildBattleReward(userId: string, amount: number) {

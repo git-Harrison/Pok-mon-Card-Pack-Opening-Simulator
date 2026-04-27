@@ -18,35 +18,35 @@ import {
   fetchAllGradingsWithDisplay,
   fetchGiftQuota,
   fetchWallet,
-  type PsaGradingWithDisplay,
+  type PclGradingWithDisplay,
   type WalletSnapshot,
 } from "@/lib/db";
 import { fetchProfile } from "@/lib/profile";
 import { notifyGift } from "@/lib/discord";
 import Link from "next/link";
 import PokeCard from "./PokeCard";
-import PsaSlab from "./PsaSlab";
+import PclSlab from "./PclSlab";
 import CoinIcon from "./CoinIcon";
 import PageHeader from "./PageHeader";
 import PageBackdrop from "./PageBackdrop";
 import Portal from "./Portal";
 import UserSelect from "./UserSelect";
 
-type Mode = "cards" | "psa";
+type Mode = "cards" | "pcl";
 type RarityFilter = "ALL" | Rarity;
 
 export default function WalletView() {
   const { user } = useAuth();
   const params = useSearchParams();
-  const initialMode: Mode = params.get("tab") === "cards" ? "cards" : "psa";
+  const initialMode: Mode = params.get("tab") === "cards" ? "cards" : "pcl";
   const [mode, setMode] = useState<Mode>(initialMode);
 
   const [snap, setSnap] = useState<WalletSnapshot>({
     items: [],
-    packsOpenedBySet: { m2a: 0, m2: 0, sv8: 0, sv2a: 0, sv8a: 0, sv5a: 0, sv10: 0 },
+    packsOpenedBySet: { m2a: 0, m2: 0, sv8: 0, sv2a: 0, sv8a: 0, sv5a: 0, sv10: 0, m1l: 0, m1s: 0, m3: 0 },
     totalCards: 0,
   });
-  const [psa, setPsa] = useState<PsaGradingWithDisplay[]>([]);
+  const [pcl, setPcl] = useState<PclGradingWithDisplay[]>([]);
   const [petIds, setPetIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>("ALL");
@@ -60,7 +60,7 @@ export default function WalletView() {
       fetchProfile(userId),
     ]);
     setSnap(w);
-    setPsa(g);
+    setPcl(g);
     setPetIds(new Set(p.main_card_ids ?? []));
     setLoading(false);
   }, [userId]);
@@ -81,8 +81,8 @@ export default function WalletView() {
       });
   }, [snap.items, rarityFilter]);
 
-  const psaItems = useMemo(() => {
-    return psa
+  const pclItems = useMemo(() => {
+    return pcl
       .map((g) => {
         const card = getCard(g.card_id);
         if (!card) return null;
@@ -91,7 +91,7 @@ export default function WalletView() {
       })
       .filter(
         (v): v is {
-          grading: PsaGradingWithDisplay;
+          grading: PclGradingWithDisplay;
           card: Card;
           isPet: boolean;
           isDisplayed: boolean;
@@ -103,7 +103,7 @@ export default function WalletView() {
         if (ar !== br) return ar - br;
         return b.grading.grade - a.grading.grade;
       });
-  }, [psa, petIds]);
+  }, [pcl, petIds]);
 
   const rarityCounts = useMemo(() => {
     const counts = new Map<Rarity, number>();
@@ -122,7 +122,7 @@ export default function WalletView() {
     [snap.packsOpenedBySet]
   );
 
-  const hasAny = snap.items.length > 0 || psa.length > 0;
+  const hasAny = snap.items.length > 0 || pcl.length > 0;
 
   return (
     <div className="relative max-w-6xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
@@ -131,9 +131,9 @@ export default function WalletView() {
 
       <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
         <div className="inline-flex items-stretch rounded-xl bg-white/5 border border-white/10 p-1">
-          <ModeTab active={mode === "psa"} onClick={() => setMode("psa")}>
+          <ModeTab active={mode === "pcl"} onClick={() => setMode("pcl")}>
             PCL 감별
-            <CountBadge value={psaItems.length} cap="2만" />
+            <CountBadge value={pclItems.length} cap="2만" />
           </ModeTab>
           <ModeTab active={mode === "cards"} onClick={() => setMode("cards")}>
             보유 카드
@@ -179,13 +179,13 @@ export default function WalletView() {
             </motion.div>
           ) : (
             <motion.div
-              key="psa"
+              key="pcl"
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
             >
-              <PsaMode items={psaItems} onAfterGift={refresh} />
+              <PclMode items={pclItems} onAfterGift={refresh} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -207,7 +207,7 @@ function CardsMode({
 }) {
   const reduce = useReducedMotion();
 
-  // 무한 스크롤 — 30종씩 점진 로드. PsaMode 와 동일 패턴.
+  // 무한 스크롤 — 30종씩 점진 로드. PclMode 와 동일 패턴.
   const [visibleCount, setVisibleCount] = useState(WALLET_PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -356,12 +356,12 @@ function CardsMode({
 // 한 페이지에 보일 카드/슬랩 수. 무한 스크롤로 30개씩 추가.
 const WALLET_PAGE_SIZE = 30;
 
-function PsaMode({
+function PclMode({
   items,
   onAfterGift,
 }: {
   items: {
-    grading: PsaGradingWithDisplay;
+    grading: PclGradingWithDisplay;
     card: Card;
     isPet: boolean;
     isDisplayed: boolean;
@@ -370,11 +370,11 @@ function PsaMode({
 }) {
   const reduce = useReducedMotion();
   const [previewTarget, setPreviewTarget] = useState<{
-    grading: PsaGradingWithDisplay;
+    grading: PclGradingWithDisplay;
     card: Card;
   } | null>(null);
   const [giftTarget, setGiftTarget] = useState<{
-    grading: PsaGradingWithDisplay;
+    grading: PclGradingWithDisplay;
     card: Card;
   } | null>(null);
 
@@ -498,7 +498,7 @@ function PsaMode({
                     locked && "opacity-45 grayscale saturate-50"
                   )}
                 >
-                  <PsaSlab card={card} grade={grading.grade} size="sm" compact />
+                  <PclSlab card={card} grade={grading.grade} size="sm" compact />
                 </div>
                 {locked && (
                   <div
@@ -576,7 +576,7 @@ function SlabPreview({
   onClose,
   onGift,
 }: {
-  target: { grading: PsaGradingWithDisplay; card: Card } | null;
+  target: { grading: PclGradingWithDisplay; card: Card } | null;
   onClose: () => void;
   onGift: () => void;
 }) {
@@ -628,7 +628,7 @@ function SlabPreview({
                 ✕
               </button>
               <div className="px-4 pt-5 pb-4 flex flex-col items-center gap-3">
-                <PsaSlab
+                <PclSlab
                   card={target.card}
                   grade={target.grading.grade}
                   size="sm"
@@ -667,7 +667,7 @@ function SlabGiftComposer({
   onClose,
   onSuccess,
 }: {
-  target: { grading: PsaGradingWithDisplay; card: Card } | null;
+  target: { grading: PclGradingWithDisplay; card: Card } | null;
   onClose: () => void;
   onSuccess: () => void | Promise<void>;
 }) {

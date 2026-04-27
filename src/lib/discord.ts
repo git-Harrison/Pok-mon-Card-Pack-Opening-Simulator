@@ -24,13 +24,13 @@ async function post(body: Record<string, unknown>): Promise<void> {
 }
 
 /** PCL 감별 성공 → 등급 10일 때만 알림. */
-export function notifyPsaGrade(
+export function notifyPclGrade(
   username: string,
   cardId: string,
   grade: number
 ): void {
   if (grade !== 10) return;
-  post({ kind: "psa-success", username, cardId, grade });
+  post({ kind: "pcl-success", username, cardId, grade });
 }
 
 /** 센터 부수기 → 성공일 때만 알림. */

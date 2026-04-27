@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCard, SETS } from "@/lib/sets";
-import { PSA_LABEL } from "@/lib/psa";
+import { PCL_LABEL } from "@/lib/pcl";
 
 /**
  * POST /api/discord/share
@@ -8,15 +8,15 @@ import { PSA_LABEL } from "@/lib/psa";
  * Auto-notify hooks. Only the events below will actually post (the server
  * still applies a final whitelist so a misbehaving client can't spam):
  *
- *   - psa-success : grade === 10 only
+ *   - pcl-success : grade === 10 only
  *   - sabotage    : success === true only
  *   - taunt       : always
  *   - gift        : always
  *   - rank-change : prev !== next
  */
 
-interface PsaSuccessBody {
-  kind: "psa-success";
+interface PclSuccessBody {
+  kind: "pcl-success";
   username: string;
   cardId: string;
   grade: number;
@@ -50,7 +50,7 @@ interface RankChangeBody {
   next: number;
 }
 type Body =
-  | PsaSuccessBody
+  | PclSuccessBody
   | SabotageBody
   | TauntBody
   | GiftBody
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
   let embed: Record<string, unknown>;
   let content = "";
 
-  if (body.kind === "psa-success") {
+  if (body.kind === "pcl-success") {
     const card = getCard(body.cardId);
     if (!card) {
       return NextResponse.json({ ok: false, skipped: "unknown-card" });
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     content = "@everyone";
     embed = {
       title: `🏆 ${safeUser}님의 PCL 10 GEM MINT!`,
-      description: `**${card.name}**\n${SETS[card.setCode].name} · #${card.number}\n등급: **PCL 10** (${PSA_LABEL[10]})`,
+      description: `**${card.name}**\n${SETS[card.setCode].name} · #${card.number}\n등급: **PCL 10** (${PCL_LABEL[10]})`,
       color: 0xfbbf24,
       thumbnail: card.imageUrl
         ? { url: absoluteImageUrl(card.imageUrl) }

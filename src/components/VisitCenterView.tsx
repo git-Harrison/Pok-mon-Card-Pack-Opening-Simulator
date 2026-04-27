@@ -20,7 +20,7 @@ import { getCard } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
 import { getCharacter } from "@/lib/profile";
 import CoinIcon from "./CoinIcon";
-import PsaSlab from "./PsaSlab";
+import PclSlab from "./PclSlab";
 import { CenterBackdrop, CenterGrid, ModalShell } from "./CenterView";
 import PageHeader from "./PageHeader";
 import { CharacterAvatar } from "./ProfileView";
@@ -268,7 +268,7 @@ function VisitShowcaseModal({
                   clickable && "hover:scale-[1.03] active:scale-[0.98]"
                 )}
               >
-                <PsaSlab card={card} grade={row.grade} size="lg" />
+                <PclSlab card={card} grade={row.grade} size="lg" />
                 {clickable && (
                   <span className="text-xs font-bold text-rose-300">
                     💥 부수기 가능

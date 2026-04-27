@@ -8,20 +8,20 @@ import clsx from "clsx";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import {
-  bulkSubmitPsaGrading,
+  bulkSubmitPclGrading,
   fetchWallet,
   type BulkGradingResult,
   type WalletSnapshot,
 } from "@/lib/db";
 import { getCard } from "@/lib/sets";
-import { isPsaEligible, PSA_LABEL, psaTone } from "@/lib/psa";
+import { isPclEligible, PCL_LABEL, pclTone } from "@/lib/pcl";
 import { compareRarity } from "@/lib/rarity";
-import { notifyPsaGrade } from "@/lib/discord";
+import { notifyPclGrade } from "@/lib/discord";
 import PageBackdrop from "./PageBackdrop";
 import Portal from "./Portal";
 
 // 일괄 감별 한 번에 보낼 수 있는 최대 카드 수.
-// 서버 bulk_submit_psa_grading 의 statement_timeout 180s 안에서 안전한
+// 서버 bulk_submit_pcl_grading 의 statement_timeout 180s 안에서 안전한
 // 상한. SQL 함수와 동일 값으로 동기화 필수.
 const BULK_GRADING_MAX = 5000;
 
@@ -65,7 +65,7 @@ export default function GradingView() {
   const eligibleCount = useMemo(() => {
     if (!wallet) return 0;
     return wallet.items
-      .filter((it) => isPsaEligible(it.card.rarity))
+      .filter((it) => isPclEligible(it.card.rarity))
       .reduce((s, it) => s + it.count, 0);
   }, [wallet]);
 
@@ -124,7 +124,7 @@ export default function GradingView() {
       <p className="mt-4 text-[11px] text-zinc-500 text-center">
         감별이 완료된 슬랩은{" "}
         <Link
-          href="/wallet?tab=psa"
+          href="/wallet?tab=pcl"
           className="underline underline-offset-2 hover:text-fuchsia-300"
         >
           내 카드지갑 PCL 탭
@@ -663,7 +663,7 @@ function BulkGradingModal({
 }) {
   const eligible = useMemo(() => {
     return wallet.items
-      .filter((it) => isPsaEligible(it.card.rarity))
+      .filter((it) => isPclEligible(it.card.rarity))
       .sort((a, b) => compareRarity(a.card.rarity, b.card.rarity));
   }, [wallet]);
 
@@ -694,7 +694,7 @@ function BulkGradingModal({
         rarities.push(it.card.rarity);
       }
     }
-    const res = await bulkSubmitPsaGrading(
+    const res = await bulkSubmitPclGrading(
       userId,
       cardIds,
       rarities,
@@ -708,7 +708,7 @@ function BulkGradingModal({
     if (typeof res.points === "number") onPointsChange(res.points);
     for (const r of res.results ?? []) {
       if (r.ok && !r.failed && typeof r.grade === "number") {
-        notifyPsaGrade(username, r.card_id, r.grade);
+        notifyPclGrade(username, r.card_id, r.grade);
       }
     }
     setResult(res);
@@ -961,7 +961,7 @@ function BulkResults({
   result: BulkGradingResult;
   onClose: () => void;
 }) {
-  const rows = result.results ?? [];
+  const allRows = result.results ?? [];
   const success = result.success_count ?? 0;
   const fail = result.fail_count ?? 0;
   const skipped = result.skipped_count ?? 0;
@@ -969,15 +969,23 @@ function BulkResults({
   const autoSoldCount = result.auto_sold_count ?? 0;
   const autoSoldEarned = result.auto_sold_earned ?? 0;
 
+  // 결과 행 표시 — 자동판매분은 별도 chip 으로 합계만 노출하고
+  // 행 목록에선 숨김 (사용자 요청). 슬랩 저장 / 실패 / cap_skip /
+  // 보유 부족 등만 카드별 행으로 표시.
+  const rows = useMemo(
+    () => allRows.filter((r) => !r.auto_sold),
+    [allRows]
+  );
+
   const gradeBreakdown = useMemo(() => {
     const m = new Map<number, number>();
-    for (const r of rows) {
-      if (r.ok && !r.failed && typeof r.grade === "number") {
+    for (const r of allRows) {
+      if (r.ok && !r.failed && !r.auto_sold && typeof r.grade === "number") {
         m.set(r.grade, (m.get(r.grade) ?? 0) + 1);
       }
     }
     return Array.from(m.entries()).sort((a, b) => b[0] - a[0]);
-  }, [rows]);
+  }, [allRows]);
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -998,7 +1006,7 @@ function BulkResults({
         {gradeBreakdown.length > 0 && (
           <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
             {gradeBreakdown.map(([g, n]) => {
-              const tone = psaTone(g);
+              const tone = pclTone(g);
               return (
                 <span
                   key={g}
@@ -1059,7 +1067,7 @@ function BulkResultRow({
 }) {
   const card = getCard(row.card_id);
   const isGraded = row.ok && !row.failed && typeof row.grade === "number";
-  const tone = isGraded ? psaTone(row.grade as number) : null;
+  const tone = isGraded ? pclTone(row.grade as number) : null;
   return (
     <div
       className={clsx(
@@ -1093,7 +1101,7 @@ function BulkResultRow({
           {row.failed
             ? "감별 실패 · 카드 소실"
             : isGraded
-            ? `${PSA_LABEL[row.grade as number] ?? ""}${
+            ? `${PCL_LABEL[row.grade as number] ?? ""}${
                 row.sell_payout
                   ? ` · 자동판매 +${row.sell_payout.toLocaleString("ko-KR")}p`
                   : ""

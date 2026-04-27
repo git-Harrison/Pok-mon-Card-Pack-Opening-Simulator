@@ -143,4 +143,7 @@ export const BOX_COST: Record<string, number> = {
   sv8a: 40_000,
   sv5a: 30_000,
   sv10: 35_000,
+  m1l: 45_000,
+  m1s: 45_000,
+  m3: 50_000,
 };

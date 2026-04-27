@@ -15,7 +15,7 @@ import { useAuth } from "@/lib/auth";
 import {
   fetchAllGradingsWithDisplay,
   fetchTauntHistory,
-  type PsaGradingWithDisplay,
+  type PclGradingWithDisplay,
   type TauntEntry,
 } from "@/lib/db";
 import {
@@ -37,13 +37,13 @@ import { getAllCatalogCards } from "@/lib/pokedex";
 import { RARITY_STYLE } from "@/lib/rarity";
 import PageHeader from "./PageHeader";
 import PageBackdrop from "./PageBackdrop";
-import PsaSlab from "./PsaSlab";
+import PclSlab from "./PclSlab";
 import Portal from "./Portal";
 
 export default function ProfileView() {
   const { user, refreshMe, logout } = useAuth();
   const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
-  const [psa, setPsa] = useState<PsaGradingWithDisplay[]>([]);
+  const [pcl, setPcl] = useState<PclGradingWithDisplay[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingChar, setSavingChar] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +61,7 @@ export default function ProfileView() {
       fetchAllGradingsWithDisplay(userId),
     ]);
     setProfile(p);
-    setPsa(g);
+    setPcl(g);
     setLoading(false);
   }, [userId]);
 
@@ -89,15 +89,15 @@ export default function ProfileView() {
   // 전시 중 슬랩은 picker 에서 아예 보이지 않도록 (서버도 상호배타
   // 거부하므로 클라 필터는 UX 일관성 + 라운드트립 절감).
   const eligibleSlabs = useMemo(
-    () => psa.filter((g) => g.grade === 10 && !g.displayed),
-    [psa]
+    () => pcl.filter((g) => g.grade === 10 && !g.displayed),
+    [pcl]
   );
   // 전시 중인 슬랩 ID — 위에서 이미 필터되긴 하지만, 동시 등록
   // 레이스(다른 탭에서 전시 시도) 대비로 picker 에 disabled 표시도
   // 같이 유지.
   const displayedIds = useMemo(
-    () => new Set(psa.filter((g) => g.displayed).map((g) => g.id)),
-    [psa]
+    () => new Set(pcl.filter((g) => g.displayed).map((g) => g.id)),
+    [pcl]
   );
 
   const onPickCharacter = useCallback(
@@ -125,7 +125,7 @@ export default function ProfileView() {
   );
 
   // 펫 등록/해제 시 항상 "살아있는" 슬랩 ID 만 base 로 사용한다. main_card_ids
-  // 에는 소실된 슬랩(예: 도감 일괄 등록 / 선물 / 일괄 판매로 사라진 PSA
+  // 에는 소실된 슬랩(예: 도감 일괄 등록 / 선물 / 일괄 판매로 사라진 PCL
   // 기록) UUID 가 잔존할 수 있는데, 그대로 다시 보내면 서버 set_main_cards
   // 의 "본인 PCL10 슬랩만 등록 가능" 검증에서 통째로 거부되어 펫 등록이
   // 영구 실패하던 회귀의 원인. main_cards 는 get_profile 이 살아있는 PCL10
@@ -704,7 +704,7 @@ function SlabPicker({
   onClose,
   onPick,
 }: {
-  slabs: PsaGradingWithDisplay[];
+  slabs: PclGradingWithDisplay[];
   disabledIds: Set<string>;
   displayedIds: Set<string>;
   slotIndex: number;
@@ -794,7 +794,7 @@ function SlabPicker({
                             : undefined
                         }
                       >
-                        <PsaSlab card={card} grade={g.grade} size="sm" />
+                        <PclSlab card={card} grade={g.grade} size="sm" />
                         <p className="mt-1 px-1 text-[10px] text-zinc-400 truncate">
                           {SETS[card.setCode].name} · #{card.number}
                         </p>

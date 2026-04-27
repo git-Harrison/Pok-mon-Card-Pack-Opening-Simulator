@@ -9,7 +9,7 @@ import { useAuth } from "@/lib/auth";
 import {
   bulkSellCards,
   bulkSellGradings,
-  fetchPsaGradings,
+  fetchPclGradings,
   fetchWallet,
   type WalletSnapshot,
 } from "@/lib/db";
@@ -20,10 +20,10 @@ import {
   RARITY_ORDER,
   RARITY_STYLE,
 } from "@/lib/rarity";
-import { PCL_SELL_PRICE, psaTone } from "@/lib/psa";
+import { PCL_SELL_PRICE, pclTone } from "@/lib/pcl";
 import CoinIcon from "./CoinIcon";
 import PageHeader from "./PageHeader";
-import type { PsaGrading, Rarity } from "@/lib/types";
+import type { PclGrading, Rarity } from "@/lib/types";
 
 /**
  * Dedicated bulk-sell page. Two sections:
@@ -31,13 +31,13 @@ import type { PsaGrading, Rarity } from "@/lib/types";
  * - PCL-graded slabs (undisplayed) at PCL_SELL_PRICE[grade]
  *
  * Both sections sell by category (rarity / grade). Displayed slabs are
- * excluded by `fetchPsaGradings` → `get_undisplayed_gradings` RPC.
+ * excluded by `fetchPclGradings` → `get_undisplayed_gradings` RPC.
  */
 export default function BulkSellView() {
   const router = useRouter();
   const { user, setPoints } = useAuth();
   const [snap, setSnap] = useState<WalletSnapshot | null>(null);
-  const [gradings, setGradings] = useState<PsaGrading[]>([]);
+  const [gradings, setGradings] = useState<PclGrading[]>([]);
   const [petIds, setPetIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [selling, setSelling] = useState(false);
@@ -52,7 +52,7 @@ export default function BulkSellView() {
     if (!user) return;
     const [w, g, p] = await Promise.all([
       fetchWallet(user.id),
-      fetchPsaGradings(user.id),
+      fetchPclGradings(user.id),
       fetchProfile(user.id),
     ]);
     setSnap(w);
@@ -259,7 +259,7 @@ export default function BulkSellView() {
               </div>
               <ul className="space-y-2">
                 {gradeTotals.map(({ grade, ids, price }) => {
-                  const tone = psaTone(grade);
+                  const tone = pclTone(grade);
                   return (
                     <li key={grade}>
                       <button

@@ -11,10 +11,10 @@ import {
   wildBattleLoss,
   wildBattleReward,
 } from "@/lib/db";
-import type { PsaGrading } from "@/lib/types";
+import type { PclGrading } from "@/lib/types";
 import { getCard } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
-import { psaTone } from "@/lib/psa";
+import { pclTone } from "@/lib/pcl";
 import { CARD_NAME_TO_TYPE } from "@/lib/wild/name-to-type";
 import { WILD_POOL, wildSpriteUrl, type WildMon } from "@/lib/wild/pool";
 import { effectiveness, effectivenessLabel } from "@/lib/wild/typechart";
@@ -371,7 +371,7 @@ function resolveType(name: string): WildType | null {
 export default function WildView() {
   const { user, setPoints } = useAuth();
 
-  const [gradings, setGradings] = useState<PsaGrading[]>([]);
+  const [gradings, setGradings] = useState<PclGrading[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [phase, setPhase] = useState<Phase>("idle");
@@ -1704,7 +1704,7 @@ function PickSlabPanel({
       </div>
       <ul className="flex flex-col gap-1.5">
         {filtered.map((s) => {
-          const tone = psaTone(s.grade);
+          const tone = pclTone(s.grade);
           return (
             <li key={s.gradingId}>
               <button

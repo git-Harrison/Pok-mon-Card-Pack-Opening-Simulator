@@ -1,7 +1,7 @@
 import type { Rarity } from "./types";
 
 /** PCL 감정 대상 등급 — 모든 등급의 카드를 감별할 수 있음. */
-export const PSA_ELIGIBLE_RARITIES: readonly Rarity[] = [
+export const PCL_ELIGIBLE_RARITIES: readonly Rarity[] = [
   "C",
   "U",
   "R",
@@ -14,18 +14,17 @@ export const PSA_ELIGIBLE_RARITIES: readonly Rarity[] = [
   "MUR",
 ] as const;
 
-export function isPsaEligible(rarity: Rarity): boolean {
-  return (PSA_ELIGIBLE_RARITIES as readonly Rarity[]).includes(rarity);
+export function isPclEligible(rarity: Rarity): boolean {
+  return (PCL_ELIGIBLE_RARITIES as readonly Rarity[]).includes(rarity);
 }
 
-/** Display brand for our grading system (replaces "PSA"). */
+/** Display brand for our grading system. */
 export const GRADE_BRAND = "PCL";
 
 /**
- * PSA grade → display label mapping.
- * See https://www.psacard.com/resources/gradingstandards for reference.
+ * PCL grade → display label mapping.
  */
-export const PSA_LABEL: Record<number, string> = {
+export const PCL_LABEL: Record<number, string> = {
   10: "GEM MINT",
   9: "MINT",
   8: "NM-MT",
@@ -40,19 +39,21 @@ export const PSA_LABEL: Record<number, string> = {
 
 /**
  * Bulk-sell price per PCL grade. Must mirror `pcl_sell_price()` in
- * supabase/migrations/20260569_secure_bulk_sell.sql (single source
- * of truth). 이 표를 바꾸면 SQL 함수도 같이 바꿔야 함.
+ * supabase/migrations/20260574_pcl_sell_price_anti_dupe.sql.
+ * 돈복사 방지를 위해 대폭 인하 — 박스 가격(30~50k) 대비 환산 평균
+ * 이 카드당 ~400p 수준이라 한 박스(150장) 풀 감별 시 박스 비용
+ * 정도만 회수 (이전엔 ~40× 폭리). PCL 9/10 은 lottery 성격으로 유지.
  */
 export const PCL_SELL_PRICE: Record<number, number> = {
-  10: 200_000,
-  9: 100_000,
-  8: 20_000,
-  7: 10_000,
-  6: 10_000,
+  10: 10_000,
+  9: 5_000,
+  8: 1_000,
+  7: 150,
+  6: 100,
 };
 
 /**
- * Premium tone per PSA grade. Palette moves from:
+ * Premium tone per PCL grade. Palette moves from:
  *   10  → rich gold (chase rarity)
  *   9   → platinum / silver-white
  *   8   → teal
@@ -62,7 +63,7 @@ export const PCL_SELL_PRICE: Record<number, number> = {
  *   3~1 → cool gray
  * No more primary red/green that looked childish.
  */
-export function psaTone(grade: number): {
+export function pclTone(grade: number): {
   text: string;
   ring: string;
   glow: string;

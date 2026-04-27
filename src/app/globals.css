@@ -18,7 +18,10 @@ html,
 body {
   overflow-x: hidden;
   max-width: 100vw;
-  background: radial-gradient(1200px 700px at 30% -10%, #1a1a2e 0%, #06060a 55%, #020206 100%);
+  /* background-color 를 image 와 분리해서 명시 — iOS Safari overscroll
+     bounce 시 그라데이션 끝나는 영역에 기본 흰색이 노출되던 이슈 fix. */
+  background-color: #06060a;
+  background-image: radial-gradient(1200px 700px at 30% -10%, #1a1a2e 0%, #06060a 55%, #020206 100%);
   color: #f5f5f7;
   min-height: 100%;
   font-family: var(--font-sans);
@@ -27,6 +30,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* overscroll bounce 가 페이지 밖 배경(브라우저 기본)을 노출 못 하도록 */
+  overscroll-behavior-y: contain;
 }
 
 /* 모바일은 페이지 전반의 배경 레이어를 모두 끄고 단색만. PageBackdrop /
@@ -36,7 +41,8 @@ body {
 @media (max-width: 767px) {
   html,
   body {
-    background: #06060a;
+    background-color: #06060a;
+    background-image: none;
   }
 }
 
@@ -439,7 +445,7 @@ samp {
   animation: stack-breathe 3.5s ease-in-out infinite;
 }
 
-/* ---------- PSA scanner effects ---------- */
+/* ---------- PCL scanner effects ---------- */
 @keyframes scan-line {
   0% { top: 0; }
   100% { top: 100%; }

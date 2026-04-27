@@ -238,7 +238,7 @@ const WALLET_SECTIONS: HelpSection[] = [
       h("li", { key: 3 }, h("b", null, "도감 박제"), " · PCL10 한정 영구 등록"),
       h("li", { key: 4 }, h("b", null, "프로필 펫"), " · PCL10 10장까지 메인 카드로 등록"),
       h("li", { key: 5 }, h("b", null, "선물"), " · 그레이드 6 이상만 가능 · 일일 5회"),
-      h("li", { key: 6 }, h("b", null, "일괄 판매"), " · PCL10 20k / 9 10k / 8 2k / 6·7 1k")
+      h("li", { key: 6 }, h("b", null, "일괄 판매"), " · PCL10 10k / 9 5k / 8 1k / 7 150p / 6 100p")
     ),
   },
   {
@@ -284,10 +284,11 @@ const BULK_SELL_SECTIONS: HelpSection[] = [
     body: h(
       "ul",
       null,
-      h("li", { key: 1 }, h("b", null, "PCL 10 (GEM MINT)"), " · 20,000p / 장"),
-      h("li", { key: 2 }, h("b", null, "PCL 9 (MINT)"), " · 10,000p / 장"),
-      h("li", { key: 3 }, h("b", null, "PCL 8 (NM-MT)"), " · 2,000p / 장"),
-      h("li", { key: 4 }, h("b", null, "PCL 7·6"), " · 1,000p / 장")
+      h("li", { key: 1 }, h("b", null, "PCL 10 (GEM MINT)"), " · 10,000p / 장"),
+      h("li", { key: 2 }, h("b", null, "PCL 9 (MINT)"), " · 5,000p / 장"),
+      h("li", { key: 3 }, h("b", null, "PCL 8 (NM-MT)"), " · 1,000p / 장"),
+      h("li", { key: 4 }, h("b", null, "PCL 7"), " · 150p / 장"),
+      h("li", { key: 5 }, h("b", null, "PCL 6"), " · 100p / 장")
     ),
   },
   {
@@ -494,7 +495,7 @@ const CENTER_SECTIONS: HelpSection[] = [
       " 슬랩만 전시할 수 있어요. PCL 6~8 슬랩도 시간당 수익 공식은 같지만 전시 슬롯에는 들어가지 않아요. 전시 중인 슬랩은 ",
       h(
         Link,
-        { href: "/wallet?tab=psa", className: "underline text-amber-300" },
+        { href: "/wallet?tab=pcl", className: "underline text-amber-300" },
         "지갑"
       ),
       "에서 🏛️ 전시 중 배지로 표시돼요."
@@ -997,7 +998,7 @@ const GIFTS_SECTIONS: HelpSection[] = [
       null,
       h(
         Link,
-        { href: "/wallet?tab=psa", className: "underline text-amber-300" },
+        { href: "/wallet?tab=pcl", className: "underline text-amber-300" },
         "지갑의 PCL 탭"
       ),
       "에서 슬랩 아래 ",

@@ -21,7 +21,7 @@ import {
   type SabotageLog,
 } from "@/lib/db";
 import { fetchProfile } from "@/lib/profile";
-import type { PsaGrading } from "@/lib/types";
+import type { PclGrading } from "@/lib/types";
 import {
   CENTER_GRID_COLS,
   CENTER_GRID_ROWS,
@@ -31,16 +31,16 @@ import {
   type ShowcaseType,
 } from "@/lib/center";
 import { getCard } from "@/lib/sets";
-import { psaTone } from "@/lib/psa";
+import { pclTone } from "@/lib/pcl";
 import CoinIcon from "./CoinIcon";
-import PsaSlab from "./PsaSlab";
+import PclSlab from "./PclSlab";
 import Portal from "./Portal";
 import PageHeader from "./PageHeader";
 
 export default function CenterView() {
   const { user, setPoints } = useAuth();
   const [showcases, setShowcases] = useState<CenterShowcase[]>([]);
-  const [availableGradings, setAvailableGradings] = useState<PsaGrading[]>([]);
+  const [availableGradings, setAvailableGradings] = useState<PclGrading[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -163,7 +163,7 @@ export default function CenterView() {
   );
 
   const handlePickGrading = useCallback(
-    async (grading: PsaGrading) => {
+    async (grading: PclGrading) => {
       if (!user || !pickTarget) return;
       const res = await displayGrading(
         user.id,
@@ -673,7 +673,7 @@ function ManageModal({
               >
                 {card && row ? (
                   <>
-                    <PsaSlab card={card} grade={row.grade} size="lg" />
+                    <PclSlab card={card} grade={row.grade} size="lg" />
                     <button
                       type="button"
                       onClick={() => onUndisplay(i)}
@@ -714,9 +714,9 @@ function GradingPickModal({
   onClose,
   onPick,
 }: {
-  gradings: PsaGrading[];
+  gradings: PclGrading[];
   onClose: () => void;
-  onPick: (grading: PsaGrading) => void;
+  onPick: (grading: PclGrading) => void;
 }) {
   const items = useMemo(
     () => gradings.slice().sort((a, b) => b.grade - a.grade),
@@ -745,7 +745,7 @@ function GradingPickModal({
             {items.map((g) => {
               const card = getCard(g.card_id);
               if (!card) return null;
-              const tone = psaTone(g.grade);
+              const tone = pclTone(g.grade);
               return (
                 <button
                   key={g.id}
@@ -754,7 +754,7 @@ function GradingPickModal({
                   className="relative flex flex-col items-center gap-1 p-1 rounded-lg hover:bg-white/5 active:scale-[0.97] transition"
                   style={{ touchAction: "manipulation" }}
                 >
-                  <PsaSlab card={card} grade={g.grade} size="sm" />
+                  <PclSlab card={card} grade={g.grade} size="sm" />
                   <span
                     className={clsx(
                       "text-[10px] font-bold tabular-nums",
@@ -782,7 +782,7 @@ function BulkShowcaseCreateModal({
   onSubmit,
 }: {
   emptyCells: number;
-  candidates: PsaGrading[];
+  candidates: PclGrading[];
   points: number;
   onClose: () => void;
   onSubmit: (
@@ -967,7 +967,7 @@ function BulkShowcaseCreateModal({
                         )}
                         style={{ touchAction: "manipulation" }}
                       >
-                        <PsaSlab card={card} grade={g.grade} size="sm" />
+                        <PclSlab card={card} grade={g.grade} size="sm" />
                         <div className="flex items-center gap-1 text-[10px] font-bold tabular-nums text-zinc-200">
                           <span
                             className={clsx(

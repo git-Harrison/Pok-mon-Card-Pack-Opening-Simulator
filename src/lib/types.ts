@@ -17,7 +17,10 @@ export type SetCode =
   | "sv2a"
   | "sv8a"
   | "sv5a"
-  | "sv10";
+  | "sv10"
+  | "m1l"
+  | "m1s"
+  | "m3";
 
 export interface Card {
   id: string; // `${setCode}-${number}`
@@ -57,7 +60,7 @@ export interface GiftQuota {
   remaining: number;
 }
 
-export interface PsaGrading {
+export interface PclGrading {
   id: string;
   user_id: string;
   card_id: string;
