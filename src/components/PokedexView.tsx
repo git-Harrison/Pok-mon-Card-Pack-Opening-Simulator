@@ -10,6 +10,8 @@ import {
   getAllCatalogCards,
   nextBreakpoint,
   pokedexPowerBonus,
+  RARITY_COMPLETION_BONUS,
+  RARITY_TOTALS,
   type PokedexEntry,
 } from "@/lib/pokedex";
 import { RARITY_ORDER, RARITY_STYLE, RARITY_LABEL } from "@/lib/rarity";
@@ -169,6 +171,48 @@ export default function PokedexView() {
             {submitting ? "등록 중..." : "📔 도감 일괄 등록"}
           </button>
         </div>
+      </div>
+
+      {/* 셋트 효과(완전 컬렉션 보너스) 안내 — 등급별 모든 카드를
+          도감에 박제하면 추가 전투력. 신규 세트 추가 시 totals 가
+          늘어 미완성으로 바뀌면 보너스도 자동 회수. */}
+      <div className="rounded-xl border border-fuchsia-400/30 bg-fuchsia-500/5 p-3 md:p-4 mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <span aria-hidden className="text-base">✨</span>
+          <h2 className="text-sm font-bold text-fuchsia-100">
+            등급 셋트 효과 (완전 컬렉션)
+          </h2>
+        </div>
+        <p className="text-[12px] text-zinc-300 leading-relaxed mb-2">
+          한 등급의 <b className="text-white">모든 카드를 도감에 박제</b>
+          하면 추가 <b className="text-fuchsia-200">전투력 보너스</b>가
+          영구 적용돼요. 신규 세트가 추가되어 등급별 카드 수가 늘어나면
+          미완성 상태가 되어 보너스가 즉시 빠지니, 신규 세트 카드도
+          꾸준히 박제해 주세요.
+        </p>
+        <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1 text-[11px] tabular-nums">
+          {RARITY_ORDER.map((r) => (
+            <li
+              key={r}
+              className="px-2 py-1 rounded bg-white/5 border border-white/10 flex items-center justify-between gap-1"
+            >
+              <span
+                className={clsx(
+                  "text-[10px] font-black px-1 py-0.5 rounded",
+                  RARITY_STYLE[r].badge
+                )}
+              >
+                {r}
+              </span>
+              <span className="text-zinc-200">
+                <b className="text-white">{RARITY_TOTALS[r]}</b>장 →
+                <b className="text-fuchsia-300 ml-0.5">
+                  +{RARITY_COMPLETION_BONUS[r].toLocaleString("ko-KR")}
+                </b>
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <div className="flex items-center gap-1.5 mb-3 overflow-x-auto py-2 -my-1 px-1 -mx-1">

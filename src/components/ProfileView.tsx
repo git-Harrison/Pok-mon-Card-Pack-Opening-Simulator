@@ -157,34 +157,46 @@ export default function ProfileView() {
   const onSelectSlab = useCallback(
     async (slot: number, gradingId: string) => {
       if (!user || !profile) return;
-      // 클라이언트 사이드 가드 — 서버도 거부하지만 UX 즉시 안내.
       if (displayedIds.has(gradingId)) {
         setError(
           "센터에 전시 중인 슬랩이에요. 센터에서 전시 해제 후 다시 시도하세요."
         );
         return;
       }
-      const picked = (profile.main_cards ?? []).find((c) => c.id === gradingId);
-      const pickedCardId =
-        picked?.card_id ??
-        eligibleSlabs.find((s) => s.id === gradingId)?.card_id ??
-        null;
-      const lockedCardIds = new Set(
-        (profile.main_cards ?? []).map((c) => c.card_id)
-      );
-      if (pickedCardId && lockedCardIds.has(pickedCardId)) {
-        setError("이미 같은 카드가 펫으로 등록돼 있어요.");
-        return;
+      // filledSlots 가 희귀도순으로 정렬돼 표시 slot index 와
+      // main_card_ids 의 실제 index 가 어긋남. slot 의 현재 카드 id 를
+      // 기준으로 "교체" 동작 — 이전 splice 방식은 다른 카드를 밀어내는
+      // 버그 (사용자 보고).
+      const slotCard = filledSlots[slot] ?? null;
+      let ids = [...aliveIds];
+      if (slotCard) {
+        ids = ids.filter((id) => id !== slotCard.id);
       }
-      const ids = [...aliveIds];
       if (ids.includes(gradingId)) {
         setError("이미 다른 슬롯에 등록된 슬랩이에요.");
         return;
       }
-      // slot 위치에 끼워 넣되 최대 10 cap. 빈 자리(slot >= length) 면 push.
-      if (slot >= ids.length) ids.push(gradingId);
-      else ids.splice(slot, 0, gradingId);
-      if (ids.length > MAX_MAIN_CARDS) ids.length = MAX_MAIN_CARDS;
+      // 교체 후 남는 슬랩들의 card_id 와 새 카드의 card_id 비교 —
+      // 다른 슬롯의 같은 card_id 와 중복이면 거부.
+      const cardIdByGradingId = new Map<string, string>();
+      for (const c of profile.main_cards ?? []) {
+        cardIdByGradingId.set(c.id, c.card_id);
+      }
+      for (const s of eligibleSlabs) {
+        cardIdByGradingId.set(s.id, s.card_id);
+      }
+      const newCardId = cardIdByGradingId.get(gradingId) ?? null;
+      const remainingCardIds = new Set(
+        ids
+          .map((id) => cardIdByGradingId.get(id))
+          .filter((v): v is string => !!v)
+      );
+      if (newCardId && remainingCardIds.has(newCardId)) {
+        setError("이미 같은 카드가 펫으로 등록돼 있어요.");
+        return;
+      }
+      ids.push(gradingId);
+      if (ids.length > MAX_MAIN_CARDS) ids = ids.slice(0, MAX_MAIN_CARDS);
       setError(null);
       const res = await rpcSetMainCards(user.id, ids);
       if (!res.ok) {
@@ -194,7 +206,15 @@ export default function ProfileView() {
       setPickerSlot(null);
       await refresh();
     },
-    [user, profile, aliveIds, displayedIds, eligibleSlabs, refresh]
+    [
+      user,
+      profile,
+      aliveIds,
+      displayedIds,
+      eligibleSlabs,
+      filledSlots,
+      refresh,
+    ]
   );
 
   const onRemoveSlot = useCallback(

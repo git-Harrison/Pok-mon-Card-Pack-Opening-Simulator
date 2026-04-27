@@ -919,7 +919,7 @@ function IdleCTA({
           <HudStat
             label="승리 보상"
             value="+20,000p"
-            sub="랭킹 +50"
+            sub="랭킹 +100"
             tone="amber"
             delay={0.9}
             reduce={!!reduce}

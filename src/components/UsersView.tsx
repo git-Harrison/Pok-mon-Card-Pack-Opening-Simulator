@@ -73,29 +73,27 @@ export default function UsersView() {
   // activityLoading state 객체가 있어서 setState 마다 effect 가 4회 재실행
   // 됐었음 — 모바일에서 탭/펼치기 응답이 끊겨 보이는 보조 원인이었음.
   // 이제 effect 는 expandedId / mode 변경에만 반응.
-  const cacheRef = useRef<Record<string, UserActivityEvent[]>>({});
+  // cacheRef 는 영구 보관하지 않고 매 expand 마다 새로 fetch — 다른
+  // 사용자의 펫/전시 등 변경 사항이 즉시 반영되도록.
   const loadingRef = useRef<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!expandedId) return;
     const key = `${expandedId}::${mode}`;
-    if (cacheRef.current[key] !== undefined) return;
     if (loadingRef.current[key]) return;
     loadingRef.current[key] = true;
     setActivityLoading((prev) => ({ ...prev, [key]: true }));
     let cancelled = false;
     fetchUserActivity(expandedId, mode)
       .then((events) => {
-        if (cancelled) return;
-        cacheRef.current[key] = events;
         loadingRef.current[key] = false;
+        if (cancelled) return;
         setActivityCache((prev) => ({ ...prev, [key]: events }));
         setActivityLoading((prev) => ({ ...prev, [key]: false }));
       })
       .catch(() => {
-        if (cancelled) return;
-        cacheRef.current[key] = [];
         loadingRef.current[key] = false;
+        if (cancelled) return;
         setActivityCache((prev) => ({ ...prev, [key]: [] }));
         setActivityLoading((prev) => ({ ...prev, [key]: false }));
       });
