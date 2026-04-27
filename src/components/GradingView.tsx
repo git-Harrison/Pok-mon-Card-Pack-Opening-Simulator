@@ -20,6 +20,11 @@ import { notifyPsaGrade } from "@/lib/discord";
 import PageBackdrop from "./PageBackdrop";
 import Portal from "./Portal";
 
+// 일괄 감별 한 번에 보낼 수 있는 최대 카드 수.
+// 서버 bulk_submit_psa_grading 의 statement_timeout 180s 안에서 안전한
+// 상한. SQL 함수와 동일 값으로 동기화 필수.
+const BULK_GRADING_MAX = 5000;
+
 const OAK_SPRITE =
   "https://play.pokemonshowdown.com/sprites/trainers/oak-gen3.png";
 
@@ -672,14 +677,19 @@ function BulkGradingModal({
     [eligible]
   );
 
+  // 한 번에 보낼 수 있는 카드 수 한도. 서버 statement_timeout 안에서
+  // 안전하게 처리되는 상한 — 같은 값이 SQL 함수에도 박혀있어야 함.
+  const submitCount = Math.min(totalEligibleCount, BULK_GRADING_MAX);
+
   const submit = useCallback(async () => {
     if (totalEligibleCount === 0 || phase !== "picking") return;
     setError(null);
     setPhase("submitting");
     const cardIds: string[] = [];
     const rarities: string[] = [];
-    for (const it of eligible) {
+    outer: for (const it of eligible) {
       for (let i = 0; i < it.count; i++) {
+        if (cardIds.length >= BULK_GRADING_MAX) break outer;
         cardIds.push(it.card.id);
         rarities.push(it.card.rarity);
       }
@@ -754,7 +764,7 @@ function BulkGradingModal({
           {phase === "done" && result ? (
             <BulkResults result={result} onClose={onClose} />
           ) : phase === "submitting" ? (
-            <BulkSubmittingScreen count={totalEligibleCount} />
+            <BulkSubmittingScreen count={submitCount} />
           ) : (
             <>
               <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-5 space-y-4">
@@ -775,10 +785,18 @@ function BulkGradingModal({
                         {totalEligibleCount.toLocaleString("ko-KR")}
                         <span className="text-base font-bold text-fuchsia-300/80"> 장</span>
                       </p>
-                      <p className="mt-2 text-[11px] text-fuchsia-200/80 leading-relaxed">
-                        제출 시 <b>모든 감별 가능 카드</b>를 일괄로 의뢰해요.
-                        실패 시 카드는 사라져요. (감별 확률은 단일 감별과 동일)
-                      </p>
+                      {totalEligibleCount > BULK_GRADING_MAX ? (
+                        <p className="mt-2 text-[11px] text-amber-200/90 leading-relaxed">
+                          ⚠️ 한 번에 최대 <b>{BULK_GRADING_MAX.toLocaleString("ko-KR")}장</b>까지
+                          처리. 남은 {(totalEligibleCount - BULK_GRADING_MAX).toLocaleString("ko-KR")}
+                          장은 다음 회차에 다시 의뢰해 주세요. 실패 시 카드는 사라져요.
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-[11px] text-fuchsia-200/80 leading-relaxed">
+                          제출 시 <b>모든 감별 가능 카드</b>를 일괄로 의뢰해요.
+                          실패 시 카드는 사라져요. (감별 확률은 단일 감별과 동일)
+                        </p>
+                      )}
                     </div>
                     <AutoSellThresholdPicker
                       value={autoSellBelow}
@@ -808,7 +826,7 @@ function BulkGradingModal({
                   )}
                   style={{ touchAction: "manipulation" }}
                 >
-                  🔎 {totalEligibleCount.toLocaleString("ko-KR")}장 일괄 감별
+                  🔎 {submitCount.toLocaleString("ko-KR")}장 일괄 감별
                 </button>
               </div>
             </>
