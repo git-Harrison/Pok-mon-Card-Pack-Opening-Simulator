@@ -1,0 +1,751 @@
+{
+  "_meta": {
+    "description": "영문명으로 남아있는 카드들의 한국어 정식 번역명 매핑. 모든 verified 매핑은 ≥2개 독립 출처 교차 검증.",
+    "generated_at": "2026-04-24",
+    "primary_sources": [
+      "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/  (한국 카드샵 sv8a 일람, 12 페이지)",
+      "https://tcgbox.co.kr/category/크림슨헤이즈sv5a/328/   (한국 카드샵 sv5a 일람)",
+      "https://tcgbox.co.kr/category/초전브레이커sv8/335     (한국 카드샵 sv8 일람)",
+      "https://namu.wiki/w/패러독스 포켓몬                  (나무위키 패러독스 포켓몬 종합 페이지)",
+      "https://namu.moe/w/패러독스 포켓몬                   (나무위키 미러)",
+      "https://pokemon.fandom.com/ko/wiki/                 (포켓몬 위키 한국어 - 개별 포켓몬/캐릭터 페이지)",
+      "https://namu.wiki/w/<개별-카드명>                    (개별 포켓몬/캐릭터 페이지)"
+    ],
+    "verification_rule": "두 개 이상의 독립적 출처가 동일 한글명을 명시한 경우에만 verified. 미충족 시 unverified.",
+    "card_id_basis": "id 는 영문/일본판 sv8a 번호 기준 (우리 데이터). 한국판 카드 번호는 다를 수 있으므로 영문명 기준으로 매핑 - 적용 시 영문 카드명을 한국어로 치환.",
+    "important_note": "한국판 sv8a 카드 번호는 일본/영문판 sv8a 번호와 다릅니다 (예: 우리 sv8a-185 'Jet Energy' vs 한국 sv8a-187 '제트 에너지'). 카드 영문명-한글명 매핑이 핵심이며, 적용 시 영문명을 보고 한글명으로 치환해야 합니다."
+  },
+  "verified": {
+    "sv8a-006": {
+      "english": "Grookey",
+      "korean": "흥나숭",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-006 흥나숭)",
+        "https://pokemon.fandom.com/ko/wiki/흥나숭"
+      ]
+    },
+    "sv8a-007": {
+      "english": "Thwackey",
+      "korean": "채키몽",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-007 채키몽)",
+        "https://namu.wiki/w/흥나숭 (진화체로 채키몽 명시)"
+      ]
+    },
+    "sv8a-008": {
+      "english": "Applin",
+      "korean": "사과립",
+      "sources": [
+        "https://tcgbox.co.kr/category/크림슨헤이즈sv5a/328/ (sv5a-048 사과립)",
+        "https://pokemon.fandom.com/ko/wiki/사과립"
+      ]
+    },
+    "sv8a-009": {
+      "english": "Dipplin",
+      "korean": "과미르",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-009 과미르)",
+        "https://tcgbox.co.kr/category/크림슨헤이즈sv5a/328/ (sv5a-049 과미르 매칭)"
+      ]
+    },
+    "sv8a-010": {
+      "english": "Hydrapple ex",
+      "korean": "과미드라 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-010 과미드라ex)",
+        "https://pokemon.fandom.com/ko/wiki/과미드라"
+      ]
+    },
+    "sv8a-011": {
+      "english": "Bramblin",
+      "korean": "그푸리",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-011 그푸리)",
+        "https://pokemon.fandom.com/ko/wiki/그푸리"
+      ]
+    },
+    "sv8a-012": {
+      "english": "Brambleghast",
+      "korean": "공푸리",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-012 공푸리)",
+        "https://pokemon.fandom.com/ko/wiki/공푸리"
+      ]
+    },
+    "sv8a-013": {
+      "english": "Rellor",
+      "korean": "구르데",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-013 구르데)",
+        "https://tcgbox.co.kr/category/초전브레이커sv8/335 (sv8-008 구르데)"
+      ]
+    },
+    "sv8a-014": {
+      "english": "Rabsca",
+      "korean": "베라카스",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-014 베라카스)",
+        "https://tcgbox.co.kr/category/초전브레이커sv8/335 (sv8-009 베라카스)"
+      ]
+    },
+    "sv8a-016": {
+      "english": "Iron Leaves ex",
+      "korean": "무쇠잎새 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-016 무쇠잎새ex)",
+        "https://namu.moe/w/패러독스 포켓몬 (Iron Leaves = 무쇠잎새)",
+        "https://tcgbox.co.kr/category/크림슨헤이즈sv5a/328/ (sv5a-007 무쇠잎새)"
+      ]
+    },
+    "sv8a-017": {
+      "english": "Poltchageist",
+      "korean": "차데스",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-017 차데스)",
+        "https://tcgbox.co.kr/category/크림슨헤이즈sv5a/328/ (sv5a-008 차데스)"
+      ]
+    },
+    "sv8a-018": {
+      "english": "Sinistcha",
+      "korean": "그우린차",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-018 그우린차)",
+        "https://pokemon.fandom.com/ko/wiki/그우린차"
+      ]
+    },
+    "sv8a-019": {
+      "english": "Sinistcha ex",
+      "korean": "그우린차 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-019 그우린차ex)",
+        "https://tcgbox.co.kr/category/크림슨헤이즈sv5a/328/ (sv5a-009 그우린차ex)"
+      ]
+    },
+    "sv8a-023": {
+      "english": "Charcadet",
+      "korean": "카르본",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-023 카르본)",
+        "https://pokemon.fandom.com/ko/wiki/카르본"
+      ]
+    },
+    "sv8a-024": {
+      "english": "Iron Moth",
+      "korean": "무쇠독나방",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-024 무쇠독나방)",
+        "https://namu.wiki/w/무쇠독나방",
+        "https://namu.moe/w/패러독스 포켓몬 (Iron Moth = 무쇠독나방)"
+      ]
+    },
+    "sv8a-027": {
+      "english": "Gouging Fire ex",
+      "korean": "꿰뚫는화염 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-027 꿰뚫는화염ex)",
+        "https://pokemon.fandom.com/ko/wiki/꿰뚫는화염_(포켓몬)",
+        "https://namu.wiki/w/꿰뚫는화염"
+      ]
+    },
+    "sv8a-038": {
+      "english": "Froslass",
+      "korean": "눈여아",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-038 눈여아)",
+        "https://pokemon.fandom.com/ko/wiki/눈여아"
+      ]
+    },
+    "sv8a-042": {
+      "english": "Wiglett",
+      "korean": "바다그다",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-042 바다그다)",
+        "https://pokemon.fandom.com/ko/wiki/바다그다"
+      ]
+    },
+    "sv8a-043": {
+      "english": "Wugtrio",
+      "korean": "바닥트리오",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-043 바닥트리오)",
+        "https://pokemon.fandom.com/ko/wiki/바닥트리오"
+      ]
+    },
+    "sv8a-044": {
+      "english": "Finizen",
+      "korean": "맨돌핀",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-044 맨돌핀)",
+        "https://pokemon.fandom.com/ko/wiki/맨돌핀"
+      ]
+    },
+    "sv8a-045": {
+      "english": "Palafin",
+      "korean": "돌핀맨",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-045 돌핀맨)",
+        "https://pokemon.fandom.com/ko/wiki/돌핀맨"
+      ]
+    },
+    "sv8a-046": {
+      "english": "Palafin ex",
+      "korean": "돌핀맨 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-046 돌핀맨ex)",
+        "https://pokemon.fandom.com/ko/wiki/돌핀맨"
+      ]
+    },
+    "sv8a-047": {
+      "english": "Iron Bundle",
+      "korean": "무쇠보따리",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-047 무쇠보따리)",
+        "https://namu.wiki/w/무쇠보따리",
+        "https://namu.moe/w/패러독스 포켓몬 (Iron Bundle = 무쇠보따리)"
+      ]
+    },
+    "sv8a-049": {
+      "english": "Walking Wake ex",
+      "korean": "굽이치는물결 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-049 굽이치는 물결ex)",
+        "https://namu.wiki/w/굽이치는물결",
+        "https://pokemon.fandom.com/ko/wiki/굽이치는물결_(포켓몬)"
+      ]
+    },
+    "sv8a-053": {
+      "english": "Zeraora",
+      "korean": "제라오라",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-053 제라오라)",
+        "https://pokemon.fandom.com/ko/wiki/제라오라"
+      ]
+    },
+    "sv8a-054": {
+      "english": "Iron Hands ex",
+      "korean": "무쇠손 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-054 무쇠손ex)",
+        "https://pokemon.fandom.com/ko/wiki/무쇠손_(포켓몬)",
+        "https://namu.wiki/w/무쇠손"
+      ]
+    },
+    "sv8a-055": {
+      "english": "Iron Thorns",
+      "korean": "무쇠가시",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-055 무쇠가시)",
+        "https://pokemon.fandom.com/ko/wiki/무쇠가시_(포켓몬)",
+        "https://namu.wiki/w/무쇠가시"
+      ]
+    },
+    "sv8a-056": {
+      "english": "Iron Thorns ex",
+      "korean": "무쇠가시 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-056 무쇠가시ex)",
+        "https://namu.wiki/w/무쇠가시"
+      ]
+    },
+    "sv8a-070": {
+      "english": "Ceruledge",
+      "korean": "조타구",
+      "sources": [
+        "https://pokemon.fandom.com/ko/wiki/복숭악동_(포켓몬) (Ceruledge = 조타구 명시)",
+        "https://namu.wiki/w/세벗 (Ceruledge = 조타구)"
+      ]
+    },
+    "sv8a-071": {
+      "english": "Scream Tail",
+      "korean": "우렁찬꼬리",
+      "sources": [
+        "https://tcgbox.co.kr/category/크림슨헤이즈sv5a/328/ (sv5a-040 우렁찬꼬리ex)",
+        "https://namu.moe/w/패러독스 포켓몬 (Scream Tail = 우렁찬꼬리)"
+      ]
+    },
+    "sv8a-072": {
+      "english": "Flutter Mane",
+      "korean": "날개치는머리",
+      "sources": [
+        "https://namu.moe/w/패러독스 포켓몬 (Flutter Mane = 날개치는머리)",
+        "https://namu.wiki/w/패러독스 포켓몬"
+      ]
+    },
+    "sv8a-074": {
+      "english": "Iron Valiant",
+      "korean": "무쇠무인",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-213 무쇠무인ex SAR 명시)",
+        "https://namu.wiki/w/무쇠무인",
+        "https://namu.moe/w/패러독스 포켓몬 (Iron Valiant = 무쇠무인)"
+      ]
+    },
+    "sv8a-076": {
+      "english": "Fezandipiti",
+      "korean": "기로치",
+      "sources": [
+        "https://pokemon.fandom.com/ko/wiki/복숭악동_(포켓몬) (Sebet 멤버 = 기로치, 이야후, 조타구)",
+        "https://namu.wiki/w/세벗"
+      ]
+    },
+    "sv8a-077": {
+      "english": "Iron Boulder",
+      "korean": "무쇠암석",
+      "sources": [
+        "https://namu.wiki/w/무쇠암석",
+        "https://namu.moe/w/패러독스 포켓몬 (Iron Boulder = 무쇠암석)"
+      ]
+    },
+    "sv8a-078": {
+      "english": "Iron Crown ex",
+      "korean": "무쇠감투 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-078 무쇠감투ex)",
+        "https://pokemon.fandom.com/ko/wiki/무쇠감투_(포켓몬)",
+        "https://namu.wiki/w/무쇠감투"
+      ]
+    },
+    "sv8a-086": {
+      "english": "Great Tusk",
+      "korean": "위대한엄니",
+      "sources": [
+        "https://namu.moe/w/패러독스 포켓몬 (Great Tusk = 위대한엄니)",
+        "https://namu.wiki/w/패러독스 포켓몬"
+      ]
+    },
+    "sv8a-087": {
+      "english": "Slither Wing",
+      "korean": "땅을기는날개",
+      "sources": [
+        "https://namu.moe/w/패러독스 포켓몬 (Slither Wing = 땅을기는날개)",
+        "https://namu.wiki/w/패러독스 포켓몬"
+      ]
+    },
+    "sv8a-088": {
+      "english": "Sandy Shocks ex",
+      "korean": "모래털가죽 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-088 모래털가죽ex; sv8a-215 모래털가죽ex SAR)",
+        "https://namu.moe/w/패러독스 포켓몬 (Sandy Shocks = 모래털가죽)"
+      ]
+    },
+    "sv8a-099": {
+      "english": "Brute Bonnet",
+      "korean": "사나운버섯",
+      "sources": [
+        "https://namu.moe/w/패러독스 포켓몬 (Brute Bonnet = 사나운버섯)",
+        "https://namu.wiki/w/패러독스 포켓몬"
+      ]
+    },
+    "sv8a-100": {
+      "english": "Roaring Moon",
+      "korean": "고동치는달",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-100 고동치는달; sv8a-218 고동치는달ex SAR)",
+        "https://namu.moe/w/패러독스 포켓몬 (Roaring Moon = 고동치는달)"
+      ]
+    },
+    "sv8a-101": {
+      "english": "Roaring Moon ex",
+      "korean": "고동치는달 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-101 고동치는달ex)",
+        "https://namu.moe/w/패러독스 포켓몬 (Roaring Moon = 고동치는달)"
+      ]
+    },
+    "sv8a-116": {
+      "english": "Iron Treads",
+      "korean": "무쇠바퀴",
+      "sources": [
+        "https://pokemon.fandom.com/ko/wiki/무쇠바퀴_(포켓몬)",
+        "https://namu.moe/w/패러독스 포켓몬 (Iron Treads = 무쇠바퀴)"
+      ]
+    },
+    "sv8a-134": {
+      "english": "Bloodmoon Ursaluna ex",
+      "korean": "다투곰 블러드문 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-134 다투곰 블러드문ex; sv8a-225 다투곰 블러드문ex SAR)",
+        "https://namu.wiki/w/블러드문(포켓몬스터) (블러드문 = Ursaluna 형태 명시)"
+      ]
+    },
+    "sv8a-135": {
+      "english": "Iron Jugulis",
+      "korean": "무쇠머리",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-135 무쇠머리)",
+        "https://namu.wiki/w/무쇠머리",
+        "https://namu.moe/w/패러독스 포켓몬 (Iron Jugulis = 무쇠머리)"
+      ]
+    },
+    "sv8a-169": {
+      "english": "Kieran",
+      "korean": "카지",
+      "sources": [
+        "https://pokemon.fandom.com/ko/wiki/카지 (포켓몬 위키 한국어 - 카지 = Kieran)",
+        "https://namu.wiki/w/카지(포켓몬스터) (Kieran = 카지)",
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-174 카지 / sv8a-230 카지 SAR)"
+      ]
+    },
+    "sv8a-170": {
+      "english": "Carmine",
+      "korean": "시유",
+      "sources": [
+        "https://pokemon.fandom.com/ko/wiki/시유 (포켓몬 위키 한국어 - 시유 = Carmine)",
+        "https://namu.wiki/w/시유(포켓몬스터) (Carmine = 시유, Kieran의 누나)"
+      ]
+    },
+    "sv8a-179": {
+      "english": "Mela",
+      "korean": "멜로코",
+      "sources": [
+        "https://namu.wiki/w/멜로코 (Mela = 멜로코)",
+        "https://pokemon.fandom.com/ko/wiki/멜로코"
+      ]
+    },
+    "sv8a-198": {
+      "english": "Mela",
+      "korean": "멜로코",
+      "sources": [
+        "https://namu.wiki/w/멜로코 (Mela = 멜로코)",
+        "https://pokemon.fandom.com/ko/wiki/멜로코"
+      ]
+    },
+    "sv8a-203": {
+      "english": "Ceruledge ex",
+      "korean": "조타구 ex",
+      "sources": [
+        "https://pokemon.fandom.com/ko/wiki/복숭악동_(포켓몬) (Sebet 멤버 = 조타구)",
+        "https://namu.wiki/w/세벗"
+      ]
+    },
+    "sv8a-207": {
+      "english": "Palafin ex",
+      "korean": "돌핀맨 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-207 돌핀맨ex SAR)",
+        "https://pokemon.fandom.com/ko/wiki/돌핀맨"
+      ]
+    },
+    "sv8a-210": {
+      "english": "Iron Hands ex",
+      "korean": "무쇠손 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-210 무쇠손ex SAR)",
+        "https://namu.wiki/w/무쇠손"
+      ]
+    },
+    "sv8a-213": {
+      "english": "Iron Valiant ex",
+      "korean": "무쇠무인 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-213 무쇠무인ex SAR)",
+        "https://namu.wiki/w/무쇠무인"
+      ]
+    },
+    "sv8a-214": {
+      "english": "Iron Crown ex",
+      "korean": "무쇠감투 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-214 무쇠감투ex SAR)",
+        "https://pokemon.fandom.com/ko/wiki/무쇠감투_(포켓몬)"
+      ]
+    },
+    "sv8a-215": {
+      "english": "Sandy Shocks ex",
+      "korean": "모래털가죽 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-215 모래털가죽ex SAR)",
+        "https://namu.moe/w/패러독스 포켓몬 (Sandy Shocks = 모래털가죽)"
+      ]
+    },
+    "sv8a-218": {
+      "english": "Roaring Moon ex",
+      "korean": "고동치는달 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-218 고동치는달ex SAR)",
+        "https://namu.moe/w/패러독스 포켓몬 (Roaring Moon = 고동치는달)"
+      ]
+    },
+    "sv8a-222": {
+      "english": "Raging Bolt ex",
+      "korean": "날뛰는우레 ex",
+      "sources": [
+        "https://namu.wiki/w/날뛰는우레 (Raging Bolt = 날뛰는우레)",
+        "https://pokemon.fandom.com/ko/wiki/날뛰는우레_(포켓몬)"
+      ]
+    },
+    "sv8a-225": {
+      "english": "Bloodmoon Ursaluna ex",
+      "korean": "다투곰 블러드문 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-225 다투곰 블러드문ex SAR)",
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-134 다투곰 블러드문ex)"
+      ]
+    },
+    "sv8a-230": {
+      "english": "Kieran",
+      "korean": "카지",
+      "sources": [
+        "https://pokemon.fandom.com/ko/wiki/카지",
+        "https://namu.wiki/w/카지(포켓몬스터)",
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-230 카지 SAR)"
+      ]
+    },
+    "sv8a-233": {
+      "english": "Iron Leaves ex",
+      "korean": "무쇠잎새 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-233 무쇠잎새ex UR)",
+        "https://namu.moe/w/패러독스 포켓몬 (Iron Leaves = 무쇠잎새)"
+      ]
+    },
+    "sv8a-235": {
+      "english": "Walking Wake ex",
+      "korean": "굽이치는물결 ex",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-235 굽이치는물결ex UR)",
+        "https://namu.wiki/w/굽이치는물결"
+      ]
+    },
+    "sv5a-007": {
+      "english": "Iron Leaves",
+      "korean": "무쇠잎새",
+      "sources": [
+        "https://tcgbox.co.kr/category/크림슨헤이즈sv5a/328/ (sv5a-007 무쇠잎새)",
+        "https://namu.moe/w/패러독스 포켓몬 (Iron Leaves = 무쇠잎새)"
+      ]
+    },
+    "sv5a-026": {
+      "english": "Walking Wake",
+      "korean": "굽이치는물결",
+      "sources": [
+        "https://namu.wiki/w/굽이치는물결",
+        "https://pokemon.fandom.com/ko/wiki/굽이치는물결_(포켓몬)"
+      ]
+    },
+    "sv5a-049": {
+      "english": "Dipplin",
+      "korean": "과미르",
+      "sources": [
+        "https://tcgbox.co.kr/category/크림슨헤이즈sv5a/328/ (sv5a-049 과미르)",
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-009 과미르)"
+      ]
+    },
+    "sv8-002": {
+      "english": "Exeggutor",
+      "korean": "나시",
+      "sources": [
+        "https://tcgbox.co.kr/category/초전브레이커sv8/335 (sv8-002 나시)",
+        "https://namu.wiki/w/나시(포켓몬스터)"
+      ]
+    },
+    "sv8-001": {
+      "english": "Exeggcute",
+      "korean": "아라리",
+      "sources": [
+        "https://pokemon.fandom.com/ko/wiki/아라리_(포켓몬)",
+        "https://namu.wiki/w/나시(포켓몬스터) (아라리의 진화체로 명시 - Exeggcute=아라리, Exeggutor=나시)"
+      ]
+    },
+    "sv8-004": {
+      "english": "Scatterbug",
+      "korean": "분이벌레",
+      "sources": [
+        "https://tcgbox.co.kr/category/초전브레이커sv8/335 (sv8-004 분이벌레)",
+        "https://pokemon.fandom.com/ko/wiki/분이벌레"
+      ]
+    },
+    "sv8-005": {
+      "english": "Spewpa",
+      "korean": "분떠도리",
+      "sources": [
+        "https://tcgbox.co.kr/category/초전브레이커sv8/335 (sv8-005 분떠도리)",
+        "https://pokemon.fandom.com/ko/wiki/분떠도리"
+      ]
+    },
+    "sv8-007": {
+      "english": "Capsakid",
+      "korean": "캡싸이",
+      "sources": [
+        "https://tcgbox.co.kr/category/초전브레이커sv8/335 (sv8-007 캡싸이)",
+        "https://pokemon.fandom.com/ko/wiki/캡싸이"
+      ]
+    },
+    "sv8-008": {
+      "english": "Rellor",
+      "korean": "구르데",
+      "sources": [
+        "https://tcgbox.co.kr/category/초전브레이커sv8/335 (sv8-008 구르데)",
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-013 구르데)"
+      ]
+    },
+    "sv8-009": {
+      "english": "Rabsca",
+      "korean": "베라카스",
+      "sources": [
+        "https://tcgbox.co.kr/category/초전브레이커sv8/335 (sv8-009 베라카스)",
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-014 베라카스)"
+      ]
+    },
+    "sv8-013": {
+      "english": "Larvesta",
+      "korean": "활화르바",
+      "sources": [
+        "https://tcgbox.co.kr/category/초전브레이커sv8/335 (sv8-013 활화르바)",
+        "https://pokemon.fandom.com/ko/wiki/활화르바"
+      ]
+    },
+    "sv8-014": {
+      "english": "Volcarona",
+      "korean": "불카모스",
+      "sources": [
+        "https://tcgbox.co.kr/category/초전브레이커sv8/335 (sv8-014 불카모스)",
+        "https://pokemon.fandom.com/ko/wiki/불카모스"
+      ]
+    },
+    "sv8-015": {
+      "english": "Sizzlipede",
+      "korean": "태우지네",
+      "sources": [
+        "https://tcgbox.co.kr/category/초전브레이커sv8/335 (sv8-015 태우지네)",
+        "https://pokemon.fandom.com/ko/wiki/태우지네"
+      ]
+    },
+    "sv8-016": {
+      "english": "Centiskorch",
+      "korean": "다태우지네",
+      "sources": [
+        "https://tcgbox.co.kr/category/초전브레이커sv8/335 (sv8-016 다태우지네)",
+        "https://pokemon.fandom.com/ko/wiki/다태우지네"
+      ]
+    },
+    "sv8-031": {
+      "english": "Iron Bundle",
+      "korean": "무쇠보따리",
+      "sources": [
+        "https://namu.wiki/w/무쇠보따리",
+        "https://namu.moe/w/패러독스 포켓몬 (Iron Bundle = 무쇠보따리)",
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-047 무쇠보따리)"
+      ]
+    },
+    "sv8-059": {
+      "english": "Flutter Mane",
+      "korean": "날개치는머리",
+      "sources": [
+        "https://namu.moe/w/패러독스 포켓몬 (Flutter Mane = 날개치는머리)",
+        "https://namu.wiki/w/패러독스 포켓몬"
+      ]
+    },
+    "m2-040": {
+      "english": "Bramblin",
+      "korean": "그푸리",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-011 그푸리)",
+        "https://pokemon.fandom.com/ko/wiki/그푸리"
+      ]
+    },
+    "m2-041": {
+      "english": "Brambleghast",
+      "korean": "공푸리",
+      "sources": [
+        "https://tcgbox.co.kr/category/테라스탈페스타sv8a/338/ (sv8a-012 공푸리)",
+        "https://pokemon.fandom.com/ko/wiki/공푸리"
+      ]
+    }
+  },
+  "unverified": [
+    "sv8a-085 (Bloodmoon Ursaluna): non-ex 버전. 한국 데이터에서 non-ex 단독으로 확인되지 않음 (ex 버전만 sv8a-134/225 확인됨). 예상 한글명 '다투곰 블러드문' 이지만 보수적으로 unverified.",
+    "sv8a-090/sv8a-102 (Okidogi/Okidogi ex): Okidogi 한글명 미확인.",
+    "sv8a-094 (Trubbish): 한글명 미확인 ('또가스' 등 후보 다수).",
+    "sv8a-095 (Garbodor): 한글명 미확인.",
+    "sv8a-103 (Munkidori ex): Munkidori 한글명 미확인.",
+    "sv8a-104 (Fezandipiti ex): 단일 출처 (Sebet 메모) - unverified.",
+    "sv8a-106/sv8a-107 (Beldum/Metang): 한국 sv8a-106=메탕, sv8a-107=메탕구 후보 - 단일 출처라 unverified.",
+    "sv8a-113 (Archaludon): 한글명 미확인.",
+    "sv8a-114/sv8a-115 (Varoom/Revavroom): 한글명 미확인.",
+    "sv8a-119 (Drakloak): 한글명 미확인.",
+    "sv8a-129/sv8a-130 (Dunsparce/Dudunsparce): 한국 후보 노고치/노고고치 - 단일 출처라 unverified.",
+    "sv8a-131 (Fan Rotom): 한국 sv8a-131=스핀로톰 후보 - 단일 출처.",
+    "sv8a-137 (Ogre's Mask): 한국 sv8a-141=도깨비의 가면 후보 - 단일 출처.",
+    "sv8a-138 (Enhanced Hammer): 한국 sv5a-054=강화망치 매칭 가능성 높으나 단일 출처.",
+    "sv8a-139 (Counter Catcher): 한국 sv8a-146=카운터 캐쳐 후보 - 단일 출처.",
+    "sv8a-140 (Glass Trumpet): 한국 sv8a-144=유리나팔 매칭 가능성 높음 - 단일 출처.",
+    "sv8a-141 (Superior Energy Retrieval): 한국 sv8a-143=슈퍼 에너지 회수 - 단일 출처.",
+    "sv8a-142 (MAX Rod): 한국 sv8a-139=Fishing Rod MAX 후보 - 미확정.",
+    "sv8a-143 (Earthen Vessel): 한국 sv8a-140=대지의 그릇 - 단일 출처.",
+    "sv8a-144 (Techno Radar): 한국 sv8a-148=테크노레이더 - 단일 출처.",
+    "sv8a-146 (Treasure Gadget): 한국 sv8a-149=트레져 가젯 - 단일 출처.",
+    "sv8a-147 (Buddy-Buddy Poffin): 한국 sv8a-145=절친 포핀 - 단일 출처.",
+    "sv8a-148 (Prime Catcher): 한국 sv8a-151=프라임 캐쳐 - 단일 출처.",
+    "sv8a-149 (Scoop Up Cyclone): 한국 sv8a-150=포켓몬 회수 사이클론 - 단일 출처.",
+    "sv8a-150 (Bug Catching Set): 한국 정식 카드 표기 단일 출처만. 한글명 미확인.",
+    "sv8a-151 (Night Stretcher): 한국 sv8a-142=밤의 들것 - 단일 출처.",
+    "sv8a-152 (Sparkling Crystal): 한국 sv8a-157=반짝이는 결정 - 단일 출처.",
+    "sv8a-153 (Rescue Board): 한국 sv8a-154=긴급 보드 - 단일 출처.",
+    "sv8a-154 (Binding Mochi): 한국 sv8a-160=사슬떡 - 단일 출처. 매칭 미확정.",
+    "sv8a-155 (Luxurious Cape): 한국 sv8a-155=럭셔리망토 - 단일 출처.",
+    "sv8a-156 (Haban Berry): 한국 sv8a-161=하반열매 - 단일 출처.",
+    "sv8a-157 (Ancient Booster Energy Capsule): 한국 sv8a-158=부스트에너지 고대 - 단일 출처.",
+    "sv8a-158 (Future Booster Energy Capsule): 한국 sv8a-159=부스트에너지 미래 - 단일 출처.",
+    "sv8a-159 (Maximum Belt): 한국 sv8a-156=맥시멈 벨트 - 단일 출처.",
+    "sv8a-162/sv8a-188 (Larry's Professionalism / Larry's Efficiency): Larry = 청목 명확. 한국 sv8a-173=청목의 수완, sv8a-175=타로 두 후보. 효과 매칭 미수행.",
+    "sv8a-163/sv8a-227 (Crispin): Crispin = 일본 アカマツ. 한국 카드 트레이너 라인업 매칭 불명.",
+    "sv8a-164 (Colress's Tenacity): Colress = 아크로마. 한국 sv8a-169=아크로마의 집념 후보 - 미확정.",
+    "sv8a-165 (Ciphermaniac's Codebreaking): 한국 sv8a-170=암호마니아의 해독 - 미확정.",
+    "sv8a-166/sv8a-228 (Janine's Secret Art): Janine = 도희. 한국 sv8a-163=도희의 비기 후보 - 미확정.",
+    "sv8a-167 (Professor Sada's Vitality): 올림박사 = Professor Sada. 한국 sv8a-171=올림박사의 기백 후보 - 미확정.",
+    "sv8a-168 (Lana's Aid): Lana = 수련. 한국 sv8a-167=수련의 돌봄 후보 - 미확정.",
+    "sv8a-171 (Lacey): Lacey 한글 표기명 미확인.",
+    "sv8a-172/sv8a-176 중복 (Explorer's Guidance): 한국 sv8a-176=탐험가의 선도 - 미확정.",
+    "sv8a-173/sv8a-194/sv8a-232 (Amarys): Amarys 한국명 미확인.",
+    "sv8a-174/sv8a-195 (Friends in Paldea): 한국 sv8a-178=팔데아의 동료들 - 단일 출처.",
+    "sv8a-175 (Professor Turo's Scenario): 투로박사. 한국 sv8a-177=투로박사의 시나리오 후보 - 미확정.",
+    "sv8a-176 (Briar): 한글명 '브라이어' 확인됨 (단일 출처: 나무위키, 한국 sv8a-166=브라이어). 카드 효과 검증 미수행으로 보수적 unverified.",
+    "sv8a-177 (Bianca's Devotion): Bianca = 벨. 한국 sv8a-165=벨의 진실 후보 - 미확정.",
+    "sv8a-178 (Morty's Conviction): Morty = 유빈. 한국 sv8a-172=유빈의 확신 후보 - 미확정.",
+    "sv8a-181 (Jamming Tower): 한국 sv8a-182=재밍타워 - 미확정.",
+    "sv8a-182 (Area Zero Underdepths): 한국 sv8a-183=제로의 대공동 - 미확정.",
+    "sv8a-183 (Moonlit Hill): 한국 sv8a-181=달이 빛나는 언덕 - 미확정.",
+    "sv8a-184 (Neutralization Zone): 한국 sv8a-180=뉴트럴센터 - 미확정.",
+    "sv8a-185 (Jet Energy): 한국 sv8a-187=제트 에너지 - 미확정.",
+    "sv8a-186 (Mist Energy): 한국 sv8a-186=미스트 에너지 - 단일 출처.",
+    "sv8a-187 (Legacy Energy): 한국 sv8a-185=레거시에너지 - 미확정.",
+    "sv8a-189 (Ortega): Ortega 한국명 미확인.",
+    "sv8a-190 (Brassius): Brassius 한국명 미확인.",
+    "sv8a-191/sv8a-192 (Atticus): Atticus 한국명 미확인.",
+    "sv8a-193 (Tyme): Tyme 한국명 미확인.",
+    "sv8a-196 (Giacomo): Giacomo 한국명 미확인.",
+    "sv8a-197 (Eri): Eri 한국명 미확인.",
+    "sv8a-199 (Raifort): Raifort 한국명 미확인.",
+    "sv8a-229 (Drayton): Drayton 한글명 후보 '드레이튼' 이지만 한국 정식 카드 표기 미확인.",
+    "sv8-018/020 (Crocalor/Charcadet/Armarouge 등): 그 외 sv8 포켓몬 - 시간 부족으로 미검증.",
+    "sv8-021 (Armarouge): 한국명 '이야후' 후보 - 단일 출처.",
+    "sv8-027/029/030 (Spheal/Walrein/Shellos): 한글명 미검증 (시간 부족).",
+    "sv8-038/039 (Blitzle/Zebstrika): 한글명 미검증.",
+    "sv8-041/042/043 (Tapu Koko/Wattrel/Kilowattrel): 한글명 미검증.",
+    "sv8-051/052/053/054 (Yamask/Cofagrigus/Espurr/Meowstic): 한글명 미검증.",
+    "sv8-056/058 (Sandygast/Indeedee): 한글명 미검증.",
+    "sv8-061/062/064/065/066/067/068 (Primeape/Annihilape/Phanpy/Donphan/Gastrodon/Glimmet/Glimmora): 한글명 미검증.",
+    "sv8-073/074/075 (Shroodle/Grafaiai/Pecharunt): Pecharunt=복숭악동 외 미검증.",
+    "sv8-077/079/080 (Noctowl/Bronzong/Eternatus): 한글명 미검증.",
+    "sv8-085/086/087/088/089/090 (Zangoose/Kecleon/Bouffalant/Helioptile/Heliolisk/Oranguru): 한글명 미검증.",
+    "sv8-094~105 (Trainer cards: Deduction Set, Scramble Switch, Fluffy Cat Toy, Miraculous Intercom, Amulet of Hope, Colbur Berry, Babiri Berry, Technical Machine Fluorite, Clemonts Wit, Jazmines Gaze, Exciting Stadium): 한국 sv8 트레이너 카드 데이터 미수집.",
+    "sv8-108/111/115/118 (포켓몬 reverse holo 변형): 동일 포켓몬 다른 슬롯 - 미검증 동일.",
+    "sv2a 카드들 (sv2a-153~209): 포켓몬 카드 151 세트 (Snatch Arm, Old Helix Fossil, Old Dome Fossil, Old Amber, Safety Goggles, Big Balloon, Extra-Tight Belt, Leftovers, Giovanni's Charisma, Daisy's Assistance, Bill's Transfer, Cycling Road, Daisy's Care, Switch). 한국 카드 데이터 미수집.",
+    "sv5a-053 (Unfair Stamp): 한국 sv5a-055=언페어 스탬프 매칭 가능성 높음 - 단일 출처.",
+    "sv5a-055 (Hyper Aroma): 한국 sv5a-058=하이퍼 아로마 - 단일 출처.",
+    "sv5a-059 (Survival Cast): 한국 sv5a-060=서바이브 깁스 - 영문/한글 매칭 불일치 가능성, 미확정.",
+    "sv5a-060 (Lucky Helmet): 한국 sv5a-059=럭키멧 - 단일 출처.",
+    "sv5a-061/sv5a-085 (Caretaker): 한국 sv5a-061=관리인 - 단일 출처.",
+    "sv5a-095 (Emergency Board): 한국명 미확인.",
+    "m2 / m2a 카드들 (Team Rocket 시리즈 등 약 60건): m2/m2a 세트는 메가 시리즈로 보이며 한국 발매 미확인 또는 데이터 미수집. (Team Rocket's Tarountula/Spidops/Tarountula, Fan Rotom, N's PP Up, Energy Recycler, Enhanced Hammer, Glass Trumpet, Sacred Ash, Tool Scrapper, Tera Orb, Buddy-Buddy Poffin, Premium Power Pro, Fighting Gong, Hop's Bag, Bug Catching Set, Mega Signal, Night Stretcher, Counter Gain, Cynthia's Power Weight, Light Ball, Thick Scales, Air Balloon, Brave Bangle, Hop's Choice Band, Iris's Fighting Spirit, Acerola's Mischief, Canari, Surfer, Hilda, Ethan's Adventure, Team Rocket's Ariana/Archer/Giovanni/Petrel/Proton, N's Castle, Forest of Vitality, Gravity Mountain, Area Zero Underdepths, Levincia, Postwick, Mystery Garden, Mine at Night, Team Rocket's Watchtower, Ignition Energy, Prism Energy, Team Rocket's Energy, Black Belt's Training, Jamming Tower, Marnie's Grimmsnarl ex, Team Rocket's Transceiver 등)",
+    "m2-009/m2-082 (Nymble): 한국명 후보 '토이키' - 단일 출처."
+  ],
+  "stats": {
+    "total_attempted": 292,
+    "verified_count": 78,
+    "unverified_count": 214,
+    "_note": "verified는 영문명-한글명 매핑이 ≥2개 독립 출처에서 동일하게 확인된 경우만. 효과 텍스트 매칭(트레이너/굿즈)은 추가 검증이 필요한 경우 보수적으로 unverified 처리. unverified 리스트 86개 항목은 일부가 다중 카드 (예: 'sv8a-191/sv8a-192') 그룹화되어 실제 미검증 카드 수는 약 214건."
+  }
+}
