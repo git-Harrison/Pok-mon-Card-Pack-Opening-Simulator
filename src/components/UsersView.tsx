@@ -268,7 +268,13 @@ export default function UsersView() {
           {entries.map((e, rank) => {
             const isMe = currentUser?.id === e.id;
             const def = getCharacter(e.character);
-            const isOnline = onlineSet.has(e.id);
+            // 온라인 dot 발화: 실시간 presence channel OR 5분 이내
+            // last_seen_at heartbeat. presence 가 RLS / 네트워크로
+            // 실패해도 last_seen 으로 fallback.
+            const isOnline =
+              onlineSet.has(e.id) ||
+              (typeof e.seconds_since_seen === "number" &&
+                e.seconds_since_seen < 300);
             const isExpanded = expandedId === e.id;
             const isTopThree = rank < 3;
             const trophy = rank === 0 ? "🏆" : rank === 1 ? "🥈" : rank === 2 ? "🥉" : null;

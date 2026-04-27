@@ -267,15 +267,16 @@ const BULK_SELL_SECTIONS: HelpSection[] = [
     body: h(
       "ul",
       null,
-      h("li", { key: 1 }, h("b", null, "MUR"), " · 10,000p"),
-      h("li", { key: 2 }, h("b", null, "UR"), " · 5,000p"),
-      h("li", { key: 3 }, h("b", null, "SAR"), " · 3,000p"),
-      h("li", { key: 4 }, h("b", null, "SR · MA"), " · 1,000p"),
-      h("li", { key: 5 }, h("b", null, "AR"), " · 500p"),
-      h("li", { key: 6 }, h("b", null, "RR"), " · 200p"),
-      h("li", { key: 7 }, h("b", null, "R"), " · 100p"),
-      h("li", { key: 8 }, h("b", null, "U"), " · 50p"),
-      h("li", { key: 9 }, h("b", null, "C"), " · 25p")
+      h("li", { key: 1 }, h("b", null, "MUR"), " · 5,000p"),
+      h("li", { key: 2 }, h("b", null, "UR"), " · 2,500p"),
+      h("li", { key: 3 }, h("b", null, "SAR"), " · 1,500p"),
+      h("li", { key: 4 }, h("b", null, "SR"), " · 750p"),
+      h("li", { key: 5 }, h("b", null, "AR"), " · 400p"),
+      h("li", { key: 6 }, h("b", null, "MA"), " · 250p"),
+      h("li", { key: 7 }, h("b", null, "RR"), " · 100p"),
+      h("li", { key: 8 }, h("b", null, "R"), " · 50p"),
+      h("li", { key: 9 }, h("b", null, "U"), " · 25p"),
+      h("li", { key: 10 }, h("b", null, "C"), " · 10p")
     ),
   },
   {

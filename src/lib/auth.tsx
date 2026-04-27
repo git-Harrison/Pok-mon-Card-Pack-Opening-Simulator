@@ -13,6 +13,7 @@ import {
   fetchMe,
   rpcLogin,
   rpcSignup,
+  touchLastSeen,
   type DbUser,
 } from "./db";
 
@@ -102,9 +103,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!userId) return;
     let alive = true;
+    // 진입 즉시 한 번 heartbeat — login / 새로고침 직후 dot 발화 위해.
+    void touchLastSeen(userId);
     const tick = async () => {
       if (!alive) return;
       if (typeof document !== "undefined" && document.hidden) return;
+      // last_seen_at heartbeat (실시간 presence channel 의 fallback 으로
+      // /users 페이지 온라인 dot 의 데이터 소스).
+      void touchLastSeen(userId);
       const fresh = await fetchMe(userId);
       if (alive && fresh) persist(fresh);
     };

@@ -623,10 +623,11 @@ function Stat({
   );
 }
 
-// 사용자 정한 hierarchy (low → high): C, U, R, RR, MA, AR, SR.
-// SR 은 SAR 바로 아래라 자동판매 옵션에 포함. 그 위 (SAR/UR/MUR)
-// 는 너무 비싸서 자동판매 후보로 노출하지 않음.
-const AUTO_SELL_RARITY_OPTIONS = ["C", "U", "R", "RR", "MA", "AR", "SR"] as const;
+// MUR 외 모든 등급을 자동판매 후보로 노출. 사용자가 칩으로 직접
+// 선택. MUR 만 제외 — chase 카드라 자동판매하면 사고임.
+const AUTO_SELL_RARITY_OPTIONS = [
+  "C", "U", "R", "RR", "MA", "AR", "SR", "SAR", "UR",
+] as const;
 
 function SealedBox({
   set,

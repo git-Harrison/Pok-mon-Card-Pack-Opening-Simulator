@@ -119,19 +119,20 @@ export function cardFxClass(r: Rarity): "fx-mur" | "fx-sar" | null {
 }
 
 // Bulk-sell payout (지갑 → 일괄판매). 정리용 단가.
+// 돈복사 차단 위해 전반 50% 인하 + low-tier 추가 인하.
 // 사용자 hierarchy 와 정합: C < U < R < RR < MA < AR < SR < SAR < UR < MUR.
 // 서버 함수 bulk_sell_price() 와 mirror — 동기화 필수.
 export const BULK_SELL_PRICE: Record<Rarity, number> = {
-  C: 25,
-  U: 50,
-  R: 100,
-  RR: 200,
-  MA: 500,
-  AR: 800,
-  SR: 1_500,
-  SAR: 3_000,
-  UR: 5_000,
-  MUR: 10_000,
+  C: 10,
+  U: 25,
+  R: 50,
+  RR: 100,
+  MA: 250,
+  AR: 400,
+  SR: 750,
+  SAR: 1_500,
+  UR: 2_500,
+  MUR: 5_000,
 };
 
 // Cost in points to open one sealed booster box.

@@ -109,6 +109,16 @@ export async function fetchMe(userId: string): Promise<DbUser | null> {
   return data as DbUser;
 }
 
+// Heartbeat — 클라가 주기적으로 호출해 last_seen_at 갱신.
+// /users 페이지의 온라인 dot 의 fallback 데이터로 쓰임.
+export async function touchLastSeen(userId: string): Promise<void> {
+  try {
+    await supabase.rpc("touch_last_seen", { p_user_id: userId });
+  } catch {
+    // 실패는 silent — heartbeat 는 best-effort.
+  }
+}
+
 // ---------- Users directory ----------
 
 export interface UserListEntry {
