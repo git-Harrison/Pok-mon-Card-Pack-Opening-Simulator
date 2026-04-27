@@ -7,30 +7,35 @@ import type { Card, Rarity } from "@/lib/types";
 
 const supabase = createClient();
 
+// 11 세트(m1l/m1s/m2/m2a/m3/m4/sv2a/sv5a/sv8/sv8a/sv10) 카탈로그
+// 실측 카운트. 신규 세트가 들어올 때마다 src/lib/sets/* 와 함께 갱신.
+// 서버 pokedex_completion_bonus(SQL) 의 임계값과 반드시 동기화.
 export const RARITY_TOTALS: Record<Rarity, number> = {
-  MUR: 3,
-  UR: 14,
-  SAR: 79,
+  MUR: 6,
+  UR: 17,
+  SAR: 101,
   MA: 5,
-  SR: 100,
-  AR: 86,
-  RR: 103,
-  R: 104,
-  U: 234,
-  C: 439,
+  SR: 153,
+  AR: 134,
+  RR: 129,
+  R: 134,
+  U: 334,
+  C: 587,
 };
 
+// 등급별 완전 컬렉션 보너스 — 어렵게 모이는 등급일수록 더 큰 보상.
+// 카드 수 늘어난 만큼 보너스도 비례 상향.
 export const RARITY_COMPLETION_BONUS: Record<Rarity, number> = {
-  MUR: 10000,
-  UR: 6000,
-  SAR: 5000,
-  MA: 5000,
-  SR: 5000,
-  AR: 4000,
-  RR: 3000,
-  R: 2000,
-  U: 1500,
-  C: 1500,
+  MUR: 15000,
+  UR:   9000,
+  SAR:  8000,
+  MA:   5000,
+  SR:   7500,
+  AR:   6500,
+  RR:   5500,
+  R:    4500,
+  U:    3500,
+  C:    3000,
 };
 
 export interface PokedexEntry {

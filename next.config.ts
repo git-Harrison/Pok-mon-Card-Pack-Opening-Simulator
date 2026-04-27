@@ -1,8 +1,13 @@
 import type { NextConfig } from "next";
 
+// 'unsafe-eval' 제거됨 — Chrome DevTools Issues 패널의 보안 권고
+// (advisory) 대응. Next.js 프로덕션 번들은 eval / new Function 을
+// 쓰지 않으므로 안전. 만약 특정 라이브러리(framer-motion 일부 모드,
+// JIT 템플릿 등) 가 깨지면 다시 추가.
+// 'wasm-unsafe-eval' 은 wasm 모듈 컴파일에 필요할 수 있어 명시 추가.
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://vercel.live https://*.vercel.live",
+  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://vercel.live https://*.vercel.live",
   "script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://vercel.live https://*.vercel.live",
   "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://vercel.live https://*.vercel.live https://fonts.googleapis.com",
   "img-src 'self' data: blob: https:",
