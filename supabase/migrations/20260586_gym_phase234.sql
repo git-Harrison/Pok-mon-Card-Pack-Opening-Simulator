@@ -121,8 +121,11 @@ language sql
 stable
 set search_path = public, extensions
 as $$
+  -- 20260564 에서 rarity_power × pcl_power → showcase_power(r, g) 로
+  -- 교체. 옛 곱셈은 AR/RR/R/U/C 에서 0 이라 center_power 가 과소
+  -- 평가됐음.
   select coalesce((
-    select sum(rarity_power(g2.rarity) * pcl_power(g2.grade))::int
+    select sum(coalesce(showcase_power(g2.rarity, g2.grade), 0))::int
       from showcase_cards sc
       join user_showcases us on us.id = sc.showcase_id
       join psa_gradings g2 on g2.id = sc.grading_id

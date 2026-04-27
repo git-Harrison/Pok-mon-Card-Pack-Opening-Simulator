@@ -725,10 +725,13 @@ begin
 
   elsif p_tab = 'power' then
     with showcases as (
+      -- 20260564 에서 rarity_power × pcl_power 곱셈 모델 폐기, AR/RR/
+      -- R/U/C 가 0 이던 문제 수정. showcase_power(rarity, grade) lookup
+      -- 으로 교체 (모든 PCL9·10 등급 양수 점수).
       select
         ('전시 (' || g2.rarity || ' PCL' || g2.grade || ')') as label,
         g2.card_id as card_id,
-        (rarity_power(g2.rarity) * pcl_power(g2.grade))::int as points,
+        coalesce(showcase_power(g2.rarity, g2.grade), 0) as points,
         'showcase_display'::text as source,
         sc.created_at as occurred_at
       from showcase_cards sc
