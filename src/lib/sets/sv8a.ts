@@ -33,7 +33,7 @@ export const sv8a: SetInfo = {
     {
       // Hit 슬롯 — 박스당 SAR 약 1~2장, UR 약 1장 페이스.
       label: "Hit",
-      weights: { RR: 50, SR: 30, SAR: 15, UR: 5 },
+      weights: { RR: 50, SR: 30, SAR: 15, UR: 2.5 },
     },
   ],
   cards: [

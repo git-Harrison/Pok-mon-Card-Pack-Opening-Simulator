@@ -27,7 +27,7 @@ export const sv10: SetInfo = {
     { label: "C 2", weights: { C: 100 } },
     { label: "C/U", weights: { C: 55, U: 45 } },
     { label: "U/R", weights: { U: 70, R: 30 } },
-    { label: "Hit", weights: { R: 30, RR: 30, AR: 10, SR: 7, SAR: 5, UR: 1 } },
+    { label: "Hit", weights: { R: 30, RR: 30, AR: 10, SR: 7, SAR: 5, UR: 0.5 } },
   ],
   cards: [
     { id: "sv10-001", setCode: "sv10", number: "001", name: "피콘", rarity: "C", imageUrl: pk("Pineco", "001", "57080") },

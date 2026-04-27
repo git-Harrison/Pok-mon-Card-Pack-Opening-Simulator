@@ -8,6 +8,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import {
   fetchUndisplayedGradings,
+  fetchWildCooldown,
   wildBattleLoss,
   wildBattleReward,
 } from "@/lib/db";
@@ -335,6 +336,20 @@ function pickBiome(): Biome {
   return BIOMES[Math.floor(Math.random() * BIOMES.length)];
 }
 
+/** Pick 3 distinct wild Pokemon from the pool — one of these is the actual
+ *  encounter when the user presses 전투 시작. Lives at the top level so
+ *  WildView can re-roll it per idle phase and use the same list for both
+ *  the silhouette preview and the encounter Pokemon. */
+function pickDetected(): WildMon[] {
+  const pool = [...WILD_POOL];
+  const out: WildMon[] = [];
+  for (let i = 0; i < 3 && pool.length > 0; i++) {
+    const idx = Math.floor(Math.random() * pool.length);
+    out.push(pool.splice(idx, 1)[0]);
+  }
+  return out;
+}
+
 interface Slab {
   gradingId: string;
   cardId: string;
@@ -387,8 +402,12 @@ export default function WildView() {
   const [playerHit, setPlayerHit] = useState(false);
   const [attackingSide, setAttackingSide] = useState<"player" | "enemy" | null>(null);
   const [rewarded, setRewarded] = useState<number | null>(null);
+  const [rankAwarded, setRankAwarded] = useState<number | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [biome, setBiome] = useState<Biome>(() => BIOMES[0]);
+  // 감지 화면에 노출되는 3마리. 실제 전투 시작 시 이 안에서 1마리를
+  // 골라 등장시킨다 — 화면에서 본 적과 실제 전투 적이 같도록 보장.
+  const [detected, setDetected] = useState<WildMon[]>(() => pickDetected());
   const floaterSeq = useRef(0);
 
   const refresh = useCallback(async () => {
@@ -401,6 +420,23 @@ export default function WildView() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // 서버 권위 쿨타임 — 패배 후 다른 페이지 갔다 와도 쿨타임 유지.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const res = await fetchWildCooldown(user.id);
+      if (cancelled) return;
+      if (res.ok && res.cooldown_until) {
+        const end = new Date(res.cooldown_until).getTime();
+        if (end > Date.now()) setCooldownUntil(end);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const eligibleSlabs: Slab[] = useMemo(() => {
     return gradings
@@ -452,7 +488,10 @@ export default function WildView() {
   );
 
   const encounter = useCallback(() => {
-    const base = WILD_POOL[Math.floor(Math.random() * WILD_POOL.length)];
+    // 감지 화면에서 본 3마리 중 1마리를 실제 전투 적으로. 비어 있으면
+    // 풀 전체에서 폴백.
+    const candidates = detected.length > 0 ? detected : WILD_POOL;
+    const base = candidates[Math.floor(Math.random() * candidates.length)];
     // 난이도 상향 — 야생 hp / atk 1.8x. 슬랩이 그냥 이기던 케이스
     // (특히 PCL10 SR 이상) 에서도 데미지를 받게 만들어 야생 패배 =
     // 슬랩 영구 삭제 위험을 다시 의미 있게 만듦.
@@ -467,9 +506,10 @@ export default function WildView() {
     setBubble(null);
     setFloaters([]);
     setRewarded(null);
+    setRankAwarded(null);
     setBiome(pickBiome());
     setPhase("intro");
-  }, []);
+  }, [detected]);
 
   // Auto-advance from intro → picking after short dialogue.
   useEffect(() => {
@@ -517,6 +557,9 @@ export default function WildView() {
       if (user) {
         const res = await wildBattleReward(user.id, prize);
         if (res.ok && typeof res.points === "number") setPoints(res.points);
+        if (res.ok && typeof res.rank_points === "number") {
+          setRankAwarded(res.rank_points);
+        }
       }
       setPhase("won");
       return;
@@ -545,25 +588,25 @@ export default function WildView() {
       // server permanently deletes the grading.
       setPhase("dying");
       await say(randomFarewell(slab.name), "player", 2400);
+      let serverCooldownEnd: number | null = null;
       if (user) {
         const res = await wildBattleLoss(user.id, slab.gradingId);
         if (!res.ok) console.error("wild_battle_loss failed", res);
+        if (res.ok && res.cooldown_until) {
+          const end = new Date(res.cooldown_until).getTime();
+          if (end > Date.now()) serverCooldownEnd = end;
+        }
         // Refresh eligible slabs so the deleted one is gone.
         void refresh();
       }
       setPhase("lost");
-      setCooldownUntil(Date.now() + 30_000);
+      // 서버 쿨타임 사용. 서버 응답 못 받았으면 클라 폴백 30초.
+      setCooldownUntil(serverCooldownEnd ?? Date.now() + 30_000);
       return;
     }
     setBubble({ side: "player", text: pickLine(TURN_OPENER_LINES, slab.name) });
     setPhase("player-turn");
   }, [slab, wild, wildHp, addFloater, say, user, setPoints, refresh]);
-
-  const flee = useCallback(async () => {
-    if (!wild) return;
-    await say("무사히 도망쳤다!", "player", 800);
-    resetAll();
-  }, [wild, say]);
 
   const resetAll = useCallback(() => {
     setPhase("idle");
@@ -574,6 +617,9 @@ export default function WildView() {
     setFloaters([]);
     setAttackingSide(null);
     setRewarded(null);
+    setRankAwarded(null);
+    // 다음 idle 진입에는 새로운 감지 후보 3마리.
+    setDetected(pickDetected());
   }, []);
 
   // Cooldown tick
@@ -629,7 +675,9 @@ export default function WildView() {
             count={eligibleSlabs.length}
             cooldownLeft={cooldownLeft}
             onStart={encounter}
+            detected={detected}
           />
+          <TypeChartHint className="mt-3" />
         </div>
       )}
 
@@ -649,7 +697,10 @@ export default function WildView() {
       )}
 
       {phase === "picking" && (
-        <PickSlabPanel slabs={eligibleSlabs} onPick={deploy} />
+        <>
+          {wild && <TypeBriefHint enemy={wild} className="mt-3" />}
+          <PickSlabPanel slabs={eligibleSlabs} onPick={deploy} />
+        </>
       )}
 
       {phase === "player-turn" && (
@@ -662,11 +713,14 @@ export default function WildView() {
             ⚔️ 공격
           </button>
           <button
-            onClick={flee}
+            type="button"
+            disabled
+            aria-disabled
+            title="야생 전투에서는 도망갈 수 없어요"
             style={{ touchAction: "manipulation" }}
-            className="h-11 md:h-12 rounded-xl bg-white/10 border border-white/15 text-white font-bold text-sm active:scale-[0.98]"
+            className="h-11 md:h-12 rounded-xl bg-white/5 border border-white/10 text-zinc-500 font-bold text-sm cursor-not-allowed"
           >
-            🏃 도망
+            🚫 도망 불가
           </button>
         </div>
       )}
@@ -677,7 +731,7 @@ export default function WildView() {
           title={`야생의 ${wild?.name}을(를) 쓰러뜨렸다!`}
           message={
             rewarded !== null
-              ? `보상 +${rewarded.toLocaleString("ko-KR")}p 획득!`
+              ? `보상 +${rewarded.toLocaleString("ko-KR")}p · 랭킹 +${(rankAwarded ?? 50).toLocaleString("ko-KR")}점`
               : ""
           }
           onAgain={encounter}
@@ -723,10 +777,14 @@ function IdleCTA({
   count,
   cooldownLeft,
   onStart,
+  detected,
 }: {
   count: number;
   cooldownLeft: number;
   onStart: () => void;
+  /** 부모(WildView)에서 idle 진입마다 새로 골라 내려주는 후보 3마리.
+   *  실제 전투 적도 이 안에서 선택되므로 화면=실전 일치. */
+  detected: WildMon[];
 }) {
   const blocked = cooldownLeft > 0;
   const reduce = useReducedMotion();
@@ -746,16 +804,6 @@ function IdleCTA({
   // 루프가 2개(idle hero + battle bg) 동시에 돌면 mid-tier Android 에서
   // 메인 스레드 점유로 스크롤/탭 응답이 끊긴다.
   const cinematic = !reduce && !isMobile;
-  // 3 random distinct enemies "detected" — picked once at mount.
-  const detected = useMemo(() => {
-    const pool = [...WILD_POOL];
-    const out: WildMon[] = [];
-    for (let i = 0; i < 3 && pool.length > 0; i++) {
-      const idx = Math.floor(Math.random() * pool.length);
-      out.push(pool.splice(idx, 1)[0]);
-    }
-    return out;
-  }, []);
 
   return (
     <motion.div
@@ -1204,25 +1252,133 @@ function HudStat({
 
 function TypeChartHint({ className }: { className?: string }) {
   return (
-    <details
+    <div
       className={clsx(
-        "rounded-xl border border-white/10 bg-white/5 group",
+        "rounded-xl border border-amber-400/30 bg-amber-400/[0.06] px-3 py-2.5",
         className
       )}
     >
-      <summary className="cursor-pointer list-none px-3 py-2 text-[11px] text-zinc-300 flex items-center justify-between">
-        <span>💡 타입 상성 요약</span>
-        <span className="text-zinc-500 group-open:hidden">▾</span>
-        <span className="text-zinc-500 hidden group-open:inline">▴</span>
-      </summary>
-      <div className="px-3 pb-3 text-[11px] text-zinc-400 leading-snug">
-        공격 타입이 방어 타입을 잘 때리면{" "}
-        <b className="text-amber-300">×2</b>, 안 먹히면{" "}
-        <b className="text-rose-300">×0.5</b>, 완전 무효는{" "}
-        <b className="text-zinc-500">×0</b>. 예) 불꽃 → 풀·얼음·벌레·강철 에
-        강함, 물·바위·드래곤에 약함.
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <span aria-hidden>💡</span>
+        <span className="text-[11px] md:text-xs font-bold text-amber-100">
+          타입 상성 한눈에
+        </span>
       </div>
-    </details>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-[10px] md:text-[11px] leading-snug">
+        <div className="rounded-md bg-amber-400/10 border border-amber-400/30 px-2 py-1.5">
+          <b className="text-amber-200">×2</b>{" "}
+          <span className="text-zinc-300">잘 들어감 — 효과 굉장!</span>
+        </div>
+        <div className="rounded-md bg-rose-500/10 border border-rose-500/30 px-2 py-1.5">
+          <b className="text-rose-300">×0.5</b>{" "}
+          <span className="text-zinc-300">반쪽 — 효과가 별로…</span>
+        </div>
+        <div className="rounded-md bg-zinc-500/10 border border-zinc-500/30 px-2 py-1.5">
+          <b className="text-zinc-300">×0</b>{" "}
+          <span className="text-zinc-400">완전 무효 — 안 먹힘</span>
+        </div>
+      </div>
+      <p className="mt-1.5 text-[10px] md:text-[11px] text-zinc-400 leading-snug">
+        예) 🔥 불꽃 → 풀·얼음·벌레·강철 강함 / 물·바위·드래곤 약함.
+        ⚡ 전기 → 물·비행 강함 / 땅에 무효.
+      </p>
+    </div>
+  );
+}
+
+/** 전투 직전(슬랩 선택 단계)에 띄우는 1줄 상성 요약 — 적 타입과
+ *  무엇이 강하고 약한지를 즉시 알려줌. */
+function TypeBriefHint({
+  enemy,
+  className,
+}: {
+  enemy: WildMon;
+  className?: string;
+}) {
+  // 어떤 공격 타입이 이 야생을 ×2 로 때리는지, 어떤 타입이 ×0.5 로
+  // 안 먹히는지(=피해야 할 매치) 빠르게 산출.
+  const { strong, weak, immune } = useMemo(() => {
+    const strong: WildType[] = [];
+    const weak: WildType[] = [];
+    const immune: WildType[] = [];
+    const allTypes: WildType[] = [
+      "노말","불꽃","물","풀","전기","얼음","격투","독","땅",
+      "비행","에스퍼","벌레","바위","고스트","드래곤","악","강철","페어리",
+    ];
+    for (const t of allTypes) {
+      const m = effectiveness(t, enemy.type);
+      if (m === 0) immune.push(t);
+      else if (m >= 2) strong.push(t);
+      else if (m <= 0.5) weak.push(t);
+    }
+    return { strong, weak, immune };
+  }, [enemy]);
+
+  return (
+    <div
+      className={clsx(
+        "rounded-xl border border-white/10 bg-zinc-900/60 px-3 py-2",
+        className
+      )}
+    >
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="text-[11px] text-zinc-300">상대</span>
+        <span
+          className={clsx(
+            "px-1.5 py-0.5 rounded text-[10px] font-black",
+            TYPE_STYLE[enemy.type].badge
+          )}
+        >
+          {enemy.type}
+        </span>
+        <span className="text-[11px] text-zinc-300">에게는</span>
+      </div>
+      <div className="mt-1 grid grid-cols-1 gap-1 text-[11px] leading-snug">
+        {strong.length > 0 && (
+          <div>
+            <span className="text-amber-300 font-bold">×2 강함:</span>{" "}
+            <TypePillRow types={strong} />
+          </div>
+        )}
+        {weak.length > 0 && (
+          <div>
+            <span className="text-rose-300 font-bold">×0.5 약함:</span>{" "}
+            <TypePillRow types={weak} muted />
+          </div>
+        )}
+        {immune.length > 0 && (
+          <div>
+            <span className="text-zinc-300 font-bold">×0 무효:</span>{" "}
+            <TypePillRow types={immune} muted />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TypePillRow({
+  types,
+  muted = false,
+}: {
+  types: WildType[];
+  muted?: boolean;
+}) {
+  return (
+    <span className="inline-flex flex-wrap gap-1 align-middle">
+      {types.map((t) => (
+        <span
+          key={t}
+          className={clsx(
+            "inline-block px-1.5 py-[1px] rounded text-[9px] md:text-[10px] font-black",
+            muted ? "opacity-70" : "",
+            TYPE_STYLE[t].badge
+          )}
+        >
+          {t}
+        </span>
+      ))}
+    </span>
   );
 }
 

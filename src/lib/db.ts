@@ -725,7 +725,12 @@ export async function wildBattleReward(userId: string, amount: number) {
     p_amount: amount,
   });
   if (error) return { ok: false as const, error: error.message };
-  return data as { ok: boolean; awarded?: number; points?: number };
+  return data as {
+    ok: boolean;
+    awarded?: number;
+    rank_points?: number;
+    points?: number;
+  };
 }
 
 export async function wildBattleLoss(userId: string, gradingId: string) {
@@ -740,6 +745,20 @@ export async function wildBattleLoss(userId: string, gradingId: string) {
     card_id?: string;
     grade?: number;
     rarity?: string;
+    /** ISO timestamp — server-authoritative cooldown end. */
+    cooldown_until?: string;
+  };
+}
+
+export async function fetchWildCooldown(userId: string) {
+  const { data, error } = await supabase.rpc("get_wild_cooldown", {
+    p_user_id: userId,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    cooldown_until?: string | null;
+    seconds_left?: number;
   };
 }
 

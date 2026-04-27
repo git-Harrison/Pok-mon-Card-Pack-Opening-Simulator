@@ -112,7 +112,7 @@ type Phase =
   | "multi-result";
 
 // Bulk-purchase sizes offered by the "여러 박스 한번에" shortcut.
-const MULTI_OPTIONS: number[] = [3, 5, 10];
+const MULTI_OPTIONS: number[] = [5, 10, 30];
 
 export default function SetView({ set }: { set: SetInfo }) {
   const { user, setPoints } = useAuth();
@@ -683,11 +683,50 @@ function SealedBox({
   return (
     <motion.div
       key="sealed"
-      className="mt-8 md:mt-14 flex flex-col items-center gap-5 md:gap-6"
+      className="mt-4 md:mt-8 flex flex-col items-center gap-4 md:gap-6"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
     >
+      {/* 일괄 박스 열기 — 모바일 가시성 우선이라 박스 이미지 위로 올림.
+          스크롤 안 하고 첫 화면에서 바로 5/10/30 박스 일괄을 눌러 살 수
+          있어야 한다는 사용자 피드백 반영. */}
+      <div className="w-full max-w-[420px] rounded-2xl border border-amber-400/30 bg-amber-400/5 px-3 py-2.5">
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <p className="text-[11px] md:text-xs font-bold text-amber-100 inline-flex items-center gap-1">
+            ⚡ 박스 일괄 열기
+          </p>
+          <p className="text-[10px] text-zinc-400 tabular-nums">
+            보유 {userPoints.toLocaleString("ko-KR")}p
+          </p>
+        </div>
+        <div className="grid grid-cols-3 gap-1.5">
+          {MULTI_OPTIONS.map((n) => {
+            const total = cost * n;
+            const afford = userPoints >= total;
+            return (
+              <button
+                key={n}
+                onClick={() => onOpenMulti(n)}
+                disabled={!afford || loading}
+                style={{ touchAction: "manipulation" }}
+                className={clsx(
+                  "h-11 md:h-12 rounded-lg text-xs md:text-sm font-black inline-flex flex-col items-center justify-center transition",
+                  afford && !loading
+                    ? "bg-gradient-to-br from-amber-400/30 to-rose-500/20 border border-amber-400/50 text-white hover:scale-[1.02] active:scale-[0.97]"
+                    : "bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed"
+                )}
+              >
+                <span className="leading-none">×{n} 박스</span>
+                <span className="mt-0.5 text-[10px] font-semibold opacity-85 tabular-nums">
+                  {total.toLocaleString("ko-KR")}p
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <motion.div
         className="relative w-full max-w-[360px] md:max-w-[520px] aspect-[3/2]"
         whileHover={{ rotate: 1.5, y: -4 }}
@@ -793,38 +832,6 @@ function SealedBox({
           </>
         )}
       </button>
-
-      {/* Multi-box shortcut: buys + auto-opens N boxes all at once. */}
-      <div className="flex flex-col items-center gap-1.5">
-        <p className="text-[10px] uppercase tracking-wider text-zinc-500">
-          여러 박스 한번에 (자동 개봉)
-        </p>
-        <div className="flex items-center gap-1.5">
-          {MULTI_OPTIONS.map((n) => {
-            const total = cost * n;
-            const afford = userPoints >= total;
-            return (
-              <button
-                key={n}
-                onClick={() => onOpenMulti(n)}
-                disabled={!afford || loading}
-                style={{ touchAction: "manipulation" }}
-                className={clsx(
-                  "h-10 px-3 rounded-lg text-xs font-black inline-flex items-center gap-1 transition",
-                  afford && !loading
-                    ? "bg-white/10 border border-white/20 text-white hover:bg-white/15 active:scale-[0.97]"
-                    : "bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed"
-                )}
-              >
-                <span>×{n}</span>
-                <span className="text-[10px] font-semibold opacity-80 tabular-nums">
-                  {total.toLocaleString("ko-KR")}p
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
       {!canAfford && !loading && (
         <p className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">

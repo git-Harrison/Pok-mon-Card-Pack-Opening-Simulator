@@ -27,7 +27,7 @@ export const sv8: SetInfo = {
       // Pack-level odds (ratio AR 10 : SAR 5 : UR 1):
       //   AR 10% · SR 7% · SAR 5% · UR 1% · RR/R fill the rest.
       label: "Hit",
-      weights: { R: 30, RR: 30, AR: 10, SR: 7, SAR: 5, UR: 1 },
+      weights: { R: 30, RR: 30, AR: 10, SR: 7, SAR: 5, UR: 0.5 },
     },
   ],
   // Korean names carried over from the previous file where a card number
