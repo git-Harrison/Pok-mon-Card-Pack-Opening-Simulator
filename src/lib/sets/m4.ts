@@ -19,10 +19,16 @@ export const m4: SetInfo = {
   totalCards: 120,
   primaryColor: "#10b981",
   accentColor: "#6ee7b7",
-  // TODO: box.webp / pack.webp 는 m3 의 이미지를 임시 placeholder 로
-  // 복사. 닌자스피너 공식 박스/팩 아트로 교체 필요.
-  boxImage: "/images/sets/m4/box.webp",
-  packImage: "/images/sets/m4/pack.webp",
+  // public/images/sets/m4/ 의 box.webp / pack.webp 가 m3 (니힐제로) 와
+  // byte-identical 한 복사본이라 사용자 화면에 닌자스피너 박스가
+  // 니힐제로 박스로 보였다. 실제 닌자스피너 공식 아트가 들어오기
+  // 전까지는 *시각적으로 구분되는* m1l (메가 디멘션) 이미지로 임시
+  // 대체. m1l 도 MEGA 시리즈라 톤 매치 유지.
+  // TODO: 실제 닌자스피너 box.webp / pack.webp 를
+  // public/images/sets/m4/ 에 업로드한 뒤 경로를 /images/sets/m4/* 로
+  // 되돌리세요.
+  boxImage: "/images/sets/m1l/box.webp",
+  packImage: "/images/sets/m1l/pack.webp",
   slots: [
     { label: "C 1", weights: { C: 100 } },
     { label: "C 2", weights: { C: 100 } },

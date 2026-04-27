@@ -26,7 +26,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ko" className="h-full antialiased">
+    <html lang="ko" className="antialiased">
       <head>
         <link
           rel="preconnect"
