@@ -18,13 +18,17 @@ import {
 } from "@/lib/gym/types";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 import { wildSpriteUrl } from "@/lib/wild/pool";
+import { lookupDex } from "@/lib/wild/name-to-dex";
+import { slabStats } from "@/lib/wild/stats";
+import { getCard } from "@/lib/sets";
+import type { Rarity } from "@/lib/types";
+import type { DefenderPokemonInfo } from "@/lib/gym/types";
 import { CenteredPokeLoader } from "./PokeLoader";
 import PageHeader from "./PageHeader";
 import Portal from "./Portal";
 import GymChallengeOverlay from "./GymChallengeOverlay";
 import GymMedalIcon from "./GymMedalIcon";
 import GymDefenseDeckModal from "./GymDefenseDeckModal";
-import { getCharacter } from "@/lib/profile";
 
 // 폴링 주기 — Phase 1 에서는 단순 setInterval. Phase 4 에서 Supabase
 // realtime 으로 격상 검토.
@@ -726,9 +730,6 @@ function GymDetailModal({
                 {gym.ownership && (
                   <p className="text-[10px] text-fuchsia-200 truncate mt-0.5">
                     🏆 점령한 체육관장:{" "}
-                    {gym.ownership.character && (
-                      <CharacterTag characterKey={gym.ownership.character} />
-                    )}{" "}
                     <b className="text-white">{gym.ownership.display_name}</b>
                   </p>
                 )}
@@ -788,15 +789,30 @@ function GymDetailModal({
               )}
             </AnimatePresence>
 
-            {/* 관장 포켓몬 */}
+            {/* 관장 포켓몬 — 방어 덱이 셋업돼 있으면 점령자 펫 3마리,
+                아니면 NPC 관장 포켓몬. */}
             <section>
               <h3 className="text-[11px] uppercase tracking-wider text-zinc-400 mb-2">
-                관장 포켓몬
+                {gym.ownership?.has_defense_deck
+                  ? `방어 덱 (${gym.ownership.display_name})`
+                  : "관장 포켓몬"}
               </h3>
               <div className="grid grid-cols-3 gap-2">
-                {gym.pokemon.map((p) => (
-                  <PokemonStatCard key={p.id} pokemon={p} gymType={gym.type} />
-                ))}
+                {gym.ownership?.has_defense_deck && gym.ownership.defender_pokemon
+                  ? gym.ownership.defender_pokemon.map((p) => (
+                      <DefenderStatCard
+                        key={`def-${p.slot}`}
+                        defender={p}
+                        gymType={gym.type}
+                      />
+                    ))
+                  : gym.pokemon.map((p) => (
+                      <PokemonStatCard
+                        key={p.id}
+                        pokemon={p}
+                        gymType={gym.type}
+                      />
+                    ))}
               </div>
             </section>
 
@@ -1148,14 +1164,76 @@ function PokemonStatCard({
 }
 
 
-/** 점령자 캐릭터 표시 — character key → 한국어 이름. */
-function CharacterTag({ characterKey }: { characterKey: string }) {
-  const def = getCharacter(characterKey);
-  if (!def) return null;
+/** 방어 덱 펫 카드 — 점령자가 셋업한 펫 카드 정보. PokemonStatCard 와
+ *  비슷하지만 dex 가 카드 이름→lookup 으로 결정되고 HP/ATK 는 클라
+ *  카드 카탈로그(slabStats) 로 미리보기. */
+function DefenderStatCard({
+  defender,
+  gymType,
+}: {
+  defender: DefenderPokemonInfo;
+  gymType: string;
+}) {
+  const t = defender.type as keyof typeof TYPE_STYLE;
+  const style = TYPE_STYLE[t];
+  const sameAsGym = defender.type === gymType;
+  const card = getCard(defender.card_id);
+  const cardName = card?.name ?? defender.card_id;
+  const dex = lookupDex(cardName);
+  const baseStats = slabStats(
+    (card?.rarity ?? defender.rarity) as Rarity,
+    defender.grade
+  );
+  const [broken, setBroken] = useState(false);
   return (
-    <span className="inline-flex items-center gap-0.5">
-      <span aria-hidden>{def.gender === "여" ? "👩" : "🧑"}</span>
-      <span className="text-zinc-300">{def.name}</span>
-    </span>
+    <div className="relative rounded-lg border bg-zinc-900/60 p-2 flex flex-col items-center gap-1 border-fuchsia-400/30">
+      <div className="relative w-14 h-14 flex items-center justify-center">
+        {!broken && dex ? (
+          <img
+            src={wildSpriteUrl(dex, true)}
+            alt=""
+            draggable={false}
+            decoding="async"
+            referrerPolicy="no-referrer"
+            onError={() => setBroken(true)}
+            className="w-full h-full object-contain"
+            style={{ imageRendering: "pixelated" }}
+          />
+        ) : !broken && card?.imageUrl ? (
+          <img
+            src={card.imageUrl}
+            alt={cardName}
+            draggable={false}
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            onError={() => setBroken(true)}
+            className="w-full h-full object-contain"
+          />
+        ) : (
+          <span className="text-[10px] text-zinc-400 text-center px-1">
+            {cardName}
+          </span>
+        )}
+      </div>
+      <p className="text-[10px] font-bold text-white truncate max-w-full">
+        {cardName}
+      </p>
+      <div className="flex items-center gap-1">
+        <span className={clsx("px-1 py-0.5 rounded text-[8px] font-black", style.badge)}>
+          {defender.type}
+        </span>
+        {sameAsGym && (
+          <span className="text-[8px] text-amber-300 font-bold">★</span>
+        )}
+      </div>
+      <ul className="text-[9px] text-zinc-300 grid grid-cols-2 gap-x-1 gap-y-0 w-full leading-tight tabular-nums">
+        <li>HP {baseStats.hp}</li>
+        <li>ATK {baseStats.atk}</li>
+        <li className="col-span-2 text-fuchsia-300/85 font-bold text-[8px]">
+          PCL {defender.grade} · {defender.rarity}
+        </li>
+      </ul>
+    </div>
   );
 }

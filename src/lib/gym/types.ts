@@ -21,6 +21,14 @@ export interface GymMedal {
   description: string;
 }
 
+export interface DefenderPokemonInfo {
+  slot: number;
+  card_id: string;
+  type: WildType;
+  rarity: string;
+  grade: number;
+}
+
 export interface GymOwnership {
   user_id: string;
   display_name: string;
@@ -30,6 +38,8 @@ export interface GymOwnership {
   protection_until: string;
   /** 점령자가 자기 펫 3마리로 방어 덱을 셋업했는지. */
   has_defense_deck: boolean;
+  /** 방어 덱 셋업되어 있을 때 사용자 펫 3마리 정보. NPC 모드면 null. */
+  defender_pokemon: DefenderPokemonInfo[] | null;
 }
 
 export interface GymActiveChallenge {
