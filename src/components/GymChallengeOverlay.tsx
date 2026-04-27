@@ -20,6 +20,7 @@ import type {
 import { effectiveness } from "@/lib/wild/typechart";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 import { CARD_NAME_TO_TYPE } from "@/lib/wild/name-to-type";
+import { lookupDex } from "@/lib/wild/name-to-dex";
 import { wildSpriteUrl } from "@/lib/wild/pool";
 import { getCard } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
@@ -785,69 +786,80 @@ function FloaterText({
   );
 }
 
-/** 적 sprite — NPC (dex 기반 PokeAPI sprite) vs 방어덱 (card_id 기반
- *  카드 이미지) 자동 분기. 방어덱이면 펫 카드, 아니면 BW 픽셀 sprite. */
-function EnemySprite({ enemy }: { enemy: BattleUnit }) {
-  const [broken, setBroken] = useState(false);
-  // 방어 덱이면 카드 이미지 우선
-  if (enemy.is_defender || (enemy.card_id && !enemy.dex)) {
-    const card = enemy.card_id ? getCard(enemy.card_id) : null;
-    if (!broken && card?.imageUrl) {
-      return (
-        <img
-          src={card.imageUrl}
-          alt={card.name}
-          draggable={false}
-          loading="lazy"
-          decoding="async"
-          referrerPolicy="no-referrer"
-          onError={() => setBroken(true)}
-          className="w-full h-full object-contain rounded-md"
-        />
-      );
-    }
+/** 카드 이름 → dex sprite 시도 → 카드 이미지 fallback → 텍스트 fallback.
+ *  사용자 요청: 펫 / 방어 덱도 야생 포켓몬처럼 도트 캐릭터로 보이게.
+ *  carrd_id 가 있으면 카드 이름을 lookup 해 dex 매핑 시도, 매핑되면
+ *  PokeAPI BW gen5 애니메이션 sprite (야생 전투와 동일) 로 렌더. */
+function CardOrDexSprite({
+  cardId,
+  fallbackDex,
+  name,
+  pixel = true,
+}: {
+  cardId?: string;
+  fallbackDex?: number;
+  name: string;
+  pixel?: boolean;
+}) {
+  const card = cardId ? getCard(cardId) : null;
+  // 1) 카드 이름으로 dex lookup. 매칭되면 dot sprite (사용자 요청).
+  const cardName = card?.name ?? name;
+  const dexFromName = cardName ? lookupDex(cardName) : null;
+  const dex = dexFromName ?? fallbackDex ?? null;
+  const [spriteBroken, setSpriteBroken] = useState(false);
+  const [cardBroken, setCardBroken] = useState(false);
+
+  if (dex && !spriteBroken) {
     return (
-      <div className="w-full h-full flex items-center justify-center text-[10px] text-white text-center bg-zinc-900 rounded-md p-1">
-        {enemy.name}
-      </div>
+      <img
+        src={wildSpriteUrl(dex, true)}
+        alt={cardName}
+        draggable={false}
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onError={() => setSpriteBroken(true)}
+        className="w-full h-full object-contain"
+        style={pixel ? { imageRendering: "pixelated" } : undefined}
+      />
     );
   }
-  // NPC 모드 — dex 기반 sprite
+  // 2) dex 매칭 실패 → 카드 이미지 fallback.
+  if (card?.imageUrl && !cardBroken) {
+    return (
+      <img
+        src={card.imageUrl}
+        alt={cardName}
+        draggable={false}
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onError={() => setCardBroken(true)}
+        className="w-full h-full object-contain rounded-md"
+      />
+    );
+  }
+  // 3) 둘 다 실패 → 이름 텍스트.
   return (
-    <img
-      src={wildSpriteUrl(enemy.dex ?? 1, true)}
-      alt=""
-      draggable={false}
-      decoding="async"
-      referrerPolicy="no-referrer"
-      onError={() => setBroken(true)}
-      className="w-full h-full object-contain"
-      style={{ imageRendering: "pixelated" }}
+    <div className="w-full h-full flex items-center justify-center text-[10px] text-white text-center bg-zinc-900 rounded-md p-1">
+      {cardName}
+    </div>
+  );
+}
+
+/** 적 sprite — NPC 모드는 dex 직접, 방어덱 모드는 카드 이름→dex 시도. */
+function EnemySprite({ enemy }: { enemy: BattleUnit }) {
+  return (
+    <CardOrDexSprite
+      cardId={enemy.card_id}
+      fallbackDex={enemy.dex}
+      name={enemy.name}
     />
   );
 }
 
 function PetCardArt({ pet }: { pet: BattleUnit | undefined }) {
   if (!pet) return null;
-  const card = pet.card_id ? getCard(pet.card_id) : null;
-  if (card?.imageUrl) {
-    return (
-      <img
-        src={card.imageUrl}
-        alt={card.name}
-        draggable={false}
-        loading="lazy"
-        decoding="async"
-        referrerPolicy="no-referrer"
-        className="w-full h-full object-contain rounded-md"
-      />
-    );
-  }
-  return (
-    <div className="w-full h-full flex items-center justify-center text-[10px] text-white text-center bg-zinc-900 rounded-md p-1">
-      {pet.name}
-    </div>
-  );
+  return <CardOrDexSprite cardId={pet.card_id} name={pet.name} />;
 }
 
 /* ─────────────── Result ─────────────── */
