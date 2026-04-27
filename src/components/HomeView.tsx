@@ -301,25 +301,65 @@ export default function HomeView() {
           </p>
         )}
 
-        {/* ---------- Pack carousel/grid ---------- */}
-        <section className="mt-10 md:mt-14">
+        {/* ---------- Pack grid by series ---------- */}
+        <section className="mt-10 md:mt-14 space-y-8 md:space-y-10">
           <SectionTitle
             label="팩 선택"
-            sub="여섯 세트의 박스를 골라 한 팩씩 까보세요"
+            sub="시리즈별 박스를 골라 한 팩씩 까보세요"
             reduce={!!reduce}
           />
-          <motion.div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
-            initial="hidden"
-            animate="show"
-            variants={gridVariants}
-          >
-            {SET_ORDER.map((code) => (
-              <motion.div key={code} variants={itemVariants}>
-                <PackTile code={code} />
-              </motion.div>
-            ))}
-          </motion.div>
+          {(() => {
+            // 시리즈별 그룹화. 10세트 한 줄 스택 (특히 모바일) 너무 길어
+            // 시리즈 별로 끊어 시각적 리듬 + 사용자가 원하는 시리즈로
+            // 빠르게 스크롤 가능. SET_ORDER 의 등장 순서 유지하되
+            // MEGA / SV 두 그룹으로 분류.
+            const megaCodes = SET_ORDER.filter((c) => /^m/.test(c));
+            const svCodes = SET_ORDER.filter((c) => /^sv/.test(c));
+            const groups: Array<{
+              key: string;
+              label: string;
+              sub: string;
+              codes: typeof megaCodes;
+            }> = [];
+            if (megaCodes.length)
+              groups.push({
+                key: "mega",
+                label: "MEGA 시리즈",
+                sub: `${megaCodes.length}종 — 메가 진화 ex 카드`,
+                codes: megaCodes,
+              });
+            if (svCodes.length)
+              groups.push({
+                key: "sv",
+                label: "스칼렛 & 바이올렛",
+                sub: `${svCodes.length}종 — Pokémon SV 본편 익스팬션`,
+                codes: svCodes,
+              });
+            return groups.map((g) => (
+              <div key={g.key}>
+                <div className="mb-3 md:mb-4 flex items-baseline gap-2">
+                  <h3 className="text-sm md:text-base font-black text-white">
+                    {g.label}
+                  </h3>
+                  <span className="text-[10px] md:text-[11px] text-zinc-500">
+                    {g.sub}
+                  </span>
+                </div>
+                <motion.div
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
+                  initial="hidden"
+                  animate="show"
+                  variants={gridVariants}
+                >
+                  {g.codes.map((code) => (
+                    <motion.div key={code} variants={itemVariants}>
+                      <PackTile code={code} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </div>
+            ));
+          })()}
         </section>
 
         {/* ---------- Activity teasers ---------- */}

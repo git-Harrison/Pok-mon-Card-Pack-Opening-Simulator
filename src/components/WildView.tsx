@@ -452,7 +452,15 @@ export default function WildView() {
   );
 
   const encounter = useCallback(() => {
-    const w = WILD_POOL[Math.floor(Math.random() * WILD_POOL.length)];
+    const base = WILD_POOL[Math.floor(Math.random() * WILD_POOL.length)];
+    // 난이도 상향 — 야생 hp / atk 1.8x. 슬랩이 그냥 이기던 케이스
+    // (특히 PCL10 SR 이상) 에서도 데미지를 받게 만들어 야생 패배 =
+    // 슬랩 영구 삭제 위험을 다시 의미 있게 만듦.
+    const w: WildMon = {
+      ...base,
+      hp: Math.round(base.hp * 1.8),
+      atk: Math.round(base.atk * 1.8),
+    };
     setWild(w);
     setWildHp(w.hp);
     setSlab(null);
