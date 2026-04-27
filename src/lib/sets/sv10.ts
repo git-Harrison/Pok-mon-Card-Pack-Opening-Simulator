@@ -5,8 +5,10 @@ import type { SetInfo } from "../types";
 // 한국판 카드 번호를 canonical 로 사용 — 일본판과 일부 swap (KR ↔ JP
 // number 가 다른 트레이너 카드들 등). slug + asset_id 가 한국판 번호에
 // 정확히 매칭되는 이미지를 가리키도록 에이전트가 검증.
+// Pokellector URL 은 unpadded number ("1" not "001") 만 받음 — 카드
+// 데이터의 zero-padded number 를 URL 빌드 시 strip.
 const pk = (slug: string, num: string, id: string) =>
-  `https://den-cards.pokellector.com/413/${slug}.SV10.${num}.${id}.png`;
+  `https://den-cards.pokellector.com/413/${slug}.SV10.${parseInt(num, 10)}.${id}.png`;
 
 export const sv10: SetInfo = {
   code: "sv10",
@@ -114,15 +116,15 @@ export const sv10: SetInfo = {
     { id: "sv10-084", setCode: "sv10", number: "084", name: "테일로", rarity: "C", imageUrl: pk("Taillow", "084", "57122") },
     { id: "sv10-085", setCode: "sv10", number: "085", name: "스왈로", rarity: "C", imageUrl: pk("Swellow", "085", "57123") },
     { id: "sv10-086", setCode: "sv10", number: "086", name: "시비꼬", rarity: "C", imageUrl: pk("Squawkabilly", "086", "57124") },
-    { id: "sv10-087", setCode: "sv10", number: "087", name: "로켓단의 깜짝봄", rarity: "U", imageUrl: pk("Team-Rockets-Venture-Bomb", "087", "57066") },
-    { id: "sv10-088", setCode: "sv10", number: "088", name: "로켓단의 리시버", rarity: "U", imageUrl: pk("Team-Rockets-Receiver", "088", "56887") },
-    { id: "sv10-089", setCode: "sv10", number: "089", name: "로켓단의 방해로봇", rarity: "U", imageUrl: pk("Team-Rockets-Hindering-Robo", "089", "57125") },
-    { id: "sv10-090", setCode: "sv10", number: "090", name: "로켓단의 슈퍼볼", rarity: "U", imageUrl: pk("Team-Rockets-Great-Ball", "090", "57065") },
-    { id: "sv10-091", setCode: "sv10", number: "091", name: "로켓단의 람다", rarity: "U", imageUrl: pk("Team-Rockets-Petrel", "091", "57067") },
-    { id: "sv10-092", setCode: "sv10", number: "092", name: "로켓단의 랜스", rarity: "U", imageUrl: pk("Team-Rockets-Proton", "092", "57068") },
+    { id: "sv10-087", setCode: "sv10", number: "087", name: "로켓단의 깜짝봄", rarity: "U", imageUrl: pk("Team-Rockets-Venture-Bomb", "89", "57066") },
+    { id: "sv10-088", setCode: "sv10", number: "088", name: "로켓단의 리시버", rarity: "U", imageUrl: pk("Team-Rockets-Receiver", "90", "56887") },
+    { id: "sv10-089", setCode: "sv10", number: "089", name: "로켓단의 방해로봇", rarity: "U", imageUrl: pk("Team-Rockets-Hindering-Robo", "87", "57125") },
+    { id: "sv10-090", setCode: "sv10", number: "090", name: "로켓단의 슈퍼볼", rarity: "U", imageUrl: pk("Team-Rockets-Great-Ball", "88", "57065") },
+    { id: "sv10-091", setCode: "sv10", number: "091", name: "로켓단의 람다", rarity: "U", imageUrl: pk("Team-Rockets-Petrel", "94", "57067") },
+    { id: "sv10-092", setCode: "sv10", number: "092", name: "로켓단의 랜스", rarity: "U", imageUrl: pk("Team-Rockets-Proton", "95", "57068") },
     { id: "sv10-093", setCode: "sv10", number: "093", name: "로켓단의 비주기", rarity: "U", imageUrl: pk("Team-Rockets-Giovanni", "093", "56890") },
-    { id: "sv10-094", setCode: "sv10", number: "094", name: "로켓단의 아테나", rarity: "U", imageUrl: pk("Team-Rockets-Ariana", "094", "56888") },
-    { id: "sv10-095", setCode: "sv10", number: "095", name: "로켓단의 아폴로", rarity: "U", imageUrl: pk("Team-Rockets-Archer", "095", "56889") },
+    { id: "sv10-094", setCode: "sv10", number: "094", name: "로켓단의 아테나", rarity: "U", imageUrl: pk("Team-Rockets-Ariana", "91", "56888") },
+    { id: "sv10-095", setCode: "sv10", number: "095", name: "로켓단의 아폴로", rarity: "U", imageUrl: pk("Team-Rockets-Archer", "92", "56889") },
     { id: "sv10-096", setCode: "sv10", number: "096", name: "로켓단의 감시탑", rarity: "U", imageUrl: pk("Team-Rockets-Watchtower", "096", "57126") },
     { id: "sv10-097", setCode: "sv10", number: "097", name: "로켓단의 팩토리", rarity: "U", imageUrl: pk("Team-Rockets-Factory", "097", "57127") },
     { id: "sv10-098", setCode: "sv10", number: "098", name: "로켓단 에너지", rarity: "U", imageUrl: pk("Team-Rocket-Energy", "098", "56891") },
@@ -146,17 +148,17 @@ export const sv10: SetInfo = {
     { id: "sv10-116", setCode: "sv10", number: "116", name: "로켓단의 니드킹ex", rarity: "SR", imageUrl: pk("Team-Rockets-Nidoking-ex", "116", "57128") },
     { id: "sv10-117", setCode: "sv10", number: "117", name: "로켓단의 크로뱃ex", rarity: "SR", imageUrl: pk("Team-Rockets-Crobat-ex", "117", "57148") },
     { id: "sv10-118", setCode: "sv10", number: "118", name: "로켓단의 페르시온ex", rarity: "SR", imageUrl: pk("Team-Rockets-Persian-ex", "118", "57149") },
-    { id: "sv10-119", setCode: "sv10", number: "119", name: "로켓단의 람다", rarity: "SR", imageUrl: pk("Team-Rockets-Petrel", "119", "57153") },
-    { id: "sv10-120", setCode: "sv10", number: "120", name: "로켓단의 랜스", rarity: "SR", imageUrl: pk("Team-Rockets-Proton", "120", "57154") },
+    { id: "sv10-119", setCode: "sv10", number: "119", name: "로켓단의 람다", rarity: "SR", imageUrl: pk("Team-Rockets-Petrel", "122", "57153") },
+    { id: "sv10-120", setCode: "sv10", number: "120", name: "로켓단의 랜스", rarity: "SR", imageUrl: pk("Team-Rockets-Proton", "123", "57154") },
     { id: "sv10-121", setCode: "sv10", number: "121", name: "로켓단의 비주기", rarity: "SR", imageUrl: pk("Team-Rockets-Giovanni", "121", "57152") },
-    { id: "sv10-122", setCode: "sv10", number: "122", name: "로켓단의 아테나", rarity: "SR", imageUrl: pk("Team-Rockets-Ariana", "122", "57150") },
-    { id: "sv10-123", setCode: "sv10", number: "123", name: "로켓단의 아폴로", rarity: "SR", imageUrl: pk("Team-Rockets-Archer", "123", "57151") },
+    { id: "sv10-122", setCode: "sv10", number: "122", name: "로켓단의 아테나", rarity: "SR", imageUrl: pk("Team-Rockets-Ariana", "119", "57150") },
+    { id: "sv10-123", setCode: "sv10", number: "123", name: "로켓단의 아폴로", rarity: "SR", imageUrl: pk("Team-Rockets-Archer", "120", "57151") },
     { id: "sv10-124", setCode: "sv10", number: "124", name: "로켓단의 파이어ex", rarity: "SAR", imageUrl: pk("Team-Rockets-Moltres-ex", "124", "57155") },
     { id: "sv10-125", setCode: "sv10", number: "125", name: "로켓단의 뮤츠ex", rarity: "SAR", imageUrl: pk("Team-Rockets-Mewtwo-ex", "125", "57156") },
     { id: "sv10-126", setCode: "sv10", number: "126", name: "로켓단의 니드킹ex", rarity: "SAR", imageUrl: pk("Team-Rockets-Nidoking-ex", "126", "57157") },
     { id: "sv10-127", setCode: "sv10", number: "127", name: "로켓단의 크로뱃ex", rarity: "SAR", imageUrl: pk("Team-Rockets-Crobat-ex", "127", "57158") },
-    { id: "sv10-128", setCode: "sv10", number: "128", name: "로켓단의 비주기", rarity: "SAR", imageUrl: pk("Team-Rockets-Giovanni", "128", "57160") },
-    { id: "sv10-129", setCode: "sv10", number: "129", name: "로켓단의 아테나", rarity: "SAR", imageUrl: pk("Team-Rockets-Ariana", "129", "57159") },
+    { id: "sv10-128", setCode: "sv10", number: "128", name: "로켓단의 비주기", rarity: "SAR", imageUrl: pk("Team-Rockets-Giovanni", "129", "57160") },
+    { id: "sv10-129", setCode: "sv10", number: "129", name: "로켓단의 아테나", rarity: "SAR", imageUrl: pk("Team-Rockets-Ariana", "128", "57159") },
     { id: "sv10-130", setCode: "sv10", number: "130", name: "로켓단의 뮤츠ex", rarity: "UR", imageUrl: pk("Team-Rockets-Mewtwo-ex", "130", "57161") },
     { id: "sv10-131", setCode: "sv10", number: "131", name: "로켓단의 크로뱃ex", rarity: "UR", imageUrl: pk("Team-Rockets-Crobat-ex", "131", "57162") },
     { id: "sv10-132", setCode: "sv10", number: "132", name: "재밍타워", rarity: "UR", imageUrl: pk("Jamming-Tower", "132", "57163") },

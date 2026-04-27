@@ -5,8 +5,9 @@ import type { SetInfo } from "../types";
 // 한국판 카드 번호를 canonical 로 사용 — 일본판과 일부 swap (KR ↔ JP
 // number 가 다른 트레이너 카드들 등). slug + asset_id 가 한국판 번호에
 // 정확히 매칭되는 이미지를 가리키도록 에이전트가 검증.
+// Pokellector URL 은 unpadded number ("1" not "001") 만 받음.
 const pk = (slug: string, num: string, id: string) =>
-  `https://den-cards.pokellector.com/428/${slug}.M3.${num}.${id}.png`;
+  `https://den-cards.pokellector.com/428/${slug}.M3.${parseInt(num, 10)}.${id}.png`;
 
 export const m3: SetInfo = {
   code: "m3",
@@ -94,16 +95,16 @@ export const m3: SetInfo = {
     { id: "m3-064", setCode: "m3", number: "064", name: "파르토", rarity: "U", imageUrl: pk("Diggersby", "064", "60244") },
     { id: "m3-065", setCode: "m3", number: "065", name: "화살꼬빈", rarity: "C", imageUrl: pk("Fletchling", "065", "60245") },
     { id: "m3-066", setCode: "m3", number: "066", name: "트리미앙", rarity: "C", imageUrl: pk("Furfrou", "066", "60246") },
-    { id: "m3-067", setCode: "m3", number: "067", name: "미르갈레트", rarity: "U", imageUrl: pk("Lumiose-Galette", "067", "60248") },
-    { id: "m3-068", setCode: "m3", number: "068", name: "에너지탁치기", rarity: "U", imageUrl: pk("Energy-Swatter", "068", "60247") },
+    { id: "m3-067", setCode: "m3", number: "067", name: "미르갈레트", rarity: "U", imageUrl: pk("Lumiose-Galette", "71", "60248") },
+    { id: "m3-068", setCode: "m3", number: "068", name: "에너지탁치기", rarity: "U", imageUrl: pk("Energy-Swatter", "67", "60247") },
     { id: "m3-069", setCode: "m3", number: "069", name: "오래된 지느러미화석", rarity: "C", imageUrl: pk("Antique-Sail-Fossil", "069", "60170") },
-    { id: "m3-070", setCode: "m3", number: "070", name: "오래된 턱화석", rarity: "C", imageUrl: pk("Jaw-Fossil", "070", "60167") },
-    { id: "m3-071", setCode: "m3", number: "071", name: "포켓패드", rarity: "U", imageUrl: pk("Pokepad", "071", "60163") },
+    { id: "m3-070", setCode: "m3", number: "070", name: "오래된 턱화석", rarity: "C", imageUrl: pk("Jaw-Fossil", "68", "60167") },
+    { id: "m3-071", setCode: "m3", number: "071", name: "포켓패드", rarity: "U", imageUrl: pk("Pokepad", "70", "60163") },
     { id: "m3-072", setCode: "m3", number: "072", name: "코어 메모리", rarity: "U", imageUrl: pk("Core-Memory", "072", "60162") },
-    { id: "m3-073", setCode: "m3", number: "073", name: "명희의 격려", rarity: "U", imageUrl: pk("Rosas-Encouragement", "073", "60249") },
-    { id: "m3-074", setCode: "m3", number: "074", name: "유카리", rarity: "U", imageUrl: pk("Jacinthe", "074", "60250") },
-    { id: "m3-075", setCode: "m3", number: "075", name: "이노", rarity: "U", imageUrl: pk("Naveen", "075", "60159") },
-    { id: "m3-076", setCode: "m3", number: "076", name: "타라곤", rarity: "U", imageUrl: pk("Tarragon", "076", "60158") },
+    { id: "m3-073", setCode: "m3", number: "073", name: "명희의 격려", rarity: "U", imageUrl: pk("Rosas-Encouragement", "75", "60249") },
+    { id: "m3-074", setCode: "m3", number: "074", name: "유카리", rarity: "U", imageUrl: pk("Jacinthe", "76", "60250") },
+    { id: "m3-075", setCode: "m3", number: "075", name: "이노", rarity: "U", imageUrl: pk("Naveen", "74", "60159") },
+    { id: "m3-076", setCode: "m3", number: "076", name: "타라곤", rarity: "U", imageUrl: pk("Tarragon", "73", "60158") },
     { id: "m3-077", setCode: "m3", number: "077", name: "미르시티", rarity: "U", imageUrl: pk("Lumiose-City", "077", "60160") },
     { id: "m3-078", setCode: "m3", number: "078", name: "그로우 풀에너지", rarity: "R", imageUrl: pk("Grow-Energy", "078", "60251") },
     { id: "m3-079", setCode: "m3", number: "079", name: "텔레패스 초에너지", rarity: "R", imageUrl: pk("Telepath-Energy", "079", "60252") },
@@ -128,16 +129,16 @@ export const m3: SetInfo = {
     { id: "m3-098", setCode: "m3", number: "098", name: "이벨타르 ex", rarity: "SR", imageUrl: pk("Yveltal-ex", "098", "60267") },
     { id: "m3-099", setCode: "m3", number: "099", name: "메가무장조 ex", rarity: "SR", imageUrl: pk("Mega-Skarmory-ex", "099", "60268") },
     { id: "m3-100", setCode: "m3", number: "100", name: "나옹 ex", rarity: "SR", imageUrl: pk("Meowth-ex", "100", "60269") },
-    { id: "m3-101", setCode: "m3", number: "101", name: "성스러운분말", rarity: "SR", imageUrl: pk("Sacred-Ash", "101", "60271") },
-    { id: "m3-102", setCode: "m3", number: "102", name: "에너지 리사이클", rarity: "SR", imageUrl: pk("Energy-Recycler", "102", "60270") },
-    { id: "m3-103", setCode: "m3", number: "103", name: "원더패치", rarity: "SR", imageUrl: pk("Wondrous-Patch", "103", "60273") },
-    { id: "m3-104", setCode: "m3", number: "104", name: "포켓패드", rarity: "SR", imageUrl: pk("Pok-Pad", "104", "60272") },
-    { id: "m3-105", setCode: "m3", number: "105", name: "명희의 격려", rarity: "SR", imageUrl: pk("Rosas-Encouragement", "105", "60276") },
-    { id: "m3-106", setCode: "m3", number: "106", name: "유카리", rarity: "SR", imageUrl: pk("Jacinthe", "106", "60277") },
-    { id: "m3-107", setCode: "m3", number: "107", name: "이노", rarity: "SR", imageUrl: pk("Naveen", "107", "60275") },
-    { id: "m3-108", setCode: "m3", number: "108", name: "타라곤", rarity: "SR", imageUrl: pk("Tarragon", "108", "60274") },
-    { id: "m3-109", setCode: "m3", number: "109", name: "미르시티", rarity: "SR", imageUrl: pk("Lumiose-City", "109", "60279") },
-    { id: "m3-110", setCode: "m3", number: "110", name: "활력의 숲", rarity: "SR", imageUrl: pk("Forest-of-Vitality", "110", "60278") },
+    { id: "m3-101", setCode: "m3", number: "101", name: "성스러운분말", rarity: "SR", imageUrl: pk("Sacred-Ash", "102", "60271") },
+    { id: "m3-102", setCode: "m3", number: "102", name: "에너지 리사이클", rarity: "SR", imageUrl: pk("Energy-Recycler", "101", "60270") },
+    { id: "m3-103", setCode: "m3", number: "103", name: "원더패치", rarity: "SR", imageUrl: pk("Wondrous-Patch", "104", "60273") },
+    { id: "m3-104", setCode: "m3", number: "104", name: "포켓패드", rarity: "SR", imageUrl: pk("Pok-Pad", "103", "60272") },
+    { id: "m3-105", setCode: "m3", number: "105", name: "명희의 격려", rarity: "SR", imageUrl: pk("Rosas-Encouragement", "107", "60276") },
+    { id: "m3-106", setCode: "m3", number: "106", name: "유카리", rarity: "SR", imageUrl: pk("Jacinthe", "108", "60277") },
+    { id: "m3-107", setCode: "m3", number: "107", name: "이노", rarity: "SR", imageUrl: pk("Naveen", "106", "60275") },
+    { id: "m3-108", setCode: "m3", number: "108", name: "타라곤", rarity: "SR", imageUrl: pk("Tarragon", "105", "60274") },
+    { id: "m3-109", setCode: "m3", number: "109", name: "미르시티", rarity: "SR", imageUrl: pk("Lumiose-City", "110", "60279") },
+    { id: "m3-110", setCode: "m3", number: "110", name: "활력의 숲", rarity: "SR", imageUrl: pk("Forest-of-Vitality", "109", "60278") },
     { id: "m3-111", setCode: "m3", number: "111", name: "메가아쿠스타 ex", rarity: "SAR", imageUrl: pk("Mega-Starmie-ex", "111", "60280") },
     { id: "m3-112", setCode: "m3", number: "112", name: "메가픽시 ex", rarity: "SAR", imageUrl: pk("Mega-Clefable-ex", "112", "60281") },
     { id: "m3-113", setCode: "m3", number: "113", name: "메가지가르데 ex", rarity: "SAR", imageUrl: pk("Mega-Zygarde-ex", "113", "60282") },

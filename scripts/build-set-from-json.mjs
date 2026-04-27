@@ -76,8 +76,9 @@ const ts = `import type { SetInfo } from "../types";
 // 한국판 카드 번호를 canonical 로 사용 — 일본판과 일부 swap (KR ↔ JP
 // number 가 다른 트레이너 카드들 등). slug + asset_id 가 한국판 번호에
 // 정확히 매칭되는 이미지를 가리키도록 에이전트가 검증.
+// Pokellector URL 은 unpadded number ("1" not "001") 만 받음.
 const pk = (slug: string, num: string, id: string) =>
-  \`https://den-cards.pokellector.com/${folder}/\${slug}.${setCodeUpper}.\${num}.\${id}.png\`;
+  \`https://den-cards.pokellector.com/${folder}/\${slug}.${setCodeUpper}.\${parseInt(num, 10)}.\${id}.png\`;
 
 export const ${SET_CODE}: SetInfo = {
   code: "${SET_CODE}",

@@ -5,8 +5,9 @@ import type { SetInfo } from "../types";
 // 한국판 카드 번호를 canonical 로 사용 — 일본판과 일부 swap (KR ↔ JP
 // number 가 다른 트레이너 카드들 등). slug + asset_id 가 한국판 번호에
 // 정확히 매칭되는 이미지를 가리키도록 에이전트가 검증.
+// Pokellector URL 은 unpadded number ("1" not "001") 만 받음.
 const pk = (slug: string, num: string, id: string) =>
-  `https://den-cards.pokellector.com/416/${slug}.M1L.${num}.${id}.png`;
+  `https://den-cards.pokellector.com/416/${slug}.M1L.${parseInt(num, 10)}.${id}.png`;
 
 export const m1l: SetInfo = {
   code: "m1l",
@@ -84,12 +85,12 @@ export const m1l: SetInfo = {
     { id: "m1l-054", setCode: "m1l", number: "054", name: "밀탱크", rarity: "C", imageUrl: pk("Miltank", "054", "58858") },
     { id: "m1l-055", setCode: "m1l", number: "055", name: "영구스", rarity: "C", imageUrl: pk("Yungoos", "055", "58859") },
     { id: "m1l-056", setCode: "m1l", number: "056", name: "형사구스", rarity: "U", imageUrl: pk("Gumshoos", "056", "58860") },
-    { id: "m1l-057", setCode: "m1l", number: "057", name: "벌레회피스프레이", rarity: "U", imageUrl: pk("Repel", "057", "58863") },
-    { id: "m1l-058", setCode: "m1l", number: "058", name: "아이언 디펜드업", rarity: "U", imageUrl: pk("Iron-X-Defense", "058", "58861") },
-    { id: "m1l-059", setCode: "m1l", number: "059", name: "파워프로틴", rarity: "U", imageUrl: pk("Premium-Power-Pro", "059", "57979") },
-    { id: "m1l-060", setCode: "m1l", number: "060", name: "파이팅공", rarity: "U", imageUrl: pk("Fight-Gong", "060", "58862") },
-    { id: "m1l-061", setCode: "m1l", number: "061", name: "릴리에의 결심", rarity: "U", imageUrl: pk("Lillie", "061", "57975") },
-    { id: "m1l-062", setCode: "m1l", number: "062", name: "마티스의 거래", rarity: "U", imageUrl: pk("Lt-Surges-Deal", "062", "58864") },
+    { id: "m1l-057", setCode: "m1l", number: "057", name: "벌레회피스프레이", rarity: "U", imageUrl: pk("Repel", "60", "58863") },
+    { id: "m1l-058", setCode: "m1l", number: "058", name: "아이언 디펜드업", rarity: "U", imageUrl: pk("Iron-X-Defense", "57", "58861") },
+    { id: "m1l-059", setCode: "m1l", number: "059", name: "파워프로틴", rarity: "U", imageUrl: pk("Premium-Power-Pro", "58", "57979") },
+    { id: "m1l-060", setCode: "m1l", number: "060", name: "파이팅공", rarity: "U", imageUrl: pk("Fight-Gong", "59", "58862") },
+    { id: "m1l-061", setCode: "m1l", number: "061", name: "릴리에의 결심", rarity: "U", imageUrl: pk("Lillie", "62", "57975") },
+    { id: "m1l-062", setCode: "m1l", number: "062", name: "마티스의 거래", rarity: "U", imageUrl: pk("Lt-Surges-Deal", "61", "58864") },
     { id: "m1l-063", setCode: "m1l", number: "063", name: "위험한 폐허", rarity: "U", imageUrl: pk("Dangerous-Ruins", "063", "58865") },
     { id: "m1l-064", setCode: "m1l", number: "064", name: "이상해씨", rarity: "AR", imageUrl: pk("Bulbasaur", "064", "57980") },
     { id: "m1l-065", setCode: "m1l", number: "065", name: "이상해풀", rarity: "AR", imageUrl: pk("Ivysaur", "065", "58866") },
@@ -108,17 +109,17 @@ export const m1l: SetInfo = {
     { id: "m1l-078", setCode: "m1l", number: "078", name: "메가루카리오", rarity: "SR", imageUrl: pk("Mega-Lucario-ex", "078", "58877") },
     { id: "m1l-079", setCode: "m1l", number: "079", name: "메가앱솔", rarity: "SR", imageUrl: pk("Mega-Absol-ex", "079", "58878") },
     { id: "m1l-080", setCode: "m1l", number: "080", name: "메가입치트", rarity: "SR", imageUrl: pk("Mega-Mawile-ex", "080", "58879") },
-    { id: "m1l-081", setCode: "m1l", number: "081", name: "밤의 들것", rarity: "SR", imageUrl: pk("Rescue-Stretcher", "081", "57976") },
-    { id: "m1l-082", setCode: "m1l", number: "082", name: "파워프로틴", rarity: "SR", imageUrl: pk("Premium-Power-Pro", "082", "58880") },
-    { id: "m1l-083", setCode: "m1l", number: "083", name: "파이팅공", rarity: "SR", imageUrl: pk("Fight-Gong", "083", "58881") },
+    { id: "m1l-081", setCode: "m1l", number: "081", name: "밤의 들것", rarity: "SR", imageUrl: pk("Rescue-Stretcher", "83", "57976") },
+    { id: "m1l-082", setCode: "m1l", number: "082", name: "파워프로틴", rarity: "SR", imageUrl: pk("Premium-Power-Pro", "81", "58880") },
+    { id: "m1l-083", setCode: "m1l", number: "083", name: "파이팅공", rarity: "SR", imageUrl: pk("Fight-Gong", "82", "58881") },
     { id: "m1l-084", setCode: "m1l", number: "084", name: "풍선", rarity: "SR", imageUrl: pk("Air-Balloon", "084", "58882") },
-    { id: "m1l-085", setCode: "m1l", number: "085", name: "릴리에의 결심", rarity: "SR", imageUrl: pk("Lillies-Determination", "085", "58884") },
-    { id: "m1l-086", setCode: "m1l", number: "086", name: "마티스의 거래", rarity: "SR", imageUrl: pk("Lt-Surges-Deal", "086", "58883") },
+    { id: "m1l-085", setCode: "m1l", number: "085", name: "릴리에의 결심", rarity: "SR", imageUrl: pk("Lillies-Determination", "86", "58884") },
+    { id: "m1l-086", setCode: "m1l", number: "086", name: "마티스의 거래", rarity: "SR", imageUrl: pk("Lt-Surges-Deal", "85", "58883") },
     { id: "m1l-087", setCode: "m1l", number: "087", name: "메가이상해꽃", rarity: "SAR", imageUrl: pk("Mega-Venusaur-ex", "087", "58885") },
     { id: "m1l-088", setCode: "m1l", number: "088", name: "메가루카리오", rarity: "SAR", imageUrl: pk("Mega-Lucario-ex", "088", "58886") },
     { id: "m1l-089", setCode: "m1l", number: "089", name: "메가앱솔", rarity: "SAR", imageUrl: pk("Mega-Absol-ex", "089", "58887") },
-    { id: "m1l-090", setCode: "m1l", number: "090", name: "릴리에의 결심", rarity: "SAR", imageUrl: pk("Lillies-Determination", "090", "58889") },
-    { id: "m1l-091", setCode: "m1l", number: "091", name: "마티스의 거래", rarity: "SAR", imageUrl: pk("Lt-Surges-Deal", "091", "58888") },
+    { id: "m1l-090", setCode: "m1l", number: "090", name: "릴리에의 결심", rarity: "SAR", imageUrl: pk("Lillies-Determination", "91", "58889") },
+    { id: "m1l-091", setCode: "m1l", number: "091", name: "마티스의 거래", rarity: "SAR", imageUrl: pk("Lt-Surges-Deal", "90", "58888") },
     { id: "m1l-092", setCode: "m1l", number: "092", name: "메가루카리오", rarity: "MUR", imageUrl: pk("Mega-Lucario-ex", "092", "58890") },
   ],
 };

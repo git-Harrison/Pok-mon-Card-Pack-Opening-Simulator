@@ -5,8 +5,9 @@ import type { SetInfo } from "../types";
 // 한국판 카드 번호를 canonical 로 사용 — 일본판과 일부 swap (KR ↔ JP
 // number 가 다른 트레이너 카드들 등). slug + asset_id 가 한국판 번호에
 // 정확히 매칭되는 이미지를 가리키도록 에이전트가 검증.
+// Pokellector URL 은 unpadded number ("1" not "001") 만 받음.
 const pk = (slug: string, num: string, id: string) =>
-  `https://den-cards.pokellector.com/417/${slug}.M1S.${num}.${id}.png`;
+  `https://den-cards.pokellector.com/417/${slug}.M1S.${parseInt(num, 10)}.${id}.png`;
 
 export const m1s: SetInfo = {
   code: "m1s",
@@ -86,11 +87,11 @@ export const m1s: SetInfo = {
     { id: "m1s-056", setCode: "m1s", number: "056", name: "이븐곰", rarity: "C", imageUrl: pk("Bewear", "056", "58937") },
     { id: "m1s-057", setCode: "m1s", number: "057", name: "괴상한 시계", rarity: "U", imageUrl: pk("Suspicious-Watch", "057", "58938") },
     { id: "m1s-058", setCode: "m1s", number: "058", name: "메가시그널", rarity: "U", imageUrl: pk("Mega-Signal", "058", "57986") },
-    { id: "m1s-059", setCode: "m1s", number: "059", name: "민진의 헤아림", rarity: "U", imageUrl: pk("Wally", "059", "57990") },
-    { id: "m1s-060", setCode: "m1s", number: "060", name: "아세로라의 장난", rarity: "U", imageUrl: pk("Acerolas-Mischief", "060", "58939") },
-    { id: "m1s-061", setCode: "m1s", number: "061", name: "미스터리 가든", rarity: "U", imageUrl: pk("Mystery-Garden", "061", "57985") },
+    { id: "m1s-059", setCode: "m1s", number: "059", name: "민진의 헤아림", rarity: "U", imageUrl: pk("Wally", "60", "57990") },
+    { id: "m1s-060", setCode: "m1s", number: "060", name: "아세로라의 장난", rarity: "U", imageUrl: pk("Acerolas-Mischief", "59", "58939") },
+    { id: "m1s-061", setCode: "m1s", number: "061", name: "미스터리 가든", rarity: "U", imageUrl: pk("Mystery-Garden", "63", "57985") },
     { id: "m1s-062", setCode: "m1s", number: "062", name: "파도타기 비치", rarity: "U", imageUrl: pk("Surfing-Beach", "062", "58941") },
-    { id: "m1s-063", setCode: "m1s", number: "063", name: "활력의 숲", rarity: "U", imageUrl: pk("Vitality-Forest", "063", "58940") },
+    { id: "m1s-063", setCode: "m1s", number: "063", name: "활력의 숲", rarity: "U", imageUrl: pk("Vitality-Forest", "61", "58940") },
     { id: "m1s-064", setCode: "m1s", number: "064", name: "단단지", rarity: "AR", imageUrl: pk("Shuckle", "064", "58942") },
     { id: "m1s-065", setCode: "m1s", number: "065", name: "아이스크", rarity: "AR", imageUrl: pk("Ninjask", "065", "58943") },
     { id: "m1s-066", setCode: "m1s", number: "066", name: "레오꼬", rarity: "AR", imageUrl: pk("Litleo", "066", "58944") },
@@ -108,17 +109,17 @@ export const m1s: SetInfo = {
     { id: "m1s-078", setCode: "m1s", number: "078", name: "메가가디안", rarity: "SR", imageUrl: pk("Mega-Gardevoir-ex", "078", "58955") },
     { id: "m1s-079", setCode: "m1s", number: "079", name: "메가라티아스", rarity: "SR", imageUrl: pk("Mega-Latias-ex", "079", "58956") },
     { id: "m1s-080", setCode: "m1s", number: "080", name: "메가캥카", rarity: "SR", imageUrl: pk("Mega-Kangaskhan-ex", "080", "58957") },
-    { id: "m1s-081", setCode: "m1s", number: "081", name: "메가시그널", rarity: "SR", imageUrl: pk("Mega-Signal", "081", "58959") },
+    { id: "m1s-081", setCode: "m1s", number: "081", name: "메가시그널", rarity: "SR", imageUrl: pk("Mega-Signal", "83", "58959") },
     { id: "m1s-082", setCode: "m1s", number: "082", name: "이상한사탕", rarity: "SR", imageUrl: pk("Rare-Candy", "082", "57987") },
-    { id: "m1s-083", setCode: "m1s", number: "083", name: "절친 포핀", rarity: "SR", imageUrl: pk("Buddy-Buddy-Poffin", "083", "58958") },
-    { id: "m1s-084", setCode: "m1s", number: "084", name: "민진의 헤아림", rarity: "SR", imageUrl: pk("Wallys-Compassion", "084", "58961") },
-    { id: "m1s-085", setCode: "m1s", number: "085", name: "아세로라의 장난", rarity: "SR", imageUrl: pk("Acerolas-Mischief", "085", "58960") },
+    { id: "m1s-083", setCode: "m1s", number: "083", name: "절친 포핀", rarity: "SR", imageUrl: pk("Buddy-Buddy-Poffin", "81", "58958") },
+    { id: "m1s-084", setCode: "m1s", number: "084", name: "민진의 헤아림", rarity: "SR", imageUrl: pk("Wallys-Compassion", "85", "58961") },
+    { id: "m1s-085", setCode: "m1s", number: "085", name: "아세로라의 장난", rarity: "SR", imageUrl: pk("Acerolas-Mischief", "84", "58960") },
     { id: "m1s-086", setCode: "m1s", number: "086", name: "미스터리 가든", rarity: "SR", imageUrl: pk("Mystery-Garden", "086", "58962") },
     { id: "m1s-087", setCode: "m1s", number: "087", name: "메가가디안", rarity: "SAR", imageUrl: pk("Mega-Gardevoir-ex", "087", "58963") },
     { id: "m1s-088", setCode: "m1s", number: "088", name: "메가라티아스", rarity: "SAR", imageUrl: pk("Mega-Latias-ex", "088", "58964") },
     { id: "m1s-089", setCode: "m1s", number: "089", name: "메가캥카", rarity: "SAR", imageUrl: pk("Mega-Kangaskhan-ex", "089", "58965") },
-    { id: "m1s-090", setCode: "m1s", number: "090", name: "민진의 헤아림", rarity: "SAR", imageUrl: pk("Wallys-Compassion", "090", "58967") },
-    { id: "m1s-091", setCode: "m1s", number: "091", name: "아세로라의 장난", rarity: "SAR", imageUrl: pk("Acerolas-Mischief", "091", "58966") },
+    { id: "m1s-090", setCode: "m1s", number: "090", name: "민진의 헤아림", rarity: "SAR", imageUrl: pk("Wallys-Compassion", "91", "58967") },
+    { id: "m1s-091", setCode: "m1s", number: "091", name: "아세로라의 장난", rarity: "SAR", imageUrl: pk("Acerolas-Mischief", "90", "58966") },
     { id: "m1s-092", setCode: "m1s", number: "092", name: "메가가디안", rarity: "MUR", imageUrl: pk("Mega-Gardevoir-ex", "092", "58968") },
   ],
 };
