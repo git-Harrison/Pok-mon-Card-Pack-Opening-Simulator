@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getCard, SETS } from "@/lib/sets";
-import { PCL_LABEL } from "@/lib/pcl";
 
 /**
  * POST /api/discord/share
@@ -8,19 +7,12 @@ import { PCL_LABEL } from "@/lib/pcl";
  * Auto-notify hooks. Only the events below will actually post (the server
  * still applies a final whitelist so a misbehaving client can't spam):
  *
- *   - pcl-success : grade === 10 only
  *   - sabotage    : success === true only
  *   - taunt       : always
  *   - gift        : always
  *   - rank-change : prev !== next
  */
 
-interface PclSuccessBody {
-  kind: "pcl-success";
-  username: string;
-  cardId: string;
-  grade: number;
-}
 interface SabotageBody {
   kind: "sabotage";
   username: string;
@@ -50,7 +42,6 @@ interface RankChangeBody {
   next: number;
 }
 type Body =
-  | PclSuccessBody
   | SabotageBody
   | TauntBody
   | GiftBody
@@ -99,27 +90,7 @@ export async function POST(request: Request) {
   let embed: Record<string, unknown>;
   let content = "";
 
-  if (body.kind === "pcl-success") {
-    const card = getCard(body.cardId);
-    if (!card) {
-      return NextResponse.json({ ok: false, skipped: "unknown-card" });
-    }
-    const grade = Math.floor(body.grade);
-    if (grade !== 10) {
-      return NextResponse.json({ ok: true, skipped: true });
-    }
-    content = "@everyone";
-    embed = {
-      title: `🏆 ${safeUser}님의 PCL 10 GEM MINT!`,
-      description: `**${card.name}**\n${SETS[card.setCode].name} · #${card.number}\n등급: **PCL 10** (${PCL_LABEL[10]})`,
-      color: 0xfbbf24,
-      thumbnail: card.imageUrl
-        ? { url: absoluteImageUrl(card.imageUrl) }
-        : undefined,
-      footer: { text: "카드깡 자동 알림" },
-      timestamp: new Date().toISOString(),
-    };
-  } else if (body.kind === "sabotage") {
+  if (body.kind === "sabotage") {
     if (!body.success) {
       return NextResponse.json({ ok: true, skipped: true });
     }

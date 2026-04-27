@@ -16,7 +16,6 @@ import {
 import { getCard } from "@/lib/sets";
 import { isPclEligible, PCL_LABEL, pclTone } from "@/lib/pcl";
 import { compareRarity } from "@/lib/rarity";
-import { notifyPclGrade } from "@/lib/discord";
 import PageBackdrop from "./PageBackdrop";
 import Portal from "./Portal";
 
@@ -137,7 +136,6 @@ export default function GradingView() {
           <BulkGradingModal
             wallet={wallet}
             userId={user.id}
-            username={user.display_name}
             onClose={() => {
               setBulkOpen(false);
               refreshWallet();
@@ -651,13 +649,11 @@ type BulkPhase = "picking" | "submitting" | "done";
 function BulkGradingModal({
   wallet,
   userId,
-  username,
   onClose,
   onPointsChange,
 }: {
   wallet: WalletSnapshot;
   userId: string;
-  username: string;
   onClose: () => void;
   onPointsChange: (points: number) => void;
 }) {
@@ -706,18 +702,12 @@ function BulkGradingModal({
       return;
     }
     if (typeof res.points === "number") onPointsChange(res.points);
-    for (const r of res.results ?? []) {
-      if (r.ok && !r.failed && typeof r.grade === "number") {
-        notifyPclGrade(username, r.card_id, r.grade);
-      }
-    }
     setResult(res);
     setPhase("done");
   }, [
     totalEligibleCount,
     phase,
     userId,
-    username,
     onPointsChange,
     autoSellBelow,
     eligible,

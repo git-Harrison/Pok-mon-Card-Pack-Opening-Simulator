@@ -148,6 +148,18 @@ export default function ProfileView() {
         );
         return;
       }
+      const picked = (profile.main_cards ?? []).find((c) => c.id === gradingId);
+      const pickedCardId =
+        picked?.card_id ??
+        eligibleSlabs.find((s) => s.id === gradingId)?.card_id ??
+        null;
+      const lockedCardIds = new Set(
+        (profile.main_cards ?? []).map((c) => c.card_id)
+      );
+      if (pickedCardId && lockedCardIds.has(pickedCardId)) {
+        setError("이미 같은 카드가 펫으로 등록돼 있어요.");
+        return;
+      }
       const ids = [...aliveIds];
       if (ids.includes(gradingId)) {
         setError("이미 다른 슬롯에 등록된 슬랩이에요.");
@@ -166,7 +178,7 @@ export default function ProfileView() {
       setPickerSlot(null);
       await refresh();
     },
-    [user, profile, aliveIds, displayedIds, refresh]
+    [user, profile, aliveIds, displayedIds, eligibleSlabs, refresh]
   );
 
   const onRemoveSlot = useCallback(
@@ -371,6 +383,11 @@ export default function ProfileView() {
           <SlabPicker
             slabs={eligibleSlabs}
             disabledIds={new Set(profile.main_card_ids)}
+            lockedCardIds={
+              new Set(
+                (profile.main_cards ?? []).map((c) => c.card_id)
+              )
+            }
             displayedIds={displayedIds}
             slotIndex={pickerSlot}
             onClose={() => setPickerSlot(null)}
@@ -699,6 +716,7 @@ function PetSlot({
 function SlabPicker({
   slabs,
   disabledIds,
+  lockedCardIds,
   displayedIds,
   slotIndex,
   onClose,
@@ -706,6 +724,7 @@ function SlabPicker({
 }: {
   slabs: PclGradingWithDisplay[];
   disabledIds: Set<string>;
+  lockedCardIds: Set<string>;
   displayedIds: Set<string>;
   slotIndex: number;
   onClose: () => void;
@@ -772,7 +791,9 @@ function SlabPicker({
                   if (!card) return null;
                   const taken = disabledIds.has(g.id);
                   const onShowcase = displayedIds.has(g.id);
-                  const blocked = taken || onShowcase;
+                  const sameCardTaken =
+                    !taken && lockedCardIds.has(g.card_id);
+                  const blocked = taken || onShowcase || sameCardTaken;
                   return (
                     <li key={g.id}>
                       <button
@@ -791,11 +812,24 @@ function SlabPicker({
                             ? "이미 펫으로 등록된 슬랩이에요."
                             : onShowcase
                             ? "센터에 전시 중인 슬랩이에요. 전시 해제 후 등록 가능."
+                            : sameCardTaken
+                            ? "이미 같은 카드가 펫으로 등록돼 있어요."
                             : undefined
                         }
                       >
                         <PclSlab card={card} grade={g.grade} size="sm" />
-                        <p className="mt-1 px-1 text-[10px] text-zinc-400 truncate">
+                        <span
+                          className={clsx(
+                            "absolute top-2 right-2 text-[10px] font-black px-1.5 py-0.5 rounded ring-1 ring-white/20 shadow",
+                            RARITY_STYLE[card.rarity].badge
+                          )}
+                        >
+                          {card.rarity}
+                        </span>
+                        <p className="mt-1 px-1 text-[11px] font-bold text-white truncate">
+                          {card.name}
+                        </p>
+                        <p className="px-1 text-[10px] text-zinc-400 truncate">
                           {SETS[card.setCode].name} · #{card.number}
                         </p>
                         {taken && (
@@ -806,6 +840,11 @@ function SlabPicker({
                         {!taken && onShowcase && (
                           <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/90 text-zinc-950 ring-1 ring-amber-300/60">
                             전시 중
+                          </span>
+                        )}
+                        {sameCardTaken && (
+                          <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-fuchsia-500/90 text-white ring-1 ring-fuchsia-300/60">
+                            중복
                           </span>
                         )}
                       </button>

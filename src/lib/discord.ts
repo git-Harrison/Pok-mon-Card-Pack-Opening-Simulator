@@ -4,11 +4,10 @@
  * Discord webhook notifications. Only these events fire — everything else
  * is intentionally silent:
  *
- *   1. PCL 10 (GEM MINT) grading success
- *   2. Center sabotage success (attacker side)
- *   3. Taunt sent
- *   4. Gift sent
- *   5. Ranking position change (rank / power / pet tabs)
+ *   1. Center sabotage success (attacker side)
+ *   2. Taunt sent
+ *   3. Gift sent
+ *   4. Ranking position change (rank / power / pet tabs)
  */
 
 async function post(body: Record<string, unknown>): Promise<void> {
@@ -21,16 +20,6 @@ async function post(body: Record<string, unknown>): Promise<void> {
   } catch {
     // Fire-and-forget — don't block user flow on webhook failure
   }
-}
-
-/** PCL 감별 성공 → 등급 10일 때만 알림. */
-export function notifyPclGrade(
-  username: string,
-  cardId: string,
-  grade: number
-): void {
-  if (grade !== 10) return;
-  post({ kind: "pcl-success", username, cardId, grade });
 }
 
 /** 센터 부수기 → 성공일 때만 알림. */
