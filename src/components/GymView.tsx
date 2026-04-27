@@ -1403,7 +1403,8 @@ function GymHelpModal({ onClose }: { onClose: () => void }) {
               내 PCL10 펫 3마리(체육관 속성 동일)를 <b>방어 덱</b>으로 셋업.
               다른 트레이너가 도전하면 NPC 대신 이 3마리가 등장.<br />
               • 방어 덱에 든 펫은 펫 슬롯에서 자동 빠짐 (전투력은 그대로 합산).<br />
-              • 방어 시 ratio/cap 통일 — 단, <b>MUR 카드는 효율 ×2</b>.<br />
+              • <b>MUR 카드는 도전/방어 양측 동일</b>하게 효율 ×2 + 캡 ×10
+              적용 — 같은 power 면 MUR 이 비-MUR 을 압도.<br />
               • 다른 사람에게 점령당하면 방어 덱 슬랩 <b>영구 삭제</b> + pet_score
               감소.
             </Section>
@@ -1422,13 +1423,14 @@ function GymHelpModal({ onClose }: { onClose: () => void }) {
             </Section>
             <Section icon="📊" title="전투 공식 요약">
               펫 능력치 = 카드 기본 스탯(slabStats) + center_power 비례 보너스.
-              슬롯 1/2/3 = ATK 보너스 비율 10% / 8% / 6%, 캡 = 기본 ATK × 5
-              (방어 MUR 은 ×2 효율 + 캡 ×10). 속성 상성 표(2× / 0.5×) 적용.
+              슬롯 1/2/3 = ATK 보너스 비율 10% / 8% / 6%, 캡 = 기본 ATK × 5.
+              <b>MUR 카드는 양측 동일 ×2 효율 + 캡 ×10</b>. 속성 상성 표
+              (2× / 0.5×) 적용.
             </Section>
             <Section icon="💡" title="팁">
               • 첫 도전은 가장 약한 체육관 1개로 메달 + 점령 버프 +10,000 확보.<br />
               • 점령 직후 일일 보상 1회 청구 → 랭킹 +10,000 즉시 반영.<br />
-              • MUR 슬랩이 있다면 방어 덱에 우선 배치 — 효율 2배.<br />
+              • <b>MUR 슬랩</b>은 도전/방어 모두 강력 — power 동등 시 비-MUR 압도.<br />
               • 도감/펫/전시 전투력으로 min_power 부족 시 도감 채우기 우선.
             </Section>
           </div>
