@@ -24,9 +24,9 @@ import {
   DISPLAY_NAME_MIN,
   fetchProfile,
   getCharacter,
-  MAX_MAIN_CARDS,
+  PETS_PER_TYPE,
   setCharacter as rpcSetCharacter,
-  setMainCards as rpcSetMainCards,
+  setPetForType,
   updateDisplayName as rpcUpdateDisplayName,
   type CharacterDef,
   type ProfileMainCard,
@@ -54,7 +54,11 @@ export default function ProfileView() {
   const [savingChar, setSavingChar] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [pickerSlot, setPickerSlot] = useState<number | null>(null);
+  // 신구조 picker state — { type, slot } 로 어느 타입의 어느 슬롯을
+  // 채우려는지 식별. 구조 변경 (spec 2-1) 후엔 이 상태만 사용.
+  const [picker, setPicker] = useState<
+    { type: WildType; slot: number } | null
+  >(null);
   const [nameOpen, setNameOpen] = useState(false);
   const [tauntOpen, setTauntOpen] = useState(false);
 
@@ -75,27 +79,79 @@ export default function ProfileView() {
     refresh();
   }, [refresh]);
 
+  // 자동 마이그레이션 — 기존 main_card_ids 의 펫을 속성별 구조로 이동.
+  // 1회 실행: main_cards_by_type 가 비어있고 main_card_ids 에 카드가
+  // 있을 때만. 카드 type 은 resolveCardType (CARD_NAME_TO_TYPE +
+  // DEX_TO_TYPE fallback) 로 분류. 같은 type 에 카드가 3개 초과면
+  // 희귀도 내림차순 상위 3개만 채택.
+  const migratedRef = useRef(false);
+  useEffect(() => {
+    if (migratedRef.current) return;
+    if (!user || !profile) return;
+    const byType = profile.main_cards_by_type ?? {};
+    const hasNew = Object.values(byType).some((arr) => arr.length > 0);
+    const oldCards = profile.main_cards ?? [];
+    if (hasNew || oldCards.length === 0) return;
+
+    migratedRef.current = true;
+    (async () => {
+      // 카드별 type 분류.
+      const groups = new Map<WildType, ProfileMainCard[]>();
+      for (const c of oldCards) {
+        const card = getCard(c.card_id);
+        if (!card) continue;
+        const t = resolveCardType(card.name);
+        if (!t) continue;
+        const bucket = groups.get(t) ?? [];
+        bucket.push(c);
+        groups.set(t, bucket);
+      }
+      // 각 type 별 상위 PETS_PER_TYPE 만 채택, 희귀도 내림차순.
+      for (const [type, bucket] of groups) {
+        bucket.sort((a, b) =>
+          compareRarity(a.rarity as Rarity, b.rarity as Rarity)
+        );
+        const ids = bucket.slice(0, PETS_PER_TYPE).map((c) => c.id);
+        if (ids.length > 0) {
+          await setPetForType(user.id, type, ids);
+        }
+      }
+      await refresh();
+    })();
+  }, [user, profile, refresh]);
+
   const characterDef = useMemo(
     () => getCharacter(profile?.character ?? null),
     [profile?.character]
   );
 
-  // 등록된 펫은 희귀도 내림차순(MUR → C) 정렬, 빈 슬롯은 뒤쪽으로.
-  // 슬롯 위치 의미는 더이상 사용 안 함 (set_main_cards 가 어차피
-  // ids 배열을 통째로 갱신하고 pet_score 도 순서 무관).
-  const filledSlots: (ProfileMainCard | null)[] = useMemo(() => {
-    const ids = profile?.main_card_ids ?? [];
-    const cards = profile?.main_cards ?? [];
-    const byId = new Map(cards.map((c) => [c.id, c]));
-    const filled = ids
-      .map((id) => byId.get(id) ?? null)
-      .filter((c): c is ProfileMainCard => c !== null)
-      .sort((a, b) =>
+  // 속성별 펫 슬롯 — { type: [slot1, slot2, slot3] } 형태. 빈 슬롯은
+  // null. spec 2-1 (속성별 최대 3마리). hydrated card 정보는 server 의
+  // get_profile main_cards_by_type 응답에서.
+  const slotsByType: Record<string, (ProfileMainCard | null)[]> = useMemo(() => {
+    const data = profile?.main_cards_by_type ?? {};
+    const out: Record<string, (ProfileMainCard | null)[]> = {};
+    for (const [type, cards] of Object.entries(data)) {
+      const sorted = [...cards].sort((a, b) =>
         compareRarity(a.rarity as Rarity, b.rarity as Rarity)
       );
-    const out: (ProfileMainCard | null)[] = [...filled];
-    while (out.length < MAX_MAIN_CARDS) out.push(null);
+      const arr: (ProfileMainCard | null)[] = sorted.slice(0, PETS_PER_TYPE);
+      while (arr.length < PETS_PER_TYPE) arr.push(null);
+      out[type] = arr;
+    }
     return out;
+  }, [profile]);
+
+  // 모든 등록 펫 평탄화 (헤더 카운트, breakdown 등에 사용).
+  const allRegisteredPets: ProfileMainCard[] = useMemo(() => {
+    const data = profile?.main_cards_by_type ?? {};
+    const flat: ProfileMainCard[] = [];
+    for (const cards of Object.values(data)) {
+      for (const c of cards) flat.push(c);
+    }
+    return flat.sort((a, b) =>
+      compareRarity(a.rarity as Rarity, b.rarity as Rarity)
+    );
   }, [profile]);
 
   // 펫 등록 후보 — 본인 PCL10 슬랩 중 전시 중이 아닌 것만 노출.
@@ -150,99 +206,56 @@ export default function ProfileView() {
     [user, profile?.character_locked, refresh, savingChar]
   );
 
-  // 펫 등록/해제 시 항상 "살아있는" 슬랩 ID 만 base 로 사용한다. main_card_ids
-  // 에는 소실된 슬랩(예: 도감 일괄 등록 / 선물 / 일괄 판매로 사라진 PCL
-  // 기록) UUID 가 잔존할 수 있는데, 그대로 다시 보내면 서버 set_main_cards
-  // 의 "본인 PCL10 슬랩만 등록 가능" 검증에서 통째로 거부되어 펫 등록이
-  // 영구 실패하던 회귀의 원인. main_cards 는 get_profile 이 살아있는 PCL10
-  // 만 반환하므로 그 id 집합을 신뢰 소스로 사용.
-  const aliveIds = useMemo(
-    () =>
-      (profile?.main_card_ids ?? []).filter((id) =>
-        (profile?.main_cards ?? []).some((c) => c.id === id)
-      ),
-    [profile]
-  );
-
-  const onSelectSlab = useCallback(
-    async (slot: number, gradingId: string) => {
+  // 속성별 펫 등록 — 한 type 슬롯의 한 자리를 새 카드로 교체.
+  // 서버 set_pet_for_type 에 type 의 ids 배열 통째로 전달.
+  const onSelectSlabForType = useCallback(
+    async (type: WildType, slot: number, gradingId: string) => {
       if (!user || !profile) return;
       if (displayedIds.has(gradingId)) {
-        setError(
-          "센터에 전시 중인 슬랩이에요. 센터에서 전시 해제 후 다시 시도하세요."
-        );
+        setError("센터에 전시 중인 슬랩이에요. 전시 해제 후 다시 시도하세요.");
         return;
       }
-      // filledSlots 가 희귀도순으로 정렬돼 표시 slot index 와
-      // main_card_ids 의 실제 index 가 어긋남. slot 의 현재 카드 id 를
-      // 기준으로 "교체" 동작 — 이전 splice 방식은 다른 카드를 밀어내는
-      // 버그 (사용자 보고).
-      const slotCard = filledSlots[slot] ?? null;
-      let ids = [...aliveIds];
-      if (slotCard) {
-        ids = ids.filter((id) => id !== slotCard.id);
-      }
-      if (ids.includes(gradingId)) {
-        setError("이미 다른 슬롯에 등록된 슬랩이에요.");
+      if (defenseIds.has(gradingId)) {
+        setError("방어 덱에 등록된 슬랩이에요. 방어 덱에서 제외 후 등록하세요.");
         return;
       }
-      // 교체 후 남는 슬랩들의 card_id 와 새 카드의 card_id 비교 —
-      // 다른 슬롯의 같은 card_id 와 중복이면 거부.
-      const cardIdByGradingId = new Map<string, string>();
-      for (const c of profile.main_cards ?? []) {
-        cardIdByGradingId.set(c.id, c.card_id);
-      }
-      for (const s of eligibleSlabs) {
-        cardIdByGradingId.set(s.id, s.card_id);
-      }
-      const newCardId = cardIdByGradingId.get(gradingId) ?? null;
-      const remainingCardIds = new Set(
-        ids
-          .map((id) => cardIdByGradingId.get(id))
-          .filter((v): v is string => !!v)
-      );
-      if (newCardId && remainingCardIds.has(newCardId)) {
-        setError("이미 같은 카드가 펫으로 등록돼 있어요.");
-        return;
-      }
-      ids.push(gradingId);
-      if (ids.length > MAX_MAIN_CARDS) ids = ids.slice(0, MAX_MAIN_CARDS);
+      // 같은 type 에 이미 등록된 ID 들에서, 해당 슬롯 자리에 새 ID 삽입.
+      const current = (profile.main_cards_by_type[type] ?? []).map((c) => c.id);
+      const filtered = current.filter((id) => id !== gradingId);
+      while (filtered.length <= slot) filtered.push("");
+      filtered[slot] = gradingId;
+      const cleaned = Array.from(
+        new Set(filtered.filter((id) => id !== ""))
+      ).slice(0, PETS_PER_TYPE);
       setError(null);
-      const res = await rpcSetMainCards(user.id, ids);
+      const res = await setPetForType(user.id, type, cleaned);
       if (!res.ok) {
         setError(res.error ?? "펫을 등록하지 못했어요.");
         return;
       }
-      setPickerSlot(null);
+      setPicker(null);
       await refresh();
     },
-    [
-      user,
-      profile,
-      aliveIds,
-      displayedIds,
-      eligibleSlabs,
-      filledSlots,
-      refresh,
-    ]
+    [user, profile, displayedIds, defenseIds, refresh]
   );
 
-  const onRemoveSlot = useCallback(
-    async (gradingId: string) => {
+  const onRemoveSlotForType = useCallback(
+    async (type: WildType, gradingId: string) => {
       if (!user || !profile) return;
-      const ids = aliveIds.filter((id) => id !== gradingId);
-      if (ids.length === aliveIds.length) return;
+      const current = (profile.main_cards_by_type[type] ?? []).map((c) => c.id);
+      const next = current.filter((id) => id !== gradingId);
+      if (next.length === current.length) return;
       const ok = window.confirm("이 펫을 슬롯에서 빼시겠어요?");
       if (!ok) return;
       setError(null);
-      const res = await rpcSetMainCards(user.id, ids);
+      const res = await setPetForType(user.id, type, next);
       if (!res.ok) {
         setError(res.error ?? "펫을 해제하지 못했어요.");
         return;
       }
       await refresh();
     },
-    [user, profile, aliveIds, refresh]
+    [user, profile, refresh]
   );
 
   return (
@@ -262,7 +275,7 @@ export default function ProfileView() {
           <ProfileBanner
             character={characterDef}
             displayName={user?.display_name ?? ""}
-            slotsUsed={filledSlots.filter(Boolean).length}
+            slotsUsed={allRegisteredPets.length}
             centerPower={profile?.center_power ?? 0}
             pokedexCount={profile?.pokedex_count ?? 0}
             onEditName={() => setNameOpen(true)}
@@ -372,47 +385,13 @@ export default function ProfileView() {
           </section>
           )}
 
-          <section className="mt-8">
-            <div className="flex items-end justify-between gap-2 flex-wrap">
-              <div>
-                <h2 className="text-sm font-bold text-white inline-flex items-center gap-1.5">
-                  <span aria-hidden>🐾</span>내 펫 슬롯
-                </h2>
-                <p className="mt-1 text-[11px] text-zinc-400">
-                  PCL10 슬랩만 등록할 수 있어요. 슬롯을 눌러 변경하세요.
-                </p>
-              </div>
-              <span className="text-[11px] text-zinc-400 tabular-nums">
-                {filledSlots.filter(Boolean).length} / {MAX_MAIN_CARDS} 슬롯
-              </span>
-            </div>
-
-            {/* 등록 펫 속성 분포 — "풀 3 · 물 2 · 전기 5" 식 */}
-            <PetTypeBreakdown slots={filledSlots} />
-
-            <LayoutGroup>
-              <div className="mt-3 grid grid-cols-5 md:grid-cols-10 gap-1.5 md:gap-2">
-                {filledSlots.map((slot, i) => (
-                  <PetSlot
-                    key={slot ? slot.id : `empty-${i}`}
-                    index={i}
-                    card={slot}
-                    onPick={() => setPickerSlot(i)}
-                    onRemove={
-                      slot ? () => onRemoveSlot(slot.id) : () => undefined
-                    }
-                  />
-                ))}
-              </div>
-            </LayoutGroup>
-
-            {eligibleSlabs.length === 0 && (
-              <p className="mt-3 text-[11px] text-amber-200/80">
-                아직 등록 가능한 PCL10 슬랩이 없어요. 감별에서 10등급을
-                노려보세요.
-              </p>
-            )}
-          </section>
+          <PetSlotsByTypeSection
+            slotsByType={slotsByType}
+            allRegisteredPets={allRegisteredPets}
+            eligibleSlabs={eligibleSlabs}
+            onPick={(type, slot) => setPicker({ type, slot })}
+            onRemove={onRemoveSlotForType}
+          />
 
           <section className="mt-10 mb-6 flex justify-center">
             <button
@@ -430,20 +409,21 @@ export default function ProfileView() {
       )}
 
       <AnimatePresence>
-        {pickerSlot !== null && profile && (
+        {picker && profile && (
           <SlabPicker
             slabs={eligibleSlabs}
-            disabledIds={new Set(profile.main_card_ids)}
+            disabledIds={
+              new Set(allRegisteredPets.map((c) => c.id))
+            }
             defenseIds={defenseIds}
             lockedCardIds={
-              new Set(
-                (profile.main_cards ?? []).map((c) => c.card_id)
-              )
+              new Set(allRegisteredPets.map((c) => c.card_id))
             }
             displayedIds={displayedIds}
-            slotIndex={pickerSlot}
-            onClose={() => setPickerSlot(null)}
-            onPick={(id) => onSelectSlab(pickerSlot, id)}
+            slotIndex={picker.slot}
+            forcedType={picker.type}
+            onClose={() => setPicker(null)}
+            onPick={(id) => onSelectSlabForType(picker.type, picker.slot, id)}
           />
         )}
         {nameOpen && user && (
@@ -629,7 +609,7 @@ function ProfileBanner({
           <div className="mt-0.5 text-sm md:text-base font-black tabular-nums text-amber-200 leading-tight">
             {slotsUsed}
             <span className="text-[9px] text-amber-300/60 font-semibold">
-              {" "}/ {MAX_MAIN_CARDS}
+              마리
             </span>
           </div>
         </div>
@@ -690,6 +670,122 @@ export function CharacterAvatar({
 }
 
 /** 등록된 펫의 속성 분포 — type 별 count 칩 (풀 3 · 물 2 · 전기 5). */
+/** spec 2-1: 속성별 펫 슬롯 섹션. 18 type 중 사용자가 (a) 등록했거나
+ *  (b) eligible PCL10 카드를 보유한 type 만 노출 — 18 type 모두 항상
+ *  보여주면 모바일에서 스크롤 부담. */
+function PetSlotsByTypeSection({
+  slotsByType,
+  allRegisteredPets,
+  eligibleSlabs,
+  onPick,
+  onRemove,
+}: {
+  slotsByType: Record<string, (ProfileMainCard | null)[]>;
+  allRegisteredPets: ProfileMainCard[];
+  eligibleSlabs: PclGradingWithDisplay[];
+  onPick: (type: WildType, slot: number) => void;
+  onRemove: (type: WildType, gradingId: string) => void;
+}) {
+  // type 우선 순서 — 8 gym type 먼저, 나머지 10 type 뒤로.
+  const TYPE_ORDER: WildType[] = [
+    "풀", "불꽃", "물", "전기", "얼음", "바위", "땅", "에스퍼",
+    "격투", "독", "비행", "벌레", "고스트", "드래곤", "악", "강철", "페어리", "노말",
+  ];
+
+  // 보유 PCL10 의 type 별 카운트 — eligible 카드 중 type 로 분류 가능한 것.
+  const eligibleByType = useMemo(() => {
+    const m = new Map<WildType, number>();
+    for (const g of eligibleSlabs) {
+      const card = getCard(g.card_id);
+      if (!card) continue;
+      const t = resolveCardType(card.name);
+      if (!t) continue;
+      m.set(t, (m.get(t) ?? 0) + 1);
+    }
+    return m;
+  }, [eligibleSlabs]);
+
+  // 노출 type — 등록 1+ OR eligible 1+.
+  const visibleTypes = TYPE_ORDER.filter(
+    (t) =>
+      (slotsByType[t]?.some(Boolean) ?? false) ||
+      (eligibleByType.get(t) ?? 0) > 0
+  );
+
+  return (
+    <section className="mt-8">
+      <div className="flex items-end justify-between gap-2 flex-wrap">
+        <div>
+          <h2 className="text-sm font-bold text-white inline-flex items-center gap-1.5">
+            <span aria-hidden>🐾</span>속성별 펫 슬롯
+          </h2>
+          <p className="mt-1 text-[11px] text-zinc-400">
+            속성별 최대 {PETS_PER_TYPE}마리. PCL10 슬랩만 등록 가능.
+          </p>
+        </div>
+        <span className="text-[11px] text-zinc-400 tabular-nums">
+          총 {allRegisteredPets.length}마리 등록
+        </span>
+      </div>
+
+      {visibleTypes.length === 0 ? (
+        <p className="mt-3 text-[11px] text-amber-200/80">
+          아직 등록 가능한 PCL10 슬랩이 없어요. 감별에서 10등급을 노려보세요.
+        </p>
+      ) : (
+        <div className="mt-3 space-y-2">
+          {visibleTypes.map((t) => {
+            const slots = slotsByType[t] ?? [null, null, null];
+            const filled = slots.filter(Boolean).length;
+            const ts = TYPE_STYLE[t];
+            const eligibleCount = eligibleByType.get(t) ?? 0;
+            return (
+              <div
+                key={t}
+                className="rounded-xl border border-white/10 bg-zinc-900/40"
+              >
+                <div className="flex items-center gap-2 px-3 py-1.5 border-b border-white/5">
+                  <span
+                    className={clsx(
+                      "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black",
+                      ts.badge
+                    )}
+                  >
+                    {t}
+                  </span>
+                  <span className="ml-auto text-[10px] text-zinc-400 tabular-nums">
+                    {filled}/{PETS_PER_TYPE}
+                    {eligibleCount > 0 && (
+                      <span className="ml-1 text-zinc-500">
+                        · 보유 {eligibleCount}장
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <LayoutGroup>
+                  <div className="grid grid-cols-3 gap-1.5 p-2">
+                    {slots.map((slot, i) => (
+                      <PetSlot
+                        key={slot ? slot.id : `empty-${t}-${i}`}
+                        index={i}
+                        card={slot}
+                        onPick={() => onPick(t, i)}
+                        onRemove={
+                          slot ? () => onRemove(t, slot.id) : () => undefined
+                        }
+                      />
+                    ))}
+                  </div>
+                </LayoutGroup>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function PetTypeBreakdown({
   slots,
 }: {
@@ -850,6 +946,7 @@ function SlabPicker({
   displayedIds,
   defenseIds,
   slotIndex,
+  forcedType = null,
   onClose,
   onPick,
 }: {
@@ -859,12 +956,16 @@ function SlabPicker({
   displayedIds: Set<string>;
   defenseIds: Set<string>;
   slotIndex: number;
+  /** 속성별 슬롯에서 호출되면 type 강제. filter chip 숨김 + 초기값 고정. */
+  forcedType?: WildType | null;
   onClose: () => void;
   onPick: (id: string) => void;
 }) {
   // 페이징 + 타입 필터 + 무한 스크롤 — 큰 슬랩 풀에서 렉 제거.
   const PAGE_SIZE = 12;
-  const [typeFilter, setTypeFilter] = useState<WildType | "ALL">("ALL");
+  const [typeFilter, setTypeFilter] = useState<WildType | "ALL">(
+    forcedType ?? "ALL"
+  );
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -1003,7 +1104,9 @@ function SlabPicker({
           <div className="shrink-0 flex items-center justify-between gap-3 px-4 h-12 border-b border-white/10 bg-gradient-to-r from-amber-500/10 via-fuchsia-500/10 to-indigo-500/10">
             <h2 className="text-sm font-bold text-white inline-flex items-center gap-1.5">
               <span aria-hidden>🐾</span>
-              슬롯 {slotIndex + 1} 펫 선택
+              {forcedType
+                ? `${forcedType} 속성 슬롯 ${slotIndex + 1} 펫 선택`
+                : `슬롯 ${slotIndex + 1} 펫 선택`}
             </h2>
             <button
               type="button"
@@ -1015,44 +1118,47 @@ function SlabPicker({
             </button>
           </div>
 
-          {/* 타입 필터 칩 — 가로 스크롤 가능 */}
-          <div className="shrink-0 px-3 py-2 border-b border-white/10 bg-black/40">
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1">
-              <button
-                type="button"
-                onClick={() => setTypeFilter("ALL")}
-                style={{ touchAction: "manipulation" }}
-                className={clsx(
-                  "shrink-0 h-8 px-2.5 rounded-full text-[11px] font-bold border transition",
-                  typeFilter === "ALL"
-                    ? "bg-white text-zinc-900 border-white"
-                    : "bg-white/5 text-zinc-300 border-white/10 hover:bg-white/10"
-                )}
-              >
-                전체
-                <span className="ml-1 text-[9px] opacity-75 tabular-nums">
-                  {slabs.length}
-                </span>
-              </button>
-              {sortedTypes.map(([t, n]) => (
+          {/* 타입 필터 칩 — forcedType 있으면 숨김 (이미 픽되어 있어
+              사용자가 다른 type 으로 바꿀 수 없게). */}
+          {!forcedType && (
+            <div className="shrink-0 px-3 py-2 border-b border-white/10 bg-black/40">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1">
                 <button
-                  key={t}
                   type="button"
-                  onClick={() => setTypeFilter(t)}
+                  onClick={() => setTypeFilter("ALL")}
                   style={{ touchAction: "manipulation" }}
                   className={clsx(
-                    "shrink-0 h-8 px-2.5 rounded-full text-[11px] font-bold border transition inline-flex items-center gap-1",
-                    typeFilter === t
-                      ? clsx("border-white", TYPE_STYLE[t].badge)
+                    "shrink-0 h-8 px-2.5 rounded-full text-[11px] font-bold border transition",
+                    typeFilter === "ALL"
+                      ? "bg-white text-zinc-900 border-white"
                       : "bg-white/5 text-zinc-300 border-white/10 hover:bg-white/10"
                   )}
                 >
-                  {t}
-                  <span className="text-[9px] opacity-80 tabular-nums">{n}</span>
+                  전체
+                  <span className="ml-1 text-[9px] opacity-75 tabular-nums">
+                    {slabs.length}
+                  </span>
                 </button>
-              ))}
+                {sortedTypes.map(([t, n]) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTypeFilter(t)}
+                    style={{ touchAction: "manipulation" }}
+                    className={clsx(
+                      "shrink-0 h-8 px-2.5 rounded-full text-[11px] font-bold border transition inline-flex items-center gap-1",
+                      typeFilter === t
+                        ? clsx("border-white", TYPE_STYLE[t].badge)
+                        : "bg-white/5 text-zinc-300 border-white/10 hover:bg-white/10"
+                    )}
+                  >
+                    {t}
+                    <span className="text-[9px] opacity-80 tabular-nums">{n}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div
             ref={scrollRef}
