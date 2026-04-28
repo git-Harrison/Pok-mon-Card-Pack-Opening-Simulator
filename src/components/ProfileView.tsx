@@ -729,7 +729,8 @@ function PetSlotsByTypeSection({
             <span aria-hidden>🐾</span>속성별 펫 슬롯
           </h2>
           <p className="mt-1 text-[11px] text-zinc-400">
-            속성별 최대 {PETS_PER_TYPE}마리. PCL10 슬랩만 등록 가능.
+            속성별 최대 {PETS_PER_TYPE}마리 · PCL 10 만 등록 가능.
+            등록 등급별 펫 등록 전투력: MUR 40k · UR 20k · SAR 12k · SR 7k.
           </p>
         </div>
         <span className="text-[11px] text-zinc-400 tabular-nums">

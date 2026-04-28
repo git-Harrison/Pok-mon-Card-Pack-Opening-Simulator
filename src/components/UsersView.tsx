@@ -281,17 +281,20 @@ export default function UsersView() {
       </div>
       {mode === "power" && (
         <p className="mt-2 text-[11px] text-zinc-400 leading-snug">
-          전투력 = <b className="text-zinc-200">전시 슬랩</b>(희귀도×PCL) +{" "}
-          <b className="text-emerald-200">도감 보너스</b> +{" "}
-          <b className="text-fuchsia-200">펫 점수</b>. 펫 슬랩이 강할수록(MUR
-          최강) 전투력이 함께 올라요.
+          총 전투력 = <b className="text-zinc-200">전시 슬랩</b>(희귀도×PCL)
+          + <b className="text-emerald-200">도감 보너스</b> +{" "}
+          <b className="text-cyan-200">도감 세트효과</b> +{" "}
+          <b className="text-fuchsia-200">펫 등록 전투력</b> +{" "}
+          <b className="text-violet-200">메달 전투력</b>. MUR 슬랩일수록 총
+          전투력이 더 크게 올라요.
         </p>
       )}
       {mode === "pet" && (
         <p className="mt-2 text-[11px] text-zinc-400 leading-snug">
-          펫 점수 = 등록한 PCL10 펫 슬랩의 등급별 정액 합산.{" "}
-          <b className="text-zinc-200">MUR 40k · UR 20k · SAR 12k · SR 7k · MA
-          5k · AR 4k · RR 2k · R 1k · U/C 0.5k</b>. PCL 9 이하는 점수 없음.
+          펫 등록 전투력 = 등록한 <b className="text-zinc-200">PCL 10 펫</b>의
+          등급별 정액 합산 ·{" "}
+          <b className="text-zinc-200">MUR 40k · UR 20k · SAR 12k · SR 7k ·
+          MA 5k · AR 4k · RR 2k · R 1k · U/C 0.5k</b>. PCL 9 이하는 0점.
         </p>
       )}
 

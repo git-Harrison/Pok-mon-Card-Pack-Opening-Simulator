@@ -147,13 +147,8 @@ export interface ProfileSnapshot {
   pokedex_bonus: number;
 }
 
-/** @deprecated 전환기 호환용. spec 2-1: 속성별 3 슬롯. */
-export const MAX_MAIN_CARDS = 10;
-/** spec 2-1: 한 type 당 슬롯 cap. */
+/** 한 속성당 펫 슬롯 상한. */
 export const PETS_PER_TYPE = 3;
-/** @deprecated 더 이상 의미 없는 상수. 펫 점수는 등급별 절대값 합산
- *  (MUR 40k 등 — 20260636_pet_score_bump_v3.sql) 으로 변경되어 cap 없음. */
-export const MAX_PET_SCORE = 1000;
 
 export const DISPLAY_NAME_MIN = 2;
 export const DISPLAY_NAME_MAX = 20;
