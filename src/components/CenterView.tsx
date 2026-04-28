@@ -859,6 +859,27 @@ function BulkShowcaseCreateModal({
     [candidates]
   );
 
+  // spec 0-2: 무한 스크롤. 첫 60장 + IntersectionObserver +60.
+  const PAGE = 60;
+  const [bulkVisible, setBulkVisible] = useState(PAGE);
+  const bulkSentinelRef = useRef<HTMLDivElement>(null);
+  const visibleCandidates = sortedCandidates.slice(0, bulkVisible);
+  const bulkHasMore = bulkVisible < sortedCandidates.length;
+  useEffect(() => {
+    const el = bulkSentinelRef.current;
+    if (!el || !bulkHasMore) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setBulkVisible((v) => v + PAGE);
+        }
+      },
+      { rootMargin: "240px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [bulkHasMore, bulkVisible]);
+
   const spec = selectedType ? SHOWCASES[selectedType] : null;
   const N = selectedIds.length;
   const totalCost = spec ? spec.price * N : 0;
@@ -1004,7 +1025,7 @@ function BulkShowcaseCreateModal({
                       "repeat(auto-fill, minmax(110px, 1fr))",
                   }}
                 >
-                  {sortedCandidates.map((g) => {
+                  {visibleCandidates.map((g) => {
                     const card = getCard(g.card_id);
                     if (!card) return null;
                     const checked = selectedIds.includes(g.id);
@@ -1043,6 +1064,20 @@ function BulkShowcaseCreateModal({
                     );
                   })}
                 </div>
+                {bulkHasMore && (
+                  <div
+                    ref={bulkSentinelRef}
+                    className="py-3 text-center text-[11px] text-zinc-500"
+                  >
+                    더 불러오는 중… ({visibleCandidates.length} /{" "}
+                    {sortedCandidates.length})
+                  </div>
+                )}
+                {!bulkHasMore && sortedCandidates.length > PAGE && (
+                  <p className="py-2 text-center text-[10px] text-zinc-500">
+                    모두 표시됨 ({sortedCandidates.length}장)
+                  </p>
+                )}
               </>
             )}
             <div className="sticky bottom-0 -mx-3 md:-mx-4 px-3 md:px-4 py-2 bg-zinc-900/95 backdrop-blur border-t border-white/10 flex items-center justify-between gap-2">
