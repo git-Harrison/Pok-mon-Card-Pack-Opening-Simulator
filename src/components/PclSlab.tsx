@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import type { Card } from "@/lib/types";
-import { GRADE_BRAND, PCL_LABEL, pclTone } from "@/lib/pcl";
+import { GRADE_BRAND, pclTone } from "@/lib/pcl";
 import RarityBadge from "./RarityBadge";
 import { resolveCardType } from "@/lib/wild/name-to-type";
 import { TYPE_STYLE } from "@/lib/wild/types";
@@ -13,8 +13,7 @@ import { TYPE_STYLE } from "@/lib/wild/types";
  *
  * 슬랩 내부에 표시:
  *   · PCL 브랜드 마크 (header 좌)
- *   · PCL 등급 (header 우, 큰 숫자)
- *   · GEM MINT 등 등급 라벨 (header 가운데)
+ *   · PCL 등급 숫자 (header 우)
  *   · 카드 이미지 (메인 영역, aspect 5/7)
  *   · 카드 희귀도 뱃지 (이미지 좌하단 overlay)
  *   · 카드 속성 뱃지 (이미지 우하단 overlay)
@@ -42,7 +41,6 @@ export default function PclSlab({
 }) {
   void _compact;
   const tone = pclTone(grade);
-  const label = PCL_LABEL[grade] ?? "PCL";
   const safeGrade =
     typeof grade === "number" && Number.isFinite(grade) ? grade : "?";
 
@@ -100,59 +98,28 @@ export default function PclSlab({
           }}
         />
 
-        {/* ── Header — 인증서 스탬프 스타일 ──
+        {/* ── Header — 미니멀 ──
               ┌──────────────────────────┐
-              │ PCL ★★★★★      ⦿ 10 ⦿  │
-              │            GEM MINT       │
+              │ PCL                  10  │
               └──────────────────────────┘ */}
-        <div className="relative px-2.5 md:px-3 py-1.5 md:py-2 flex items-center gap-2">
-          {/* 좌측: PCL 브랜드 + 별점 */}
-          <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-            <div className="flex items-center gap-1.5">
-              <span
-                className={clsx(
-                  "text-[10px] md:text-[11px] font-black tracking-[0.2em] leading-none",
-                  tone.text
-                )}
-                style={{ fontFamily: "monospace" }}
-              >
-                {GRADE_BRAND}
-              </span>
-              <span className={clsx("text-[8px] tracking-widest leading-none", tone.text)}>
-                {"★".repeat(Math.max(0, Math.min(5, safeGrade === "?" ? 0 : safeGrade - 5)))}
-                {"☆".repeat(Math.max(0, 5 - Math.max(0, Math.min(5, safeGrade === "?" ? 0 : (safeGrade as number) - 5))))}
-              </span>
-            </div>
-            <span
-              className={clsx(
-                "text-[8px] md:text-[9px] uppercase tracking-[0.22em] font-bold leading-none truncate",
-                tone.text
-              )}
-            >
-              {label}
-            </span>
-          </div>
-          {/* 우측: 원형 grade seal */}
-          <div
+        <div className="relative px-3 md:px-3.5 py-2 md:py-2.5 flex items-center justify-between gap-2">
+          <span
             className={clsx(
-              "shrink-0 relative w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center",
-              "ring-2 ring-white/30",
-              tone.banner
+              "text-[11px] md:text-xs font-black tracking-[0.22em] leading-none",
+              tone.text
             )}
-            style={{
-              boxShadow:
-                "inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.35), 0 4px 10px -2px rgba(0,0,0,0.5)",
-            }}
+            style={{ fontFamily: "monospace" }}
           >
-            {/* 외곽 점선 stamp */}
-            <span
-              aria-hidden
-              className="absolute inset-0.5 rounded-full border border-dashed border-white/40 pointer-events-none"
-            />
-            <span className="relative text-base md:text-lg font-black tabular-nums leading-none">
-              {safeGrade}
-            </span>
-          </div>
+            {GRADE_BRAND}
+          </span>
+          <span
+            className={clsx(
+              "text-[13px] md:text-sm font-black tabular-nums leading-none",
+              tone.text
+            )}
+          >
+            {safeGrade}
+          </span>
         </div>
 
         {/* 헤더-카드 사이 디바이더 */}
