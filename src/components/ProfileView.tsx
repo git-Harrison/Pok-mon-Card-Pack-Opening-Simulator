@@ -45,6 +45,7 @@ import { fetchUserGymMedals } from "@/lib/gym/db";
 import type { UserGymMedal } from "@/lib/gym/types";
 import { resolveCardType } from "@/lib/wild/name-to-type";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
+import { groupGradings } from "@/lib/cards/group-gradings";
 
 export default function ProfileView() {
   const { user, refreshMe, logout } = useAuth();
@@ -1069,8 +1070,19 @@ function SlabPicker({
     setVisibleCount(PAGE_SIZE);
   }, [typeFilter]);
 
-  const visibleSlabs = filteredSlabs.slice(0, visibleCount);
-  const hasMore = visibleCount < filteredSlabs.length;
+  // 같은 카드의 같은 PCL 등급 슬랩들을 한 칸으로 묶음. 사용 가능한
+  // 첫 슬랩을 rep 로 선택 (펫 등록은 카드당 1장만 가능하므로 그룹
+  // 클릭은 사실상 그 카드 등록).
+  const slabGroups = useMemo(
+    () =>
+      groupGradings(filteredSlabs, (g) => ({
+        cardId: g.card_id,
+        grade: g.grade,
+      })),
+    [filteredSlabs]
+  );
+  const visibleGroups = slabGroups.slice(0, visibleCount);
+  const hasMore = visibleCount < slabGroups.length;
 
   // 무한 스크롤 — scroll 이벤트 + IntersectionObserver(sentinel)
   // + ResizeObserver(레이아웃 변경) 조합. 첫 mount(motion.div spring
@@ -1230,7 +1242,17 @@ function SlabPicker({
             ) : (
               <>
                 <ul className="grid grid-cols-3 gap-2">
-                  {visibleSlabs.map((g) => {
+                  {visibleGroups.map((group) => {
+                    // 그룹 내 사용 가능한 첫 슬랩을 rep 으로 선택.
+                    // 모두 잠긴 경우 rep 그대로 (잠긴 표시 노출).
+                    const usable =
+                      group.all.find(
+                        (s) =>
+                          !disabledIds.has(s.id) &&
+                          !displayedIds.has(s.id) &&
+                          !defenseIds.has(s.id)
+                      ) ?? group.rep;
+                    const g = usable;
                     const card = getCard(g.card_id);
                     if (!card) return null;
                     const taken = disabledIds.has(g.id);
@@ -1240,7 +1262,7 @@ function SlabPicker({
                       !taken && !onDefense && lockedCardIds.has(g.card_id);
                     const blocked = taken || onShowcase || onDefense || sameCardTaken;
                     return (
-                      <li key={g.id}>
+                      <li key={`${g.card_id}@${g.grade}`}>
                         <button
                           type="button"
                           disabled={blocked}
@@ -1261,10 +1283,17 @@ function SlabPicker({
                               ? "체육관 방어 덱에 등록된 슬랩이에요. 방어 덱에서 제외 후 등록 가능."
                               : sameCardTaken
                               ? "이미 같은 카드가 펫으로 등록돼 있어요."
+                              : group.count > 1
+                              ? `${group.count}장 보유`
                               : undefined
                           }
                         >
-                          <PclSlab card={card} grade={g.grade} size="sm" />
+                          <PclSlab
+                            card={card}
+                            grade={g.grade}
+                            size="sm"
+                            quantity={group.count}
+                          />
                           <p className="mt-1 px-1 text-[10px] font-bold text-white truncate">
                             {card.name}
                           </p>
@@ -1301,12 +1330,12 @@ function SlabPicker({
                     ref={sentinelRef}
                     className="py-4 flex items-center justify-center text-[11px] text-zinc-500"
                   >
-                    더 불러오는 중... ({visibleSlabs.length}/{filteredSlabs.length})
+                    더 불러오는 중... ({visibleGroups.length}/{slabGroups.length})
                   </div>
                 )}
-                {!hasMore && filteredSlabs.length > PAGE_SIZE && (
+                {!hasMore && slabGroups.length > PAGE_SIZE && (
                   <p className="py-3 text-center text-[11px] text-zinc-500">
-                    모두 표시됨 ({filteredSlabs.length}장)
+                    모두 표시됨 ({filteredSlabs.length}장 · {slabGroups.length}종)
                   </p>
                 )}
               </>

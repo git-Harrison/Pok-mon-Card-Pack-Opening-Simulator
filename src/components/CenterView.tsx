@@ -38,6 +38,7 @@ import CoinIcon from "./CoinIcon";
 import PclSlab from "./PclSlab";
 import Portal from "./Portal";
 import PageHeader from "./PageHeader";
+import { groupGradings } from "@/lib/cards/group-gradings";
 
 export default function CenterView() {
   const { user, setPoints } = useAuth();
@@ -745,12 +746,23 @@ function GradingPickModal({
     [gradings]
   );
 
-  // spec 0-2: 무한 스크롤. 첫 60장 노출, 스크롤 하단 도달 시 +60.
+  // 같은 카드의 같은 등급 슬랩들을 한 칸으로 묶고 ×N 뱃지 표시.
+  // 그룹 클릭 시 그룹 내 첫 슬랩 선택 (어느 카피든 가치 동일).
+  const groups = useMemo(
+    () =>
+      groupGradings(items, (g) => ({
+        cardId: g.card_id,
+        grade: g.grade,
+      })),
+    [items]
+  );
+
+  // spec 0-2: 무한 스크롤. 첫 60장(그룹) 노출, 스크롤 하단 도달 시 +60.
   const PAGE = 60;
   const [visibleCount, setVisibleCount] = useState(PAGE);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const visible = items.slice(0, visibleCount);
-  const hasMore = visibleCount < items.length;
+  const visibleGroups = groups.slice(0, visibleCount);
+  const hasMore = visibleCount < groups.length;
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el || !hasMore) return;
@@ -787,19 +799,25 @@ function GradingPickModal({
                 gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
               }}
             >
-              {visible.map((g) => {
+              {visibleGroups.map((group) => {
+                const g = group.rep;
                 const card = getCard(g.card_id);
                 if (!card) return null;
                 const tone = pclTone(g.grade);
                 return (
                   <button
-                    key={g.id}
+                    key={`${g.card_id}@${g.grade}`}
                     type="button"
                     onClick={() => onPick(g)}
                     className="relative flex flex-col items-center gap-1 p-1 rounded-lg hover:bg-white/5 active:scale-[0.97] transition"
                     style={{ touchAction: "manipulation" }}
                   >
-                    <PclSlab card={card} grade={g.grade} size="sm" />
+                    <PclSlab
+                      card={card}
+                      grade={g.grade}
+                      size="sm"
+                      quantity={group.count}
+                    />
                     <p className="mt-1 text-[10px] font-bold text-white truncate w-full text-center px-1">
                       {card.name}
                     </p>
@@ -826,12 +844,12 @@ function GradingPickModal({
                 ref={sentinelRef}
                 className="py-4 text-center text-[11px] text-zinc-500"
               >
-                더 불러오는 중… ({visible.length} / {items.length})
+                더 불러오는 중… ({visibleGroups.length} / {groups.length})
               </div>
             )}
-            {!hasMore && items.length > PAGE && (
+            {!hasMore && groups.length > PAGE && (
               <p className="py-2 text-center text-[10px] text-zinc-500">
-                모두 표시됨 ({items.length}장)
+                모두 표시됨 ({items.length}장 · {groups.length}종)
               </p>
             )}
           </>
