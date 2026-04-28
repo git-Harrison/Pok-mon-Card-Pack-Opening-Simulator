@@ -1,7 +1,7 @@
 "use client";
 
 import PokeLoader, { LoadingText } from "./PokeLoader";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import clsx from "clsx";
@@ -102,60 +102,38 @@ export default function GradingView() {
   return (
     <div className="relative max-w-3xl mx-auto px-3 md:px-6 py-3 md:py-6 fade-in">
       <PageBackdrop tone="lab" />
-      {/* Lab hero — large NPC + speech bubble */}
-      <LabHero busy={bulkOpen} />
 
-      {/* 활성 잡 banner — 모달 닫고 페이지 다시 와도 진행 상황 보임 */}
-      {activeJob && activeJob.status !== "completed" && (
-        <ActiveJobBanner job={activeJob} onResume={() => setBulkOpen(true)} />
-      )}
+      {/* 풀 룸 래퍼 — 연구소 배경 + 스캔라인 + 부유 입자. 안에 hero +
+          stations 가 lab equipment 처럼 배치. */}
+      <LabRoom>
+        {/* Lab hero — large NPC + speech bubble (기존, 유지) */}
+        <LabHero busy={bulkOpen} />
 
-      {/* Eligible card count */}
-      <section className="mt-4 md:mt-5 rounded-2xl border border-fuchsia-400/40 bg-gradient-to-b from-fuchsia-500/10 to-indigo-500/10 px-4 py-5 md:px-6 md:py-6 text-center">
-        <p className="text-[10px] md:text-[11px] uppercase tracking-[0.2em] text-fuchsia-200/80">
-          감별 대기 카드
-        </p>
-        <p className="mt-1 text-4xl md:text-5xl font-black tabular-nums text-fuchsia-100 drop-shadow-[0_4px_12px_rgba(217,70,239,0.4)]">
-          {eligibleCount.toLocaleString("ko-KR")}
-          <span className="ml-1 text-base md:text-lg font-bold text-fuchsia-300/80">
-            장
-          </span>
-        </p>
-        <p className="mt-2 text-[11px] md:text-xs text-fuchsia-200/70 leading-relaxed">
-          모든 등급의 카드를 감별할 수 있어요. 실패 시 카드는 사라져요.
-        </p>
-      </section>
-
-      {/* Primary action */}
-      <button
-        type="button"
-        onClick={() => setBulkOpen(true)}
-        disabled={eligibleCount === 0}
-        style={{ touchAction: "manipulation" }}
-        className={clsx(
-          "mt-4 w-full h-14 md:h-16 rounded-2xl text-base md:text-lg font-black inline-flex items-center justify-center gap-2 transition",
-          eligibleCount === 0
-            ? "bg-white/5 text-zinc-500 border border-white/10 cursor-not-allowed"
-            : "bg-gradient-to-r from-fuchsia-500 via-violet-500 to-indigo-500 text-white shadow-[0_14px_32px_-10px_rgba(168,85,247,0.7)] hover:scale-[1.01] active:scale-[0.98]"
+        {/* 활성 잡 banner — 모달 닫고 페이지 다시 와도 진행 상황 보임 */}
+        {activeJob && activeJob.status !== "completed" && (
+          <ActiveJobBanner job={activeJob} onResume={() => setBulkOpen(true)} />
         )}
-      >
-        🔎 일괄 감별 시작
-      </button>
 
-      {/* spec: 정적 설명 박스(GEM MINT / 자동 판매 / 감별 한도) 삭제.
-          NPC 대화형 몰입 UI 로 정보 전달 — 모달 안에서 다이얼로그/스캔
-          애니메이션으로. */}
+        {/* CRT 홀로그램 모니터 — 감별 대기 카드 수 표시 */}
+        <HoloMonitor count={eligibleCount} />
 
-      <p className="mt-4 text-[11px] text-zinc-500 text-center">
-        감별이 완료된 슬랩은{" "}
-        <Link
-          href="/wallet?tab=pcl"
-          className="underline underline-offset-2 hover:text-fuchsia-300"
-        >
-          내 카드지갑 PCL 탭
-        </Link>
-        에서 확인할 수 있어요.
-      </p>
+        {/* Industrial lever 시작 버튼 */}
+        <LabActionLever
+          disabled={eligibleCount === 0}
+          onPress={() => setBulkOpen(true)}
+          label="감별 시작"
+        />
+
+        <p className="mt-3 text-[11px] text-fuchsia-200/60 text-center font-mono">
+          감별 완료 슬랩 →{" "}
+          <Link
+            href="/wallet?tab=pcl"
+            className="underline underline-offset-2 hover:text-fuchsia-300"
+          >
+            내 카드지갑 PCL 탭
+          </Link>
+        </p>
+      </LabRoom>
 
       <AnimatePresence>
         {bulkOpen && wallet && user && (
@@ -174,6 +152,258 @@ export default function GradingView() {
 /* ────────────────────────────────────────────────────────────
  * Lab hero — Oak NPC + speech bubble with idle motion / parallax
  * ──────────────────────────────────────────────────────────── */
+/** 풀 룸 래퍼 — 연구소 분위기. SVG 책장/모니터/비커 + scanline +
+ *  부유 입자 + 종이 텍스처. 내부 자식이 lab equipment 처럼 배치됨.
+ *  기존 페이지 정적 박스 (GEM MINT / 자동 삭제 / 감별 한도) 통째로
+ *  대체 — spec 의 "포켓몬 연구실 내부 같은 느낌" 충족. */
+function LabRoom({ children }: { children: ReactNode }) {
+  const reduce = useReducedMotion();
+  return (
+    <div
+      className="relative rounded-3xl overflow-hidden p-3 md:p-4 space-y-3 md:space-y-4"
+      style={{
+        background:
+          "linear-gradient(180deg, #0a0814 0%, #110b22 50%, #0a0814 100%)",
+        boxShadow:
+          "inset 0 0 60px -12px rgba(168,85,247,0.18), 0 18px 40px -16px rgba(0,0,0,0.6)",
+      }}
+    >
+      {/* 종이 그리드 텍스처 — graph paper 도트 */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none opacity-[0.08]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px)",
+          backgroundSize: "16px 16px",
+        }}
+      />
+      {/* 좌측 책장 SVG */}
+      <svg
+        aria-hidden
+        viewBox="0 0 40 200"
+        preserveAspectRatio="xMidYMid slice"
+        shapeRendering="crispEdges"
+        className="absolute left-0 top-0 h-full w-8 md:w-12 opacity-25 pointer-events-none"
+      >
+        <rect x="0" y="0" width="40" height="200" fill="#3a2410" />
+        {Array.from({ length: 8 }).map((_, i) => (
+          <g key={i} transform={`translate(0, ${10 + i * 24})`}>
+            <rect x="2" y="0" width="36" height="3" fill="#7c4a18" />
+            <rect x="4" y="3" width="6" height="14" fill="#9a3412" />
+            <rect x="11" y="3" width="5" height="14" fill="#7c2d12" />
+            <rect x="17" y="3" width="6" height="14" fill="#1e3a8a" />
+            <rect x="24" y="3" width="5" height="14" fill="#581c87" />
+            <rect x="30" y="3" width="6" height="14" fill="#831843" />
+            <rect x="2" y="17" width="36" height="2" fill="#1a0e07" />
+          </g>
+        ))}
+      </svg>
+      {/* 우측 비커/실험기구 */}
+      <svg
+        aria-hidden
+        viewBox="0 0 40 200"
+        preserveAspectRatio="xMidYMid slice"
+        shapeRendering="crispEdges"
+        className="absolute right-0 top-0 h-full w-8 md:w-12 opacity-30 pointer-events-none"
+      >
+        {/* 비커 1 — 보라 액체 */}
+        <rect x="6" y="20" width="14" height="22" fill="#1e1b4b" />
+        <rect x="6" y="32" width="14" height="10" fill="#7c3aed" opacity="0.7" />
+        <rect x="6" y="32" width="14" height="2" fill="#a855f7" />
+        <rect x="4" y="18" width="18" height="2" fill="#52525b" />
+        {/* 비커 2 — 핫핑크 */}
+        <rect x="22" y="50" width="12" height="18" fill="#1f1b2e" />
+        <rect x="22" y="58" width="12" height="10" fill="#9d174d" opacity="0.7" />
+        <rect x="22" y="58" width="12" height="2" fill="#ec4899" />
+        {/* 시험관 stand */}
+        <rect x="6" y="100" width="3" height="20" fill="#3f3f46" />
+        <rect x="13" y="100" width="3" height="20" fill="#3f3f46" />
+        <rect x="20" y="100" width="3" height="20" fill="#3f3f46" />
+        <rect x="6" y="100" width="3" height="6" fill="#22d3ee" opacity="0.8" />
+        <rect x="13" y="100" width="3" height="10" fill="#fde68a" opacity="0.8" />
+        <rect x="20" y="100" width="3" height="4" fill="#f472b6" opacity="0.8" />
+        {/* 회로 패턴 */}
+        <g stroke="#a855f7" strokeWidth="0.5" opacity="0.5">
+          <path d="M5 140 H30 V160" fill="none" />
+          <path d="M10 145 H25" fill="none" />
+        </g>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <rect key={i} x="6" y={150 + i * 6} width="2" height="2" fill="#22d3ee" opacity="0.7" />
+        ))}
+      </svg>
+      {/* 스캔라인 — CRT 모니터 톤 */}
+      {!reduce && (
+        <div
+          aria-hidden
+          className="absolute inset-x-0 h-8 pointer-events-none opacity-40"
+          style={{
+            background:
+              "linear-gradient(180deg, transparent 0%, rgba(168,85,247,0.45) 50%, transparent 100%)",
+            animation: "lab-scanline 6s linear infinite",
+            mixBlendMode: "screen",
+          }}
+        />
+      )}
+      <style>{`
+        @keyframes lab-scanline { 0% { top: -10%; } 100% { top: 110%; } }
+        @keyframes holo-flicker { 0%, 100% { opacity: 1; } 50% { opacity: 0.85; } }
+        @keyframes holo-rgb {
+          0%, 100% { text-shadow: 0 0 8px rgba(168,85,247,0.7), 1px 0 rgba(244,63,94,0.4), -1px 0 rgba(56,189,248,0.4); }
+          50% { text-shadow: 0 0 14px rgba(168,85,247,0.9), 2px 0 rgba(244,63,94,0.5), -2px 0 rgba(56,189,248,0.5); }
+        }
+        @keyframes lever-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(168,85,247,0.55), 0 14px 32px -10px rgba(168,85,247,0.7); }
+          50% { box-shadow: 0 0 0 8px rgba(168,85,247,0); 0 14px 32px -8px rgba(217,70,239,0.85); }
+        }
+      `}</style>
+      {/* 부유 입자 — 실험실 먼지 */}
+      {!reduce &&
+        Array.from({ length: 6 }).map((_, i) => (
+          <span
+            key={i}
+            aria-hidden
+            className="absolute w-1 h-1 rounded-full bg-fuchsia-300/40 pointer-events-none"
+            style={{
+              left: `${15 + i * 12}%`,
+              top: `${20 + (i * 17) % 60}%`,
+              animation: `lab-scanline ${8 + i * 1.2}s linear infinite`,
+              animationDelay: `${-i * 1.4}s`,
+            }}
+          />
+        ))}
+      <div className="relative">{children}</div>
+    </div>
+  );
+}
+
+/** CRT 홀로그램 모니터 — 감별 대기 카드 수 표시. RGB chromatic
+ *  aberration + flicker 로 sci-fi 톤. */
+function HoloMonitor({ count }: { count: number }) {
+  const reduce = useReducedMotion();
+  return (
+    <section
+      className="relative rounded-2xl overflow-hidden border-2 border-fuchsia-400/40"
+      style={{
+        background:
+          "radial-gradient(ellipse at 50% 30%, rgba(168,85,247,0.18) 0%, rgba(15,10,35,0.95) 70%)",
+        boxShadow:
+          "inset 0 0 40px -8px rgba(168,85,247,0.5), 0 0 32px -10px rgba(168,85,247,0.6)",
+      }}
+    >
+      {/* 모니터 베젤 — 모서리 도트 */}
+      {[
+        "top-1 left-1",
+        "top-1 right-1",
+        "bottom-1 left-1",
+        "bottom-1 right-1",
+      ].map((cls, i) => (
+        <span
+          key={i}
+          aria-hidden
+          className={clsx(
+            "absolute w-1.5 h-1.5 rounded-sm bg-fuchsia-400/70",
+            cls
+          )}
+        />
+      ))}
+      <div className="relative px-4 py-5 md:px-6 md:py-6 text-center">
+        <p className="text-[9px] md:text-[10px] uppercase tracking-[0.32em] text-fuchsia-300/85 font-mono">
+          ▮▮ DETECTION QUEUE ▮▮
+        </p>
+        <p
+          className="mt-2 text-5xl md:text-6xl font-black tabular-nums text-fuchsia-100 leading-none"
+          style={{
+            fontFamily: "monospace",
+            animation: reduce ? undefined : "holo-rgb 2.4s ease-in-out infinite",
+            textShadow:
+              "0 0 8px rgba(168,85,247,0.7), 1px 0 rgba(244,63,94,0.4), -1px 0 rgba(56,189,248,0.4)",
+          }}
+        >
+          {count.toLocaleString("ko-KR")}
+        </p>
+        <p className="mt-2 text-[10px] md:text-[11px] text-fuchsia-200/70 font-mono">
+          card{count !== 1 && "s"} pending — PCL eligible
+        </p>
+        {/* 횡단 데이터 라인 — 가짜 telemetry */}
+        <div className="mt-3 grid grid-cols-3 gap-2 text-[8px] md:text-[9px] font-mono">
+          <div className="px-1.5 py-1 rounded bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-300/85">
+            STATUS<br />
+            <span className="text-emerald-300 font-bold">READY</span>
+          </div>
+          <div className="px-1.5 py-1 rounded bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-300/85">
+            SCAN RATE<br />
+            <span className="text-cyan-300 font-bold">5K/CYCLE</span>
+          </div>
+          <div className="px-1.5 py-1 rounded bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-300/85">
+            STORAGE<br />
+            <span className="text-amber-300 font-bold">PCL ≤ 20K</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Industrial lever 스타일 시작 버튼 — 빠른 lever-pulse 애니메이션 +
+ *  도트 코너 인디케이터. disabled 면 dim. */
+function LabActionLever({
+  disabled,
+  onPress,
+  label,
+}: {
+  disabled: boolean;
+  onPress: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onPress}
+      disabled={disabled}
+      style={{
+        touchAction: "manipulation",
+        animation: disabled ? undefined : "lever-pulse 2.6s ease-in-out infinite",
+      }}
+      className={clsx(
+        "relative w-full h-16 md:h-20 rounded-2xl text-base md:text-lg font-black",
+        "inline-flex items-center justify-center gap-3 transition overflow-hidden",
+        disabled
+          ? "bg-white/5 text-zinc-500 border border-white/10 cursor-not-allowed"
+          : "bg-gradient-to-br from-fuchsia-500 via-violet-500 to-indigo-500 text-white border-2 border-fuchsia-300/60 hover:scale-[1.01] active:scale-[0.98]"
+      )}
+    >
+      {/* 좌우 LED 인디케이터 */}
+      {!disabled && (
+        <>
+          <span
+            aria-hidden
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(52,211,153,0.95)]"
+          />
+          <span
+            aria-hidden
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(52,211,153,0.95)]"
+          />
+          {/* 좌우 그림자 회로 */}
+          <span
+            aria-hidden
+            className="absolute inset-y-0 left-0 w-2 bg-gradient-to-r from-fuchsia-300/30 to-transparent"
+          />
+          <span
+            aria-hidden
+            className="absolute inset-y-0 right-0 w-2 bg-gradient-to-l from-fuchsia-300/30 to-transparent"
+          />
+        </>
+      )}
+      <span aria-hidden className="text-2xl">🔬</span>
+      <span className="font-mono tracking-[0.18em]">
+        {disabled ? "NO CARDS" : label.toUpperCase()}
+      </span>
+      <span aria-hidden className="text-2xl">⚡</span>
+    </button>
+  );
+}
+
 /** 활성 잡 banner — 페이지 외부에서도 백그라운드 감별 진행 표시 + 모달
  *  복귀. 잡 status === completed 면 표시 안 함 (모달 결과 화면이 처리). */
 function ActiveJobBanner({
