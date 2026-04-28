@@ -3,8 +3,8 @@
 // (replacing .webp/.jpg with transparent .png so the box floats cleanly
 // on the dark app background).
 import sharp from "sharp";
-import { readFileSync, writeFileSync, unlinkSync, statSync } from "node:fs";
-import { dirname, basename, resolve, extname } from "node:path";
+import { readFileSync, unlinkSync, statSync } from "node:fs";
+import { dirname, basename, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");

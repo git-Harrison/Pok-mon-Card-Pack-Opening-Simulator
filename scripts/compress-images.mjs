@@ -2,7 +2,7 @@
 // (max 1400px wide, quality 85) so mobile users don't wait for 8 MB hero art.
 import sharp from "sharp";
 import { readFileSync, writeFileSync, statSync, renameSync } from "node:fs";
-import { resolve, dirname, basename } from "node:path";
+import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");

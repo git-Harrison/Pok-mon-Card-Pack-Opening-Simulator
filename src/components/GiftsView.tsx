@@ -1,6 +1,6 @@
 "use client";
 
-import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
+import { CenteredPokeLoader } from "./PokeLoader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";

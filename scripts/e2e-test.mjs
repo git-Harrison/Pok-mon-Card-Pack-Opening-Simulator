@@ -39,8 +39,8 @@ await call(
   })
 );
 
-// 4. Check hun's wallet
-const wallet = await call(
+// 4. Check hun's wallet — 결과는 콘솔 로그만, 변수는 보관 X.
+await call(
   "fetch card_ownership for hun",
   sb.from("card_ownership").select("card_id, count").eq("user_id", hunId)
 );

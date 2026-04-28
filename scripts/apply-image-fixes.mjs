@@ -31,7 +31,6 @@ for (const [setCode, fixes] of Object.entries(bySet)) {
   let src = readFileSync(path, "utf8");
   let applied = 0;
   for (const fix of fixes) {
-    const krNum = fix.id.split("-").pop(); // "sv10-087" → "087"
     const jpNum = fix.to.jp_number;
     const slug = fix.to.slug;
     const assetId = fix.to.asset_id;

@@ -405,7 +405,6 @@ const result = {
   },
 };
 
-const outDir = path.dirname(new URL(import.meta.url).pathname.replace(/^\//, "")); // not used directly
 const outPath = "C:/Users/USER/Desktop/test/pokemon-tcg-sim/scripts/data/sv10/cards.json";
 fs.writeFileSync(outPath, JSON.stringify(result, null, 2) + "\n", "utf8");
 console.log(`Wrote ${outPath}`);
