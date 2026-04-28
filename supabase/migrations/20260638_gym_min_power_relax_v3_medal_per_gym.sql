@@ -53,14 +53,20 @@ update gyms set min_power = 1620000 where id = 'gym-dark';
 update gyms set min_power = 1900000 where id = 'gym-dragon';
 
 -- ── 2) gym_medal_buff — gym_id 기반 per-gym 차등 ───────────
+--
+-- 주의: 파라미터 이름은 기존 gym_medal_buff(p_difficulty text) 와 동일하게
+-- 'p_difficulty' 를 그대로 유지. PostgreSQL CREATE OR REPLACE FUNCTION 은
+-- 파라미터 이름 변경을 거부하므로 (cannot change name of input parameter)
+-- 의미는 gym_id 로 바뀌었지만 식별자는 그대로 두고 본문만 교체.
 
-create or replace function gym_medal_buff(p_gym_id text)
+create or replace function gym_medal_buff(p_difficulty text)
 returns int
 language sql
 immutable
 set search_path = public
 as $$
-  select case p_gym_id
+  -- 사실상 p_difficulty 파라미터는 이제 gym_id 를 받음.
+  select case p_difficulty
     -- Ch1
     when 'gym-grass'    then  10000
     when 'gym-water'    then  12000

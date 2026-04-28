@@ -31,13 +31,15 @@
 -- 멱등성: truncate 는 항상 빈 상태로 만들므로 재실행 안전.
 -- ============================================================
 
--- 의존 순서대로 비움. 다른 테이블에서 이들을 참조하는 FK 는 없음
--- (확인: showcases / sabotage / wallet 등 무관) → cascade 불요.
-truncate table gym_cooldowns;
-truncate table gym_rewards;
-truncate table user_gym_medals;
-truncate table gym_battle_logs;
-truncate table gym_challenges;
-truncate table gym_ownerships;
+-- gym_battle_logs.challenge_id 가 gym_challenges 를 참조하므로 분리
+-- 실행 시 RESTRICT 위반. 단일 TRUNCATE 문 + CASCADE 로 안전 보장.
+truncate table
+  gym_cooldowns,
+  gym_rewards,
+  user_gym_medals,
+  gym_battle_logs,
+  gym_challenges,
+  gym_ownerships
+cascade;
 
 notify pgrst, 'reload schema';
