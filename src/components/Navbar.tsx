@@ -24,20 +24,22 @@ import {
 } from "./icons/NavIcons";
 
 const NAV_ITEMS = [
-  { href: "/", label: "홈", Icon: HomeIcon },
-  { href: "/wild", label: "야생", Icon: LeafIcon },
-  { href: "/gym", label: "체육관", Icon: GymIcon },
-  { href: "/grading", label: "등급", Icon: MagnifyIcon },
-  { href: "/users", label: "랭킹", Icon: TrophyIcon },
-  { href: "/pokedex", label: "도감", Icon: BookIcon },
+  // ── Primary (모바일 하단 바, 좌→우 순서) ──
+  { href: "/",        label: "홈",     Icon: HomeIcon },
+  { href: "/grading", label: "등급",   Icon: MagnifyIcon },
+  { href: "/pokedex", label: "도감",   Icon: BookIcon },
+  { href: "/gym",     label: "체육관", Icon: GymIcon },
+  { href: "/wild",    label: "야생",   Icon: LeafIcon },
   { href: "/profile", label: "프로필", Icon: UserIcon },
-  { href: "/wallet", label: "지갑", Icon: WalletIcon },
-  { href: "/center", label: "센터", Icon: MuseumIcon },
-  { href: "/gifts", label: "선물함", Icon: GiftIcon },
+  // ── 더보기 시트 (위 6개 외) ──
+  { href: "/users",   label: "랭킹",   Icon: TrophyIcon },
+  { href: "/center",  label: "센터",   Icon: MuseumIcon },
+  { href: "/wallet",  label: "지갑",   Icon: WalletIcon },
+  { href: "/gifts",   label: "선물함", Icon: GiftIcon },
 ];
 
-// 지갑/센터/도감/선물함/체육관은 더보기 시트에서 진입.
-const MOBILE_PRIMARY = ["/", "/wild", "/grading", "/pokedex", "/profile"];
+// 모바일 하단 바에 띄울 6개. 그 외는 더보기 시트로.
+const MOBILE_PRIMARY = ["/", "/grading", "/pokedex", "/gym", "/wild", "/profile"];
 
 // Header title shown next to the logo. Mobile only — saves vertical
 // space by replacing the per-page <h1>. Long page names live in the
