@@ -198,7 +198,7 @@ export default function GymView() {
             onExtend={async () => {
               if (!userId) return;
               const ok = window.confirm(
-                "10,000,000P를 사용해 보호를 12시간 연장할까요?"
+                "10,000,000P를 사용해 보호를 1시간 연장할까요?"
               );
               if (!ok) return;
               const res = await extendGymProtection(userId, selectedGym.id);
@@ -206,7 +206,7 @@ export default function GymView() {
                 alert(res.error ?? "보호 연장 실패");
               } else {
                 alert(
-                  "10,000,000P를 사용해 체육관 보호시간을 12시간 연장했습니다."
+                  "10,000,000P를 사용해 체육관 보호시간을 1시간 연장했습니다."
                 );
               }
               refresh();
@@ -918,7 +918,7 @@ function GymDetailModal({
                 style={{ touchAction: "manipulation" }}
                 className="w-full h-11 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-zinc-950 font-black text-sm active:scale-[0.98]"
               >
-                🛡️ 12시간 보호 연장 (10,000,000P)
+                🛡️ 1시간 보호 연장 (10,000,000P)
               </button>
             )}
             <div className="grid grid-cols-2 gap-2">
@@ -1436,9 +1436,9 @@ function GymHelpModal({ onClose }: { onClose: () => void }) {
               • 패배 시 8분 재도전 쿨타임.
             </Section>
             <Section icon="🛡️" title="점령 효과 — 보호 시간">
-              점령 직후 <b>3시간 보호</b> — 다른 트레이너 도전 불가.
+              점령 직후 <b>1시간 보호</b> — 다른 트레이너 도전 불가.
               보호 끝난 뒤에는 누구나 도전 가능. 소유자는 10,000,000P 결제로
-              보호를 추가 3시간 연장 가능.
+              보호를 추가 1시간 연장 가능.
             </Section>
             <Section icon="🐾" title="방어 덱 (점령자 전용)">
               내 PCL10 펫 3마리(체육관 속성 동일)를 <b>방어 덱</b>으로 셋업.

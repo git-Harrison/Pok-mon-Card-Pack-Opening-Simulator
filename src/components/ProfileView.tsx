@@ -706,11 +706,19 @@ function PetSlotsByTypeSection({
   }, [eligibleSlabs]);
 
   // 노출 type — 등록 1+ OR eligible 1+.
-  const visibleTypes = TYPE_ORDER.filter(
+  const allVisibleTypes = TYPE_ORDER.filter(
     (t) =>
       (slotsByType[t]?.some(Boolean) ?? false) ||
       (eligibleByType.get(t) ?? 0) > 0
   );
+
+  // 속성 필터 — "전체" or 단일 type. 사용자 요청: 18 type 카드가 너무
+  // 많아 스크롤 부담 → chip 으로 풀 누르면 풀만, 등으로 토글.
+  const [filterType, setFilterType] = useState<WildType | "ALL">("ALL");
+  const visibleTypes =
+    filterType === "ALL"
+      ? allVisibleTypes
+      : allVisibleTypes.filter((t) => t === filterType);
 
   return (
     <section className="mt-8">
@@ -728,9 +736,58 @@ function PetSlotsByTypeSection({
         </span>
       </div>
 
+      {/* 속성 필터 chip — 가로 스크롤. "전체" + 노출 type 만. */}
+      {allVisibleTypes.length > 0 && (
+        <div className="mt-2 flex items-center gap-1 overflow-x-auto no-scrollbar -mx-1 px-1">
+          <button
+            type="button"
+            onClick={() => setFilterType("ALL")}
+            style={{ touchAction: "manipulation" }}
+            className={clsx(
+              "shrink-0 h-7 px-2.5 rounded-full text-[10px] font-bold border transition",
+              filterType === "ALL"
+                ? "bg-white text-zinc-900 border-white"
+                : "bg-white/5 text-zinc-300 border-white/10 hover:bg-white/10"
+            )}
+          >
+            전체
+            <span className="ml-1 text-[9px] opacity-75 tabular-nums">
+              {allVisibleTypes.length}
+            </span>
+          </button>
+          {allVisibleTypes.map((t) => {
+            const ts = TYPE_STYLE[t];
+            const filled = (slotsByType[t] ?? []).filter(Boolean).length;
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setFilterType(t)}
+                style={{ touchAction: "manipulation" }}
+                className={clsx(
+                  "shrink-0 h-7 px-2.5 rounded-full text-[10px] font-bold border transition inline-flex items-center gap-1",
+                  filterType === t
+                    ? clsx("border-white", ts.badge)
+                    : "bg-white/5 text-zinc-300 border-white/10 hover:bg-white/10"
+                )}
+              >
+                {t}
+                {filled > 0 && (
+                  <span className="text-[8px] opacity-90 tabular-nums">
+                    {filled}/{PETS_PER_TYPE}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {visibleTypes.length === 0 ? (
         <p className="mt-3 text-[11px] text-amber-200/80">
-          아직 등록 가능한 PCL10 슬랩이 없어요. 감별에서 10등급을 노려보세요.
+          {filterType === "ALL"
+            ? "아직 등록 가능한 PCL10 슬랩이 없어요. 감별에서 10등급을 노려보세요."
+            : `${filterType} 속성 PCL10 슬랩이 없어요.`}
         </p>
       ) : (
         <div className="mt-3 space-y-2">
