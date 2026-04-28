@@ -85,6 +85,7 @@ const STATUS_PILL: Record<
   challenge_active: { label: "도전 중",       cls: "bg-rose-500/20 text-rose-200 border-rose-500/40" },
   user_cooldown:    { label: "재도전 쿨타임", cls: "bg-zinc-500/20 text-zinc-300 border-zinc-500/40" },
   owned_by_me:      { label: "내 체육관",     cls: "bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-500/40" },
+  underpowered:     { label: "도전 불가",     cls: "bg-rose-500/15 text-rose-300 border-rose-500/40" },
 };
 
 export default function GymView() {
@@ -154,6 +155,7 @@ export default function GymView() {
       <GymTownMap
         gyms={gyms}
         myUserId={userId}
+        centerPower={centerPower}
         onSelect={setSelectedId}
         reduce={!!reduce}
       />
@@ -256,11 +258,13 @@ export default function GymView() {
 function GymTownMap({
   gyms,
   myUserId,
+  centerPower,
   onSelect,
   reduce,
 }: {
   gyms: Gym[];
   myUserId: string | null;
+  centerPower: number | null;
   onSelect: (id: string) => void;
   reduce: boolean;
 }) {
@@ -280,6 +284,7 @@ function GymTownMap({
           key={g.id}
           gym={g}
           myUserId={myUserId}
+          centerPower={centerPower}
           onClick={() => onSelect(g.id)}
           reduce={reduce}
         />
@@ -517,15 +522,17 @@ const ROOF_COLORS: Record<string, { light: string; dark: string }> = {
 function PixelGymPin({
   gym,
   myUserId,
+  centerPower,
   onClick,
   reduce,
 }: {
   gym: Gym;
   myUserId: string | null;
+  centerPower: number | null;
   onClick: () => void;
   reduce: boolean;
 }) {
-  const status = deriveGymStatus(gym, myUserId);
+  const status = deriveGymStatus(gym, myUserId, Date.now(), centerPower);
   const pill = STATUS_PILL[status];
   const typeStyle = TYPE_STYLE[gym.type];
   const roof = ROOF_COLORS[gym.type] ?? { light: "#a1a1aa", dark: "#52525b" };
@@ -536,6 +543,7 @@ function PixelGymPin({
     status === "protected"   ? "🛡️" :
     status === "challenge_active" ? "⚔️" :
     status === "user_cooldown" ? "⌛" :
+    status === "underpowered" ? "🚫" :
     null;
 
   // 도전 가능 / 비점령 후 도전 가능 핀에만 살짝 떠오르는 bobbing.
@@ -642,7 +650,7 @@ function GymDetailModal({
   onClaimDaily: () => void;
 }) {
   const reduce = useReducedMotion();
-  const status = deriveGymStatus(gym, myUserId);
+  const status = deriveGymStatus(gym, myUserId, Date.now(), centerPower);
   const diff = DIFFICULTY_STYLE[gym.difficulty];
   const typeStyle = TYPE_STYLE[gym.type];
 

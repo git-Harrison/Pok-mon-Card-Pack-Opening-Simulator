@@ -87,14 +87,22 @@ export type GymStatus =
   | "protected"          // 보호 쿨타임 중
   | "challenge_active"   // 다른 유저 도전 중
   | "user_cooldown"      // 본인 재도전 쿨타임 중
-  | "owned_by_me";       // 내가 소유 중
+  | "owned_by_me"        // 내가 소유 중
+  | "underpowered";      // 도전 가능하지만 내 전투력 < 최소 전투력
 
 /** 서버 응답 (JSON 문자열 timestamp) 을 파싱해 클라이언트 분기에 쓰는
- *  현재 상태를 산출. 보호/쿨타임은 now 기준. */
+ *  현재 상태를 산출. 보호/쿨타임은 now 기준. centerPower 가 주어지면
+ *  open/owned_open 인 체육관에 대해 underpowered 판정.
+ *
+ *  점령 판정 규칙: ownership.has_defense_deck === true 일 때만 점령 효력.
+ *  방어 덱이 셋업되지 않은 ownership 은 비점령 (open) 으로 간주 →
+ *  타 유저는 NPC 와 정상 도전 가능 (사용자 정책).
+ *  단 본인은 항상 owned_by_me (자신의 체육관 인지). */
 export function deriveGymStatus(
   gym: Gym,
   myUserId: string | null,
-  now: number = Date.now()
+  now: number = Date.now(),
+  centerPower: number | null = null
 ): GymStatus {
   if (gym.active_challenge) return "challenge_active";
   if (gym.user_cooldown_until) {
@@ -102,11 +110,24 @@ export function deriveGymStatus(
     if (left > 0) return "user_cooldown";
   }
   if (gym.ownership) {
+    // 본인 소유 — 방어덱 셋업 여부 무관 항상 owned_by_me.
     if (gym.ownership.user_id === myUserId) return "owned_by_me";
-    const protectedLeft =
-      new Date(gym.ownership.protection_until).getTime() - now;
-    if (protectedLeft > 0) return "protected";
-    return "owned_open";
+    // 타인이 점령했지만 방어 덱 미설정 → "점령 안 된 것으로" 처리.
+    // open 으로 fall-through 후 underpowered 검사.
+    if (gym.ownership.has_defense_deck) {
+      const protectedLeft =
+        new Date(gym.ownership.protection_until).getTime() - now;
+      if (protectedLeft > 0) return "protected";
+      // open 상태로 간주하되, 색깔 라벨은 owned_open 유지.
+      if (centerPower !== null && centerPower < gym.min_power) {
+        return "underpowered";
+      }
+      return "owned_open";
+    }
+    // 방어덱 미설정 — open 처리, underpowered 검사 진행.
+  }
+  if (centerPower !== null && centerPower < gym.min_power) {
+    return "underpowered";
   }
   return "open";
 }
