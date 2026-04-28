@@ -1799,6 +1799,10 @@ function PickSlabPanel({
   onPick: (s: Slab) => void;
 }) {
   const [typeFilter, setTypeFilter] = useState<WildType | "ALL">("ALL");
+  // spec 0-2: 무한 스크롤. 첫 50장 노출, 스크롤 하단 도달 시 +50.
+  const PAGE = 50;
+  const [visibleCount, setVisibleCount] = useState(PAGE);
+  const sentinelRef = useRef<HTMLLIElement>(null);
 
   const typeCounts = useMemo(() => {
     const m = new Map<WildType, number>();
@@ -1823,6 +1827,33 @@ function PickSlabPanel({
         : slabs.filter((s) => s.type === typeFilter),
     [slabs, typeFilter]
   );
+
+  // 필터 변경 시 페이지 reset.
+  useEffect(() => {
+    setVisibleCount(PAGE);
+  }, [typeFilter]);
+
+  const visible = useMemo(
+    () => filtered.slice(0, visibleCount),
+    [filtered, visibleCount]
+  );
+  const hasMore = visibleCount < filtered.length;
+
+  // sentinel intersection → 다음 페이지 로드.
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setVisibleCount((v) => v + PAGE);
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, visibleCount]);
 
   return (
     <div className="mt-2 md:mt-4">
@@ -1865,7 +1896,7 @@ function PickSlabPanel({
         ))}
       </div>
       <ul className="flex flex-col gap-1.5">
-        {filtered.map((s) => {
+        {visible.map((s) => {
           const tone = pclTone(s.grade);
           return (
             <li key={s.gradingId}>
@@ -1933,6 +1964,19 @@ function PickSlabPanel({
         {filtered.length === 0 && (
           <li className="text-center text-[11px] text-zinc-500 py-6">
             이 타입의 슬랩이 없어요.
+          </li>
+        )}
+        {hasMore && (
+          <li
+            ref={sentinelRef}
+            className="text-center text-[10px] text-zinc-500 py-3"
+          >
+            더 불러오는 중… ({visible.length} / {filtered.length})
+          </li>
+        )}
+        {!hasMore && filtered.length > PAGE && (
+          <li className="text-center text-[10px] text-zinc-500 py-2">
+            모두 표시됨 ({filtered.length}장)
           </li>
         )}
       </ul>

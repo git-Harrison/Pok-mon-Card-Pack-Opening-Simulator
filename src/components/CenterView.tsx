@@ -1,7 +1,7 @@
 "use client";
 
 import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
@@ -731,6 +731,28 @@ function GradingPickModal({
       }),
     [gradings]
   );
+
+  // spec 0-2: 무한 스크롤. 첫 60장 노출, 스크롤 하단 도달 시 +60.
+  const PAGE = 60;
+  const [visibleCount, setVisibleCount] = useState(PAGE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const visible = items.slice(0, visibleCount);
+  const hasMore = visibleCount < items.length;
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setVisibleCount((v) => v + PAGE);
+        }
+      },
+      { rootMargin: "240px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, visibleCount]);
+
   return (
     <ModalShell
       title="전시할 PCL 슬랩 선택"
@@ -745,40 +767,55 @@ function GradingPickModal({
             감별 페이지에서 등급 9 또는 10을 받아보세요.
           </p>
         ) : (
-          <div
-            className="grid gap-3"
-            style={{
-              gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
-            }}
-          >
-            {items.map((g) => {
-              const card = getCard(g.card_id);
-              if (!card) return null;
-              const tone = pclTone(g.grade);
-              return (
-                <button
-                  key={g.id}
-                  type="button"
-                  onClick={() => onPick(g)}
-                  className="relative flex flex-col items-center gap-1 p-1 rounded-lg hover:bg-white/5 active:scale-[0.97] transition"
-                  style={{ touchAction: "manipulation" }}
-                >
-                  <PclSlab card={card} grade={g.grade} size="sm" />
-                  <span
-                    className={clsx(
-                      "text-[10px] font-bold tabular-nums",
-                      tone.text
-                    )}
+          <>
+            <div
+              className="grid gap-3"
+              style={{
+                gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
+              }}
+            >
+              {visible.map((g) => {
+                const card = getCard(g.card_id);
+                if (!card) return null;
+                const tone = pclTone(g.grade);
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => onPick(g)}
+                    className="relative flex flex-col items-center gap-1 p-1 rounded-lg hover:bg-white/5 active:scale-[0.97] transition"
+                    style={{ touchAction: "manipulation" }}
                   >
-                    PCL {g.grade} · 30분당{" "}
-                    {slabIncomeTrade(card.rarity, g.grade).toLocaleString(
-                      "ko-KR"
-                    )}p
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                    <PclSlab card={card} grade={g.grade} size="sm" />
+                    <span
+                      className={clsx(
+                        "text-[10px] font-bold tabular-nums",
+                        tone.text
+                      )}
+                    >
+                      PCL {g.grade} · 30분당{" "}
+                      {slabIncomeTrade(card.rarity, g.grade).toLocaleString(
+                        "ko-KR"
+                      )}p
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {hasMore && (
+              <div
+                ref={sentinelRef}
+                className="py-4 text-center text-[11px] text-zinc-500"
+              >
+                더 불러오는 중… ({visible.length} / {items.length})
+              </div>
+            )}
+            {!hasMore && items.length > PAGE && (
+              <p className="py-2 text-center text-[10px] text-zinc-500">
+                모두 표시됨 ({items.length}장)
+              </p>
+            )}
+          </>
         )}
       </div>
     </ModalShell>
