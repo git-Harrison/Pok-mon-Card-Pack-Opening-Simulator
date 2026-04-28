@@ -143,15 +143,28 @@ export interface RawPetGrading {
   grade: number;
 }
 
-/** users.main_card_ids 의 PCL10 슬랩 raw 데이터. 카드 이름 / 타입은
- *  클라가 카탈로그(getCard, CARD_NAME_TO_TYPE) 로 머지. */
+/** 사용자의 등록된 PCL10 슬랩 raw 데이터. 펫 등록 구조 (spec 2-1) 가
+ *  flat main_card_ids → 속성별 main_cards_by_type 으로 바뀌었으므로
+ *  두 컬럼 모두 union 으로 읽음. (전환기 동안 legacy 데이터도 인식.)
+ *  카드 이름 / 타입은 클라가 카탈로그(getCard, resolveCardType) 로 머지. */
 export async function fetchMyPets(userId: string): Promise<RawPetGrading[]> {
   const { data: u } = await supabase
     .from("users")
-    .select("main_card_ids")
+    .select("main_card_ids, main_cards_by_type")
     .eq("id", userId)
     .single();
-  const ids = ((u as { main_card_ids?: string[] } | null)?.main_card_ids) ?? [];
+  const row = u as
+    | {
+        main_card_ids?: string[] | null;
+        main_cards_by_type?: Record<string, string[]> | null;
+      }
+    | null;
+  const idSet = new Set<string>();
+  for (const id of row?.main_card_ids ?? []) idSet.add(id);
+  for (const arr of Object.values(row?.main_cards_by_type ?? {})) {
+    for (const id of arr) idSet.add(id);
+  }
+  const ids = Array.from(idSet);
   if (!ids.length) return [];
   const { data: gradings, error } = await supabase
     .from("psa_gradings")

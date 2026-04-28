@@ -809,12 +809,16 @@ function GymDetailModal({
               )}
             </AnimatePresence>
 
-            {/* 관장 포켓몬 — 방어 덱이 셋업돼 있으면 점령자 펫 3마리,
-                아니면 NPC 관장 포켓몬. */}
+            {/* 관장/방어덱 표시 분기:
+                · 점령됨 + 방어덱 셋업    → 점령자 펫 3마리
+                · 점령됨 + 방어덱 미설정  → 안내 메시지 (NPC fallback 금지)
+                · 미점령                   → NPC 관장 포켓몬 */}
             <section>
               <h3 className="text-[11px] uppercase tracking-wider text-zinc-400 mb-2">
                 {gym.ownership?.has_defense_deck
                   ? `방어 덱 (${gym.ownership.display_name})`
+                  : gym.ownership?.user_id
+                  ? `방어 덱 미설정 (${gym.ownership.display_name})`
                   : "관장 포켓몬"}
               </h3>
               <div className="grid grid-cols-3 gap-2">
@@ -825,6 +829,18 @@ function GymDetailModal({
                         defender={p}
                         gymType={gym.type}
                       />
+                    ))
+                  : gym.ownership?.user_id
+                  ? // 점령됐는데 방어덱 미설정 — NPC 표시 X, 안내 placeholder.
+                    Array.from({ length: 3 }).map((_, i) => (
+                      <div
+                        key={`empty-def-${i}`}
+                        className="rounded-lg border border-dashed border-amber-400/40 bg-amber-400/5 p-2 flex items-center justify-center text-center text-[10px] text-amber-200/80 leading-tight aspect-[5/7]"
+                      >
+                        방어 덱
+                        <br />
+                        미설정
+                      </div>
                     ))
                   : gym.pokemon.map((p) => (
                       <PokemonStatCard
