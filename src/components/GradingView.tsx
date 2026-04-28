@@ -720,7 +720,12 @@ function Tip({
  * Bulk grading modal — DO NOT TOUCH (preserved verbatim)
  * ──────────────────────────────────────────────────────────── */
 
-type BulkPhase = "picking" | "submitting" | "done";
+// 감별 모달 phase 흐름:
+//  greet     — 오박사 인사 (typewriter, 자동 전환 또는 사용자 클릭)
+//  picking   — 카운트 + 자동삭제 옵션 + 시작 버튼
+//  submitting — 스캐너 + 진행
+//  done       — 결과 + reaction
+type BulkPhase = "greet" | "picking" | "submitting" | "done";
 
 function BulkGradingModal({
   wallet,
@@ -739,7 +744,7 @@ function BulkGradingModal({
       .sort((a, b) => compareRarity(a.card.rarity, b.card.rarity));
   }, [wallet]);
 
-  const [phase, setPhase] = useState<BulkPhase>("picking");
+  const [phase, setPhase] = useState<BulkPhase>("greet");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<BulkGradingResult | null>(null);
 
@@ -953,9 +958,14 @@ function BulkGradingModal({
               progress={batchProgress}
               onCancel={handleCancel}
             />
+          ) : phase === "greet" ? (
+            <OakGreetPhase
+              count={totalEligibleCount}
+              onContinue={() => setPhase("picking")}
+            />
           ) : (
             <>
-              <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-5 space-y-4">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-5 space-y-4 lab-bg">
                 {totalEligibleCount === 0 ? (
                   <OakDialogueEmpty />
                 ) : (
@@ -997,6 +1007,195 @@ function BulkGradingModal({
         </motion.div>
       </motion.div>
     </Portal>
+  );
+}
+
+/** typewriter 효과 — text 를 한 글자씩 보여줌. 완료 시 onDone 호출. */
+function Typewriter({
+  text,
+  speedMs = 32,
+  onDone,
+  className,
+}: {
+  text: string;
+  speedMs?: number;
+  onDone?: () => void;
+  className?: string;
+}) {
+  const [shown, setShown] = useState(0);
+  const reduce = useReducedMotion();
+  useEffect(() => {
+    if (reduce) {
+      setShown(text.length);
+      onDone?.();
+      return;
+    }
+    setShown(0);
+    let i = 0;
+    const id = setInterval(() => {
+      i += 1;
+      setShown(i);
+      if (i >= text.length) {
+        clearInterval(id);
+        onDone?.();
+      }
+    }, speedMs);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text]);
+  return <span className={className}>{text.slice(0, shown)}</span>;
+}
+
+/** greet phase — 오박사 인사 typewriter + 자동/수동 전환.
+ *  카운트가 0 이면 picking 으로 즉시 (인사 후 카드 없음 안내 표시).
+ *  카운트 있으면 typewriter 끝나고 1.5초 후 auto-advance, 또는 사용자
+ *  클릭 시 즉시 picking. lab 배경 패턴 + 오박사 sprite. */
+function OakGreetPhase({
+  count,
+  onContinue,
+}: {
+  count: number;
+  onContinue: () => void;
+}) {
+  const reduce = useReducedMotion();
+  const lines = useMemo(() => {
+    if (count === 0) {
+      return ["어이, 카드를 가져왔구먼... 어 비어있네?"];
+    }
+    if (count >= 5000) {
+      return [
+        "어서 오게! 트레이너!",
+        "오... 어마어마하게 많이 가져왔구먼!",
+        `${count.toLocaleString("ko-KR")}장... 정밀 감별기를 가동시키지!`,
+      ];
+    }
+    return [
+      "어서 오게! 트레이너!",
+      `${count.toLocaleString("ko-KR")}장 가져왔구먼.`,
+      "감별 준비를 도와주지.",
+    ];
+  }, [count]);
+
+  const [lineIdx, setLineIdx] = useState(0);
+  const [done, setDone] = useState(false);
+
+  // 마지막 line 끝나면 1.5초 후 자동 전환.
+  useEffect(() => {
+    if (!done) return;
+    const t = setTimeout(onContinue, 1500);
+    return () => clearTimeout(t);
+  }, [done, onContinue]);
+
+  const advanceLine = () => {
+    if (lineIdx < lines.length - 1) {
+      setLineIdx((i) => i + 1);
+      setDone(false);
+    } else {
+      onContinue();
+    }
+  };
+
+  return (
+    <div
+      className="flex-1 min-h-0 overflow-hidden flex flex-col items-center justify-center gap-4 p-6 relative cursor-pointer lab-bg"
+      onClick={advanceLine}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") advanceLine();
+      }}
+    >
+      <LabBackgroundPattern />
+      <motion.img
+        src={OAK_SPRITE}
+        alt=""
+        aria-hidden
+        width={120}
+        height={120}
+        className="w-24 h-24 md:w-32 md:h-32 object-contain relative z-10"
+        style={{ imageRendering: "pixelated" }}
+        initial={reduce ? false : { y: -3 }}
+        animate={reduce ? undefined : { y: [-3, 3, -3] }}
+        transition={
+          reduce ? undefined : { duration: 2.4, repeat: Infinity, ease: "easeInOut" }
+        }
+      />
+      <div className="relative max-w-md w-full">
+        <div className="relative rounded-xl bg-white text-zinc-900 px-4 py-3 shadow-xl">
+          <span aria-hidden className="absolute -top-1.5 left-8 w-3 h-3 rotate-45 bg-white" />
+          <p className="text-fuchsia-700/80 text-[10px] uppercase tracking-[0.18em] font-black mb-1">
+            오박사
+          </p>
+          <p className="text-[14px] md:text-[15px] font-bold leading-snug min-h-[3em]">
+            💬{" "}
+            <Typewriter
+              key={lineIdx}
+              text={lines[lineIdx]}
+              speedMs={32}
+              onDone={() => {
+                if (lineIdx < lines.length - 1) {
+                  // 다음 라인으로 자동 전환 (0.6초 호흡).
+                  setTimeout(() => {
+                    setLineIdx((i) => i + 1);
+                    setDone(false);
+                  }, 600);
+                } else {
+                  setDone(true);
+                }
+              }}
+            />
+          </p>
+          <p className="mt-2 text-[10px] text-zinc-500 text-right">
+            {done ? "잠시 후 자동 진행..." : "▼ 화면을 눌러 건너뛰기"}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** lab 배경 패턴 — 도트 책상/책장/화학기구 실루엣. SVG inline.
+ *  parent 가 relative + lab-bg 클래스 가져야 절대 위치 작동. */
+function LabBackgroundPattern() {
+  return (
+    <>
+      <style>{`
+        .lab-bg {
+          background-image:
+            linear-gradient(180deg, rgba(168,85,247,0.06) 0%, rgba(99,102,241,0.04) 100%),
+            radial-gradient(circle at 20% 80%, rgba(168,85,247,0.15) 0%, transparent 50%),
+            radial-gradient(circle at 80% 30%, rgba(56,189,248,0.10) 0%, transparent 50%);
+        }
+      `}</style>
+      <svg
+        aria-hidden
+        viewBox="0 0 200 100"
+        preserveAspectRatio="none"
+        className="absolute inset-0 w-full h-full pointer-events-none opacity-30"
+        shapeRendering="crispEdges"
+      >
+        {/* 책장 — 좌측 */}
+        <rect x="2" y="20" width="14" height="60" fill="#3a2410" stroke="#1a0e07" strokeWidth="0.5" />
+        <rect x="3" y="22" width="12" height="3" fill="#7c4a18" />
+        <rect x="3" y="27" width="12" height="3" fill="#9a6028" />
+        <rect x="3" y="32" width="12" height="3" fill="#7c4a18" />
+        <rect x="3" y="37" width="12" height="3" fill="#9a6028" />
+        <rect x="3" y="42" width="12" height="3" fill="#7c4a18" />
+        <rect x="3" y="47" width="12" height="3" fill="#5a3a18" />
+        {/* 화학 비커 — 우측 */}
+        <rect x="180" y="40" width="6" height="14" fill="#1e3a8a" opacity="0.6" />
+        <rect x="180" y="52" width="6" height="2" fill="#7cc4ff" opacity="0.8" />
+        <rect x="188" y="45" width="4" height="9" fill="#9d174d" opacity="0.5" />
+        <rect x="188" y="51" width="4" height="3" fill="#ec4899" opacity="0.7" />
+        {/* 책상 라인 — 하단 */}
+        <rect x="0" y="90" width="200" height="3" fill="#3a2410" opacity="0.5" />
+        <rect x="0" y="93" width="200" height="1" fill="#1a0e07" opacity="0.7" />
+        {/* 점 도트 — 천장 */}
+        {[10, 30, 50, 70, 90, 110, 130, 150, 170, 190].map((x, i) => (
+          <rect key={i} x={x} y="4" width="1" height="1" fill="#fde68a" />
+        ))}
+      </svg>
+    </>
   );
 }
 
