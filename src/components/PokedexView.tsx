@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
@@ -23,7 +23,9 @@ import Portal from "./Portal";
 import PokeCard from "./PokeCard";
 import RarityBadge from "./RarityBadge";
 
-const CARDS_PER_PAGE = 30;
+// spec 0-2: 카드 리스트는 무한 스크롤. 페이지 버튼/이전 다음 버튼 금지.
+// 첫 60장 노출, 스크롤 하단 도달 시 +60.
+const CARDS_PER_BATCH = 60;
 
 const RARITY_TABS: Rarity[] = RARITY_ORDER;
 
@@ -32,8 +34,8 @@ export default function PokedexView() {
   const [entries, setEntries] = useState<PokedexEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeRarity, setActiveRarity] = useState<Rarity>("MUR");
-  const [pageIndex, setPageIndex] = useState(0);
-  const [flipDir, setFlipDir] = useState<1 | -1>(1);
+  const [visibleCount, setVisibleCount] = useState(CARDS_PER_BATCH);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -69,27 +71,30 @@ export default function PokedexView() {
   );
 
   const cardsForTab = groupedByRarity.get(activeRarity) ?? [];
-  const totalPages = Math.max(1, Math.ceil(cardsForTab.length / CARDS_PER_PAGE));
-  const safePageIndex = Math.min(pageIndex, totalPages - 1);
-  const pageCards = cardsForTab.slice(
-    safePageIndex * CARDS_PER_PAGE,
-    safePageIndex * CARDS_PER_PAGE + CARDS_PER_PAGE
-  );
+  const visibleCards = cardsForTab.slice(0, visibleCount);
+  const hasMore = visibleCount < cardsForTab.length;
 
+  // 등급 탭 전환 시 visibleCount 리셋.
   useEffect(() => {
-    setPageIndex(0);
+    setVisibleCount(CARDS_PER_BATCH);
   }, [activeRarity]);
 
-  const goPrev = () => {
-    if (safePageIndex <= 0) return;
-    setFlipDir(-1);
-    setPageIndex((i) => Math.max(0, i - 1));
-  };
-  const goNext = () => {
-    if (safePageIndex >= totalPages - 1) return;
-    setFlipDir(1);
-    setPageIndex((i) => Math.min(totalPages - 1, i + 1));
-  };
+  // sentinel intersection → 다음 batch 로드. 현재 batch 가 한도일 때만
+  // observer 작동.
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setVisibleCount((v) => v + CARDS_PER_BATCH);
+        }
+      },
+      { rootMargin: "320px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, visibleCount, activeRarity]);
 
   const count = entries.length;
   const bonus = pokedexPowerBonus(entries);
@@ -227,55 +232,21 @@ export default function PokedexView() {
           );
         })}
         <span className="ml-auto shrink-0 text-[11px] text-zinc-400 tabular-nums pl-2">
-          {totalPages > 0 ? `${safePageIndex + 1} / ${totalPages}` : "0 / 0"}
+          {visibleCards.length} / {cardsForTab.length}
         </span>
       </div>
 
-      <div className="relative">
-        <Book
-          loading={loading}
-          flipDir={flipDir}
-          pageIndex={safePageIndex}
-          pageCards={pageCards}
-          registeredIds={registeredIds}
-          emptyForRarity={cardsForTab.length === 0}
-          rarityLabel={RARITY_LABEL[activeRarity]}
-          onSelect={setPreviewCard}
-        />
-        <button
-          type="button"
-          onClick={goPrev}
-          disabled={safePageIndex <= 0}
-          aria-label="이전 페이지"
-          style={{ touchAction: "manipulation" }}
-          className={clsx(
-            "absolute left-0 md:left-1 top-1/2 -translate-y-1/2 z-10 inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full border-2 font-black text-lg transition shadow-lg",
-            safePageIndex <= 0
-              ? "bg-zinc-900/60 border-white/10 text-zinc-600 cursor-not-allowed"
-              : "bg-zinc-950/90 border-amber-400/50 text-amber-100 hover:bg-amber-500/20 hover:scale-110 active:scale-95"
-          )}
-        >
-          ◀
-        </button>
-        <button
-          type="button"
-          onClick={goNext}
-          disabled={safePageIndex >= totalPages - 1}
-          aria-label="다음 페이지"
-          style={{ touchAction: "manipulation" }}
-          className={clsx(
-            "absolute right-0 md:right-1 top-1/2 -translate-y-1/2 z-10 inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full border-2 font-black text-lg transition shadow-lg",
-            safePageIndex >= totalPages - 1
-              ? "bg-zinc-900/60 border-white/10 text-zinc-600 cursor-not-allowed"
-              : "bg-zinc-950/90 border-amber-400/50 text-amber-100 hover:bg-amber-500/20 hover:scale-110 active:scale-95"
-          )}
-        >
-          ▶
-        </button>
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 px-2.5 py-1 rounded-full bg-zinc-950/80 border border-white/10 text-[11px] text-zinc-300 tabular-nums font-bold">
-          {safePageIndex + 1} / {totalPages}
-        </div>
-      </div>
+      <Book
+        loading={loading}
+        visibleCards={visibleCards}
+        totalForTab={cardsForTab.length}
+        registeredIds={registeredIds}
+        emptyForRarity={cardsForTab.length === 0}
+        rarityLabel={RARITY_LABEL[activeRarity]}
+        onSelect={setPreviewCard}
+        sentinelRef={sentinelRef}
+        hasMore={hasMore}
+      />
 
       <AnimatePresence>
         {toast && (
@@ -362,33 +333,31 @@ function RarityTab({
 
 function Book({
   loading,
-  flipDir,
-  pageIndex,
-  pageCards,
+  visibleCards,
+  totalForTab,
   registeredIds,
   emptyForRarity,
   rarityLabel,
   onSelect,
+  sentinelRef,
+  hasMore,
 }: {
   loading: boolean;
-  flipDir: 1 | -1;
-  pageIndex: number;
-  pageCards: Card[];
+  visibleCards: Card[];
+  totalForTab: number;
   registeredIds: Set<string>;
   emptyForRarity: boolean;
   rarityLabel: string;
   onSelect: (c: Card) => void;
+  sentinelRef: React.RefObject<HTMLDivElement | null>;
+  hasMore: boolean;
 }) {
   const reduce = useReducedMotion();
   return (
     <div
-      className="relative rounded-2xl overflow-hidden border border-amber-900/40 bg-[linear-gradient(160deg,#3a2410_0%,#1a0e07_55%,#0a0604_100%)] p-2 md:p-5 perspective-1200"
+      className="relative rounded-2xl overflow-hidden border border-amber-900/40 bg-[linear-gradient(160deg,#3a2410_0%,#1a0e07_55%,#0a0604_100%)] p-2 md:p-5"
       style={{ minHeight: 380 }}
     >
-      <div
-        aria-hidden
-        className="absolute inset-y-2 left-1/2 -translate-x-1/2 w-px bg-gradient-to-b from-amber-900/0 via-amber-700/40 to-amber-900/0 hidden md:block pointer-events-none"
-      />
       <div
         aria-hidden
         className="absolute inset-0 pointer-events-none opacity-30"
@@ -412,49 +381,32 @@ function Book({
           </p>
         </div>
       ) : (
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={pageIndex}
-            className="relative preserve-3d"
-            initial={reduce ? { opacity: 0 } : { rotateY: flipDir === 1 ? 90 : -90, opacity: 0 }}
-            animate={reduce ? { opacity: 1 } : { rotateY: 0, opacity: 1 }}
-            exit={reduce ? { opacity: 0 } : { rotateY: flipDir === 1 ? -90 : 90, opacity: 0 }}
-            transition={{ duration: reduce ? 0.15 : 0.45, ease: [0.4, 0, 0.2, 1] }}
-            style={{ transformOrigin: flipDir === 1 ? "left center" : "right center" }}
-          >
-            <motion.div
-              className="grid grid-cols-6 sm:grid-cols-6 md:grid-cols-10 gap-1 md:gap-1.5 backface-hidden"
-              initial="hidden"
-              animate="visible"
-              variants={{
-                hidden: {},
-                visible: {
-                  transition: reduce
-                    ? { staggerChildren: 0 }
-                    : { staggerChildren: 0.012, delayChildren: 0.08 },
-                },
-              }}
+        <>
+          <div className="grid grid-cols-6 sm:grid-cols-6 md:grid-cols-10 gap-1 md:gap-1.5">
+            {visibleCards.map((c) => (
+              <DexCell
+                key={c.id}
+                card={c}
+                registered={registeredIds.has(c.id)}
+                onClick={() => onSelect(c)}
+                reduce={!!reduce}
+              />
+            ))}
+          </div>
+          {hasMore && (
+            <div
+              ref={sentinelRef}
+              className="py-4 text-center text-[11px] text-amber-200/70 font-bold"
             >
-              {pageCards.map((c) => (
-                <DexCell
-                  key={c.id}
-                  card={c}
-                  registered={registeredIds.has(c.id)}
-                  onClick={() => onSelect(c)}
-                  reduce={!!reduce}
-                />
-              ))}
-              {Array.from({ length: CARDS_PER_PAGE - pageCards.length }).map(
-                (_, i) => (
-                  <div
-                    key={`pad-${i}`}
-                    className="rounded-md border border-dashed border-white/5 bg-white/[0.02] aspect-[5/7]"
-                  />
-                )
-              )}
-            </motion.div>
-          </motion.div>
-        </AnimatePresence>
+              더 펼치는 중… ({visibleCards.length} / {totalForTab})
+            </div>
+          )}
+          {!hasMore && totalForTab > CARDS_PER_BATCH && (
+            <p className="py-3 text-center text-[11px] text-amber-200/60">
+              모두 표시됨 ({totalForTab}장)
+            </p>
+          )}
+        </>
       )}
     </div>
   );
