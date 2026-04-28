@@ -1,12 +1,12 @@
-# 체육관 대결 시스템 — 전투 스펙 감사 보고서
+# 체육관 대결 시스템 — 전투 스펙 (v3)
 
-> 조사 시점: 2026-04-28
+> 최종 수정: 2026-04-28 (v3 — PCL10 전용 + sqrt 정규화 + MUR 최상위 효율)
 > 대상 브랜치: `main`
-> 조사 범위: `supabase/migrations/`, `src/components/Gym*.tsx`, `src/lib/wild/`
+> 핵심 마이그레이션: `20260637_gym_battle_redesign_v3.sql`
 
 ## 0. 한 줄 요약
 
-현재 시스템은 **hp/atk 단일 축 턴제 시뮬레이션**이다. `def`/`spd` 컬럼은 DB에 존재하지만 실제 전투 계산에는 **사용되지 않는다**. 승패는 `희귀도 × PCL × 체육관 속성 일치 × 양 측 center_power 보정 × 난수(±10%·5% 크리)` 로 결정된다.
+체육관 시스템은 **PCL 10 슬랩 전용**. PCL 9 이하는 등록/도전/전투 어디에도 들어올 수 없다. 산식은 `희귀도 base + center_power(sqrt 정규화) 가산 + 방어자 HP 1.10 + MUR 공격 1.05 + 체육관 속성 일치 1.10` 의 합성. PCL 등급별 배율(grade_mult)은 폐기. `def`/`spd` 컬럼은 시뮬레이션 미사용 (Phase 5 예정).
 
 ---
 
@@ -14,13 +14,12 @@
 
 | 항목 | 내용 |
 |------|------|
-| 데이터 출처 | `gym_pokemon` 테이블 — `supabase/migrations/20260585_gym_phase1.sql:180-217` |
-| 정의 방식 | 8개 체육관 × 3마리 = 24행 하드코딩 시드 |
+| 데이터 출처 | `gym_pokemon` 테이블 — 초기 시드 `20260585_gym_phase1.sql:180-217`, 난이도별 정규화 `20260637_…` |
+| 정의 방식 | 체육관 × 3슬롯 시드. 난이도별 hp/atk 정규화 |
 | 컬럼 | `slot, name, type, dex, hp, atk, def, spd` |
-| 체육관별 차이 | 있음 (예: `gym-grass` slot1/2/3 = 이상해씨 hp 100/115/140, atk 30/34/42) |
+| **난이도별 정규화 (v3)** | EASY 100~140 / 20~35 · NORMAL 150~210 / 35~55 · HARD 220~320 / 55~80 · BOSS 260~380 / 65~95 |
 | 능력치 계산 | 시드 고정값 그대로 로드 (`20260620_…:209-225`) |
-| 변환/보정 | 없음 |
-| **반영 보너스** | 체육관 속성 == 포켓몬 속성일 때 `atk × 1.10` (단 한 가지) |
+| **반영 보너스** | 체육관 속성 == 포켓몬 속성일 때 `atk × 1.10` (속성 일치 보정만) |
 | **반영 안 됨** | 희귀도 / PCL / 메달 / 도감 / 펫 점수 / 도전자 center_power |
 | 실제 사용 여부 | ✅ 미점령 체육관일 때만. 점령된 체육관은 default 미사용 |
 
@@ -34,40 +33,66 @@
 | 등록 함수 | `set_gym_defense_deck()` — `supabase/migrations/20260620_gym_resolve_pet_by_type_no_npc_fallback.sql:379-514` |
 | 등록 검증 | (1) 본인 소유 (2) PCL 10 슬랩 (3) 펫 등록 상태(main_card_ids 또는 main_cards_by_type) (4) 체육관 속성 일치 — 4가지 모두 |
 
-### 능력치 산식 — `gym_pet_battle_stats(is_defender=true)`
+### 능력치 산식 — `gym_pet_battle_stats(is_defender=true)` (v3)
 
-`supabase/migrations/20260603_gym_defender_buff.sql:22-118`
+`supabase/migrations/20260637_gym_battle_redesign_v3.sql`
 
 ```
-base_hp  = rarity_base_hp  × grade_mult
-base_atk = rarity_base_atk × grade_mult
+# (1) PCL 10 hard gate
+if grade != 10: return  (호출 측에서 abort)
 
-grade_mult: grade 10 → 2.0, 9 → 1.6, 8 → 1.3, 7 → 1.1, else → 1.0
+# (2) 희귀도 base — gym_rarity_base_stats(rarity)
+base_hp  = rarity_base_hp[rarity]
+base_atk = rarity_base_atk[rarity]
 
-rarity_base (희귀도별 hp/atk):
-  C  30/8   U  34/9   R  38/10   RR 42/12   AR 48/13
-  SR 55/15  MA 60/16  SAR 70/18  UR 80/20   MUR 95/24
+# (3) center_power 정규화 보너스 — gym_power_bonus_rate(cp, rarity)
+rate = (rarity == 'MUR')
+       ? min(0.45, sqrt(cp) / 2800)
+       : min(0.35, sqrt(cp) / 3000)
+hp  = base_hp  × (1 + rate)
+atk = base_atk × (1 + rate)
 
-bonus_ratio_def = (slot 10/8/6%) × 1.5         (방어 가중)
-                × 2.0 if rarity == MUR         (MUR 우대)
-bonus           = round(defender.center_power × bonus_ratio_def)
-cap             = base × 1.5 (일반) / × 10 (MUR)
-final_hp        = base_hp  + min(hp_bonus,  hp_cap)
-final_atk       = base_atk + min(atk_bonus, atk_cap)
-if pet_type == gym_type: final_atk × 1.05
+# (4) 방어자 HP 가산
+hp = hp × gym_defender_hp_multiplier()    # 1.10
+
+# (5) 속성 일치 가산
+if pet_type == gym_type:
+    atk = atk × gym_type_match_multiplier()    # 1.10
+
+final_hp  = round(hp)
+final_atk = round(atk)
 ```
 
-**슬롯별 보너스 비율**:
-- slot 1: 일반 15% / MUR 30%
-- slot 2: 일반 12% / MUR 24%
-- slot 3: 일반 9%  / MUR 18%
+### 희귀도별 기본 스탯 (PCL 10 슬랩, v3)
+
+| 희귀도 | base HP | base ATK |
+|--------|--:|--:|
+| **MUR** | **240** | **60** |
+| **UR**  | 165 | 39 |
+| **SAR** | 135 | 31 |
+| **SR**  | 110 | 24 |
+| **MA**  | 100 | 21 |
+| **AR**  | 90  | 18 |
+| **RR**  | 70  | 14 |
+| **R**   | 60  | 12 |
+| **U/C** | 50  | 10 |
+
+### center_power 보정 예시
+
+| center_power | 일반 rate | MUR rate |
+|--:|--:|--:|
+| 100,000 | 10.5% | 11.3% |
+| 400,000 | 21.1% | 22.6% |
+| 1,000,000 | 33.3% | 35.7% |
+| 1,160,000 + | **35% (cap)** | 38.6% |
+| 1,580,000 + | 35% (cap) | **45% (cap)** |
 
 | 항목 | 내용 |
 |------|------|
-| 반영 보너스 | 희귀도, PCL 등급, 체육관 속성 일치(+5%), MUR 2배 보너스, **방어자 center_power** |
-| 반영 안 됨 | 도감 세트효과 / 메달 — center_power 안에 부분 합산 (별도 가산 X). 메달은 center_power 자체에도 미포함 |
+| 반영 보너스 | 희귀도 base, center_power(sqrt 정규화), 방어자 HP × 1.10, 속성 일치 ATK × 1.10 |
+| 반영 안 됨 | PCL 등급 배율(폐기), 도감/메달 별도 가산 (center_power 에 부분 포함) |
 | 슬롯 fallback | 없음. 3마리 미달이면 점령 자체가 막힘 |
-| 카드 깨짐 처리 | `psa_gradings` 삭제 cascade로 자동 정리. 재감별/전시/펫 변경해도 등록 시점 grading_id 유효시 사용. 패배 시 default 로 복귀 |
+| 카드 깨짐 처리 | `psa_gradings` 삭제 cascade로 자동 정리 |
 | 실제 사용 | ✅ 점령 체육관일 때 항상 |
 
 ---
@@ -80,21 +105,27 @@ if pet_type == gym_type: final_atk × 1.05
 | 검증 | `users.main_card_ids ∪ flatten_pet_ids_by_type(main_cards_by_type)` (`20260620_…:106-118`) |
 | 속성 제약 | 체육관 속성과 동일한 `pet_type` 만 사용 가능. 다른 속성 1장이라도 섞이면 `wrong_type` 으로 도전 자체 abort |
 
-### 능력치 산식 — `gym_pet_battle_stats(is_defender=false)`
+### 능력치 산식 — `gym_pet_battle_stats(is_defender=false)` (v3)
 
 ```
-base = rarity_base × grade_mult              (방어자와 동일)
-bonus_ratio_atk = slot 10/8/6%               (×1.5 가중 없음)
-bonus = round(challenger.center_power × bonus_ratio_atk)
-cap   = base × 1.5
-final_atk × 1.05 if pet_type == gym_type
+# (1) PCL 10 hard gate — 방어자와 동일
+# (2) 희귀도 base
+# (3) center_power sqrt 정규화 (방어자와 동일)
+
+# 방어자 HP 가산은 적용 안 함 (공격자 = 도전자)
+
+# (5) MUR 공격자 ATK 가산
+if rarity == 'MUR':
+    atk = atk × gym_mur_attack_multiplier()    # 1.05
+
+# (6) 속성 일치 ATK 가산 — 방어자와 동일
 ```
 
 | 항목 | 내용 |
 |------|------|
-| 반영 보너스 | 희귀도, PCL, 체육관 속성 일치, **도전자 center_power** |
-| 반영 안 됨 | 도감/펫 점수/메달 (center_power 안에 부분 포함) |
-| 프로필 vs 대결 | 프로필이 `gym_compute_user_center_power` 결과를 표시한다면 동일 (UI 별도 점검 권장) |
+| 반영 보너스 | 희귀도 base, center_power(sqrt 정규화), MUR 공격 × 1.05, 속성 일치 × 1.10 |
+| 반영 안 됨 | PCL 배율, 도감/펫/메달 별도 가산 |
+| 프로필 vs 대결 | 프로필이 `gym_compute_user_center_power` 결과를 표시한다면 동일 |
 | 실제 사용 | ✅ 항상 |
 
 ### "속성 카드 없음" 버그 의심 후보
@@ -234,11 +265,45 @@ winner = 'won' if pet_alive > 0 and enemy_alive == 0 else 'lost'
 
 | 역할 | 경로 |
 |------|------|
-| default 포켓몬 시드 | `supabase/migrations/20260585_gym_phase1.sql:180-217` |
-| 방어 보너스 산식 | `supabase/migrations/20260603_gym_defender_buff.sql:22-118` |
-| 전투 메인 RPC | `supabase/migrations/20260620_gym_resolve_pet_by_type_no_npc_fallback.sql` |
-| center_power 함수 | `supabase/migrations/20260630_medal_buff_by_difficulty.sql:36-61` |
-| 메달 난이도 버프 | `supabase/migrations/20260630_medal_buff_by_difficulty.sql:18-31` |
-| 보호 쿨타임 (1h) | `supabase/migrations/20260628_gym_protection_1h.sql:13-16` |
-| UI | `src/components/GymView.tsx` |
+| **전투 산식 (v3)** | `supabase/migrations/20260637_gym_battle_redesign_v3.sql` |
+| default 포켓몬 시드 (난이도별 정규화) | `20260637_…` 의 update + `20260585_gym_phase1.sql:180-217` (초기 시드) |
+| 전투 메인 RPC | `20260620_gym_resolve_pet_by_type_no_npc_fallback.sql` (시그니처 변경 X) |
+| 방어덱 등록 RPC | `20260620_…:379-514` (PCL10 + 펫 등록 + 속성 일치 검증) |
+| center_power 함수 | `20260630_medal_buff_by_difficulty.sql:36-61` |
+| 메달 난이도 버프 | `20260630_medal_buff_by_difficulty.sql:18-31` |
+| 보호 쿨타임 (1h) | `20260628_gym_protection_1h.sql:13-16` |
+| 펫 점수 산식 (v3) | `20260636_pet_score_bump_v3.sql` |
+| UI | `src/components/GymView.tsx`, `GymChallengeOverlay.tsx`, `GymDefenseDeckModal.tsx` |
+| 클라 PCL10 필터 | `src/lib/gym/db.ts:175` (`fetchMyPets` `g.grade === 10`) |
 | 속성 검증 진실의 원천 | `src/lib/wild/name-to-type.ts:22-63` (`resolveCardType`) |
+
+---
+
+## 9. v3 변경 이력
+
+### v2 → v3 (2026-04-28)
+
+| 항목 | v2 | v3 |
+|------|------|------|
+| PCL 등급 게이트 | grade ≥ 1 (grade_mult 가산) | **grade == 10 만 허용** (gate) |
+| grade_mult | 10→2.0, 9→1.6, 8→1.3, 7→1.1 | **폐기** (1.0 고정) |
+| 희귀도 base hp | C 30 ~ MUR 95 | **C 50 ~ MUR 240** (확대) |
+| 희귀도 base atk | C 8 ~ MUR 24 | **C 10 ~ MUR 60** (확대) |
+| center_power 보정 | 슬롯별 6/8/10% × 1.5 (def) × 2 (MUR) | **sqrt(cp) 정규화 + 상한 35%/45%** |
+| 방어자 보너스 | hp + atk 양쪽 × 1.5 캡 (MUR ×10) | **HP 만 × 1.10** |
+| MUR 우대 | 방어 시 비율 × 2, 캡 × 10 | **공격 ATK × 1.05 + center_power 상한 45%** |
+| 속성 일치 | atk × 1.05 | **atk × 1.10** |
+| 밸런스 수치 관리 | gym_pet_battle_stats 본문 하드코딩 | **공통 helper 함수 7개로 분리** |
+
+### 공통 설정 함수 (v3)
+
+| 함수 | 반환 |
+|------|------|
+| `gym_required_grade()` | `10` |
+| `gym_rarity_base_stats(rarity)` | `(hp, atk)` |
+| `gym_power_bonus_rate(cp, rarity)` | `numeric` (sqrt 정규화) |
+| `gym_defender_hp_multiplier()` | `1.10` |
+| `gym_mur_attack_multiplier()` | `1.05` |
+| `gym_type_match_multiplier()` | `1.10` |
+
+향후 밸런스 패치는 위 함수 한 곳만 수정하면 모든 산식에 자동 반영.
