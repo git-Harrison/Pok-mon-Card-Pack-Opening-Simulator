@@ -139,21 +139,6 @@ export default function GymChallengeOverlay({
     };
   }, [userId]);
 
-  // 2) ESC + body lock.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && phase !== "fighting") doClose();
-    };
-    window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
-
   const doClose = useCallback(async () => {
     if (resolvedRef.current) {
       onClose();
@@ -165,6 +150,20 @@ export default function GymChallengeOverlay({
     }
     onClose();
   }, [onClose, userId, phase, challengeId]);
+
+  // 2) ESC + body lock. doClose 이후 정의되어야 TDZ 회피.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && phase !== "fighting") doClose();
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [phase, doClose]);
 
   const togglePet = useCallback(
     (id: string) => {
