@@ -800,6 +800,78 @@ export async function fetchWildCooldown(userId: string) {
 // bulk_sell_gradings RPC 폐기됨 (20260617). spec 6-1 — PCL 판매 제거.
 // 카드 처리는 감별 페이지의 자동 삭제로 일원화.
 
+// ─────────────── Grading background jobs (spec 3-2) ───────────────
+
+export interface GradingJob {
+  job_id: string;
+  user_id: string;
+  status: "pending" | "processing" | "completed" | "failed" | "cancelled";
+  cursor: number;
+  total: number;
+  success_count: number;
+  fail_count: number;
+  skipped_count: number;
+  cap_skipped_count: number;
+  auto_deleted_count: number;
+  auto_sell_below_grade: number | null;
+  error_message: string | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export async function enqueueGradingJob(
+  userId: string,
+  cardIds: string[],
+  rarities: string[],
+  autoSellBelowGrade: number | null = null
+) {
+  const { data, error } = await supabase.rpc("enqueue_grading_job", {
+    p_user_id: userId,
+    p_card_ids: cardIds,
+    p_rarities: rarities,
+    p_auto_sell_below_grade: autoSellBelowGrade,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as { ok: boolean; error?: string; job_id?: string; total?: number };
+}
+
+export async function processGradingJobChunk(jobId: string, maxPerChunk = 5000) {
+  const { data, error } = await supabase.rpc("process_grading_job_chunk", {
+    p_job_id: jobId,
+    p_max_per_chunk: maxPerChunk,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as
+    | { ok: false; error: string }
+    | (GradingJob & { ok: true });
+}
+
+export async function getGradingJob(jobId: string): Promise<GradingJob | null> {
+  const { data, error } = await supabase.rpc("get_grading_job", {
+    p_job_id: jobId,
+  });
+  if (error || !data) return null;
+  return data as GradingJob;
+}
+
+export async function getActiveGradingJob(userId: string): Promise<GradingJob | null> {
+  const { data, error } = await supabase.rpc("get_active_grading_job", {
+    p_user_id: userId,
+  });
+  if (error || !data) return null;
+  return data as GradingJob;
+}
+
+export async function cancelGradingJob(jobId: string, userId: string) {
+  const { data, error } = await supabase.rpc("cancel_grading_job", {
+    p_job_id: jobId,
+    p_user_id: userId,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as { ok: boolean; error?: string };
+}
+
 export async function removeShowcase(userId: string, showcaseId: string) {
   const { data, error } = await supabase.rpc("remove_showcase", {
     p_user_id: userId,

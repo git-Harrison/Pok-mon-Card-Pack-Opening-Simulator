@@ -8,9 +8,13 @@ import clsx from "clsx";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import {
-  bulkSubmitPclGrading,
+  enqueueGradingJob,
+  processGradingJobChunk,
+  getActiveGradingJob,
+  cancelGradingJob,
   fetchWallet,
   type BulkGradingResult,
+  type GradingJob,
   type WalletSnapshot,
 } from "@/lib/db";
 import { getCard } from "@/lib/sets";
@@ -107,20 +111,9 @@ export default function GradingView() {
         🔎 일괄 감별 시작
       </button>
 
-      {/* Quick tips 섹션은 다음 라운드의 감별 페이지 전체 리뉴얼(NPC
-          대화형 + 몰입 UI) 에서 통째로 교체 예정. 임시로 자동판매 → 자동
-          삭제 라벨만 정정 + 한도값 동기화. */}
-      <section className="mt-4 grid grid-cols-3 gap-2">
-        <Tip icon="📈" title="GEM MINT">
-          PCL 10이 만점
-        </Tip>
-        <Tip icon="🗑️" title="자동 삭제">
-          하위 등급 즉시 폐기
-        </Tip>
-        <Tip icon="🛡️" title="감별 한도">
-          PCL 20,000장
-        </Tip>
-      </section>
+      {/* spec: 정적 설명 박스(GEM MINT / 자동 판매 / 감별 한도) 삭제.
+          NPC 대화형 몰입 UI 로 정보 전달 — 모달 안에서 다이얼로그/스캔
+          애니메이션으로. */}
 
       <p className="mt-4 text-[11px] text-zinc-500 text-center">
         감별이 완료된 슬랩은{" "}
@@ -704,15 +697,91 @@ function BulkGradingModal({
   // (totalEligibleCount > BULK_GRADING_MAX 이어도 모두 처리)
   const submitCount = totalEligibleCount;
 
-  // 진행 표시 — 분할 호출 중 현재까지 처리된 장수.
+  // 진행 표시 — 백엔드 잡의 cursor / total.
   const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 });
+
+  // 활성 잡 ID. 페이지 이탈/복귀 시에도 진행 유지를 위해 server-side
+  // grading_jobs 테이블에 영속. 모달 mount 시 active 잡 있으면 즉시
+  // 폴링 재개.
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const cancelledRef = useRef(false);
+
+  // 활성 잡 상태 → UI state 적용.
+  const applyJobState = useCallback(
+    (job: GradingJob) => {
+      setBatchProgress({ done: job.cursor, total: job.total });
+      if (job.status === "completed") {
+        const aggregated: BulkGradingResult = {
+          ok: true,
+          success_count: job.success_count,
+          fail_count: job.fail_count,
+          skipped_count: job.skipped_count,
+          cap_skipped_count: job.cap_skipped_count,
+          auto_deleted_count: job.auto_deleted_count,
+        };
+        setResult(aggregated);
+        setActiveJobId(null);
+        setPhase("done");
+      } else if (job.status === "failed" || job.status === "cancelled") {
+        setError(
+          job.error_message ??
+            (job.status === "cancelled"
+              ? "감별이 취소됐어요."
+              : "감별 중 오류가 발생했어요.")
+        );
+        setActiveJobId(null);
+        setPhase("picking");
+      }
+    },
+    []
+  );
+
+  // 청크 폴링 루프 — 1초 간격, 잡 완료/실패까지.
+  const pollJob = useCallback(
+    async (jobId: string) => {
+      while (!cancelledRef.current) {
+        const res = await processGradingJobChunk(jobId, BULK_GRADING_MAX);
+        if (!("ok" in res) || !res.ok) {
+          setError(("error" in res && res.error) || "잡 처리 실패.");
+          setPhase("picking");
+          setActiveJobId(null);
+          return;
+        }
+        applyJobState(res as unknown as GradingJob);
+        if (res.status !== "processing" && res.status !== "pending") {
+          return;
+        }
+        // 다음 청크 사이 짧은 휴식 — DB 부하 분산 + UI 진행 표시 부드럽게.
+        await new Promise((r) => setTimeout(r, 250));
+      }
+    },
+    [applyJobState]
+  );
+
+  // mount 시 active 잡 확인 → 자동 재개.
+  useEffect(() => {
+    cancelledRef.current = false;
+    let alive = true;
+    (async () => {
+      const active = await getActiveGradingJob(userId);
+      if (!alive || !active) return;
+      setActiveJobId(active.job_id);
+      setBatchProgress({ done: active.cursor, total: active.total });
+      setPhase("submitting");
+      pollJob(active.job_id);
+    })();
+    return () => {
+      alive = false;
+      cancelledRef.current = true;
+    };
+  }, [userId, pollJob]);
 
   const submit = useCallback(async () => {
     if (totalEligibleCount === 0 || phase !== "picking") return;
     setError(null);
     setPhase("submitting");
 
-    // 모든 eligible 카드를 펼친 평탄 배열 — 슬라이스로 5,000 단위 처리.
+    // 평탄 배열 빌드.
     const allCardIds: string[] = [];
     const allRarities: string[] = [];
     for (const it of eligible) {
@@ -722,74 +791,18 @@ function BulkGradingModal({
       }
     }
     const total = allCardIds.length;
+    setBatchProgress({ done: 0, total });
 
-    // 누적 결과. results 배열은 마지막 batch 만 보여주면 너무 길어서
-    // 무거우므로 합산 카운트만 노출 (results 는 합치되 클라 표시는 합계).
-    const aggregated: BulkGradingResult = {
-      ok: true,
-      success_count: 0,
-      fail_count: 0,
-      skipped_count: 0,
-      cap_skipped_count: 0,
-      auto_sold_count: 0,
-      auto_sold_earned: 0,
-      bonus: 0,
-      results: [],
-    };
-    let lastPoints: number | undefined;
-
-    for (let offset = 0; offset < total; offset += BULK_GRADING_MAX) {
-      setBatchProgress({ done: offset, total });
-      const batchIds = allCardIds.slice(offset, offset + BULK_GRADING_MAX);
-      const batchRars = allRarities.slice(offset, offset + BULK_GRADING_MAX);
-      const res = await bulkSubmitPclGrading(
-        userId,
-        batchIds,
-        batchRars,
-        autoSellBelow
-      );
-      if (!res.ok) {
-        // 부분 성공 상태 표기 — 지금까지 누적된 결과는 result 화면에
-        // 노출하고 에러 안내. 이미 처리된 카드는 저장 완료된 상태.
-        setError(
-          res.error ??
-            `일괄 감별 중 실패 (${offset.toLocaleString(
-              "ko-KR"
-            )}/${total.toLocaleString("ko-KR")} 처리됨)`
-        );
-        // 부분 결과를 result 로 보여줄지 picking 으로 돌아갈지 — 현재
-        // 디자인은 picking 으로 회귀. 이미 처리된 cards 는 서버에 반영
-        // 되어 있고 다음 클릭 시 남은 cards 부터 자동 재개됨.
-        setPhase("picking");
-        setBatchProgress({ done: 0, total: 0 });
-        return;
-      }
-      aggregated.success_count =
-        (aggregated.success_count ?? 0) + (res.success_count ?? 0);
-      aggregated.fail_count =
-        (aggregated.fail_count ?? 0) + (res.fail_count ?? 0);
-      aggregated.skipped_count =
-        (aggregated.skipped_count ?? 0) + (res.skipped_count ?? 0);
-      aggregated.cap_skipped_count =
-        (aggregated.cap_skipped_count ?? 0) + (res.cap_skipped_count ?? 0);
-      aggregated.auto_sold_count =
-        (aggregated.auto_sold_count ?? 0) + (res.auto_sold_count ?? 0);
-      aggregated.auto_sold_earned =
-        (aggregated.auto_sold_earned ?? 0) + (res.auto_sold_earned ?? 0);
-      aggregated.bonus = (aggregated.bonus ?? 0) + (res.bonus ?? 0);
-      if (res.results && res.results.length) {
-        aggregated.results = [...(aggregated.results ?? []), ...res.results];
-      }
-      if (typeof res.points === "number") lastPoints = res.points;
+    const enq = await enqueueGradingJob(userId, allCardIds, allRarities, autoSellBelow);
+    if (!enq.ok || !enq.job_id) {
+      setError(enq.error ?? "잡 등록 실패.");
+      setPhase("picking");
+      return;
     }
-
-    setBatchProgress({ done: total, total });
-    if (typeof lastPoints === "number") {
-      aggregated.points = lastPoints;
-      onPointsChange(lastPoints);
-    }
-    setResult(aggregated);
-    setPhase("done");
+    setActiveJobId(enq.job_id);
+    cancelledRef.current = false;
+    pollJob(enq.job_id);
+    void onPointsChange; // 잡 완료 시 부모가 wallet refresh 로 갱신.
   }, [
     totalEligibleCount,
     phase,
@@ -797,7 +810,17 @@ function BulkGradingModal({
     onPointsChange,
     autoSellBelow,
     eligible,
+    pollJob,
   ]);
+
+  // 사용자 명시적 취소 (모달 X 버튼 또는 닫기).
+  const handleCancel = useCallback(async () => {
+    if (activeJobId) {
+      cancelledRef.current = true;
+      await cancelGradingJob(activeJobId, userId);
+    }
+    onClose();
+  }, [activeJobId, userId, onClose]);
 
   return (
     <Portal>
@@ -825,10 +848,14 @@ function BulkGradingModal({
         >
           <div className="flex items-center justify-between h-12 px-4 border-b border-white/10 shrink-0">
             <h3 className="text-sm font-bold text-white">
-              {phase === "done" ? "일괄 감별 결과" : "일괄 감별 · 여러 장 한번에"}
+              {phase === "done"
+                ? "일괄 감별 결과"
+                : phase === "submitting"
+                ? "오박사가 감별 중..."
+                : "일괄 감별 · 여러 장 한번에"}
             </h3>
             <button
-              onClick={onClose}
+              onClick={phase === "submitting" ? handleCancel : onClose}
               aria-label="닫기"
               className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
               style={{ touchAction: "manipulation" }}
@@ -843,6 +870,7 @@ function BulkGradingModal({
             <BulkSubmittingScreen
               count={submitCount}
               progress={batchProgress}
+              onCancel={handleCancel}
             />
           ) : (
             <>
@@ -970,27 +998,55 @@ function AutoSellThresholdPicker({
   );
 }
 
+// 감별 중 NPC 대화 — 30초 주기 cycling. 과학자 페르소나.
+const SCAN_LINES: string[] = [
+  "흠... 모서리 정렬이 아주 깔끔하군.",
+  "이 카드는 표면 광택이 살아있어. 좋아.",
+  "스캔 빔 통과 — 인쇄 품질 확인 중.",
+  "센터링 측정 중... 0.05mm 이내 양호.",
+  "긁힘 감지... 미세하지만 등급에 영향이 있을지도.",
+  "놀랍군. 이 정도 보존 상태는 흔치 않아!",
+  "다음 카드 들여보내게.",
+  "기계가 한 장씩 꼼꼼히 보고 있다네.",
+  "잠시만, 이 색감... 한 번 더 봐야겠어.",
+  "거의 다 됐다네. 조금만 기다려주게.",
+];
+
 function BulkSubmittingScreen({
   count,
   progress,
+  onCancel,
 }: {
   count: number;
   progress: { done: number; total: number };
+  onCancel: () => void;
 }) {
-  // 5,000 단위 분할 호출 시 현재 회차 표기 — 사용자에게 "한 번 클릭으로
-  // 끝까지 처리되고 있음" 신호. total === 0 이면 첫 batch 시작 전.
+  // 진행 표시 — 잡 cursor / total 기반.
   const showSplit = progress.total > BULK_GRADING_MAX;
-  const pct = progress.total > 0
-    ? Math.min(100, Math.round((progress.done / progress.total) * 100))
-    : 0;
+  const pct =
+    progress.total > 0
+      ? Math.min(100, Math.round((progress.done / progress.total) * 100))
+      : 0;
+
+  // NPC 대사 cycling — 4초 주기.
+  const [lineIdx, setLineIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(
+      () => setLineIdx((i) => (i + 1) % SCAN_LINES.length),
+      4000
+    );
+    return () => clearInterval(t);
+  }, []);
+
   return (
-    <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-6 p-8 relative overflow-hidden">
+    <div className="flex-1 min-h-0 flex flex-col p-4 md:p-6 gap-4 relative overflow-hidden">
+      {/* lab background */}
       <div
         aria-hidden
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(closest-side at 50% 45%, rgba(168,85,247,0.35), transparent 65%)",
+            "radial-gradient(closest-side at 50% 30%, rgba(168,85,247,0.35), transparent 70%), radial-gradient(closest-side at 50% 110%, rgba(56,189,248,0.18), transparent 60%)",
         }}
       />
       {[0, 0.8, 1.6].map((d, i) => (
@@ -1001,51 +1057,75 @@ function BulkSubmittingScreen({
           style={
             {
               background:
-                "radial-gradient(closest-side at 50% 45%, rgba(255,255,255,0.55), rgba(255,255,255,0) 60%)",
+                "radial-gradient(closest-side at 50% 35%, rgba(255,255,255,0.45), rgba(255,255,255,0) 60%)",
               "--bdelay": `${d}s`,
             } as CSSProperties
           }
         />
       ))}
 
-      <div className="relative">
-        <PokeLoader size="lg" />
+      {/* 스캐너 — 가짜 슬랩 카드 + 가로 레이저 sweep */}
+      <div className="relative w-full max-w-[200px] mx-auto aspect-[5/7] rounded-xl border border-fuchsia-400/40 bg-gradient-to-b from-zinc-900 to-zinc-950 overflow-hidden shadow-[0_20px_44px_-20px_rgba(217,70,239,0.6)]">
+        {/* fake card grid */}
+        <div className="absolute inset-2 rounded-md ring-1 ring-white/10 bg-[linear-gradient(135deg,rgba(168,85,247,0.18)_0%,rgba(99,102,241,0.12)_50%,rgba(56,189,248,0.18)_100%)]">
+          <span aria-hidden className="absolute inset-3 rounded ring-1 ring-white/5" />
+          <div className="absolute inset-x-3 top-3 h-12 rounded ring-1 ring-white/5 bg-white/[0.04]" />
+          <div className="absolute inset-x-3 bottom-3 h-3 rounded bg-white/5" />
+        </div>
+        {/* laser sweep — vertical scan line */}
         <span
           aria-hidden
-          className="absolute -inset-6 rounded-full border border-fuchsia-300/30"
-          style={{ animation: "ring-spin 4s linear infinite" }}
+          className="absolute inset-x-0 h-1 bg-gradient-to-b from-fuchsia-300/0 via-fuchsia-300 to-fuchsia-300/0 shadow-[0_0_20px_rgba(217,70,239,0.95)]"
+          style={{
+            animation: "scan-y 1.6s linear infinite",
+          }}
         />
-        <span
-          aria-hidden
-          className="absolute -inset-12 rounded-full border border-fuchsia-300/15"
-          style={{ animation: "ring-spin 8s linear infinite reverse" }}
-        />
+        {/* corner brackets */}
+        {[
+          "top-1 left-1",
+          "top-1 right-1 rotate-90",
+          "bottom-1 left-1 -rotate-90",
+          "bottom-1 right-1 rotate-180",
+        ].map((cls, i) => (
+          <span
+            key={i}
+            aria-hidden
+            className={clsx("absolute w-3 h-3 border-l-2 border-t-2 border-fuchsia-300/80", cls)}
+          />
+        ))}
+        <style>{`@keyframes scan-y { 0% { top: 0%; opacity: 0; } 8% { opacity: 1 } 92% { opacity: 1 } 100% { top: calc(100% - 4px); opacity: 0; } }`}</style>
       </div>
 
+      {/* NPC 대화 박스 — Pokemon-style 흰 박스 + 화살표 */}
+      <div className="relative mx-auto w-full max-w-md">
+        <div className="relative rounded-xl bg-white text-zinc-900 px-3 py-2.5 text-[13px] font-bold leading-snug shadow-lg">
+          <span aria-hidden className="absolute -top-1 left-6 w-3 h-3 rotate-45 bg-white" />
+          <span className="text-fuchsia-700/80 text-[10px] uppercase tracking-[0.18em] block mb-0.5">
+            오박사
+          </span>
+          <span key={lineIdx} className="block animate-fade-in">
+            💬 {SCAN_LINES[lineIdx]}
+          </span>
+        </div>
+      </div>
+
+      {/* 진행 텍스트 + 게이지 */}
       <div className="relative text-center">
         <p className="text-base md:text-lg font-bold text-white">
-          <LoadingText
-            text={`${count.toLocaleString("ko-KR")}장 일괄 감별 중`}
-          />
-        </p>
-        <p className="mt-1 text-[11px] text-fuchsia-200/80">
-          오박사가 카드를 한 장씩 살펴보고 있어요
+          <LoadingText text={`${count.toLocaleString("ko-KR")}장 감별 중`} />
         </p>
         {showSplit && (
-          <p className="mt-2 text-[11px] text-amber-200/85 font-bold tabular-nums">
+          <p className="mt-1 text-[11px] text-amber-200/85 font-bold tabular-nums">
             진행 {progress.done.toLocaleString("ko-KR")} /{" "}
             {progress.total.toLocaleString("ko-KR")} ({pct}%)
-            <span className="ml-1.5 text-zinc-400 font-normal">
-              · {BULK_GRADING_MAX.toLocaleString("ko-KR")}장씩 자동 분할
-            </span>
           </p>
         )}
       </div>
 
-      <div className="relative w-full max-w-xs h-2 rounded-full overflow-hidden bg-white/5 ring-1 ring-fuchsia-400/20">
+      <div className="relative w-full max-w-md mx-auto h-2 rounded-full overflow-hidden bg-white/5 ring-1 ring-fuchsia-400/20">
         {showSplit ? (
           <div
-            className="absolute inset-y-0 left-0 transition-[width] duration-300 ease-out"
+            className="absolute inset-y-0 left-0 transition-[width] duration-500 ease-out"
             style={{
               width: `${pct}%`,
               backgroundImage:
@@ -1062,6 +1142,22 @@ function BulkSubmittingScreen({
           />
         )}
       </div>
+
+      {/* 안내 — 백그라운드 진행 */}
+      <p className="relative text-[11px] text-zinc-400 text-center leading-relaxed max-w-md mx-auto">
+        페이지를 닫거나 다른 화면으로 이동해도 감별은 계속 진행돼요. 다시
+        돌아오면 진행 상황을 이어서 볼 수 있어요.
+      </p>
+
+      {/* 취소 버튼 — 이미 처리된 카드는 유지, 잔여만 중단 */}
+      <button
+        type="button"
+        onClick={onCancel}
+        className="relative mx-auto h-9 px-4 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 text-xs font-bold"
+        style={{ touchAction: "manipulation" }}
+      >
+        감별 중단 + 닫기
+      </button>
     </div>
   );
 }
