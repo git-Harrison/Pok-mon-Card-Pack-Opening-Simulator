@@ -14,7 +14,7 @@ import {
 } from "@/lib/db";
 import type { PclGrading } from "@/lib/types";
 import { getCard } from "@/lib/sets";
-import { RARITY_STYLE } from "@/lib/rarity";
+import { RARITY_STYLE, compareRarity } from "@/lib/rarity";
 import { pclTone } from "@/lib/pcl";
 import { CARD_NAME_TO_TYPE } from "@/lib/wild/name-to-type";
 import { WILD_POOL, wildSpriteUrl, type WildMon } from "@/lib/wild/pool";
@@ -460,9 +460,14 @@ export default function WildView() {
         } as Slab;
       })
       .filter((x): x is Slab => x !== null)
-      .sort((a, b) =>
-        b.grade - a.grade || b.maxHp - a.maxHp
-      );
+      .sort((a, b) => {
+        // 카드 희귀도 내림차순 (MUR → C). 동률 시 PCL 등급, 그래도
+        // 동률이면 maxHp 내림차순.
+        const rd = compareRarity(a.rarity, b.rarity);
+        if (rd !== 0) return rd;
+        if (b.grade !== a.grade) return b.grade - a.grade;
+        return b.maxHp - a.maxHp;
+      });
   }, [gradings]);
 
   const addFloater = useCallback(

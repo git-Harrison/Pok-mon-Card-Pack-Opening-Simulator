@@ -31,6 +31,8 @@ import {
   type ShowcaseType,
 } from "@/lib/center";
 import { getCard } from "@/lib/sets";
+import { compareRarity } from "@/lib/rarity";
+import type { Rarity } from "@/lib/types";
 import { pclTone } from "@/lib/pcl";
 import CoinIcon from "./CoinIcon";
 import PclSlab from "./PclSlab";
@@ -716,7 +718,17 @@ function GradingPickModal({
   onPick: (grading: PclGrading) => void;
 }) {
   const items = useMemo(
-    () => gradings.slice().sort((a, b) => b.grade - a.grade),
+    () =>
+      gradings.slice().sort((a, b) => {
+        // 1차: 카드 희귀도 내림차순 (MUR → C). 2차: PCL 등급 내림차순.
+        const ra = getCard(a.card_id)?.rarity as Rarity | undefined;
+        const rb = getCard(b.card_id)?.rarity as Rarity | undefined;
+        if (ra && rb) {
+          const rd = compareRarity(ra, rb);
+          if (rd !== 0) return rd;
+        }
+        return b.grade - a.grade;
+      }),
     [gradings]
   );
   return (
@@ -796,7 +808,17 @@ function BulkShowcaseCreateModal({
   const [localError, setLocalError] = useState<string | null>(null);
 
   const sortedCandidates = useMemo(
-    () => candidates.slice().sort((a, b) => b.grade - a.grade),
+    () =>
+      candidates.slice().sort((a, b) => {
+        // MUR-first 정렬, 동률은 PCL 등급 내림차순.
+        const ra = getCard(a.card_id)?.rarity as Rarity | undefined;
+        const rb = getCard(b.card_id)?.rarity as Rarity | undefined;
+        if (ra && rb) {
+          const rd = compareRarity(ra, rb);
+          if (rd !== 0) return rd;
+        }
+        return b.grade - a.grade;
+      }),
     [candidates]
   );
 
