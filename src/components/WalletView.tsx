@@ -135,11 +135,11 @@ export default function WalletView() {
         <div className="inline-flex items-stretch rounded-xl bg-white/5 border border-white/10 p-1">
           <ModeTab active={mode === "pcl"} onClick={() => setMode("pcl")}>
             PCL 감별
-            <CountBadge value={pclItems.length} cap="2만" />
+            <CountBadge value={pclItems.length} cap="5만" />
           </ModeTab>
           <ModeTab active={mode === "cards"} onClick={() => setMode("cards")}>
             보유 카드
-            <CountBadge value={snap.totalCards} cap="2만" />
+            <CountBadge value={snap.totalCards} cap="5만" />
           </ModeTab>
         </div>
         {hasAny ? (

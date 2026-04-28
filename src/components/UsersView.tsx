@@ -528,13 +528,21 @@ export default function UsersView() {
                   onClick={(ev) => ev.stopPropagation()}
                 >
                   <Link
-                    href={`/center/${encodeURIComponent(e.user_id)}`}
-                    aria-label={`${e.display_name}님의 포켓몬센터 방문`}
+                    href={
+                      isMe
+                        ? "/center"
+                        : `/center/${encodeURIComponent(e.user_id)}`
+                    }
+                    aria-label={
+                      isMe
+                        ? "내 포켓몬센터로 이동"
+                        : `${e.display_name}님의 포켓몬센터 방문`
+                    }
                     style={{ touchAction: "manipulation" }}
                     onClick={(ev) => ev.stopPropagation()}
                     className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 px-3 rounded-xl bg-gradient-to-r from-fuchsia-500/90 to-indigo-500/90 hover:from-fuchsia-500 hover:to-indigo-500 active:scale-[0.98] text-white text-sm font-bold transition"
                   >
-                    🏛️ 센터 방문
+                    🏛️ {isMe ? "내 센터" : "센터 방문"}
                   </Link>
                   {!isMe && (
                     <button

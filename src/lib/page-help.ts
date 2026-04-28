@@ -82,7 +82,7 @@ const HOME_SECTIONS: HelpSection[] = [
         " · 카드 최대 ",
         h("b", null, "20,000장"),
         " + PCL 슬랩 최대 ",
-        h("b", null, "20,000장")
+        h("b", null, "50,000장")
       ),
       h(
         "li",
@@ -211,7 +211,7 @@ const WALLET_SECTIONS: HelpSection[] = [
         { key: 4 },
         h("b", null, "PCL"),
         " · 감별 완료 슬랩 수 / 한도 ",
-        h("b", null, "20,000장")
+        h("b", null, "50,000장")
       )
     ),
   },
@@ -895,7 +895,7 @@ const GRADING_SECTIONS: HelpSection[] = [
       "까지 (그 이상은 나눠서 의뢰). ",
       h("b", null, "“PCL N 미만 자동 판매”"),
       " (7·8·9·10 미만 선택) 옵션을 켜면 낮은 등급은 슬랩으로 만들지 않고 즉시 환산돼요. 슬랩 한도 ",
-      h("b", null, "20,000장"),
+      h("b", null, "50,000장"),
       "에 가까울 때 유용."
     ),
   },
@@ -909,7 +909,7 @@ const GRADING_SECTIONS: HelpSection[] = [
         "li",
         { key: 1 },
         "PCL 슬랩 보유 한도 ",
-        h("b", null, "20,000장")
+        h("b", null, "50,000장")
       ),
       h(
         "li",
@@ -1347,7 +1347,7 @@ const GIFTS_SECTIONS: HelpSection[] = [
   {
     heading: "주의",
     icon: "⚠️",
-    body: "본인에게는 못 보내요. 만료·거절된 선물의 슬랩은 자동으로 보낸 사람에게 그대로 남아요. 받는 쪽이 PCL 한도(20,000장)에 차 있으면 수락이 거부돼요.",
+    body: "본인에게는 못 보내요. 만료·거절된 선물의 슬랩은 자동으로 보낸 사람에게 그대로 남아요. 받는 쪽이 PCL 한도(50,000장)에 차 있으면 수락이 거부돼요.",
   },
 ];
 
