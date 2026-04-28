@@ -41,17 +41,29 @@ function resolvePetType(name: string): WildType | null {
   return CARD_NAME_TO_TYPE[base] ?? null;
 }
 
+/** rarity 가 null/undefined/invalid 이거나 RARITY_STYLE 에 없으면
+ *  안전하게 'C' 로 폴백 — `RARITY_STYLE[undefined].frame` 같은 런타임
+ *  TypeError 방지(iOS Safari 가 React 렌더 throw 를 페이지 크래시로
+ *  올리는 경우 있음). */
+function safeRarity(value: unknown): keyof typeof RARITY_STYLE {
+  if (typeof value === "string" && value in RARITY_STYLE) {
+    return value as keyof typeof RARITY_STYLE;
+  }
+  return "C";
+}
+
 function mergePet(g: RawPetGrading): MyPet | null {
   const card = getCard(g.card_id);
-  const rarity = (card?.rarity ?? g.rarity) as keyof typeof RARITY_STYLE;
+  const rarity = safeRarity(card?.rarity ?? g.rarity);
   const name = card?.name ?? g.card_id;
-  const stats = slabStats(rarity, g.grade);
+  const grade = g.grade ?? 10;
+  const stats = slabStats(rarity, grade);
   return {
     grading_id: g.grading_id,
     card_id: g.card_id,
     card_name: name,
     rarity,
-    grade: g.grade,
+    grade,
     type: card ? resolvePetType(card.name) : null,
     imageUrl: card?.imageUrl,
     baseHp: stats.hp,
@@ -64,15 +76,16 @@ function mergePet(g: RawPetGrading): MyPet | null {
 function mergeFromDefender(d: DefenderPokemonInfo): MyPet | null {
   if (!d.grading_id) return null;
   const card = getCard(d.card_id);
-  const rarity = (card?.rarity ?? d.rarity) as keyof typeof RARITY_STYLE;
-  const name = card?.name ?? d.card_id;
-  const stats = slabStats(rarity, d.grade);
+  const rarity = safeRarity(card?.rarity ?? d.rarity);
+  const name = card?.name ?? d.card_id ?? "?";
+  const grade = d.grade ?? 10;
+  const stats = slabStats(rarity, grade);
   return {
     grading_id: d.grading_id,
-    card_id: d.card_id,
+    card_id: d.card_id ?? "",
     card_name: name,
     rarity,
-    grade: d.grade,
+    grade,
     // 서버 저장된 type 우선, 없으면 카드명 기준 lookup.
     type: d.type ?? (card ? resolvePetType(card.name) : null),
     imageUrl: card?.imageUrl,

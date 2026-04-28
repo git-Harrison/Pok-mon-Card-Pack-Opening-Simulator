@@ -169,8 +169,14 @@ export default function GymView() {
             centerPower={centerPower}
             onClose={() => setSelectedId(null)}
             onOpenDefense={() => {
-              setDefenseGym(selectedGym);
+              // iOS Safari 가 backdrop-blur 깔린 detail modal 와 defense
+              // modal 이 AnimatePresence 로 동시에 마운트/언마운트되는
+              // 사이에 페이지 크래시("This page couldn't load") 를 던지는
+              // 케이스가 있어 — detail 을 먼저 닫고 exit 애니메이션이
+              // 끝난 뒤 defense 를 연다.
+              const next = selectedGym;
               setSelectedId(null);
+              setTimeout(() => setDefenseGym(next), 240);
             }}
             onStartChallenge={async () => {
               if (!userId) return;

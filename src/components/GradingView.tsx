@@ -666,7 +666,30 @@ function BulkGradingModal({
   const [phase, setPhase] = useState<BulkPhase>("picking");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<BulkGradingResult | null>(null);
-  const [autoSellBelow, setAutoSellBelow] = useState<number | null>(null);
+
+  // PCL 자동 판매 임계 — localStorage 에 영구 저장. 모달 닫았다가 다시
+  // 열어도 마지막 선택 유지. (이전엔 매번 null 로 초기화돼 풀려있었음.)
+  const AUTO_SELL_KEY = "pcl_auto_sell_below";
+  const [autoSellBelow, setAutoSellBelow] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem(AUTO_SELL_KEY);
+      if (raw === null) return null;
+      const v = parseInt(raw, 10);
+      return [7, 8, 9, 10].includes(v) ? v : null;
+    } catch {
+      return null;
+    }
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (autoSellBelow === null) window.localStorage.removeItem(AUTO_SELL_KEY);
+      else window.localStorage.setItem(AUTO_SELL_KEY, String(autoSellBelow));
+    } catch {
+      // noop — quota / private mode
+    }
+  }, [autoSellBelow]);
 
   const totalEligibleCount = useMemo(
     () => eligible.reduce((s, it) => s + it.count, 0),
@@ -675,34 +698,95 @@ function BulkGradingModal({
 
   // 한 번에 보낼 수 있는 카드 수 한도. 서버 statement_timeout 안에서
   // 안전하게 처리되는 상한 — 같은 값이 SQL 함수에도 박혀있어야 함.
-  const submitCount = Math.min(totalEligibleCount, BULK_GRADING_MAX);
+  // 클라가 5,000 단위로 자동 분할 호출 → 사용자는 한 번 클릭만.
+  // (totalEligibleCount > BULK_GRADING_MAX 이어도 모두 처리)
+  const submitCount = totalEligibleCount;
+
+  // 진행 표시 — 분할 호출 중 현재까지 처리된 장수.
+  const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 });
 
   const submit = useCallback(async () => {
     if (totalEligibleCount === 0 || phase !== "picking") return;
     setError(null);
     setPhase("submitting");
-    const cardIds: string[] = [];
-    const rarities: string[] = [];
-    outer: for (const it of eligible) {
+
+    // 모든 eligible 카드를 펼친 평탄 배열 — 슬라이스로 5,000 단위 처리.
+    const allCardIds: string[] = [];
+    const allRarities: string[] = [];
+    for (const it of eligible) {
       for (let i = 0; i < it.count; i++) {
-        if (cardIds.length >= BULK_GRADING_MAX) break outer;
-        cardIds.push(it.card.id);
-        rarities.push(it.card.rarity);
+        allCardIds.push(it.card.id);
+        allRarities.push(it.card.rarity);
       }
     }
-    const res = await bulkSubmitPclGrading(
-      userId,
-      cardIds,
-      rarities,
-      autoSellBelow
-    );
-    if (!res.ok) {
-      setError(res.error ?? "일괄 감별에 실패했어요.");
-      setPhase("picking");
-      return;
+    const total = allCardIds.length;
+
+    // 누적 결과. results 배열은 마지막 batch 만 보여주면 너무 길어서
+    // 무거우므로 합산 카운트만 노출 (results 는 합치되 클라 표시는 합계).
+    const aggregated: BulkGradingResult = {
+      ok: true,
+      success_count: 0,
+      fail_count: 0,
+      skipped_count: 0,
+      cap_skipped_count: 0,
+      auto_sold_count: 0,
+      auto_sold_earned: 0,
+      bonus: 0,
+      results: [],
+    };
+    let lastPoints: number | undefined;
+
+    for (let offset = 0; offset < total; offset += BULK_GRADING_MAX) {
+      setBatchProgress({ done: offset, total });
+      const batchIds = allCardIds.slice(offset, offset + BULK_GRADING_MAX);
+      const batchRars = allRarities.slice(offset, offset + BULK_GRADING_MAX);
+      const res = await bulkSubmitPclGrading(
+        userId,
+        batchIds,
+        batchRars,
+        autoSellBelow
+      );
+      if (!res.ok) {
+        // 부분 성공 상태 표기 — 지금까지 누적된 결과는 result 화면에
+        // 노출하고 에러 안내. 이미 처리된 카드는 저장 완료된 상태.
+        setError(
+          res.error ??
+            `일괄 감별 중 실패 (${offset.toLocaleString(
+              "ko-KR"
+            )}/${total.toLocaleString("ko-KR")} 처리됨)`
+        );
+        // 부분 결과를 result 로 보여줄지 picking 으로 돌아갈지 — 현재
+        // 디자인은 picking 으로 회귀. 이미 처리된 cards 는 서버에 반영
+        // 되어 있고 다음 클릭 시 남은 cards 부터 자동 재개됨.
+        setPhase("picking");
+        setBatchProgress({ done: 0, total: 0 });
+        return;
+      }
+      aggregated.success_count =
+        (aggregated.success_count ?? 0) + (res.success_count ?? 0);
+      aggregated.fail_count =
+        (aggregated.fail_count ?? 0) + (res.fail_count ?? 0);
+      aggregated.skipped_count =
+        (aggregated.skipped_count ?? 0) + (res.skipped_count ?? 0);
+      aggregated.cap_skipped_count =
+        (aggregated.cap_skipped_count ?? 0) + (res.cap_skipped_count ?? 0);
+      aggregated.auto_sold_count =
+        (aggregated.auto_sold_count ?? 0) + (res.auto_sold_count ?? 0);
+      aggregated.auto_sold_earned =
+        (aggregated.auto_sold_earned ?? 0) + (res.auto_sold_earned ?? 0);
+      aggregated.bonus = (aggregated.bonus ?? 0) + (res.bonus ?? 0);
+      if (res.results && res.results.length) {
+        aggregated.results = [...(aggregated.results ?? []), ...res.results];
+      }
+      if (typeof res.points === "number") lastPoints = res.points;
     }
-    if (typeof res.points === "number") onPointsChange(res.points);
-    setResult(res);
+
+    setBatchProgress({ done: total, total });
+    if (typeof lastPoints === "number") {
+      aggregated.points = lastPoints;
+      onPointsChange(lastPoints);
+    }
+    setResult(aggregated);
     setPhase("done");
   }, [
     totalEligibleCount,
@@ -754,7 +838,10 @@ function BulkGradingModal({
           {phase === "done" && result ? (
             <BulkResults result={result} onClose={onClose} />
           ) : phase === "submitting" ? (
-            <BulkSubmittingScreen count={submitCount} />
+            <BulkSubmittingScreen
+              count={submitCount}
+              progress={batchProgress}
+            />
           ) : (
             <>
               <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-5 space-y-4">
@@ -776,10 +863,11 @@ function BulkGradingModal({
                         <span className="text-base font-bold text-fuchsia-300/80"> 장</span>
                       </p>
                       {totalEligibleCount > BULK_GRADING_MAX ? (
-                        <p className="mt-2 text-[11px] text-amber-200/90 leading-relaxed">
-                          ⚠️ 한 번에 최대 <b>{BULK_GRADING_MAX.toLocaleString("ko-KR")}장</b>까지
-                          처리. 남은 {(totalEligibleCount - BULK_GRADING_MAX).toLocaleString("ko-KR")}
-                          장은 다음 회차에 다시 의뢰해 주세요. 실패 시 카드는 사라져요.
+                        <p className="mt-2 text-[11px] text-fuchsia-200/85 leading-relaxed">
+                          한 번 클릭으로 <b>전체</b> 일괄 감별 — 서버 안전
+                          한도 <b>{BULK_GRADING_MAX.toLocaleString("ko-KR")}장</b>씩
+                          자동 분할 호출 후 마지막에 합산 결과만 보여줘요.
+                          실패 시 해당 batch 카드는 사라져요.
                         </p>
                       ) : (
                         <p className="mt-2 text-[11px] text-fuchsia-200/80 leading-relaxed">
@@ -880,7 +968,19 @@ function AutoSellThresholdPicker({
   );
 }
 
-function BulkSubmittingScreen({ count }: { count: number }) {
+function BulkSubmittingScreen({
+  count,
+  progress,
+}: {
+  count: number;
+  progress: { done: number; total: number };
+}) {
+  // 5,000 단위 분할 호출 시 현재 회차 표기 — 사용자에게 "한 번 클릭으로
+  // 끝까지 처리되고 있음" 신호. total === 0 이면 첫 batch 시작 전.
+  const showSplit = progress.total > BULK_GRADING_MAX;
+  const pct = progress.total > 0
+    ? Math.min(100, Math.round((progress.done / progress.total) * 100))
+    : 0;
   return (
     <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-6 p-8 relative overflow-hidden">
       <div
@@ -929,16 +1029,36 @@ function BulkSubmittingScreen({ count }: { count: number }) {
         <p className="mt-1 text-[11px] text-fuchsia-200/80">
           오박사가 카드를 한 장씩 살펴보고 있어요
         </p>
+        {showSplit && (
+          <p className="mt-2 text-[11px] text-amber-200/85 font-bold tabular-nums">
+            진행 {progress.done.toLocaleString("ko-KR")} /{" "}
+            {progress.total.toLocaleString("ko-KR")} ({pct}%)
+            <span className="ml-1.5 text-zinc-400 font-normal">
+              · {BULK_GRADING_MAX.toLocaleString("ko-KR")}장씩 자동 분할
+            </span>
+          </p>
+        )}
       </div>
 
       <div className="relative w-full max-w-xs h-2 rounded-full overflow-hidden bg-white/5 ring-1 ring-fuchsia-400/20">
-        <div
-          className="absolute inset-0 bulk-progress-pulse"
-          style={{
-            backgroundImage:
-              "linear-gradient(90deg, rgba(217,70,239,0.15) 0%, rgba(217,70,239,0.85) 35%, rgba(255,255,255,0.95) 50%, rgba(99,102,241,0.85) 65%, rgba(99,102,241,0.15) 100%)",
-          }}
-        />
+        {showSplit ? (
+          <div
+            className="absolute inset-y-0 left-0 transition-[width] duration-300 ease-out"
+            style={{
+              width: `${pct}%`,
+              backgroundImage:
+                "linear-gradient(90deg, rgba(217,70,239,0.85) 0%, rgba(255,255,255,0.95) 50%, rgba(99,102,241,0.85) 100%)",
+            }}
+          />
+        ) : (
+          <div
+            className="absolute inset-0 bulk-progress-pulse"
+            style={{
+              backgroundImage:
+                "linear-gradient(90deg, rgba(217,70,239,0.15) 0%, rgba(217,70,239,0.85) 35%, rgba(255,255,255,0.95) 50%, rgba(99,102,241,0.85) 65%, rgba(99,102,241,0.15) 100%)",
+            }}
+          />
+        )}
       </div>
     </div>
   );
