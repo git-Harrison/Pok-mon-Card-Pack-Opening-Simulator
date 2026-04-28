@@ -40,25 +40,6 @@ export default function AdminView() {
     refresh();
   }, [refresh]);
 
-  if (user && user.user_id !== ADMIN_LOGIN) {
-    return (
-      <div className="relative max-w-xl mx-auto px-4 py-16 text-center">
-        <PageBackdrop tone="admin" />
-        <p className="text-5xl">🔒</p>
-        <p className="mt-4 text-lg font-bold text-white">관리자 전용 페이지</p>
-        <p className="mt-1 text-sm text-zinc-400">
-          이 페이지는 운영자 계정에서만 접근할 수 있어요.
-        </p>
-        <Link
-          href="/"
-          className="mt-6 inline-flex h-11 px-5 rounded-xl bg-white/10 text-white font-semibold text-sm hover:bg-white/15"
-        >
-          홈으로
-        </Link>
-      </div>
-    );
-  }
-
   const submit = useCallback(async () => {
     if (!user) return;
     const raw = parseInt(amountRaw, 10);
@@ -114,6 +95,26 @@ export default function AdminView() {
     },
     [user, users, mode, refresh]
   );
+
+  // 관리자 권한 체크 — 모든 hook 호출 후로 이동 (Rules of Hooks 준수).
+  if (user && user.user_id !== ADMIN_LOGIN) {
+    return (
+      <div className="relative max-w-xl mx-auto px-4 py-16 text-center">
+        <PageBackdrop tone="admin" />
+        <p className="text-5xl">🔒</p>
+        <p className="mt-4 text-lg font-bold text-white">관리자 전용 페이지</p>
+        <p className="mt-1 text-sm text-zinc-400">
+          이 페이지는 운영자 계정에서만 접근할 수 있어요.
+        </p>
+        <Link
+          href="/"
+          className="mt-6 inline-flex h-11 px-5 rounded-xl bg-white/10 text-white font-semibold text-sm hover:bg-white/15"
+        >
+          홈으로
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="relative max-w-2xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">

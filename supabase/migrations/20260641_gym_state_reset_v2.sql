@@ -19,11 +19,16 @@
 --   · gyms / gym_pokemon / gym_medals
 -- ============================================================
 
-truncate table gym_cooldowns;
-truncate table gym_rewards;
-truncate table user_gym_medals;
-truncate table gym_battle_logs;
-truncate table gym_challenges;
-truncate table gym_ownerships;
+-- 한 번의 TRUNCATE 로 6개 테이블 동시 비움 — gym_battle_logs 가
+-- gym_challenges 를 FK 참조하므로 분리 실행 시 RESTRICT 위반 가능.
+-- CASCADE 까지 함께 명시해 안전하게 진행.
+truncate table
+  gym_cooldowns,
+  gym_rewards,
+  user_gym_medals,
+  gym_battle_logs,
+  gym_challenges,
+  gym_ownerships
+cascade;
 
 notify pgrst, 'reload schema';
