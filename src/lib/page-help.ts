@@ -309,15 +309,15 @@ const WALLET_SECTIONS: HelpSection[] = [
         { key: 6 },
         h("b", null, "일괄 판매"),
         " · PCL 10 ",
-        h("b", { className: "text-amber-300" }, "10,000p"),
+        h("b", { className: "text-amber-300" }, "20,000p"),
         " / 9 ",
-        h("b", null, "5,000p"),
+        h("b", null, "10,000p"),
         " / 8 ",
-        h("b", null, "1,000p"),
+        h("b", null, "2,000p"),
         " / 7 ",
-        h("b", null, "150p"),
+        h("b", null, "300p"),
         " / 6 ",
-        h("b", null, "100p")
+        h("b", null, "200p")
       )
     ),
   },
@@ -376,17 +376,17 @@ const BULK_SELL_SECTIONS: HelpSection[] = [
         { key: 1 },
         h("b", { className: "text-amber-300" }, "PCL 10 (GEM MINT)"),
         " · ",
-        h("b", null, "10,000p")
+        h("b", null, "20,000p")
       ),
       h(
         "li",
         { key: 2 },
         h("b", { className: "text-slate-100" }, "PCL 9 (MINT)"),
-        " · 5,000p"
+        " · 10,000p"
       ),
-      h("li", { key: 3 }, h("b", null, "PCL 8 (NM-MT)"), " · 1,000p"),
-      h("li", { key: 4 }, h("b", null, "PCL 7 (NEAR MINT)"), " · 150p"),
-      h("li", { key: 5 }, h("b", null, "PCL 6 (EX-MT)"), " · 100p")
+      h("li", { key: 3 }, h("b", null, "PCL 8 (NM-MT)"), " · 2,000p"),
+      h("li", { key: 4 }, h("b", null, "PCL 7 (NEAR MINT)"), " · 300p"),
+      h("li", { key: 5 }, h("b", null, "PCL 6 (EX-MT)"), " · 200p")
     ),
   },
   {
@@ -514,15 +514,17 @@ const CENTER_SECTIONS: HelpSection[] = [
     ),
   },
   {
-    heading: "전시 수익 (시간당)",
+    heading: "전시 수익 (30분당)",
     icon: "💰",
     body: h(
       "div",
       null,
       h("b", null, "PCL 9·10"),
-      " 슬랩만 시간당 거래 포인트와 랭킹 점수(거래 포인트의 ",
-      h("b", null, "1/400"),
-      ")를 자동 적립. 센터 페이지에 들를 때마다 자동 정산돼요.",
+      " 슬랩만 ",
+      h("b", null, "30분"),
+      "마다 거래 포인트와 랭킹 점수(거래 포인트의 ",
+      h("b", null, "1/1200"),
+      ")를 자동 적립. 센터 페이지에 들를 때마다 자동 정산.",
       h(
         "ul",
         { className: "mt-1.5" },
@@ -531,45 +533,45 @@ const CENTER_SECTIONS: HelpSection[] = [
           { key: 1 },
           h("b", { className: "text-amber-300" }, "MUR PCL 10"),
           " · ",
-          h("b", null, "200,000p"),
-          " / 시간 · 랭킹 ",
-          h("b", null, "+500")
+          h("b", null, "300,000p"),
+          " / 30분 · 랭킹 ",
+          h("b", null, "+250")
         ),
         h(
           "li",
           { key: 2 },
           h("b", { className: "text-fuchsia-300" }, "UR PCL 10"),
           " · ",
-          h("b", null, "120,000p"),
+          h("b", null, "180,000p"),
           " · 랭킹 ",
-          h("b", null, "+300")
+          h("b", null, "+150")
         ),
         h(
           "li",
           { key: 3 },
           h("b", { className: "text-rose-300" }, "SAR PCL 10"),
           " · ",
-          h("b", null, "80,000p"),
+          h("b", null, "120,000p"),
           " · 랭킹 ",
-          h("b", null, "+200")
+          h("b", null, "+100")
         ),
         h(
           "li",
           { key: 4 },
           h("b", { className: "text-sky-300" }, "MA PCL 10"),
           " · ",
-          h("b", null, "60,000p"),
+          h("b", null, "90,000p"),
           " · 랭킹 ",
-          h("b", null, "+150")
+          h("b", null, "+75")
         ),
         h(
           "li",
           { key: 5 },
           h("b", { className: "text-emerald-300" }, "SR PCL 10"),
           " · ",
-          h("b", null, "40,000p"),
+          h("b", null, "60,000p"),
           " · 랭킹 ",
-          h("b", null, "+100")
+          h("b", null, "+50")
         )
       ),
       h(

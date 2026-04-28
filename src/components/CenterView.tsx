@@ -71,6 +71,12 @@ export default function CenterView() {
 
   const refresh = useCallback(async () => {
     if (!user) return;
+    // 매 refresh 마다 정산 시도 — 30분 이상 묵은 카드분은 즉시 적립.
+    // 전시/일괄전시 직후 사용자에게 누적분이 들어오는 게 즉시 보이게.
+    const claim = await claimShowcaseIncome(user.id);
+    if (claim.ok && typeof claim.points === "number") {
+      setPoints(claim.points);
+    }
     const [c, g, prof] = await Promise.all([
       fetchUserCenter(user.id),
       fetchUndisplayedGradings(user.id),
@@ -78,27 +84,17 @@ export default function CenterView() {
     ]);
     const pets = new Set(prof.main_card_ids ?? []);
     setShowcases(c);
-    // 펫으로 등록된 슬랩은 어디에도 노출되지 않도록 클라이언트에서도
-    // 한 번 더 거른다 — RPC 가 거부하더라도 사전에 안 보이게.
     setAvailableGradings(
       g.filter(
         (x) => (x.grade === 9 || x.grade === 10) && !pets.has(x.id)
       )
     );
     setLoading(false);
-  }, [user]);
+  }, [user, setPoints]);
 
-  // Silently sync any pending passive income on mount — no visible
-  // counter / toast. Showcase income accrues server-side and the
-  // user just sees a static "시간당 +Np / +M 점" rate below.
   useEffect(() => {
-    (async () => {
-      if (!user) return;
-      const res = await claimShowcaseIncome(user.id);
-      if (res.ok && typeof res.points === "number") setPoints(res.points);
-      await refresh();
-    })();
-  }, [user, refresh, setPoints]);
+    refresh();
+  }, [refresh]);
 
   const byCell = useMemo(() => {
     const m = new Map<string, CenterShowcase>();
@@ -248,7 +244,8 @@ export default function CenterView() {
     );
   }, [availableGradings, showcases]);
 
-  const incomePerHour = useMemo(() => {
+  // 30분당 적립값. (서버 slab_income_trade / slab_income_rank 와 정합)
+  const incomePerCycle = useMemo(() => {
     let trade = 0;
     let rank = 0;
     for (const sc of showcases) {
@@ -257,7 +254,7 @@ export default function CenterView() {
         if (!card) continue;
         const t = slabIncomeTrade(card.rarity, c.grade);
         trade += t;
-        rank += Math.floor(t / 200);
+        rank += Math.floor(t / 1200);
       }
     }
     return { trade, rank };
@@ -282,21 +279,21 @@ export default function CenterView() {
             <div className="inline-flex items-center gap-1.5 rounded-lg bg-amber-400/10 border border-amber-400/30 px-3 py-1.5 text-amber-200">
               <CoinIcon size="xs" />
               <b className="tabular-nums">
-                +{incomePerHour.trade.toLocaleString("ko-KR")}p
+                +{incomePerCycle.trade.toLocaleString("ko-KR")}p
               </b>
-              <span className="text-amber-200/70">/ 시간</span>
+              <span className="text-amber-200/70">/ 30분</span>
             </div>
-            {incomePerHour.rank > 0 && (
+            {incomePerCycle.rank > 0 && (
               <div className="inline-flex items-center gap-1.5 rounded-lg bg-rose-400/10 border border-rose-400/30 px-3 py-1.5 text-rose-200">
                 🏆
                 <b className="tabular-nums">
-                  +{incomePerHour.rank.toLocaleString("ko-KR")}
+                  +{incomePerCycle.rank.toLocaleString("ko-KR")}
                 </b>
-                <span className="text-rose-200/70">랭킹 / 시간</span>
+                <span className="text-rose-200/70">랭킹 / 30분</span>
               </div>
             )}
             <span className="text-zinc-500 text-[10px]">
-              · 1시간마다 자동 적립
+              · 30분마다 자동 적립
             </span>
           </div>
         )}
@@ -761,8 +758,10 @@ function GradingPickModal({
                       tone.text
                     )}
                   >
-                    PCL {g.grade} · 시간당{" "}
-                    {g.grade === 10 ? "5,000" : "3,000"}p
+                    PCL {g.grade} · 30분당{" "}
+                    {slabIncomeTrade(card.rarity, g.grade).toLocaleString(
+                      "ko-KR"
+                    )}p
                   </span>
                 </button>
               );

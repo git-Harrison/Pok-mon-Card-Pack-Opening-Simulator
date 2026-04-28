@@ -98,16 +98,22 @@ export const SHOWCASE_ORDER: ShowcaseType[] = [
 export const CENTER_GRID_COLS = 6;
 export const CENTER_GRID_ROWS = 6;
 
-// Mirror of supabase/migrations/20260518_showcase_income_v3.sql
-// `slab_income_trade(p_rarity, p_grade)`. Keep in sync with the SQL.
+// 20260612_showcase_income_30min_3x.sql 의 slab_income_trade 값과
+// 동기화. 30분 주기 1회 정산 시 지급되는 per-cycle 값. 시간당
+// 환산하려면 ×2.
 const SLAB_INCOME_TRADE: Record<string, Record<number, number>> = {
-  MUR: { 10: 100_000, 9: 50_000, 8: 20_000, 7: 10_000, 6: 5_000 },
-  UR: { 10: 60_000, 9: 30_000, 8: 12_000, 7: 6_000, 6: 3_000 },
-  SAR: { 10: 40_000, 9: 20_000, 8: 8_000, 7: 4_000, 6: 2_000 },
-  MA: { 10: 30_000, 9: 15_000, 8: 6_000, 7: 3_000, 6: 1_500 },
-  SR: { 10: 20_000, 9: 10_000, 8: 4_000, 7: 2_000, 6: 1_000 },
+  MUR: { 10: 300_000, 9: 150_000, 8: 60_000, 7: 30_000, 6: 15_000 },
+  UR: { 10: 180_000, 9: 90_000, 8: 36_000, 7: 18_000, 6: 9_000 },
+  SAR: { 10: 120_000, 9: 60_000, 8: 24_000, 7: 12_000, 6: 6_000 },
+  MA: { 10: 90_000, 9: 45_000, 8: 18_000, 7: 9_000, 6: 4_500 },
+  SR: { 10: 60_000, 9: 30_000, 8: 12_000, 7: 6_000, 6: 3_000 },
 };
 
 export function slabIncomeTrade(rarity: string, grade: number): number {
   return SLAB_INCOME_TRADE[rarity]?.[grade] ?? 0;
+}
+
+/** 30분당 랭킹 점수 — 서버 slab_income_rank 와 정합 (분모 1200). */
+export function slabIncomeRank(rarity: string, grade: number): number {
+  return Math.floor(slabIncomeTrade(rarity, grade) / 1200);
 }

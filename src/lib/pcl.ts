@@ -45,11 +45,11 @@ export const PCL_LABEL: Record<number, string> = {
  * 정도만 회수 (이전엔 ~40× 폭리). PCL 9/10 은 lottery 성격으로 유지.
  */
 export const PCL_SELL_PRICE: Record<number, number> = {
-  10: 10_000,
-  9: 5_000,
-  8: 1_000,
-  7: 150,
-  6: 100,
+  10: 20_000,
+  9: 10_000,
+  8: 2_000,
+  7: 300,
+  6: 200,
 };
 
 /**
