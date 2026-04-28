@@ -1757,8 +1757,9 @@ function GymHelpModal({ onClose }: { onClose: () => void }) {
               감소.
             </Section>
             <Section icon="💪" title="전투력(center_power) 버프">
-              체육관 1개 점령 = <b>전투력 +10,000</b> 자동 추가. 여러 곳을
-              점령할수록 누적 — 도감/펫/전시 외 별도 보너스.
+              메달 보유 → 전투력 자동 추가 (난이도 비례, 영구):<br />
+              EASY +10K · NORMAL +20K · HARD +40K · BOSS +80K.<br />
+              여러 곳 메달을 모을수록 누적 — 도감/펫/전시 외 별도 보너스.
             </Section>
             <Section icon="🏅" title="메달">
               체육관을 점령할 때마다 그 속성의 고유 메달이 계정에 등록.
@@ -1781,7 +1782,7 @@ function GymHelpModal({ onClose }: { onClose: () => void }) {
               (2× / 0.5×) 적용.
             </Section>
             <Section icon="💡" title="팁">
-              • 첫 도전은 가장 약한 체육관 1개로 메달 + 점령 버프 +10,000 확보.<br />
+              • 첫 도전은 가장 약한 EASY 체육관으로 메달(+10K 전투력) 확보.<br />
               • 점령 직후 일일 보상 1회 청구 → 랭킹 +10,000 즉시 반영.<br />
               • <b>MUR 슬랩</b>은 도전/방어 모두 강력 — power 동등 시 비-MUR 압도.<br />
               • 도감/펫/전시 전투력으로 min_power 부족 시 도감 채우기 우선.

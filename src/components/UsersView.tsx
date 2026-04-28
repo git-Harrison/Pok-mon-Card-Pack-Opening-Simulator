@@ -826,12 +826,30 @@ function ScoreBreakdown({
     const pokedex = (row as { pokedex_bonus?: number }).pokedex_bonus ?? 0;
     const completion = (row as { pokedex_completion_bonus?: number }).pokedex_completion_bonus ?? 0;
     const pet = row.pet_score ?? 0;
-    // 메달 기반 +10K (영구 보유). 점령 중인 체육관 수가 아니라 누적
-    // 메달 수가 기준. server: count(*) from user_gym_medals.
+    // 메달 buff — 난이도 비례 합산 (서버 medal_buff 우선,
+    // fallback: gym_medals 의 difficulty 기준 클라 합산, 마지막 fallback:
+    // medal_count × 10000 추정).
+    const MEDAL_BUFF_BY_DIFFICULTY: Record<string, number> = {
+      EASY: 10000, NORMAL: 20000, HARD: 40000, BOSS: 80000,
+    };
     const medalCount =
       (row as { medal_count?: number }).medal_count ??
       (row.gym_medals?.length ?? 0);
-    const gymBuff = medalCount * 10000;
+    const serverBuff = (row as { medal_buff?: number }).medal_buff;
+    const computedBuff = (row.gym_medals ?? []).reduce(
+      (s, m) =>
+        s +
+        (MEDAL_BUFF_BY_DIFFICULTY[
+          (m as { gym_difficulty?: string }).gym_difficulty ?? "EASY"
+        ] ?? 10000),
+      0
+    );
+    const gymBuff =
+      typeof serverBuff === "number"
+        ? serverBuff
+        : computedBuff > 0
+        ? computedBuff
+        : medalCount * 10000;
     const showcase = Math.max(
       0,
       (row.center_power ?? 0) - pokedex - completion - pet - gymBuff
