@@ -61,7 +61,13 @@ export default function WalletView() {
     ]);
     setSnap(w);
     setPcl(g);
-    setPetIds(new Set(p.main_card_ids ?? []));
+    // spec 2-1: 펫은 main_cards_by_type 으로 옮겨감. legacy main_card_ids
+    // 와 union 으로 펫 표시 (펫 뱃지 / 비활성화 등).
+    const petSet = new Set<string>(p.main_card_ids ?? []);
+    for (const arr of Object.values(p.main_cards_by_type ?? {})) {
+      for (const c of arr) petSet.add(c.id);
+    }
+    setPetIds(petSet);
     setLoading(false);
   }, [userId]);
 

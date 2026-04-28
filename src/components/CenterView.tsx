@@ -84,7 +84,12 @@ export default function CenterView() {
       fetchUndisplayedGradings(user.id),
       fetchProfile(user.id),
     ]);
-    const pets = new Set(prof.main_card_ids ?? []);
+    // 펫 풀 — legacy main_card_ids ∪ 신구조 main_cards_by_type 평탄화
+    // (spec 2-1). 펫 카드를 전시 picker 에서 제외하기 위해 union 필요.
+    const pets = new Set<string>(prof.main_card_ids ?? []);
+    for (const arr of Object.values(prof.main_cards_by_type ?? {})) {
+      for (const c of arr) pets.add(c.id);
+    }
     setShowcases(c);
     setAvailableGradings(
       g.filter(

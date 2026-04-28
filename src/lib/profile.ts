@@ -233,19 +233,8 @@ export async function setCharacter(userId: string, key: CharacterKey) {
   return data as { ok: boolean; error?: string; character?: string };
 }
 
-export async function setMainCards(userId: string, gradingIds: string[]) {
-  const { data, error } = await supabase.rpc("set_main_cards", {
-    p_user_id: userId,
-    p_grading_ids: gradingIds,
-  });
-  if (error) return { ok: false as const, error: error.message };
-  return data as {
-    ok: boolean;
-    error?: string;
-    pet_score?: number;
-    count?: number;
-  };
-}
+// setMainCards (legacy flat 펫 등록) 폐기됨 — spec 2-1 의 setPetForType
+// 으로 대체. 호출자 0 개 확인 후 wrapper 제거.
 
 export async function updateDisplayName(userId: string, newName: string) {
   const { data, error } = await supabase.rpc("update_display_name", {
