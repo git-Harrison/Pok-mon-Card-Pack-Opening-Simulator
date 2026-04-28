@@ -68,6 +68,11 @@ export interface Gym {
   location_y: number;
   min_power: number;
   display_order: number;
+  /** 챕터 — 1 (기존 8 type) / 2 (신규 10 type) / 3 (예정). */
+  chapter: number;
+  /** 난이도별 일일 보상 (서버 산정). 표시용 미리보기. */
+  daily_money?: number;
+  daily_rank_pts?: number;
   pokemon: GymPokemon[];
   medal: GymMedal | null;
   /** null 이면 비점령 (NPC 관장). */

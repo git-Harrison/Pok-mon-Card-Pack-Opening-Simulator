@@ -75,6 +75,27 @@ function formatRemaining(ms: number): string {
   return `${s}초`;
 }
 
+const CHAPTER_META: Record<
+  number,
+  { name: string; title: string; subtitle: string }
+> = {
+  1: {
+    name: "잎새 지방",
+    title: "기본 8 속성 체육관",
+    subtitle: "풀/물/바위/전기/불꽃/땅/얼음/에스퍼",
+  },
+  2: {
+    name: "불의 군도",
+    title: "확장 10 속성 체육관",
+    subtitle: "격투/독/비행/벌레/고스트/페어리/강철/악/노말/드래곤",
+  },
+  3: {
+    name: "?? 미지의 영역",
+    title: "곧 추가",
+    subtitle: "다음 시즌에 만나요",
+  },
+};
+
 const STATUS_PILL: Record<
   GymStatus,
   { label: string; cls: string }
@@ -101,6 +122,8 @@ export default function GymView() {
   } | null>(null);
   const [defenseGym, setDefenseGym] = useState<Gym | null>(null);
   const [centerPower, setCenterPower] = useState<number | null>(null);
+  // 챕터 carousel — 1 (기존 8) / 2 (신규 10) / 3 (예정).
+  const [chapter, setChapter] = useState<number>(1);
   // 매초 다시 그려 보호/쿨타임 카운트다운이 자연스럽게 줄어들도록.
   const [, force] = useState(0);
 
@@ -142,18 +165,85 @@ export default function GymView() {
     [gyms, selectedId]
   );
 
+  // 현재 챕터의 체육관만 필터.
+  const gymsInChapter = useMemo(
+    () => gyms.filter((g) => (g.chapter ?? 1) === chapter),
+    [gyms, chapter]
+  );
+
+  // 총 챕터 수 (현재 데이터 기준 + 미래 슬롯 1).
+  const MAX_CHAPTER = 3;
+  const chapterMeta = CHAPTER_META[chapter] ?? CHAPTER_META[1];
+
   if (loading) return <CenteredPokeLoader />;
 
   return (
     <div className="relative max-w-3xl mx-auto px-3 md:px-6 py-3 md:py-6 fade-in">
       <PageHeader
         title="🏟️ 체육관 지도"
-        subtitle="속성별 8개 체육관. 관장을 이기면 점령 + 메달."
+        subtitle={`챕터 ${chapter} · ${chapterMeta.name}`}
         tone="amber"
       />
 
+      {/* 챕터 carousel 헤더 — 좌우 화살표 + 진행 표시 */}
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => setChapter((c) => Math.max(1, c - 1))}
+          disabled={chapter <= 1}
+          aria-label="이전 챕터"
+          style={{ touchAction: "manipulation" }}
+          className={clsx(
+            "shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg font-black border transition",
+            chapter <= 1
+              ? "bg-white/5 text-zinc-600 border-white/10 cursor-not-allowed"
+              : "bg-amber-400/15 text-amber-200 border-amber-400/40 hover:bg-amber-400/25 active:scale-95"
+          )}
+        >
+          ◀
+        </button>
+        <div className="flex-1 min-w-0 text-center">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-amber-300/80 font-black">
+            CHAPTER {chapter} / {MAX_CHAPTER}
+          </p>
+          <p className="text-sm font-bold text-white truncate">
+            {chapterMeta.title}
+          </p>
+          <p className="text-[10px] text-zinc-400 truncate">
+            {chapterMeta.subtitle}
+          </p>
+          <div className="mt-1 inline-flex items-center gap-1">
+            {Array.from({ length: MAX_CHAPTER }).map((_, i) => (
+              <span
+                key={i}
+                className={clsx(
+                  "w-1.5 h-1.5 rounded-full",
+                  i + 1 === chapter ? "bg-amber-300" : "bg-white/20"
+                )}
+              />
+            ))}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setChapter((c) => Math.min(MAX_CHAPTER, c + 1))}
+          disabled={chapter >= MAX_CHAPTER}
+          aria-label="다음 챕터"
+          style={{ touchAction: "manipulation" }}
+          className={clsx(
+            "shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg font-black border transition",
+            chapter >= MAX_CHAPTER
+              ? "bg-white/5 text-zinc-600 border-white/10 cursor-not-allowed"
+              : "bg-amber-400/15 text-amber-200 border-amber-400/40 hover:bg-amber-400/25 active:scale-95"
+          )}
+        >
+          ▶
+        </button>
+      </div>
+
       <GymTownMap
-        gyms={gyms}
+        gyms={gymsInChapter}
+        chapter={chapter}
         myUserId={userId}
         centerPower={centerPower}
         onSelect={setSelectedId}
@@ -257,28 +347,69 @@ export default function GymView() {
 
 function GymTownMap({
   gyms,
+  chapter,
   myUserId,
   centerPower,
   onSelect,
   reduce,
 }: {
   gyms: Gym[];
+  chapter: number;
   myUserId: string | null;
   centerPower: number | null;
   onSelect: (id: string) => void;
   reduce: boolean;
 }) {
+  // 챕터별 외곽 테두리 색.
+  const borderCls =
+    chapter === 1
+      ? "border-emerald-900 shadow-[0_0_0_2px_rgba(16,185,129,0.4),0_8px_24px_rgba(0,0,0,0.5)]"
+      : chapter === 2
+      ? "border-rose-900 shadow-[0_0_0_2px_rgba(244,63,94,0.4),0_8px_24px_rgba(0,0,0,0.5)]"
+      : "border-violet-900 shadow-[0_0_0_2px_rgba(139,92,246,0.4),0_8px_24px_rgba(0,0,0,0.5)]";
+
+  // 챕터별 배경 + 라우트 SVG.
+  const Background =
+    chapter === 1
+      ? PixelTownBackground
+      : chapter === 2
+      ? PixelTownBackgroundCh2
+      : PixelTownBackgroundCh3;
+  const Routes =
+    chapter === 1
+      ? PixelRoutes
+      : chapter === 2
+      ? PixelRoutesCh2
+      : null;
+
   return (
     <div
-      className="mt-4 relative w-full max-w-md mx-auto aspect-[10/13] rounded-2xl overflow-hidden border-4 border-emerald-900 shadow-[0_0_0_2px_rgba(16,185,129,0.4),0_8px_24px_rgba(0,0,0,0.5)]"
+      className={clsx(
+        "mt-3 relative w-full max-w-md mx-auto aspect-[10/13] rounded-2xl overflow-hidden border-4",
+        borderCls
+      )}
       style={{ imageRendering: "pixelated" }}
     >
-      <PixelTownBackground />
+      <Background />
+      {Routes && <Routes />}
 
-      {/* 동선 — 체육관 사이 path. SVG 위에 absolute 배치. */}
-      <PixelRoutes />
+      {/* 챕터 3 placeholder — 빈 맵 안내 */}
+      {chapter === 3 && gyms.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="bg-zinc-950/85 border border-violet-500/40 rounded-2xl px-6 py-5 text-center">
+            <p className="text-3xl">🔒</p>
+            <p className="mt-2 text-[11px] uppercase tracking-[0.2em] text-violet-200/85 font-black">
+              ?? 미지의 영역
+            </p>
+            <p className="mt-1 text-sm font-bold text-white">곧 추가</p>
+            <p className="mt-1 text-[10px] text-zinc-400">
+              다음 시즌에 만나요
+            </p>
+          </div>
+        </div>
+      )}
 
-      {/* 체육관 핀 — HTML 버튼 (touch / accessibility 위해). */}
+      {/* 체육관 핀 */}
       {gyms.map((g) => (
         <PixelGymPin
           key={g.id}
@@ -492,6 +623,178 @@ function PixelRoutes() {
         <path d="M72 18 L80 50" />
       </g>
     </svg>
+  );
+}
+
+/** 챕터 2 — "불의 군도" 배경. 화산 / 폐허 / 부유섬 / 어둠 숲 / 용암.
+ *  10 신규 체육관이 분포할 위치 (격투 90,32 / 독 4,30 / 비행 50,12 /
+ *  벌레 4,70 / 고스트 38,68 / 페어리 78,105 / 강철 90,68 / 악 28,110 /
+ *  노말 50,105 / 드래곤 88,92) 에 어울리는 환경. */
+function PixelTownBackgroundCh2() {
+  return (
+    <svg
+      className="absolute inset-0 w-full h-full"
+      viewBox="0 0 100 130"
+      preserveAspectRatio="none"
+      shapeRendering="crispEdges"
+      aria-hidden
+    >
+      {/* 어두운 진홍 하늘 */}
+      <rect x="0" y="0" width="100" height="22" fill="#1a0612" />
+      <rect x="0" y="22" width="100" height="6" fill="#2a0a1c" />
+      {/* 별 + 보름달 */}
+      {[
+        [10, 4], [22, 7], [34, 5], [60, 3], [72, 6], [86, 4], [94, 8],
+        [16, 14], [40, 16], [68, 14],
+      ].map(([x, y], i) => (
+        <rect key={i} x={x} y={y} width="1" height="1" fill="#fde68a" />
+      ))}
+      <rect x="48" y="6" width="6" height="6" fill="#fef3c7" />
+      <rect x="46" y="8" width="2" height="2" fill="#fef3c7" />
+      <rect x="54" y="8" width="2" height="2" fill="#fef3c7" />
+
+      {/* 부유섬 — 좌상단 (독 / 비행 근처) */}
+      <PixelFloatingIsland x={4} y={26} w={22} h={8} />
+      <PixelFloatingIsland x={42} y={5} w={18} h={7} />
+
+      {/* 폐허 신전 — 중앙 (고스트, 38,68) */}
+      <g>
+        <rect x="32" y="58" width="14" height="2" fill="#1f1b2e" />
+        <rect x="30" y="60" width="18" height="2" fill="#3f3548" />
+        <rect x="32" y="62" width="3" height="6" fill="#3f3548" />
+        <rect x="38" y="62" width="3" height="6" fill="#3f3548" />
+        <rect x="44" y="62" width="3" height="6" fill="#3f3548" />
+        <rect x="30" y="68" width="18" height="2" fill="#1f1b2e" />
+        {/* 갈라진 균열 */}
+        <rect x="38" y="63" width="1" height="3" fill="#0a0418" />
+      </g>
+
+      {/* 큰 화산 — 우하단 (드래곤 88,92 근처) */}
+      <PixelVolcano x={78} y={78} />
+      {/* 용암 강 — 우하단 흐름 */}
+      <rect x="60" y="92" width="40" height="2" fill="#7c2d12" />
+      <rect x="60" y="94" width="40" height="2" fill="#9a3412" />
+      <rect x="60" y="96" width="40" height="1" fill="#dc2626" opacity="0.7" />
+
+      {/* 검은 모래 길 (도로) */}
+      <rect x="0" y="56" width="100" height="3" fill="#1c1917" />
+      <rect x="0" y="56" width="100" height="1" fill="#0a0907" />
+      <rect x="0" y="58" width="100" height="1" fill="#3f3f46" opacity="0.6" />
+
+      {/* 어둠 숲 — 좌하단 (벌레 4,70 / 악 28,110) */}
+      <rect x="0" y="62" width="50" height="68" fill="#1a0e2c" />
+      <rect x="0" y="62" width="50" height="1" fill="#0a0418" />
+      <PixelDarkTree x={4} y={75} />
+      <PixelDarkTree x={16} y={84} />
+      <PixelDarkTree x={28} y={92} />
+      <PixelDarkTree x={6} y={104} />
+      <PixelDarkTree x={36} y={114} />
+      <PixelDarkTree x={20} y={120} />
+      {/* 보랏빛 안개 입자 */}
+      {[
+        [10, 88], [22, 96], [38, 102], [14, 110], [30, 118],
+      ].map(([x, y], i) => (
+        <rect key={`mist-${i}`} x={x} y={y} width="2" height="1" fill="#7c3aed" opacity="0.4" />
+      ))}
+
+      {/* 우하단 — 화산 평원 + 페어리 사원 (흰 빛) */}
+      <rect x="50" y="62" width="50" height="68" fill="#3a0f1a" />
+      <rect x="50" y="62" width="50" height="1" fill="#1a0612" />
+      {/* 페어리 사원 — 78,105 근처 */}
+      <g>
+        <rect x="74" y="98" width="10" height="2" fill="#f9a8d4" opacity="0.7" />
+        <rect x="72" y="100" width="14" height="3" fill="#f472b6" opacity="0.6" />
+        <rect x="74" y="103" width="2" height="3" fill="#831843" />
+        <rect x="82" y="103" width="2" height="3" fill="#831843" />
+      </g>
+      {/* 핫핑크 잔잎 */}
+      {[[58, 100], [66, 110], [88, 120], [62, 122]].map(([x, y], i) => (
+        <rect key={`pink-${i}`} x={x} y={y} width="1" height="1" fill="#f472b6" />
+      ))}
+
+      {/* 강철 산 (강철 90,68) */}
+      <PixelMountain x={84} y={56} w={14} h={12} fill="#71717a" />
+      <rect x="86" y="64" width="2" height="4" fill="#a1a1aa" />
+      <rect x="92" y="64" width="2" height="4" fill="#a1a1aa" />
+    </svg>
+  );
+}
+
+/** 챕터 2 라우트 — 신규 10 체육관 사이 path. */
+function PixelRoutesCh2() {
+  return (
+    <svg
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      viewBox="0 0 100 130"
+      preserveAspectRatio="none"
+      shapeRendering="crispEdges"
+      aria-hidden
+    >
+      <g stroke="#ec4899" strokeWidth="0.6" strokeDasharray="1.2 1.4" fill="none">
+        {/* 비행(50,12) → 격투(90,32) */}
+        <path d="M50 12 L90 32" />
+        {/* 비행 → 독(4,30) */}
+        <path d="M50 12 L4 30" />
+        {/* 독 → 벌레(4,70) */}
+        <path d="M4 30 L4 70" />
+        {/* 격투 → 강철(90,68) */}
+        <path d="M90 32 L90 68" />
+        {/* 강철 → 드래곤(88,92) */}
+        <path d="M90 68 L88 92" />
+        {/* 벌레 → 고스트(38,68) */}
+        <path d="M4 70 L38 68" />
+        {/* 고스트 → 노말(50,105) */}
+        <path d="M38 68 L50 105" />
+        {/* 노말 → 페어리(78,105) */}
+        <path d="M50 105 L78 105" />
+        {/* 노말 → 악(28,110) */}
+        <path d="M50 105 L28 110" />
+        {/* 페어리 → 드래곤 */}
+        <path d="M78 105 L88 92" />
+      </g>
+    </svg>
+  );
+}
+
+/** 챕터 3 — 미지의 영역 placeholder 배경. 어두운 안개. */
+function PixelTownBackgroundCh3() {
+  return (
+    <svg
+      className="absolute inset-0 w-full h-full"
+      viewBox="0 0 100 130"
+      preserveAspectRatio="none"
+      shapeRendering="crispEdges"
+      aria-hidden
+    >
+      <rect x="0" y="0" width="100" height="130" fill="#0a0814" />
+      {/* radial-ish 안개 도트 */}
+      {Array.from({ length: 80 }).map((_, i) => {
+        const x = (i * 13) % 100;
+        const y = ((i * 7) % 130) + 2;
+        const op = ((i * 17) % 5) / 10 + 0.05;
+        return <rect key={i} x={x} y={y} width="1" height="1" fill="#7c3aed" opacity={op} />;
+      })}
+      {/* "?" 거대 글리프 (도트) */}
+      <g fill="#a78bfa" opacity="0.4">
+        <rect x="44" y="50" width="12" height="3" />
+        <rect x="56" y="53" width="3" height="6" />
+        <rect x="50" y="59" width="6" height="3" />
+        <rect x="50" y="62" width="3" height="6" />
+        <rect x="50" y="72" width="3" height="3" />
+      </g>
+    </svg>
+  );
+}
+
+/** 어둠 숲 나무 — 보라/검정 잎. */
+function PixelDarkTree({ x, y }: { x: number; y: number }) {
+  return (
+    <g>
+      <rect x={x + 1} y={y}     width={4} height={1} fill="#581c87" />
+      <rect x={x}     y={y + 1} width={6} height={2} fill="#3b0764" />
+      <rect x={x + 1} y={y + 3} width={4} height={1} fill="#1e1b4b" />
+      <rect x={x + 2} y={y + 4} width={2} height={2} fill="#1c1917" />
+    </g>
   );
 }
 
@@ -1348,7 +1651,11 @@ function DailyClaimButton({
         ? `⏳ 다음 보상까지 ${remain}`
         : claimed
         ? "✅ 일일 보상 받음 — 24시간 후 다시 받을 수 있어요"
-        : "🎁 일일 보상 받기 (+20,000,000P · 랭킹 +10,000)"}
+        : `🎁 일일 보상 받기 (+${(gym.daily_money ?? 20000000).toLocaleString(
+            "ko-KR"
+          )}P · 랭킹 +${(gym.daily_rank_pts ?? 10000).toLocaleString(
+            "ko-KR"
+          )})`}
     </button>
   );
 }
@@ -1460,7 +1767,10 @@ function GymHelpModal({ onClose }: { onClose: () => void }) {
               에 노출.
             </Section>
             <Section icon="🎁" title="일일 보상 — 24시간 쿨타임">
-              점령 중인 체육관에서 1일 1회 청구: <b>+20,000,000P · 랭킹 +10,000</b>.<br />
+              점령 중인 체육관에서 1일 1회 청구. 보상은 난이도 비례:
+              <br />
+              EASY +1000만P/+3K · NORMAL +2000만P/+8K · HARD +4000만P/+15K
+              · BOSS +8000만P/+25K.<br />
               체육관 단위 24h 쿨타임 — 다른 사람이 점령해도 이전 청구 시점
               부터 계산 유지.
             </Section>
