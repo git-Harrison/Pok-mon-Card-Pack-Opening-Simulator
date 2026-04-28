@@ -1327,10 +1327,34 @@ function BulkResults({
   const autoDeleted =
     result.auto_deleted_count ?? result.auto_sold_count ?? 0;
 
+  // NPC reaction — 성공률 / 절대 성공장수 따라 톤 변화.
+  const total = success + fail;
+  const successRate = total > 0 ? success / total : 0;
+  const oakLine =
+    success === 0 && fail > 0
+      ? "음... 이번엔 운이 좋지 않았군. 다음에 다시 도전하게."
+      : success >= 50
+      ? `대단하군! ${success.toLocaleString("ko-KR")}장이나 성공이라니!`
+      : successRate >= 0.4
+      ? "꽤 괜찮은 결과야. 잘 해냈군."
+      : "수고했네. 카드 상태가 들쭉날쭉했군 그래.";
+
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
       <div className="flex-1 min-h-0 overflow-y-auto p-6 md:p-8 flex flex-col items-center justify-center text-center gap-4">
-        <span aria-hidden className="text-5xl md:text-6xl">🎉</span>
+        <span aria-hidden className="text-5xl md:text-6xl">
+          {success === 0 ? "🔍" : "🎉"}
+        </span>
+
+        {/* 오박사 reaction 말풍선 */}
+        <div className="relative max-w-sm mx-auto rounded-xl bg-white text-zinc-900 px-3 py-2 text-[13px] font-bold leading-snug shadow-md">
+          <span aria-hidden className="absolute -top-1.5 left-6 w-3 h-3 rotate-45 bg-white" />
+          <span className="text-fuchsia-700/80 text-[10px] uppercase tracking-[0.18em] block mb-0.5">
+            오박사
+          </span>
+          💬 {oakLine}
+        </div>
+
         <div>
           <p className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">
             감별 완료
