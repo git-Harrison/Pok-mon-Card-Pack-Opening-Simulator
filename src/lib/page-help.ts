@@ -533,14 +533,32 @@ const CENTER_SECTIONS: HelpSection[] = [
           { key: 1 },
           h("b", { className: "text-amber-300" }, "MUR PCL 10"),
           " · ",
-          h("b", null, "300,000p"),
+          h("b", null, "600,000p"),
           " / 30분 · 랭킹 ",
-          h("b", null, "+250")
+          h("b", null, "+500")
         ),
         h(
           "li",
           { key: 2 },
           h("b", { className: "text-fuchsia-300" }, "UR PCL 10"),
+          " · ",
+          h("b", null, "360,000p"),
+          " · 랭킹 ",
+          h("b", null, "+300")
+        ),
+        h(
+          "li",
+          { key: 3 },
+          h("b", { className: "text-rose-300" }, "SAR PCL 10"),
+          " · ",
+          h("b", null, "240,000p"),
+          " · 랭킹 ",
+          h("b", null, "+200")
+        ),
+        h(
+          "li",
+          { key: 4 },
+          h("b", { className: "text-sky-300" }, "MA PCL 10"),
           " · ",
           h("b", null, "180,000p"),
           " · 랭킹 ",
@@ -548,8 +566,8 @@ const CENTER_SECTIONS: HelpSection[] = [
         ),
         h(
           "li",
-          { key: 3 },
-          h("b", { className: "text-rose-300" }, "SAR PCL 10"),
+          { key: 5 },
+          h("b", { className: "text-emerald-300" }, "SR PCL 10"),
           " · ",
           h("b", null, "120,000p"),
           " · 랭킹 ",
@@ -557,27 +575,54 @@ const CENTER_SECTIONS: HelpSection[] = [
         ),
         h(
           "li",
-          { key: 4 },
-          h("b", { className: "text-sky-300" }, "MA PCL 10"),
+          { key: 6 },
+          h("b", { className: "text-fuchsia-200" }, "AR PCL 10"),
           " · ",
-          h("b", null, "90,000p"),
+          h("b", null, "80,000p"),
           " · 랭킹 ",
-          h("b", null, "+75")
+          h("b", null, "+66")
         ),
         h(
           "li",
-          { key: 5 },
-          h("b", { className: "text-emerald-300" }, "SR PCL 10"),
+          { key: 7 },
+          h("b", { className: "text-indigo-200" }, "RR PCL 10"),
           " · ",
-          h("b", null, "60,000p"),
+          h("b", null, "50,000p"),
           " · 랭킹 ",
-          h("b", null, "+50")
+          h("b", null, "+41")
+        ),
+        h(
+          "li",
+          { key: 8 },
+          h("b", { className: "text-sky-200" }, "R PCL 10"),
+          " · ",
+          h("b", null, "30,000p"),
+          " · 랭킹 ",
+          h("b", null, "+25")
+        ),
+        h(
+          "li",
+          { key: 9 },
+          h("b", { className: "text-emerald-200" }, "U PCL 10"),
+          " · ",
+          h("b", null, "20,000p"),
+          " · 랭킹 ",
+          h("b", null, "+16")
+        ),
+        h(
+          "li",
+          { key: 10 },
+          h("b", { className: "text-zinc-200" }, "C PCL 10"),
+          " · ",
+          h("b", null, "15,000p"),
+          " · 랭킹 ",
+          h("b", null, "+12")
         )
       ),
       h(
         "p",
         { className: "mt-1.5 text-zinc-400" },
-        "PCL 9 = PCL 10의 약 50%. PCL 6~8 슬랩은 전시되지 않아요."
+        "PCL 9 = PCL 10의 약 50%. 전시는 PCL 9·10 만 가능."
       )
     ),
   },
