@@ -17,6 +17,8 @@ import {
   type GradingJob,
   type WalletSnapshot,
 } from "@/lib/db";
+
+const PROGRESS_POLL_MS = 3000;
 import { getCard } from "@/lib/sets";
 import { isPclEligible, PCL_LABEL, pclTone } from "@/lib/pcl";
 import { compareRarity } from "@/lib/rarity";
@@ -55,15 +57,40 @@ export default function GradingView() {
   const [wallet, setWallet] = useState<WalletSnapshot | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
 
+  // 활성 잡 — 모달 외부에서도 진행 상황 표시 (spec 3-2 백그라운드).
+  // 페이지 진입 / focus 복귀 / 3 초 폴링 으로 갱신.
+  const [activeJob, setActiveJob] = useState<GradingJob | null>(null);
+
   const refreshWallet = useCallback(async () => {
     if (!user) return;
     const w = await fetchWallet(user.id);
     setWallet(w);
   }, [user]);
 
+  const refreshActiveJob = useCallback(async () => {
+    if (!user) return;
+    const job = await getActiveGradingJob(user.id);
+    setActiveJob(job);
+  }, [user]);
+
   useEffect(() => {
     refreshWallet();
-  }, [refreshWallet]);
+    refreshActiveJob();
+  }, [refreshWallet, refreshActiveJob]);
+
+  // 페이지 노출 중일 때 3 초마다 잡 상태 갱신.
+  useEffect(() => {
+    if (!user) return;
+    const id = setInterval(refreshActiveJob, PROGRESS_POLL_MS);
+    return () => clearInterval(id);
+  }, [user, refreshActiveJob]);
+
+  // 모달 닫을 때 wallet + 잡 모두 새로고침 (감별 완료/취소 반영).
+  const onCloseBulk = useCallback(() => {
+    setBulkOpen(false);
+    refreshWallet();
+    refreshActiveJob();
+  }, [refreshWallet, refreshActiveJob]);
 
   const eligibleCount = useMemo(() => {
     if (!wallet) return 0;
@@ -78,6 +105,10 @@ export default function GradingView() {
       {/* Lab hero — large NPC + speech bubble */}
       <LabHero busy={bulkOpen} />
 
+      {/* 활성 잡 banner — 모달 닫고 페이지 다시 와도 진행 상황 보임 */}
+      {activeJob && activeJob.status !== "completed" && (
+        <ActiveJobBanner job={activeJob} onResume={() => setBulkOpen(true)} />
+      )}
 
       {/* Eligible card count */}
       <section className="mt-4 md:mt-5 rounded-2xl border border-fuchsia-400/40 bg-gradient-to-b from-fuchsia-500/10 to-indigo-500/10 px-4 py-5 md:px-6 md:py-6 text-center">
@@ -131,10 +162,7 @@ export default function GradingView() {
           <BulkGradingModal
             wallet={wallet}
             userId={user.id}
-            onClose={() => {
-              setBulkOpen(false);
-              refreshWallet();
-            }}
+            onClose={onCloseBulk}
             onPointsChange={setPoints}
           />
         )}
@@ -146,6 +174,59 @@ export default function GradingView() {
 /* ────────────────────────────────────────────────────────────
  * Lab hero — Oak NPC + speech bubble with idle motion / parallax
  * ──────────────────────────────────────────────────────────── */
+/** 활성 잡 banner — 페이지 외부에서도 백그라운드 감별 진행 표시 + 모달
+ *  복귀. 잡 status === completed 면 표시 안 함 (모달 결과 화면이 처리). */
+function ActiveJobBanner({
+  job,
+  onResume,
+}: {
+  job: GradingJob;
+  onResume: () => void;
+}) {
+  const pct =
+    job.total > 0
+      ? Math.min(100, Math.round((job.cursor / job.total) * 100))
+      : 0;
+  const isProcessing = job.status === "processing" || job.status === "pending";
+  return (
+    <button
+      type="button"
+      onClick={onResume}
+      style={{ touchAction: "manipulation" }}
+      className="mt-3 w-full rounded-2xl border border-fuchsia-400/50 bg-gradient-to-r from-fuchsia-500/15 via-violet-500/15 to-indigo-500/15 px-4 py-3 text-left hover:scale-[1.005] active:scale-[0.99] transition shadow-[0_8px_24px_-12px_rgba(168,85,247,0.5)]"
+    >
+      <div className="flex items-center gap-3">
+        <span aria-hidden className="text-2xl">🔬</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-fuchsia-200/85 font-bold">
+            {isProcessing ? "감별 진행 중" : `감별 ${job.status}`}
+          </p>
+          <p className="mt-0.5 text-[13px] font-bold text-white">
+            {job.cursor.toLocaleString("ko-KR")} /{" "}
+            {job.total.toLocaleString("ko-KR")}장 ({pct}%)
+            <span className="ml-1.5 text-[11px] text-fuchsia-200/70 font-normal">
+              · 성공 {job.success_count.toLocaleString("ko-KR")}장
+            </span>
+          </p>
+        </div>
+        <span className="shrink-0 text-[11px] font-bold text-fuchsia-200">
+          이어보기 →
+        </span>
+      </div>
+      <div className="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden">
+        <div
+          className="h-full transition-[width] duration-500 ease-out"
+          style={{
+            width: `${pct}%`,
+            backgroundImage:
+              "linear-gradient(90deg, rgba(217,70,239,0.85) 0%, rgba(99,102,241,0.85) 100%)",
+          }}
+        />
+      </div>
+    </button>
+  );
+}
+
 function LabHero({ busy }: { busy: boolean }) {
   const reduce = useReducedMotion();
   const sectionRef = useRef<HTMLElement | null>(null);
