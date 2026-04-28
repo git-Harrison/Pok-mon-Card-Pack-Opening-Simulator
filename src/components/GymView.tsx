@@ -77,26 +77,22 @@ function formatRemaining(ms: number): string {
 
 const CHAPTER_META: Record<
   number,
-  { name: string; title: string; subtitle: string }
+  { name: string; subtitle: string }
 > = {
   1: {
     name: "잎새 지방",
-    title: "기본 8 속성 체육관",
     subtitle: "풀/물/바위/전기/불꽃/땅/얼음/에스퍼",
   },
   2: {
     name: "불의 군도",
-    title: "초반 3 체육관",
     subtitle: "노말/격투/벌레",
   },
   3: {
     name: "어둠의 협곡",
-    title: "후반 7 체육관 (mixed)",
     subtitle: "독/비행/고스트/페어리/강철/악/드래곤",
   },
   4: {
     name: "미지의 영역",
-    title: "봉인된 차원",
     subtitle: "다음 시즌에 깨어날 영역",
   },
 };
@@ -212,9 +208,6 @@ export default function GymView() {
             CHAPTER {chapter} / {MAX_CHAPTER}
           </p>
           <p className="text-sm font-bold text-white truncate">
-            {chapterMeta.title}
-          </p>
-          <p className="text-[10px] text-zinc-400 truncate">
             {chapterMeta.subtitle}
           </p>
           <div className="mt-1 inline-flex items-center gap-1">
