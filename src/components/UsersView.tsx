@@ -388,10 +388,11 @@ export default function UsersView() {
                     </p>
                     {/* 체육관 메달 — 모든 탭 공통 노출. 각 메달 = type
                         색 SVG 아이콘. 호버 시 상세 (체육관/난이도).
-                        nowrap + 가로 스크롤 — 닉네임/점수와 줄바꿈 충돌
-                        방지. 잎새(풀) 메달 우선 + 정의된 type 순서. */}
+                        flex-wrap — 메달이 많아져도 다음 줄로 자연스럽게
+                        넘어가서 잘리지 않음. 잎새(풀) 메달 우선 + 정의된
+                        type 순서. */}
                     {e.gym_medals && e.gym_medals.length > 0 && (
-                      <div className="mt-1 flex items-center gap-0.5 overflow-x-auto no-scrollbar -mx-0.5 px-0.5">
+                      <div className="mt-1 flex items-center gap-1 flex-wrap">
                         {[...e.gym_medals]
                           .sort(
                             (a, b) =>
@@ -410,6 +411,9 @@ export default function UsersView() {
                               />
                             </span>
                           ))}
+                        <span className="ml-0.5 text-[10px] tabular-nums text-zinc-500 self-center">
+                          {e.gym_medals.length}
+                        </span>
                       </div>
                     )}
                   </div>
