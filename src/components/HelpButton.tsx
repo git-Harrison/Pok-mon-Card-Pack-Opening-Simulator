@@ -73,10 +73,10 @@ export default function HelpButton({
         className={clsx(
           "inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 hover:bg-white/10 active:bg-white/15 text-zinc-200 font-semibold transition",
           iconOnly
-            ? "w-9 h-9 text-base"
+            ? "w-10 h-10 text-base"
             : clsx(
                 "gap-1",
-                size === "sm" ? "h-7 px-2.5 text-[10px]" : "h-8 px-3 text-[11px]"
+                size === "sm" ? "h-9 px-3 text-[11px]" : "h-10 px-3.5 text-[12px]"
               ),
           className
         )}
