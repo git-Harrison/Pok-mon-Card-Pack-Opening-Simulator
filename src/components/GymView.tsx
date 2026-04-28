@@ -86,13 +86,18 @@ const CHAPTER_META: Record<
   },
   2: {
     name: "불의 군도",
-    title: "확장 10 속성 체육관",
-    subtitle: "격투/독/비행/벌레/고스트/페어리/강철/악/노말/드래곤",
+    title: "확장 5 속성 체육관",
+    subtitle: "노말/격투/벌레/독/비행",
   },
   3: {
-    name: "?? 미지의 영역",
-    title: "곧 추가",
-    subtitle: "다음 시즌에 만나요",
+    name: "어둠의 협곡",
+    title: "고난도 5 속성 체육관",
+    subtitle: "고스트/페어리/강철/악/드래곤",
+  },
+  4: {
+    name: "미지의 영역",
+    title: "봉인된 차원",
+    subtitle: "다음 시즌에 깨어날 영역",
   },
 };
 
@@ -171,8 +176,8 @@ export default function GymView() {
     [gyms, chapter]
   );
 
-  // 총 챕터 수 (현재 데이터 기준 + 미래 슬롯 1).
-  const MAX_CHAPTER = 3;
+  // 총 챕터 수 — 1~3 활성, 4 는 "미지의 영역" 예약.
+  const MAX_CHAPTER = 4;
   const chapterMeta = CHAPTER_META[chapter] ?? CHAPTER_META[1];
 
   if (loading) return <CenteredPokeLoader />;
@@ -366,7 +371,9 @@ function GymTownMap({
       ? "border-emerald-900 shadow-[0_0_0_2px_rgba(16,185,129,0.4),0_8px_24px_rgba(0,0,0,0.5)]"
       : chapter === 2
       ? "border-rose-900 shadow-[0_0_0_2px_rgba(244,63,94,0.4),0_8px_24px_rgba(0,0,0,0.5)]"
-      : "border-violet-900 shadow-[0_0_0_2px_rgba(139,92,246,0.4),0_8px_24px_rgba(0,0,0,0.5)]";
+      : chapter === 3
+      ? "border-violet-900 shadow-[0_0_0_2px_rgba(139,92,246,0.4),0_8px_24px_rgba(0,0,0,0.5)]"
+      : "border-zinc-800 shadow-[0_0_0_2px_rgba(0,0,0,0.85),0_12px_36px_rgba(168,85,247,0.3)]";
 
   // 챕터별 배경 + 라우트 SVG.
   const Background =
@@ -374,12 +381,16 @@ function GymTownMap({
       ? PixelTownBackground
       : chapter === 2
       ? PixelTownBackgroundCh2
-      : PixelTownBackgroundCh3;
+      : chapter === 3
+      ? PixelTownBackgroundCh3
+      : PixelTownBackgroundCh4;
   const Routes =
     chapter === 1
       ? PixelRoutes
       : chapter === 2
       ? PixelRoutesCh2
+      : chapter === 3
+      ? PixelRoutesCh3
       : null;
 
   return (
@@ -393,20 +404,9 @@ function GymTownMap({
       <Background />
       {Routes && <Routes />}
 
-      {/* 챕터 3 placeholder — 빈 맵 안내 */}
-      {chapter === 3 && gyms.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="bg-zinc-950/85 border border-violet-500/40 rounded-2xl px-6 py-5 text-center">
-            <p className="text-3xl">🔒</p>
-            <p className="mt-2 text-[11px] uppercase tracking-[0.2em] text-violet-200/85 font-black">
-              ?? 미지의 영역
-            </p>
-            <p className="mt-1 text-sm font-bold text-white">곧 추가</p>
-            <p className="mt-1 text-[10px] text-zinc-400">
-              다음 시즌에 만나요
-            </p>
-          </div>
-        </div>
+      {/* 챕터 4 — 미지의 영역. 웅장한 dark 톤 안내 (자물쇠 X). */}
+      {chapter === 4 && gyms.length === 0 && (
+        <UnknownRealmOverlay />
       )}
 
       {/* 체육관 핀 */}
@@ -720,7 +720,8 @@ function PixelTownBackgroundCh2() {
   );
 }
 
-/** 챕터 2 라우트 — 신규 10 체육관 사이 path. */
+/** 챕터 2 라우트 — 5 체육관 (노말/격투/벌레/독/비행) 사이 path.
+ *  위치: 노말(50,18) / 격투(88,26) / 벌레(8,50) / 독(8,90) / 비행(88,90). */
 function PixelRoutesCh2() {
   return (
     <svg
@@ -731,32 +732,24 @@ function PixelRoutesCh2() {
       aria-hidden
     >
       <g stroke="#ec4899" strokeWidth="0.6" strokeDasharray="1.2 1.4" fill="none">
-        {/* 비행(50,12) → 격투(90,32) */}
-        <path d="M50 12 L90 32" />
-        {/* 비행 → 독(4,30) */}
-        <path d="M50 12 L4 30" />
-        {/* 독 → 벌레(4,70) */}
-        <path d="M4 30 L4 70" />
-        {/* 격투 → 강철(90,68) */}
-        <path d="M90 32 L90 68" />
-        {/* 강철 → 드래곤(88,92) */}
-        <path d="M90 68 L88 92" />
-        {/* 벌레 → 고스트(38,68) */}
-        <path d="M4 70 L38 68" />
-        {/* 고스트 → 노말(50,105) */}
-        <path d="M38 68 L50 105" />
-        {/* 노말 → 페어리(78,105) */}
-        <path d="M50 105 L78 105" />
-        {/* 노말 → 악(28,110) */}
-        <path d="M50 105 L28 110" />
-        {/* 페어리 → 드래곤 */}
-        <path d="M78 105 L88 92" />
+        {/* 노말 → 격투 */}
+        <path d="M50 18 L88 26" />
+        {/* 노말 → 벌레 */}
+        <path d="M50 18 L8 50" />
+        {/* 격투 → 비행 (우측 세로) */}
+        <path d="M88 26 L88 90" />
+        {/* 벌레 → 독 (좌측 세로) */}
+        <path d="M8 50 L8 90" />
+        {/* 독 → 비행 (하단 가로) */}
+        <path d="M8 90 L88 90" />
       </g>
     </svg>
   );
 }
 
-/** 챕터 3 — 미지의 영역 placeholder 배경. 어두운 안개. */
+/** 챕터 3 — 어둠의 협곡. 깊은 보라/인디고 톤 + 폐허/협곡/달.
+ *  체육관 위치: 페어리 (22,18) / 강철 (78,28) / 고스트 (50,56) /
+ *               악 (22,90) / 드래곤 (78,92). */
 function PixelTownBackgroundCh3() {
   return (
     <svg
@@ -766,23 +759,312 @@ function PixelTownBackgroundCh3() {
       shapeRendering="crispEdges"
       aria-hidden
     >
-      <rect x="0" y="0" width="100" height="130" fill="#0a0814" />
-      {/* radial-ish 안개 도트 */}
-      {Array.from({ length: 80 }).map((_, i) => {
-        const x = (i * 13) % 100;
-        const y = ((i * 7) % 130) + 2;
-        const op = ((i * 17) % 5) / 10 + 0.05;
-        return <rect key={i} x={x} y={y} width="1" height="1" fill="#7c3aed" opacity={op} />;
-      })}
-      {/* "?" 거대 글리프 (도트) */}
-      <g fill="#a78bfa" opacity="0.4">
-        <rect x="44" y="50" width="12" height="3" />
-        <rect x="56" y="53" width="3" height="6" />
-        <rect x="50" y="59" width="6" height="3" />
-        <rect x="50" y="62" width="3" height="6" />
-        <rect x="50" y="72" width="3" height="3" />
+      {/* 어두운 인디고 하늘 + 자줏빛 그라데이션 */}
+      <rect x="0" y="0" width="100" height="40" fill="#0e0820" />
+      <rect x="0" y="40" width="100" height="20" fill="#1a0d2e" />
+      {/* 별 — 차갑고 sparse */}
+      {[
+        [12, 5], [28, 9], [44, 4], [60, 7], [78, 6], [92, 10],
+        [20, 16], [54, 18], [86, 15],
+      ].map(([x, y], i) => (
+        <rect key={`s-${i}`} x={x} y={y} width="1" height="1" fill="#c4b5fd" opacity="0.7" />
+      ))}
+      {/* 초승달 — 우상단 */}
+      <g>
+        <rect x="84" y="6"  width="6" height="2" fill="#e9d5ff" />
+        <rect x="82" y="8"  width="8" height="3" fill="#e9d5ff" />
+        <rect x="84" y="11" width="6" height="2" fill="#e9d5ff" />
+        <rect x="86" y="8"  width="3" height="3" fill="#1a0d2e" />
+      </g>
+      {/* 협곡 절벽 — 좌우 거대한 바위 실루엣 */}
+      <g fill="#1f1b3a">
+        {/* 좌측 절벽 */}
+        <polygon points="0,40 18,40 12,60 22,60 14,80 26,80 18,100 30,100 22,130 0,130" />
+        {/* 우측 절벽 */}
+        <polygon points="100,40 82,40 88,60 78,60 86,80 74,80 82,100 70,100 78,130 100,130" />
+      </g>
+      {/* 절벽 하이라이트 */}
+      <g fill="#3b2e5e" opacity="0.6">
+        <polygon points="0,40 18,40 12,60 22,60 14,68 6,68" />
+        <polygon points="100,40 82,40 88,60 78,60 86,68 94,68" />
+      </g>
+      {/* 협곡 바닥 — 깊은 균열 */}
+      <rect x="20" y="62" width="60" height="2" fill="#0a0418" />
+      <rect x="22" y="64" width="56" height="2" fill="#1f1b3a" opacity="0.6" />
+      {/* 보랏빛 안개 띠 */}
+      <rect x="0" y="58" width="100" height="3" fill="#7c3aed" opacity="0.18" />
+      <rect x="0" y="74" width="100" height="3" fill="#a855f7" opacity="0.12" />
+      {/* 폐허 기둥 — 중앙 (고스트 위치 근처) */}
+      <g>
+        <rect x="44" y="48" width="3" height="10" fill="#3b2e5e" />
+        <rect x="53" y="48" width="3" height="10" fill="#3b2e5e" />
+        <rect x="42" y="46" width="14" height="2" fill="#5b4a8a" />
+        <rect x="42" y="58" width="14" height="2" fill="#3b2e5e" />
+      </g>
+      {/* 부서진 돌무더기 */}
+      {[[28, 110], [70, 112], [40, 118], [60, 120]].map(([x, y], i) => (
+        <g key={`r-${i}`}>
+          <rect x={x} y={y} width="3" height="2" fill="#3b2e5e" />
+          <rect x={x + 1} y={y - 1} width="2" height="1" fill="#5b4a8a" />
+        </g>
+      ))}
+      {/* 도깨비 불 / 영혼 입자 — 부유 */}
+      {[
+        [22, 38], [50, 28], [78, 42], [38, 100], [62, 104], [88, 80],
+      ].map(([x, y], i) => (
+        <g key={`f-${i}`}>
+          <rect x={x} y={y} width="2" height="2" fill="#a78bfa" opacity="0.8" />
+          <rect x={x - 1} y={y + 1} width="1" height="1" fill="#c4b5fd" opacity="0.5" />
+          <rect x={x + 2} y={y + 1} width="1" height="1" fill="#c4b5fd" opacity="0.5" />
+        </g>
+      ))}
+      {/* 거대 그림자 — 좌하/우하 corner glow */}
+      <radialGradient id="canyon-glow" cx="50%" cy="50%">
+        <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.3" />
+        <stop offset="100%" stopColor="#7c3aed" stopOpacity="0" />
+      </radialGradient>
+      <ellipse cx="22" cy="92" rx="14" ry="6" fill="url(#canyon-glow)" />
+      <ellipse cx="78" cy="94" rx="14" ry="6" fill="url(#canyon-glow)" />
+    </svg>
+  );
+}
+
+/** 챕터 3 라우트 — 어둠의 협곡 5 체육관 사이 path. */
+function PixelRoutesCh3() {
+  return (
+    <svg
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      viewBox="0 0 100 130"
+      preserveAspectRatio="none"
+      shapeRendering="crispEdges"
+      aria-hidden
+    >
+      <g stroke="#a78bfa" strokeWidth="0.6" strokeDasharray="1.2 1.4" fill="none">
+        {/* 페어리(22,18) → 고스트(50,56) */}
+        <path d="M22 18 L50 56" />
+        {/* 강철(78,28) → 고스트(50,56) */}
+        <path d="M78 28 L50 56" />
+        {/* 페어리 → 강철 (상단 가로) */}
+        <path d="M22 18 L78 28" />
+        {/* 고스트 → 악(22,90) */}
+        <path d="M50 56 L22 90" />
+        {/* 고스트 → 드래곤(78,92) */}
+        <path d="M50 56 L78 92" />
+        {/* 악 → 드래곤 (하단 가로) */}
+        <path d="M22 90 L78 92" />
       </g>
     </svg>
+  );
+}
+
+/** 챕터 4 — 미지의 영역. 웅장 / 어둠 / 공포 톤. 자물쇠 이모지 사용 X. */
+function PixelTownBackgroundCh4() {
+  return (
+    <svg
+      className="absolute inset-0 w-full h-full"
+      viewBox="0 0 100 130"
+      preserveAspectRatio="none"
+      shapeRendering="crispEdges"
+      aria-hidden
+    >
+      {/* 칠흑 배경 — 가장 어둡게 */}
+      <rect x="0" y="0" width="100" height="130" fill="#020208" />
+      {/* 위에서부터 옅어지는 자줏빛 mist */}
+      <defs>
+        <linearGradient id="ch4-haze" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.18" />
+          <stop offset="50%" stopColor="#7c3aed" stopOpacity="0.05" />
+          <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.18" />
+        </linearGradient>
+        <radialGradient id="ch4-eye" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#dc2626" stopOpacity="0.95" />
+          <stop offset="35%" stopColor="#7f1d1d" stopOpacity="0.85" />
+          <stop offset="70%" stopColor="#1a0612" stopOpacity="0.5" />
+          <stop offset="100%" stopColor="#020208" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="ch4-vignette" cx="50%" cy="50%" r="60%">
+          <stop offset="60%" stopColor="#020208" stopOpacity="0" />
+          <stop offset="100%" stopColor="#020208" stopOpacity="0.95" />
+        </radialGradient>
+      </defs>
+      <rect x="0" y="0" width="100" height="130" fill="url(#ch4-haze)" />
+
+      {/* 깊은 fog 도트 패턴 */}
+      {Array.from({ length: 60 }).map((_, i) => {
+        const x = (i * 19) % 100;
+        const y = ((i * 11) % 130) + 1;
+        const op = ((i * 7) % 4) / 10 + 0.05;
+        return (
+          <rect
+            key={`fog-${i}`}
+            x={x}
+            y={y}
+            width="1"
+            height="1"
+            fill="#3b0764"
+            opacity={op}
+          />
+        );
+      })}
+
+      {/* 거대 실루엣 — 스토리적 위협. 정 가운데 거대한 형체.
+          몸통 사다리꼴 + 어깨 넓은 그림자 + 뿔 / 머리 */}
+      <g fill="#0a0418" opacity="0.95">
+        {/* 어깨 / 망토 윤곽 */}
+        <polygon points="22,90 38,72 62,72 78,90 78,130 22,130" />
+        {/* 머리 그림자 */}
+        <rect x="40" y="58" width="20" height="14" />
+        {/* 양 뿔 */}
+        <polygon points="40,58 36,46 42,58" />
+        <polygon points="60,58 64,46 58,58" />
+      </g>
+      {/* 형체 윤곽 보강 — 미세 highlight */}
+      <g fill="#1a0612" opacity="0.9">
+        <rect x="40" y="58" width="2" height="14" />
+        <rect x="58" y="58" width="2" height="14" />
+        <rect x="22" y="90" width="2" height="40" />
+        <rect x="76" y="90" width="2" height="40" />
+      </g>
+
+      {/* 핏빛 두 눈 (radial glow) */}
+      <circle cx="46" cy="64" r="3.5" fill="url(#ch4-eye)" />
+      <circle cx="54" cy="64" r="3.5" fill="url(#ch4-eye)" />
+      {/* 동공 — 정 가운데 어둡게 */}
+      <rect x="45" y="63" width="2" height="2" fill="#0a0000" />
+      <rect x="53" y="63" width="2" height="2" fill="#0a0000" />
+
+      {/* 룬 글리프 — 좌/우 도트 패턴 (고대 마법진 느낌) */}
+      <g fill="#7c3aed" opacity="0.55">
+        {/* 좌측 룬 */}
+        <rect x="6" y="20" width="2" height="1" />
+        <rect x="9" y="22" width="1" height="2" />
+        <rect x="6" y="25" width="2" height="1" />
+        <rect x="11" y="20" width="1" height="6" />
+        <rect x="6" y="100" width="6" height="1" />
+        <rect x="6" y="103" width="1" height="3" />
+        <rect x="11" y="103" width="1" height="3" />
+        <rect x="6" y="107" width="6" height="1" />
+        {/* 우측 룬 */}
+        <rect x="92" y="20" width="2" height="1" />
+        <rect x="89" y="22" width="1" height="2" />
+        <rect x="92" y="25" width="2" height="1" />
+        <rect x="88" y="20" width="1" height="6" />
+        <rect x="88" y="100" width="6" height="1" />
+        <rect x="88" y="103" width="1" height="3" />
+        <rect x="93" y="103" width="1" height="3" />
+        <rect x="88" y="107" width="6" height="1" />
+      </g>
+
+      {/* 가운데 균열 / 광선 — 사이드부터 위로 비스듬한 빔 */}
+      <g fill="#7c3aed" opacity="0.18">
+        <polygon points="48,0 50,0 52,40 50,40" />
+        <polygon points="0,30 12,28 14,32 0,34" />
+        <polygon points="100,30 88,28 86,32 100,34" />
+      </g>
+
+      {/* 핏빛 줄기 — 형체 발 아래 흘러내림 */}
+      <g fill="#7f1d1d" opacity="0.6">
+        <rect x="46" y="120" width="1" height="10" />
+        <rect x="50" y="118" width="2" height="12" />
+        <rect x="55" y="122" width="1" height="8" />
+      </g>
+
+      {/* 떠다니는 작은 도깨비 입자 (영혼) — 형체 주변 */}
+      {[
+        [30, 70], [70, 70], [26, 84], [74, 86], [40, 50], [60, 50],
+        [18, 110], [82, 110],
+      ].map(([x, y], i) => (
+        <g key={`spirit-${i}`}>
+          <rect x={x} y={y} width="2" height="2" fill="#a78bfa" opacity="0.7" />
+          <rect x={x - 1} y={y + 1} width="1" height="1" fill="#c4b5fd" opacity="0.4" />
+        </g>
+      ))}
+
+      {/* vignette — 가장자리 어둠 강조 */}
+      <rect x="0" y="0" width="100" height="130" fill="url(#ch4-vignette)" />
+    </svg>
+  );
+}
+
+/** 미지의 영역 안내 overlay — 자물쇠 이모티콘 X, 웅장한 dark text +
+ *  점멸 룬 + 핏빛 강조. */
+function UnknownRealmOverlay() {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <style>{`
+        @keyframes ch4-pulse-red {
+          0%, 100% { text-shadow: 0 0 12px rgba(220,38,38,0.85), 0 0 32px rgba(127,29,29,0.7); }
+          50% { text-shadow: 0 0 18px rgba(220,38,38,1), 0 0 48px rgba(127,29,29,0.9); }
+        }
+        @keyframes ch4-rune-flicker {
+          0%, 100% { opacity: 0.85; }
+          50% { opacity: 0.4; }
+        }
+        @keyframes ch4-shake {
+          0%, 100% { transform: translate(0, 0); }
+          25% { transform: translate(-0.5px, 0.3px); }
+          50% { transform: translate(0.4px, -0.4px); }
+          75% { transform: translate(-0.3px, 0.5px); }
+        }
+      `}</style>
+      <div
+        className="relative rounded-xl px-7 py-5 text-center"
+        style={{
+          background: "rgba(2,2,8,0.55)",
+          border: "1px solid rgba(124,58,237,0.45)",
+          boxShadow:
+            "inset 0 0 32px -8px rgba(124,58,237,0.45), 0 16px 36px -10px rgba(2,2,8,0.9)",
+          animation: "ch4-shake 7s ease-in-out infinite",
+        }}
+      >
+        <p
+          className="text-[10px] uppercase tracking-[0.42em] font-black"
+          style={{
+            color: "#c4b5fd",
+            animation: "ch4-rune-flicker 3.6s ease-in-out infinite",
+            fontFamily: "monospace",
+          }}
+        >
+          ▽ ◇ ▽ &nbsp; SEALED &nbsp; ▽ ◇ ▽
+        </p>
+        <p
+          className="mt-3 text-3xl md:text-4xl font-black tracking-[0.18em]"
+          style={{
+            fontFamily: "monospace",
+            color: "#fecaca",
+            animation: "ch4-pulse-red 2.4s ease-in-out infinite",
+          }}
+        >
+          미지의 영역
+        </p>
+        <p
+          className="mt-2 text-[11px] tracking-[0.22em] font-bold"
+          style={{
+            color: "#7f1d1d",
+            fontFamily: "monospace",
+          }}
+        >
+          THE REALM AWAKENS SOON
+        </p>
+        <p className="mt-3 text-[10px] text-violet-300/65 leading-snug max-w-[18rem] mx-auto">
+          잊혀진 차원의 봉인이 약해지고 있다.<br />
+          때가 되면 어둠 속에서 형체들이 깨어날 것이다.
+        </p>
+        <div
+          className="mt-3 inline-flex items-center gap-2 text-[9px] font-mono"
+          style={{
+            color: "#a78bfa",
+            animation: "ch4-rune-flicker 2.8s ease-in-out infinite",
+          }}
+        >
+          <span>Σ</span>
+          <span>Ξ</span>
+          <span>Ω</span>
+          <span>Φ</span>
+          <span>Ψ</span>
+        </div>
+      </div>
+    </div>
   );
 }
 
