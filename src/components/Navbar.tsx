@@ -37,7 +37,7 @@ const NAV_ITEMS = [
 ];
 
 // 지갑/센터/도감/선물함/체육관은 더보기 시트에서 진입.
-const MOBILE_PRIMARY = ["/", "/wild", "/grading", "/users", "/profile"];
+const MOBILE_PRIMARY = ["/", "/wild", "/grading", "/pokedex", "/profile"];
 
 // Header title shown next to the logo. Mobile only — saves vertical
 // space by replacing the per-page <h1>. Long page names live in the
