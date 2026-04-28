@@ -107,16 +107,18 @@ export default function GradingView() {
         🔎 일괄 감별 시작
       </button>
 
-      {/* Quick tips */}
+      {/* Quick tips 섹션은 다음 라운드의 감별 페이지 전체 리뉴얼(NPC
+          대화형 + 몰입 UI) 에서 통째로 교체 예정. 임시로 자동판매 → 자동
+          삭제 라벨만 정정 + 한도값 동기화. */}
       <section className="mt-4 grid grid-cols-3 gap-2">
         <Tip icon="📈" title="GEM MINT">
           PCL 10이 만점
         </Tip>
-        <Tip icon="💸" title="자동 판매">
-          하위 등급 즉시 환산
+        <Tip icon="🗑️" title="자동 삭제">
+          하위 등급 즉시 폐기
         </Tip>
         <Tip icon="🛡️" title="감별 한도">
-          PCL 50,000장
+          PCL 20,000장
         </Tip>
       </section>
 
@@ -937,10 +939,10 @@ function AutoSellThresholdPicker({
           style={{ touchAction: "manipulation" }}
         />
         <span className="text-xs font-semibold text-zinc-200">
-          PCL 자동 판매
+          PCL 자동 삭제
         </span>
         <span className="text-[10px] text-zinc-500">
-          선택한 등급 미만은 슬랩 저장 없이 즉시 환산
+          선택한 등급 미만은 슬랩 저장 없이 즉시 삭제
         </span>
       </label>
       {enabled && (
@@ -1064,6 +1066,9 @@ function BulkSubmittingScreen({
   );
 }
 
+/** 일괄 감별 결과 — 성공 개수 위주 단순 표시 (spec 3-1).
+ *  서버가 더 이상 per-card results 배열을 반환하지 않음 → 합산 카운트
+ *  4종 + 안내 문구만. 자동판매 폐기 → 자동삭제 카운트로 라벨 변경. */
 function BulkResults({
   result,
   onClose,
@@ -1071,89 +1076,44 @@ function BulkResults({
   result: BulkGradingResult;
   onClose: () => void;
 }) {
-  const allRows = result.results ?? [];
   const success = result.success_count ?? 0;
   const fail = result.fail_count ?? 0;
   const skipped = result.skipped_count ?? 0;
   const capSkipped = result.cap_skipped_count ?? 0;
-  const autoSoldCount = result.auto_sold_count ?? 0;
-  const autoSoldEarned = result.auto_sold_earned ?? 0;
-
-  // 결과 행 표시 — 자동판매분은 별도 chip 으로 합계만 노출하고
-  // 행 목록에선 숨김 (사용자 요청). 슬랩 저장 / 실패 / cap_skip /
-  // 보유 부족 등만 카드별 행으로 표시.
-  const rows = useMemo(
-    () => allRows.filter((r) => !r.auto_sold),
-    [allRows]
-  );
-
-  const gradeBreakdown = useMemo(() => {
-    const m = new Map<number, number>();
-    for (const r of allRows) {
-      if (r.ok && !r.failed && !r.auto_sold && typeof r.grade === "number") {
-        m.set(r.grade, (m.get(r.grade) ?? 0) + 1);
-      }
-    }
-    return Array.from(m.entries()).sort((a, b) => b[0] - a[0]);
-  }, [allRows]);
+  // 신규 키 우선, 구 키 fallback (마이그레이션 timing 보호).
+  const autoDeleted =
+    result.auto_deleted_count ?? result.auto_sold_count ?? 0;
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-      <div className="shrink-0 p-4 border-b border-white/10 bg-black/30">
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <SummaryChip label="성공" value={`${success}`} tone="emerald" />
-          <SummaryChip label="실패" value={`${fail}`} tone="rose" />
-          <SummaryChip
-            label="자동판매"
-            value={
-              autoSoldCount > 0
-                ? `+${autoSoldEarned.toLocaleString("ko-KR")}p`
-                : "—"
-            }
-            tone="amber"
-          />
+      <div className="flex-1 min-h-0 overflow-y-auto p-6 md:p-8 flex flex-col items-center justify-center text-center gap-4">
+        <span aria-hidden className="text-5xl md:text-6xl">🎉</span>
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">
+            감별 완료
+          </p>
+          <p className="mt-2 text-3xl md:text-4xl font-black text-white tabular-nums">
+            성공 <span className="text-emerald-300">{success.toLocaleString("ko-KR")}</span>
+            <span className="text-base text-zinc-500 font-bold"> 장</span>
+          </p>
         </div>
-        {gradeBreakdown.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
-            {gradeBreakdown.map(([g, n]) => {
-              const tone = pclTone(g);
-              return (
-                <span
-                  key={g}
-                  className={clsx(
-                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[11px] font-bold tabular-nums",
-                    tone.text
-                  )}
-                  style={{ borderColor: "rgba(255,255,255,0.12)" }}
-                >
-                  PCL {g} · {n}장
-                </span>
-              );
-            })}
-          </div>
-        )}
+
+        <div className="grid grid-cols-2 gap-2 w-full max-w-sm mt-2">
+          <SummaryChip label="실패" value={fail.toLocaleString("ko-KR")} tone="rose" />
+          <SummaryChip label="자동 삭제" value={autoDeleted.toLocaleString("ko-KR")} tone="amber" />
+        </div>
+
         {capSkipped > 0 && (
-          <p className="mt-2 text-[11px] text-rose-300 text-center font-bold">
-            ⚠️ PCL 한도(50,000장) 초과 — {capSkipped}장은 보유 한도에 막혀 감별 못 받았어요. 카드는 안전하게 지갑에 남아있어요.
+          <p className="mt-2 text-[12px] text-rose-300 max-w-sm leading-snug">
+            ⚠️ PCL 한도(20,000장) 초과 — {capSkipped.toLocaleString("ko-KR")}
+            장은 보유 한도에 막혀 감별 못 받았어요. 카드는 지갑에 남아있어요.
           </p>
         )}
         {skipped > 0 && (
-          <p className="mt-2 text-[10px] text-zinc-500 text-center">
-            보유하지 않은 카드 {skipped}장은 건너뛰었어요.
+          <p className="text-[11px] text-zinc-500">
+            건너뜀 {skipped.toLocaleString("ko-KR")}장 (보유 부족 / 미매칭)
           </p>
         )}
-        {autoSoldCount > 0 && (
-          <p className="mt-2 text-[10px] text-emerald-300 text-center">
-            자동 판매 {autoSoldCount}장 · +
-            {autoSoldEarned.toLocaleString("ko-KR")}p
-          </p>
-        )}
-      </div>
-
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-1.5">
-        {rows.map((r, i) => (
-          <BulkResultRow key={`${r.card_id}-${i}`} row={r} />
-        ))}
       </div>
 
       <div className="shrink-0 border-t border-white/10 p-3 bg-black/40">
@@ -1165,77 +1125,6 @@ function BulkResults({
         >
           확인
         </button>
-      </div>
-    </div>
-  );
-}
-
-function BulkResultRow({
-  row,
-}: {
-  row: NonNullable<BulkGradingResult["results"]>[number];
-}) {
-  const card = getCard(row.card_id);
-  const isGraded = row.ok && !row.failed && typeof row.grade === "number";
-  const tone = isGraded ? pclTone(row.grade as number) : null;
-  return (
-    <div
-      className={clsx(
-        "flex items-center gap-3 rounded-lg p-2 border",
-        row.failed
-          ? "bg-rose-500/5 border-rose-500/25"
-          : isGraded
-          ? "bg-white/5 border-white/10"
-          : "bg-white/3 border-white/10 opacity-70"
-      )}
-    >
-      <div className="relative w-10 aspect-[5/7] rounded shrink-0 overflow-hidden ring-1 ring-white/10">
-        {card?.imageUrl ? (
-          <img
-            src={card.imageUrl}
-            alt=""
-            loading="lazy"
-            draggable={false}
-            className={clsx(
-              "w-full h-full object-contain bg-zinc-900 pointer-events-none",
-              row.failed && "grayscale opacity-50"
-            )}
-          />
-        ) : null}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[12px] text-white font-semibold truncate">
-          {card?.name ?? row.card_id}
-        </p>
-        <p className="text-[10px] text-zinc-500 truncate mt-0.5">
-          {row.failed
-            ? "감별 실패 · 카드 소실"
-            : isGraded
-            ? `${PCL_LABEL[row.grade as number] ?? ""}${
-                row.sell_payout
-                  ? ` · 자동판매 +${row.sell_payout.toLocaleString("ko-KR")}p`
-                  : ""
-              }`
-            : row.error === "not_owned"
-            ? "보유하지 않아 건너뜀"
-            : "건너뜀"}
-        </p>
-      </div>
-      <div className="shrink-0">
-        {row.failed ? (
-          <span className="text-rose-300 text-lg">💔</span>
-        ) : isGraded ? (
-          <span
-            className={clsx(
-              "inline-flex items-center justify-center w-11 h-9 rounded-md font-black tabular-nums",
-              tone?.banner
-            )}
-          >
-            {row.grade}
-          </span>
-        ) : (
-          <span className="text-[10px] text-zinc-500">—</span>
-        )}
       </div>
     </div>
   );

@@ -302,6 +302,8 @@ async function expirePendingGifts() {
 
 // ---------- PCL grading ----------
 
+/** 단일 결과 행 — 더 이상 서버가 results 배열을 반환하지 않음. 타입은
+ *  과거 호출자 호환용으로만 export 유지. */
 export interface BulkGradingResultItem {
   card_id: string;
   ok: boolean;
@@ -316,12 +318,17 @@ export interface BulkGradingResultItem {
 export interface BulkGradingResult {
   ok: boolean;
   error?: string;
+  /** @deprecated 서버가 더 이상 per-card 결과를 반환하지 않음 (spec 3-1). */
   results?: BulkGradingResultItem[];
   success_count?: number;
   fail_count?: number;
   skipped_count?: number;
   cap_skipped_count?: number;
+  /** 신규 — 자동 삭제된 카드 수 (이전 auto_sold_count 가 의미 변경). */
+  auto_deleted_count?: number;
+  /** @deprecated 판매 기능 폐기. 항상 0. */
   auto_sold_count?: number;
+  /** @deprecated 판매 기능 폐기. 항상 0. */
   auto_sold_earned?: number;
   bonus?: number;
   points?: number;
@@ -790,20 +797,8 @@ export async function fetchWildCooldown(userId: string) {
   };
 }
 
-export async function bulkSellGradings(userId: string, gradingIds: string[]) {
-  const { data, error } = await supabase.rpc("bulk_sell_gradings", {
-    p_user_id: userId,
-    p_grading_ids: gradingIds,
-  });
-  if (error) return { ok: false as const, error: error.message };
-  return data as {
-    ok: boolean;
-    error?: string;
-    sold?: number;
-    earned?: number;
-    points?: number;
-  };
-}
+// bulk_sell_gradings RPC 폐기됨 (20260617). spec 6-1 — PCL 판매 제거.
+// 카드 처리는 감별 페이지의 자동 삭제로 일원화.
 
 export async function removeShowcase(userId: string, showcaseId: string) {
   const { data, error } = await supabase.rpc("remove_showcase", {
