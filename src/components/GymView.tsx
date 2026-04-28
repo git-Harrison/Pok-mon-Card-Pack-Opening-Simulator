@@ -31,25 +31,38 @@ import Portal from "./Portal";
 import GymChallengeOverlay from "./GymChallengeOverlay";
 import GymMedalIcon from "./GymMedalIcon";
 import GymDefenseDeckModal from "./GymDefenseDeckModal";
+import NpcDialogModal from "./NpcDialogModal";
 
 // 폴링 주기 — Phase 1 에서는 단순 setInterval. Phase 4 에서 Supabase
 // realtime 으로 격상 검토.
 const POLL_INTERVAL_MS = 5000;
 
 const HELLO_LINES: string[] = [
-  "오늘은 그냥 둘러보러 왔구나.",
-  "체육관 분위기는 어떠한가? 또 보세!",
-  "도전 준비가 되면 다시 와라.",
-  "트레이너로서의 길은 길고도 험하다네.",
-  "내 포켓몬들은 언제든 준비되어 있다.",
+  "오, 어서 오게! 오늘은 그냥 둘러보러 왔구나.",
+  "내 체육관 분위기는 어떤가? 또 만나세!",
+  "도전 준비가 되면 언제든 다시 오게.",
+  "트레이너의 길은 길고도 험하다네... 잘 가게나.",
+  "내 포켓몬들은 언제든 준비되어 있다네.",
+  "차 한 잔 하고 가는 것도 나쁘지 않지!",
+  "안녕히 가시게. 다음엔 정정당당히 겨뤄보자고.",
 ];
 
 const TAUNT_LINES: string[] = [
   "애송이 녀석, 더 강해져서 다시 와라!",
-  "그 실력으로 내 체육관에 도전하겠다고?",
-  "아직은 부족하다. 펫을 더 키우고 와라!",
+  "그 실력으로 내 체육관에 도전하겠다고? 어림없다!",
+  "아직 한참 부족하다. 펫을 더 키우고 와라!",
   "하하! 지금 실력으론 첫 번째 포켓몬도 못 넘을걸?",
   "도전 정신은 좋지만 실력이 따라오지 않는군.",
+  "그 정도 전투력으론 내 발치에도 못 미친다!",
+];
+
+const PREBATTLE_LINES: string[] = [
+  "흥, 도전을 받겠다! 후회하지 말거라!",
+  "각오는 되어 있겠지? 가자!",
+  "내 체육관에서 함부로 까불지 마라!",
+  "재미있는 녀석이 왔구나. 진심으로 가겠다!",
+  "오랜만에 흥미로운 도전이군. 받아주마!",
+  "내 모든 걸 보여주마. 후회는 없겠지?",
 ];
 
 const PROTECT_LINES: string[] = [
@@ -1255,15 +1268,20 @@ function GymDetailModal({
     ? new Date(gym.user_cooldown_until).getTime() - Date.now()
     : 0;
 
-  // "인사만 하고 나오기" — 랜덤 인사.
-  const [bubble, setBubble] = useState<string | null>(null);
+  // ── NPC 대화 모달 — 인사 / 도발 / 도전 수락 ────────────────
+  // 점령된 체육관일 땐 NPC 관장 이름을 점령자 이름으로 대체 (UI 일관).
+  const npcDisplayName = gym.ownership?.display_name ?? gym.leader_name;
+  const [npcOpen, setNpcOpen] = useState(false);
+  const [npcTone, setNpcTone] = useState<"greeting" | "taunt" | "prebattle">(
+    "greeting"
+  );
+  const [npcLine, setNpcLine] = useState<string>("");
+
   const handleHello = () => {
     if (closedRef.current) return;
-    setBubble(pickLine(HELLO_LINES));
-    setTimeout(() => {
-      closedRef.current = true;
-      onClose();
-    }, 1500);
+    setNpcTone("greeting");
+    setNpcLine(pickLine(HELLO_LINES));
+    setNpcOpen(true);
   };
 
   // 전투력 부족 — 버튼은 클릭 가능하게 두고, 클릭 시 NPC 도발 모달.
@@ -1275,10 +1293,6 @@ function GymDetailModal({
     status === "challenge_active" ||
     status === "user_cooldown" ||
     status === "owned_by_me";
-
-  // 도발 모달 노출 상태 — 전투력 부족 클릭 시 set.
-  const [tauntOpen, setTauntOpen] = useState(false);
-  const [tauntLine, setTauntLine] = useState<string>("");
 
   // 보호 끝났고 내가 소유 중이면 보호 연장 가능.
   const canExtend = status === "owned_by_me" && (
@@ -1330,13 +1344,15 @@ function GymDetailModal({
                 <h2 className="text-sm md:text-base font-black text-white truncate">
                   {gym.name}
                 </h2>
-                <p className="text-[10px] text-zinc-400 truncate">
-                  관장 {gym.leader_name}
-                </p>
-                {gym.ownership && (
+                {/* 점령됐을 땐 NPC 관장 이름 숨기고 점령자만 표시. */}
+                {gym.ownership ? (
                   <p className="text-[10px] text-fuchsia-200 truncate mt-0.5">
                     🏆 점령한 체육관장:{" "}
                     <b className="text-white">{gym.ownership.display_name}</b>
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-zinc-400 truncate">
+                    관장 {gym.leader_name}
                   </p>
                 )}
               </div>
@@ -1380,20 +1396,6 @@ function GymDetailModal({
               protectionLeftMs={protectionLeftMs}
               cooldownLeftMs={cooldownLeftMs}
             />
-
-            {/* 관장 멘트 인사 토스트 */}
-            <AnimatePresence>
-              {bubble && (
-                <motion.div
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[12px] text-white"
-                >
-                  💬 {bubble}
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             {/* 관장/방어덱 표시 분기:
                 · 점령됨 + 방어덱 셋업    → 점령자 펫 3마리
@@ -1512,11 +1514,14 @@ function GymDetailModal({
                 disabled={challengeDisabled}
                 onClick={() => {
                   if (underpowered) {
-                    setTauntLine(pickLine(TAUNT_LINES));
-                    setTauntOpen(true);
+                    setNpcTone("taunt");
+                    setNpcLine(pickLine(TAUNT_LINES));
+                    setNpcOpen(true);
                     return;
                   }
-                  onStartChallenge();
+                  setNpcTone("prebattle");
+                  setNpcLine(pickLine(PREBATTLE_LINES));
+                  setNpcOpen(true);
                 }}
                 style={{ touchAction: "manipulation" }}
                 className={clsx(
@@ -1533,137 +1538,48 @@ function GymDetailModal({
         </motion.div>
       </motion.div>
 
-      {/* 전투력 부족 — 관장 NPC 도발 모달 (위 detail modal 위에 스택) */}
+      {/* NPC 대화 모달 — greeting / taunt / prebattle */}
       <AnimatePresence>
-        {tauntOpen && (
-          <UnderpoweredTauntDialog
-            gym={gym}
-            line={tauntLine}
-            centerPower={centerPower ?? 0}
-            onClose={() => setTauntOpen(false)}
-          />
+        {npcOpen && (
+          <NpcDialogModal
+            type={gym.type}
+            leaderName={npcDisplayName}
+            gymName={gym.name}
+            tone={npcTone}
+            line={npcLine}
+            onClose={() => {
+              setNpcOpen(false);
+              if (npcTone === "greeting") {
+                closedRef.current = true;
+                onClose();
+              }
+            }}
+            onPrimary={
+              npcTone === "prebattle"
+                ? () => {
+                    setNpcOpen(false);
+                    onStartChallenge();
+                  }
+                : undefined
+            }
+          >
+            {npcTone === "taunt" && (
+              <div className="text-[10px] text-zinc-300 tabular-nums">
+                내 전투력{" "}
+                <b className="text-white">
+                  {(centerPower ?? 0).toLocaleString("ko-KR")}
+                </b>
+                <span className="mx-1">/</span>
+                필요{" "}
+                <b className="text-rose-300">
+                  {gym.min_power.toLocaleString("ko-KR")}
+                </b>
+              </div>
+            )}
+          </NpcDialogModal>
         )}
       </AnimatePresence>
     </Portal>
-  );
-}
-
-/* ─────────────── Underpowered taunt dialog ─────────────── */
-
-function UnderpoweredTauntDialog({
-  gym,
-  line,
-  centerPower,
-  onClose,
-}: {
-  gym: Gym;
-  line: string;
-  centerPower: number;
-  onClose: () => void;
-}) {
-  const reduce = useReducedMotion();
-  const typeStyle = TYPE_STYLE[gym.type];
-  return (
-    <motion.div
-      className="fixed inset-0 z-[120] bg-black/80 flex items-center justify-center px-3"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-    >
-      <motion.div
-        className="relative w-full max-w-sm bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-        initial={reduce ? false : { y: 12, opacity: 0, scale: 0.96 }}
-        animate={{ y: 0, opacity: 1, scale: 1 }}
-        exit={reduce ? { opacity: 0 } : { y: 12, opacity: 0 }}
-      >
-        {/* 헤더 — 관장 정보 */}
-        <div
-          className={clsx(
-            "px-4 py-3 border-b border-white/10",
-            "bg-gradient-to-br from-zinc-900 to-zinc-950"
-          )}
-        >
-          <span aria-hidden className={clsx("absolute inset-0 opacity-30 pointer-events-none", typeStyle.glow)} />
-          <p className="text-[10px] uppercase tracking-wider text-rose-300/85 mb-0.5">
-            ▍{gym.name} 관장
-          </p>
-          <p className="text-base font-black text-white">{gym.leader_name}</p>
-        </div>
-
-        {/* NPC 도트 캐릭터 — 텍스트 + 풍선 */}
-        <div className="p-4 flex items-start gap-3">
-          <div className="shrink-0">
-            <NpcSprite type={gym.type} />
-          </div>
-          <div className="min-w-0 flex-1">
-            {/* 말풍선 */}
-            <div className="relative rounded-xl bg-white text-zinc-900 px-3 py-2 text-[12px] font-bold leading-snug">
-              {line}
-              <span
-                aria-hidden
-                className="absolute top-3 -left-1.5 w-0 h-0 border-y-[6px] border-y-transparent border-r-[7px] border-r-white"
-              />
-            </div>
-            <div className="mt-2 text-[10px] text-zinc-400 tabular-nums">
-              내 전투력{" "}
-              <b className="text-white">{centerPower.toLocaleString("ko-KR")}</b>
-              <span className="mx-1">/</span>
-              필요{" "}
-              <b className="text-rose-300">
-                {gym.min_power.toLocaleString("ko-KR")}
-              </b>
-            </div>
-          </div>
-        </div>
-
-        {/* CTA — 그냥 닫기 */}
-        <div className="border-t border-white/10 p-3">
-          <button
-            type="button"
-            onClick={onClose}
-            style={{ touchAction: "manipulation" }}
-            className="w-full h-11 rounded-xl bg-white/10 border border-white/15 text-white font-bold text-sm active:scale-[0.98]"
-          >
-            물러난다
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
-/** 단순 도트 NPC 트레이너 — 모자 + 머리 + 몸. type 색 모자 + 빨간 옷.
- *  이미지 에셋 없이 SVG 만으로. */
-function NpcSprite({ type }: { type: WildType }) {
-  const c = TYPE_STYLE[type as keyof typeof TYPE_STYLE];
-  void c;
-  return (
-    <svg viewBox="0 0 24 24" width={56} height={56} shapeRendering="crispEdges" aria-hidden>
-      {/* 모자 */}
-      <rect x="6"  y="3"  width="12" height="2" fill="#dc2626" />
-      <rect x="5"  y="5"  width="14" height="1" fill="#7f1d1d" />
-      <rect x="9"  y="6"  width="6"  height="1" fill="#fbbf24" />
-      {/* 머리 */}
-      <rect x="8"  y="6"  width="8"  height="6" fill="#fde68a" />
-      <rect x="9"  y="8"  width="1"  height="1" fill="#0f172a" />
-      <rect x="14" y="8"  width="1"  height="1" fill="#0f172a" />
-      <rect x="11" y="10" width="2"  height="1" fill="#7f1d1d" />
-      {/* 몸 (조끼) */}
-      <rect x="6"  y="12" width="12" height="6" fill="#dc2626" />
-      <rect x="6"  y="12" width="12" height="1" fill="#7f1d1d" />
-      <rect x="11" y="13" width="2"  height="4" fill="#fbbf24" />
-      {/* 팔 */}
-      <rect x="4"  y="13" width="2"  height="4" fill="#fde68a" />
-      <rect x="18" y="13" width="2"  height="4" fill="#fde68a" />
-      {/* 다리 */}
-      <rect x="8"  y="18" width="3"  height="4" fill="#1e3a8a" />
-      <rect x="13" y="18" width="3"  height="4" fill="#1e3a8a" />
-      {/* 신발 */}
-      <rect x="7"  y="22" width="4"  height="1" fill="#0f172a" />
-      <rect x="13" y="22" width="4"  height="1" fill="#0f172a" />
-    </svg>
   );
 }
 

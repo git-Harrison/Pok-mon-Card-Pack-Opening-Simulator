@@ -27,6 +27,29 @@ import { getCard } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
 import { slabStats } from "@/lib/wild/stats";
 import Portal from "./Portal";
+import NpcDialogModal from "./NpcDialogModal";
+
+const VICTORY_LINES: string[] = [
+  "분하다... 네 실력을 인정한다.",
+  "오늘은 내가 졌다. 강해졌구나...",
+  "네 펫들도 훌륭하군. 이 체육관은 이제 너의 것이다.",
+  "내 메달을 가져가게. 자랑스럽게 차게나.",
+  "패배는 인정한다. 다음엔 반드시 되찾으러 가겠다.",
+  "정말 강한 트레이너야. 이 길을 계속 걸어주게.",
+];
+
+const DEFEAT_LINES: string[] = [
+  "더 단련하고 다시 오너라. 기다리고 있겠다.",
+  "체육관 관장은 그리 만만치 않다네!",
+  "패배에서 배우는 자만이 강해진다. 다음을 기약하지!",
+  "내 메달은 쉽게 내주지 않는다. 더 강해져서 와라!",
+  "포기하지 마라. 내일 다시 도전해도 좋다.",
+  "기죽지 마라. 또 만나자, 트레이너!",
+];
+
+function pickLine(arr: readonly string[]): string {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 
 /** 펫 grading + 카드 카탈로그 머지된 클라 표시용 데이터. */
 interface MyPet {
@@ -203,9 +226,18 @@ export default function GymChallengeOverlay({
     // fighting 단계는 계속 — BattlePlayback 이 turn_log 다 끝나면 result 로 전이.
   }, [userId, order, pets, gym.id, challengeId, setPoints, onResolved]);
 
+  // 결과 phase 진입 시 NPC 대화 모달도 자동 노출 (immersion).
+  const [npcResultOpen, setNpcResultOpen] = useState(false);
+  const [npcResultLine, setNpcResultLine] = useState<string>("");
   const onPlaybackEnd = useCallback(() => {
     setPhase("result");
-  }, []);
+    if (battle?.result === "won") {
+      setNpcResultLine(pickLine(VICTORY_LINES));
+    } else {
+      setNpcResultLine(pickLine(DEFEAT_LINES));
+    }
+    setNpcResultOpen(true);
+  }, [battle]);
 
   // 펫 정렬 & 추천 보너스 — 클라 측 미리보기 (서버 권위 결과는 RPC).
   const previewBonus = useCallback(
@@ -294,6 +326,34 @@ export default function GymChallengeOverlay({
           </div>
         </motion.div>
       </motion.div>
+
+      {/* 결과 발표 — 관장 NPC 의 immersive 한 마지막 한 마디 */}
+      <AnimatePresence>
+        {npcResultOpen && phase === "result" && battle && (
+          <NpcDialogModal
+            type={gym.type}
+            leaderName={gym.leader_name}
+            gymName={gym.name}
+            tone={battle.result === "won" ? "victory" : "defeat"}
+            line={npcResultLine}
+            onClose={() => setNpcResultOpen(false)}
+          >
+            {battle.result === "won" && (
+              <div className="rounded-xl border border-amber-400/30 bg-amber-400/[0.06] px-3 py-2 text-[11px] text-amber-100 leading-snug">
+                🏆 {gym.medal?.name ?? "메달"} 획득
+                {typeof battle.capture_reward === "number" && (
+                  <>
+                    {" · "}
+                    <span className="tabular-nums">
+                      +{battle.capture_reward.toLocaleString("ko-KR")}P
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
+          </NpcDialogModal>
+        )}
+      </AnimatePresence>
     </Portal>
   );
 }
