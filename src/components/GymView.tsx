@@ -20,6 +20,7 @@ import {
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 import { wildSpriteUrl } from "@/lib/wild/pool";
 import { lookupDex } from "@/lib/wild/name-to-dex";
+import { cardSpriteUrl } from "@/lib/wild/card-sprite";
 import { slabStats } from "@/lib/wild/stats";
 import { getCard } from "@/lib/sets";
 import type { Rarity } from "@/lib/types";
@@ -1222,15 +1223,30 @@ function DefenderStatCard({
   const card = getCard(defender.card_id);
   const cardName = card?.name ?? defender.card_id;
   const dex = lookupDex(cardName);
+  // 메가/특수 폼 카드 sprite 우선 (메가 리자몽 X, 메가가디안 등 — gen5
+  // BW 에 없는 폼). 매칭 없으면 dex 기반 PokeAPI sprite 로 fallback.
+  const megaSprite = cardSpriteUrl(cardName);
   const baseStats = slabStats(
     (card?.rarity ?? defender.rarity) as Rarity,
     defender.grade
   );
   const [broken, setBroken] = useState(false);
+  const [megaBroken, setMegaBroken] = useState(false);
   return (
     <div className="relative rounded-lg border bg-zinc-900/60 p-2 flex flex-col items-center gap-1 border-fuchsia-400/30">
       <div className="relative w-14 h-14 shrink-0 overflow-hidden flex items-center justify-center">
-        {!broken && dex ? (
+        {!megaBroken && megaSprite ? (
+          <img
+            src={megaSprite}
+            alt=""
+            draggable={false}
+            decoding="async"
+            referrerPolicy="no-referrer"
+            onError={() => setMegaBroken(true)}
+            className="max-w-full max-h-full object-contain"
+            style={{ imageRendering: "pixelated" }}
+          />
+        ) : !broken && dex ? (
           <img
             src={wildSpriteUrl(dex, true)}
             alt=""

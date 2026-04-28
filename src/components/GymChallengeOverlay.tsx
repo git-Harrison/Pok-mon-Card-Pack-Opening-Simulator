@@ -21,6 +21,7 @@ import { effectiveness } from "@/lib/wild/typechart";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 import { resolveCardType as resolvePetType } from "@/lib/wild/name-to-type";
 import { lookupDex } from "@/lib/wild/name-to-dex";
+import { cardSpriteUrl } from "@/lib/wild/card-sprite";
 import { wildSpriteUrl } from "@/lib/wild/pool";
 import { getCard } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
@@ -824,13 +825,30 @@ function CardOrDexSprite({
   pixel?: boolean;
 }) {
   const card = cardId ? getCard(cardId) : null;
-  // 1) 카드 이름으로 dex lookup. 매칭되면 dot sprite (사용자 요청).
+  // 1) 메가/특수 폼 sprite 우선 (Pokemon Showdown ani — 메가 X/Y 등
+  //    구분). 매칭 없으면 dex 기반 PokeAPI gen5 BW 로 fallback.
   const cardName = card?.name ?? name;
+  const megaSprite = cardName ? cardSpriteUrl(cardName) : null;
   const dexFromName = cardName ? lookupDex(cardName) : null;
   const dex = dexFromName ?? fallbackDex ?? null;
+  const [megaBroken, setMegaBroken] = useState(false);
   const [spriteBroken, setSpriteBroken] = useState(false);
   const [cardBroken, setCardBroken] = useState(false);
 
+  if (megaSprite && !megaBroken) {
+    return (
+      <img
+        src={megaSprite}
+        alt={cardName}
+        draggable={false}
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onError={() => setMegaBroken(true)}
+        className="w-full h-full object-contain"
+        style={pixel ? { imageRendering: "pixelated" } : undefined}
+      />
+    );
+  }
   if (dex && !spriteBroken) {
     return (
       <img
