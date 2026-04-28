@@ -957,36 +957,10 @@ function BulkGradingModal({
             <>
               <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-5 space-y-4">
                 {totalEligibleCount === 0 ? (
-                  <div className="py-10 text-center text-sm text-zinc-400">
-                    <p>감별 가능한 카드가 없어요.</p>
-                    <p className="mt-1 text-[11px]">
-                      박스를 열어 카드를 모은 뒤 다시 시도해 주세요.
-                    </p>
-                  </div>
+                  <OakDialogueEmpty />
                 ) : (
                   <>
-                    <div className="rounded-2xl border border-fuchsia-400/40 bg-fuchsia-500/10 p-4 text-center">
-                      <p className="text-[11px] uppercase tracking-wider text-fuchsia-200/80">
-                        지갑에서 감별 가능한 카드
-                      </p>
-                      <p className="mt-1 text-3xl md:text-4xl font-black tabular-nums text-fuchsia-100">
-                        {totalEligibleCount.toLocaleString("ko-KR")}
-                        <span className="text-base font-bold text-fuchsia-300/80"> 장</span>
-                      </p>
-                      {totalEligibleCount > BULK_GRADING_MAX ? (
-                        <p className="mt-2 text-[11px] text-fuchsia-200/85 leading-relaxed">
-                          한 번 클릭으로 <b>전체</b> 일괄 감별 — 서버 안전
-                          한도 <b>{BULK_GRADING_MAX.toLocaleString("ko-KR")}장</b>씩
-                          자동 분할 호출 후 마지막에 합산 결과만 보여줘요.
-                          실패 시 해당 batch 카드는 사라져요.
-                        </p>
-                      ) : (
-                        <p className="mt-2 text-[11px] text-fuchsia-200/80 leading-relaxed">
-                          제출 시 <b>모든 감별 가능 카드</b>를 일괄로 의뢰해요.
-                          실패 시 카드는 사라져요. (감별 확률은 단일 감별과 동일)
-                        </p>
-                      )}
-                    </div>
+                    <OakGreeting count={totalEligibleCount} />
                     <AutoSellThresholdPicker
                       value={autoSellBelow}
                       disabled={false}
@@ -1023,6 +997,98 @@ function BulkGradingModal({
         </motion.div>
       </motion.div>
     </Portal>
+  );
+}
+
+/** 감별 모달 picking 단계 — 오박사 인사 + 카운트 정보 통합 카드.
+ *  count 에 따라 라인 톤 변화 (작으면 친절, 많으면 놀람). */
+function OakGreeting({ count }: { count: number }) {
+  const reduce = useReducedMotion();
+  const lines = useMemo(() => {
+    if (count >= 5000) {
+      return [
+        "어이쿠 — 카드가 산더미군! 한 번에 다 봐주지.",
+        `${count.toLocaleString("ko-KR")}장 감별 시작할까?`,
+      ];
+    }
+    if (count >= 100) {
+      return [
+        "꽤 모았구먼! 자, 기계 앞으로 가져와 보게.",
+        `${count.toLocaleString("ko-KR")}장 감별 시작 준비.`,
+      ];
+    }
+    return [
+      "어서 오게! 카드를 가져왔구먼.",
+      `${count.toLocaleString("ko-KR")}장 감별 준비됐다네.`,
+    ];
+  }, [count]);
+
+  return (
+    <div className="rounded-2xl border border-fuchsia-400/30 bg-gradient-to-br from-fuchsia-500/10 via-violet-500/8 to-indigo-500/10 p-3 md:p-4">
+      <div className="flex items-start gap-3">
+        <motion.img
+          src={OAK_SPRITE}
+          alt=""
+          aria-hidden
+          width={56}
+          height={56}
+          className="shrink-0 w-14 h-14 object-contain"
+          style={{ imageRendering: "pixelated" }}
+          initial={reduce ? false : { y: -2 }}
+          animate={reduce ? undefined : { y: [-2, 1, -2] }}
+          transition={
+            reduce ? undefined : { duration: 2.4, repeat: Infinity, ease: "easeInOut" }
+          }
+        />
+        <div className="relative flex-1 min-w-0">
+          <span className="text-[10px] uppercase tracking-[0.18em] text-fuchsia-200/85 font-black">
+            오박사
+          </span>
+          <div className="relative mt-1 rounded-xl bg-white text-zinc-900 px-3 py-2 text-[12px] md:text-[13px] font-bold leading-snug shadow-md">
+            <span
+              aria-hidden
+              className="absolute -left-1.5 top-3 w-3 h-3 rotate-45 bg-white"
+            />
+            <p>💬 {lines[0]}</p>
+            <p className="mt-1 text-zinc-700">{lines[1]}</p>
+          </div>
+          <div className="mt-2 text-[10px] text-fuchsia-200/70 leading-relaxed">
+            {count > BULK_GRADING_MAX
+              ? `5,000장씩 자동 분할로 처리한다네. 페이지 떠도 작업은 계속.`
+              : `실패 시 카드는 사라져. 감별 확률은 단일 감별과 동일.`}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** 감별할 카드 0장 — 박스 열어 모으라 안내. NPC 톤. */
+function OakDialogueEmpty() {
+  return (
+    <div className="rounded-2xl border border-zinc-700/60 bg-zinc-900/40 p-3 md:p-4">
+      <div className="flex items-start gap-3">
+        <img
+          src={OAK_SPRITE}
+          alt=""
+          aria-hidden
+          width={56}
+          height={56}
+          className="shrink-0 w-14 h-14 object-contain opacity-80"
+          style={{ imageRendering: "pixelated" }}
+        />
+        <div className="relative flex-1 min-w-0">
+          <span className="text-[10px] uppercase tracking-[0.18em] text-zinc-400 font-black">
+            오박사
+          </span>
+          <div className="relative mt-1 rounded-xl bg-white text-zinc-900 px-3 py-2 text-[12px] md:text-[13px] font-bold leading-snug shadow-md">
+            <span aria-hidden className="absolute -left-1.5 top-3 w-3 h-3 rotate-45 bg-white" />
+            <p>💬 어, 카드가 없구먼?</p>
+            <p className="mt-1 text-zinc-700">박스를 열어 카드를 모아 온 뒤 다시 들리게나.</p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
