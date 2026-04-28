@@ -349,7 +349,7 @@ export const DEX_TO_TYPE: Record<number, WildType> = {
   328: "땅",      // 톱치 Trapinch
   329: "땅",      // 비브라바 Vibrava
   330: "땅",      // 플라이곤 Flygon
-  331: "풀",      // selvieux 선인 → 선인왕 base "선인왕" 선인왕 Cacnea
+  331: "풀",      // 선인왕 Cacnea
   332: "풀",      // 밤선인 Cacturne
   333: "노말",    // 파비코 Swablu
   334: "드래곤",  // 파비코리 Altaria
@@ -361,7 +361,7 @@ export const DEX_TO_TYPE: Record<number, WildType> = {
   340: "물",      // 메깅 Whiscash
   341: "물",      // 가재군 Corphish
   342: "물",      // 가재장군 Crawdaunt
-  343: "땅",      // 오ддish 오뚝군 Baltoy
+  343: "땅",      // 오뚝군 Baltoy
   344: "땅",      // 점토도리 Claydol
   345: "바위",    // 릴링 Lileep
   346: "바위",    // 릴리요 Cradily
@@ -373,7 +373,7 @@ export const DEX_TO_TYPE: Record<number, WildType> = {
   352: "노말",    // 켈리몬 Kecleon
   353: "고스트",  // 어둠대신 Shuppet
   354: "고스트",  // 다크펫 Banette
-  355: "고스트",  // 해 рос → 해골몽 Duskull
+  355: "고스트",  // 해골몽 Duskull
   356: "고스트",  // 미라몽 Dusclops
   357: "풀",      // 트로피우스 Tropius
   358: "에스퍼",  // 치렁 Chimecho
@@ -469,7 +469,7 @@ export const DEX_TO_TYPE: Record<number, WildType> = {
   446: "노말",    // 먹고자 Munchlax
   447: "격투",    // 리오르 Riolu
   448: "격투",    // 루카리오 Lucario
-  449: "땅",      // 託 히포포타스 Hippopotas
+  449: "땅",      // 히포포타스 Hippopotas
   450: "땅",      // 하마돈 Hippowdon
   451: "독",      // 스콜피 Skorupi
   452: "독",      // 드래피온 Drapion
@@ -824,7 +824,7 @@ export const DEX_TO_TYPE: Record<number, WildType> = {
   795: "벌레",    // 페로코체 Pheromosa
   796: "전기",    // 전수목 Xurkitree
   797: "강철",    // 철화구야 Celesteela
-  798: "풀",      // 종이신도 Kartana
+  798: "풀",      // 종이신도 Kartana (Grass primary)
   799: "악",      // 악비아르 Guzzlord
   800: "에스퍼",  // 네크로즈마 Necrozma
   801: "강철",    // 마기아나 Magearna
@@ -908,7 +908,7 @@ export const DEX_TO_TYPE: Record<number, WildType> = {
   877: "전기",    // 모르페코 Morpeko
   878: "강철",    // 끄으적 Cufant
   879: "강철",    // 코퍼라자 Copperajah
-  880: "강철",    // 파치라곤 Dracozolt
+  880: "전기",    // 파치라곤 Dracozolt
   881: "전기",    // 파치르돈 Arctozolt
   882: "물",      // 어래곤 Dracovish
   883: "물",      // 어치르돈 Arctovish
@@ -921,19 +921,19 @@ export const DEX_TO_TYPE: Record<number, WildType> = {
   890: "독",      // 무한다이노 Eternatus
   891: "격투",    // 다태우지 Kubfu
   892: "격투",    // 우라오스 Urshifu
-  893: "풀",      // 자루도 Zarude
+  893: "악",      // 자루도 Zarude
   894: "전기",    // 레지에레키 Regieleki
   895: "드래곤",  // 레지드래고 Regidrago
   896: "얼음",    // 블리자포스 Glastrier
   897: "고스트",  // 레이스포스 Spectrier
   898: "에스퍼",  // 버드렉스 Calyrex
   899: "노말",    // 따라큐 Wyrdeer
-  900: "벌레",    // 베베놈 Kleavor
-  901: "노말",    // 베어물 Ursaluna
+  900: "벌레",    // 비비온 Kleavor
+  901: "땅",      // 베어물 Ursaluna
   902: "물",      // 대쓰여너 Basculegion
-  903: "독",      // 스니부 Sneasler
-  904: "독",      // 신비로 Overqwil
-  905: "에스퍼",  // 러브로스 Enamorus
+  903: "격투",    // 포푸니라 Sneasler
+  904: "독",      // 대신침바루 Overqwil
+  905: "페어리",  // 러브로스 Enamorus
 
   // ── Gen 9 (906–1025) ─────────────────────────────────────────────
   906: "풀",      // 나린냥 Sprigatito

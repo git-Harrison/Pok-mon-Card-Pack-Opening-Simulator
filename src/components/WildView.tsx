@@ -16,7 +16,7 @@ import type { PclGrading } from "@/lib/types";
 import { getCard } from "@/lib/sets";
 import { RARITY_STYLE, compareRarity } from "@/lib/rarity";
 import { pclTone } from "@/lib/pcl";
-import { CARD_NAME_TO_TYPE } from "@/lib/wild/name-to-type";
+import { resolveCardType as resolveType } from "@/lib/wild/name-to-type";
 import { WILD_POOL, wildSpriteUrl, type WildMon } from "@/lib/wild/pool";
 import { effectiveness, effectivenessLabel } from "@/lib/wild/typechart";
 import { computeDamage, slabStats, winReward } from "@/lib/wild/stats";
@@ -372,16 +372,9 @@ interface FloatingDamage {
 }
 
 /** Resolve a card's Pokemon type. Strips suffixes so "피카츄 ex" still
- *  matches "피카츄" if only the base is mapped. */
-function resolveType(name: string): WildType | null {
-  if (CARD_NAME_TO_TYPE[name] !== undefined) return CARD_NAME_TO_TYPE[name];
-  const base = name
-    .replace(/\s*\(골드\)\s*$/, "")
-    .replace(/\s*\(SV\)\s*$/, "")
-    .replace(/\s+(ex|V|VMAX|GX|BREAK)\s*$/i, "")
-    .trim();
-  return CARD_NAME_TO_TYPE[base] ?? null;
-}
+ *  matches "피카츄" if only the base is mapped.
+ *  resolveType 은 lib/wild/name-to-type.ts 의 resolveCardType alias —
+ *  DEX_TO_TYPE 1025 entry fallback + 메가 prefix 제거 통합. */
 
 export default function WildView() {
   const { user, setPoints } = useAuth();

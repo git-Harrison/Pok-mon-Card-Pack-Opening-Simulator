@@ -43,21 +43,8 @@ import Portal from "./Portal";
 import GymMedalIcon from "./GymMedalIcon";
 import { fetchUserGymMedals } from "@/lib/gym/db";
 import type { UserGymMedal } from "@/lib/gym/types";
-import { CARD_NAME_TO_TYPE } from "@/lib/wild/name-to-type";
+import { resolveCardType } from "@/lib/wild/name-to-type";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
-
-/** 카드 이름 → WildType. 메가/ex/V 등 카드 변형 strip 후 매칭. */
-function resolveCardType(name: string): WildType | null {
-  if (CARD_NAME_TO_TYPE[name] !== undefined) return CARD_NAME_TO_TYPE[name];
-  let base = name
-    .replace(/\s*\(골드\)\s*$/, "")
-    .replace(/\s*\(SV\)\s*$/, "")
-    .replace(/\s+(ex|V|VMAX|GX|BREAK)\s*$/i, "")
-    .trim();
-  if (CARD_NAME_TO_TYPE[base] !== undefined) return CARD_NAME_TO_TYPE[base];
-  if (base.startsWith("메가 ")) base = base.slice(3).trim();
-  return CARD_NAME_TO_TYPE[base] ?? null;
-}
 
 export default function ProfileView() {
   const { user, refreshMe, logout } = useAuth();

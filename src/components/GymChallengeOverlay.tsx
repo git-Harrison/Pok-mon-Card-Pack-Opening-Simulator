@@ -19,7 +19,7 @@ import type {
 } from "@/lib/gym/types";
 import { effectiveness } from "@/lib/wild/typechart";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
-import { CARD_NAME_TO_TYPE } from "@/lib/wild/name-to-type";
+import { resolveCardType as resolvePetType } from "@/lib/wild/name-to-type";
 import { lookupDex } from "@/lib/wild/name-to-dex";
 import { wildSpriteUrl } from "@/lib/wild/pool";
 import { getCard } from "@/lib/sets";
@@ -40,15 +40,7 @@ interface MyPet {
   baseAtk: number;
 }
 
-function resolvePetType(name: string): WildType | null {
-  if (CARD_NAME_TO_TYPE[name] !== undefined) return CARD_NAME_TO_TYPE[name];
-  const base = name
-    .replace(/\s*\(골드\)\s*$/, "")
-    .replace(/\s*\(SV\)\s*$/, "")
-    .replace(/\s+(ex|V|VMAX|GX|BREAK)\s*$/i, "")
-    .trim();
-  return CARD_NAME_TO_TYPE[base] ?? null;
-}
+// resolvePetType — lib/wild/name-to-type.ts 의 resolveCardType alias.
 
 function mergePet(g: RawPetGrading): MyPet | null {
   const card = getCard(g.card_id);
