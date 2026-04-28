@@ -9,7 +9,7 @@
 | **PCL 10 강제** | 등록·도전·전투 계산 모든 레이어. PCL 9 이하 슬랩은 체육관에 출입 불가. server-side 검증 (`gym_pet_battle_stats` row 미반환) + 클라 필터 (`fetchMyPets` `g.grade===10`) 이중 가드. |
 | **전투 산식** | `gym_pet_battle_stats` — 희귀도 base × (1 + sqrt(center_power) 정규화 보너스). 일반 35% 캡 / MUR 45% 캡. 방어자 HP × 1.10, 속성 일치 ATK × 1.10, MUR 공격 ATK × 1.05. PCL grade_mult 폐기. |
 | **희귀도 base 확대** | C 50/10 ~ MUR 240/60 (이전 C 30/8 ~ MUR 95/24). |
-| **min_power 곡선 완화** | 풀 30k → 드래곤 1.9M (Ch1~Ch3 18 체육관 per-gym 세분화). Ch4 미변경. |
+| **min_power 곡선** | 풀 80k → 드래곤 7M (Ch1~Ch3 18 체육관 per-gym 세분화). Ch4 미변경. 최신 표는 아래 § 체육관 min_power 표 참고. |
 | **메달 per-gym 차등** | `gym_medal_buff(gym_id)`. 풀 +10k → 드래곤 +300k. 메달은 영구 업적, 중복 지급 X. |
 | **default NPC 정규화** | 18 체육관 각각 챕터/티어별 hp/atk 재조정. AR/SR×3 ~ MUR×3 가 자연스럽게 매칭. |
 | **보호 시간** | 점령/연장 모두 1시간 (`gym_protection_interval`). |
@@ -17,6 +17,31 @@
 | **공통 helpers (단일 진실의 원천)** | `gym_required_grade`, `gym_rarity_base_stats`, `gym_power_bonus_rate`, `gym_defender_hp_multiplier`, `gym_mur_attack_multiplier`, `gym_type_match_multiplier`, `gym_medal_buff`. 향후 패치는 함수 한 곳 수정. |
 
 자세한 건 `docs/gym-battle-spec.md`.
+
+### 체육관 min_power 표 (현재 정책 — 20260649)
+
+| 챕터 | 체육관 | min_power |
+|------|--------|--:|
+| Ch1 — 쉬움 | 풀 | 80,000 |
+| Ch1 | 물 | 140,000 |
+| Ch1 | 바위 | 220,000 |
+| Ch1 | 전기 | 320,000 |
+| Ch1 | 불꽃 | 450,000 |
+| Ch1 | 땅 | 600,000 |
+| Ch1 | 얼음 | 780,000 |
+| Ch1 | 에스퍼 | 980,000 |
+| Ch2 — 어려움 | 노말 | 1,250,000 |
+| Ch2 | 격투 | 1,600,000 |
+| Ch2 | 벌레 | 2,000,000 |
+| Ch3 — 매우 어려움 | 독 | 2,400,000 |
+| Ch3 | 비행 | 2,900,000 |
+| Ch3 | 고스트 | 3,500,000 |
+| Ch3 | 페어리 | 4,200,000 |
+| Ch3 | 강철 | 5,000,000 |
+| Ch3 | 악 | 5,900,000 |
+| Ch3 | 드래곤 | 7,000,000 |
+
+위계: 풀 < 물 < 바위 < 전기 < 불꽃 < 땅 < 얼음 < 에스퍼 < 노말 < 격투 < 벌레 < 독 < 비행 < 고스트 < 페어리 < 강철 < 악 < 드래곤. Ch4 미변경.
 
 ## 2. 펫 점수 v3 (절대값 체계)
 
