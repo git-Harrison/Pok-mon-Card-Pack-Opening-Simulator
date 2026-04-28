@@ -2,11 +2,9 @@
 
 import PokeLoader from "./PokeLoader";
 import {
-  memo,
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   useTransition,
 } from "react";
@@ -16,15 +14,12 @@ import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
 import { useIsMobile } from "@/lib/useIsMobile";
 import {
-  fetchUserActivity,
   fetchUserRankings,
   sendTaunt,
   type RankingRow,
-  type UserActivityEvent,
 } from "@/lib/db";
 import { notifyRankChange, notifyTaunt } from "@/lib/discord";
 import { usePresence } from "@/lib/usePresence";
-import { getCard } from "@/lib/sets";
 import { compareRarity } from "@/lib/rarity";
 import type { Rarity } from "@/lib/types";
 import type { WildType } from "@/lib/wild/types";
@@ -64,45 +59,6 @@ export default function UsersView() {
   );
   const [tauntTarget, setTauntTarget] = useState<RankingRow | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [activityCache, setActivityCache] = useState<
-    Record<string, UserActivityEvent[]>
-  >({});
-  const [activityLoading, setActivityLoading] = useState<
-    Record<string, boolean>
-  >({});
-
-  // 캐시/in-flight 상태는 ref 로 관리. 이전엔 deps 에 activityCache /
-  // activityLoading state 객체가 있어서 setState 마다 effect 가 4회 재실행
-  // 됐었음 — 모바일에서 탭/펼치기 응답이 끊겨 보이는 보조 원인이었음.
-  // 이제 effect 는 expandedId / mode 변경에만 반응.
-  // cacheRef 는 영구 보관하지 않고 매 expand 마다 새로 fetch — 다른
-  // 사용자의 펫/전시 등 변경 사항이 즉시 반영되도록.
-  const loadingRef = useRef<Record<string, boolean>>({});
-
-  useEffect(() => {
-    if (!expandedId) return;
-    const key = `${expandedId}::${mode}`;
-    if (loadingRef.current[key]) return;
-    loadingRef.current[key] = true;
-    setActivityLoading((prev) => ({ ...prev, [key]: true }));
-    let cancelled = false;
-    fetchUserActivity(expandedId, mode)
-      .then((events) => {
-        loadingRef.current[key] = false;
-        if (cancelled) return;
-        setActivityCache((prev) => ({ ...prev, [key]: events }));
-        setActivityLoading((prev) => ({ ...prev, [key]: false }));
-      })
-      .catch(() => {
-        loadingRef.current[key] = false;
-        if (cancelled) return;
-        setActivityCache((prev) => ({ ...prev, [key]: [] }));
-        setActivityLoading((prev) => ({ ...prev, [key]: false }));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [expandedId, mode]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -512,11 +468,6 @@ export default function UsersView() {
                       <div className="px-3 md:px-4 pt-1 pb-2">
                         <ScoreBreakdown row={e} mode={mode} />
                       </div>
-                      <ActivityFeed
-                        events={activityCache[`${e.id}::${mode}`]}
-                        loading={activityLoading[`${e.id}::${mode}`] === true}
-                        mode={mode}
-                      />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -575,33 +526,6 @@ export default function UsersView() {
 
     </div>
   );
-}
-
-function formatRelativeKo(iso: string): string {
-  const t = new Date(iso).getTime();
-  if (!Number.isFinite(t)) return "";
-  const diffMs = Date.now() - t;
-  const sec = Math.floor(diffMs / 1000);
-  if (sec < 60) return "방금 전";
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}분 전`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}시간 전`;
-  const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}일 전`;
-  const d = new Date(t);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
-}
-
-function modeAccent(mode: RankingMode): string {
-  if (mode === "power") return "text-rose-300";
-  if (mode === "pet") return "text-fuchsia-300";
-  return "text-amber-300";
 }
 
 const STAT_TONES: Record<string, { bg: string; text: string }> = {
@@ -768,75 +692,6 @@ function ProfileStatChip({
     </div>
   );
 }
-
-const ActivityFeed = memo(function ActivityFeed({
-  events,
-  loading,
-  mode,
-}: {
-  events: UserActivityEvent[] | undefined;
-  loading: boolean;
-  mode: RankingMode;
-}) {
-  if (loading || events === undefined) {
-    return (
-      <div className="px-3 md:px-4 pb-3 space-y-1.5">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-9 rounded-lg bg-white/[0.04] border border-white/10 animate-pulse"
-          />
-        ))}
-      </div>
-    );
-  }
-  if (events.length === 0) {
-    return (
-      <div className="px-3 md:px-4 pb-3">
-        <p className="text-center text-xs text-zinc-500 py-3">
-          최근 활동 없음
-        </p>
-      </div>
-    );
-  }
-  const accent = modeAccent(mode);
-  return (
-    <div className="px-3 md:px-4 pb-3">
-      <ul className="space-y-1">
-        {events.map((ev, idx) => {
-          // 카드 코드(m2-086) → 포켓몬 한글 이름 치환. card_id 가 없거나
-          // (예: "?") 카드 카탈로그에 없으면 라벨만 노출.
-          const card = ev.card_id ? getCard(ev.card_id) : null;
-          const subject = card?.name ?? null;
-          const sign = ev.points >= 0 ? "+" : "";
-          const isLoss = ev.points < 0;
-          return (
-            <li
-              key={`${ev.source}-${ev.occurred_at}-${idx}`}
-              className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white/[0.03] border border-white/10"
-            >
-              <span className="flex-1 min-w-0 text-[12px] text-zinc-200 truncate">
-                {subject ? `${ev.label} · ${subject}` : ev.label}
-              </span>
-              <span
-                className={clsx(
-                  "shrink-0 text-[12px] font-black tabular-nums",
-                  isLoss ? "text-rose-300" : accent
-                )}
-              >
-                {sign}
-                {ev.points.toLocaleString("ko-KR")}p
-              </span>
-              <span className="shrink-0 text-[10px] text-zinc-500 tabular-nums">
-                {formatRelativeKo(ev.occurred_at)}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-});
 
 const TAUNT_PRESETS = [
   "네 센터는 장식용이야?",
