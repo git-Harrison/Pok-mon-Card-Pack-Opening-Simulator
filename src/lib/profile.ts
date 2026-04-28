@@ -126,20 +126,31 @@ export interface ProfileMainCard {
   graded_at: string;
 }
 
+/** 속성별 펫 슬롯 (spec 2-1) — { "type": [{id, card_id, rarity, grade}, ...] }.
+ *  type 당 최대 3개. 빈 type 키는 객체에 없거나 빈 배열. */
+export type MainCardsByType = Record<string, ProfileMainCard[]>;
+
 export interface ProfileSnapshot {
   ok: boolean;
   error?: string;
   character: CharacterKey | null;
   character_locked: boolean;
+  /** @deprecated 전환기 호환용. 신구조는 main_cards_by_type. */
   main_card_ids: string[];
   pet_score: number;
+  /** @deprecated 전환기 호환용. */
   main_cards: ProfileMainCard[];
+  /** spec 2-1: 속성별 등록 펫. 비어 있으면 사용자가 아직 신구조로 등록 안 함. */
+  main_cards_by_type: MainCardsByType;
   center_power: number;
   pokedex_count: number;
   pokedex_bonus: number;
 }
 
+/** @deprecated 전환기 호환용. spec 2-1: 속성별 3 슬롯. */
 export const MAX_MAIN_CARDS = 10;
+/** spec 2-1: 한 type 당 슬롯 cap. */
+export const PETS_PER_TYPE = 3;
 /** Σ rarity_power × 10 across MAX_MAIN_CARDS MUR (10) slabs. */
 export const MAX_PET_SCORE = 1000;
 
@@ -159,6 +170,7 @@ export async function fetchProfile(userId: string): Promise<ProfileSnapshot> {
       main_card_ids: [],
       pet_score: 0,
       main_cards: [],
+      main_cards_by_type: {},
       center_power: 0,
       pokedex_count: 0,
       pokedex_bonus: 0,
@@ -172,6 +184,7 @@ export async function fetchProfile(userId: string): Promise<ProfileSnapshot> {
     main_card_ids?: string[] | null;
     pet_score?: number | null;
     main_cards?: ProfileMainCard[] | null;
+    main_cards_by_type?: MainCardsByType | null;
     center_power?: number | null;
     pokedex_count?: number | null;
     pokedex_bonus?: number | null;
@@ -184,9 +197,30 @@ export async function fetchProfile(userId: string): Promise<ProfileSnapshot> {
     main_card_ids: d.main_card_ids ?? [],
     pet_score: d.pet_score ?? 0,
     main_cards: d.main_cards ?? [],
+    main_cards_by_type: d.main_cards_by_type ?? {},
     center_power: d.center_power ?? 0,
     pokedex_count: d.pokedex_count ?? 0,
     pokedex_bonus: d.pokedex_bonus ?? 0,
+  };
+}
+
+/** 한 type 의 슬롯 3 통째 갱신 (spec 2-1). 길이 0~3. */
+export async function setPetForType(
+  userId: string,
+  type: string,
+  gradingIds: string[]
+) {
+  const { data, error } = await supabase.rpc("set_pet_for_type", {
+    p_user_id: userId,
+    p_type: type,
+    p_grading_ids: gradingIds,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    error?: string;
+    pet_score?: number;
+    main_cards_by_type?: Record<string, string[]>;
   };
 }
 
