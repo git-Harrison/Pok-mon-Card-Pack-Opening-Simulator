@@ -42,6 +42,13 @@ import GymMedalIcon from "./GymMedalIcon";
 
 type RankingMode = "rank" | "power" | "pet";
 
+// 메달 표시 순서. 잎새(풀) 우선 + 정해진 8 type 순서. 알 수 없는
+// type 은 indexOf=-1 라 자연스레 맨 앞으로 — 그래도 잎새가 0 으로
+// 가장 먼저 (-1 < 0 이지만 sort 시 둘 다 -1 이면 stable order 유지).
+const MEDAL_ORDER: string[] = [
+  "풀", "불꽃", "물", "전기", "얼음", "바위", "땅", "에스퍼",
+];
+
 export default function UsersView() {
   const { user: currentUser } = useAuth();
   const reduce = useReducedMotion();
@@ -404,21 +411,29 @@ export default function UsersView() {
                       {e.sabotage_wins ?? 0}회
                     </p>
                     {/* 체육관 메달 — 모든 탭 공통 노출. 각 메달 = type
-                        색 SVG 아이콘. 호버 시 상세 (체육관/난이도). */}
+                        색 SVG 아이콘. 호버 시 상세 (체육관/난이도).
+                        nowrap + 가로 스크롤 — 닉네임/점수와 줄바꿈 충돌
+                        방지. 잎새(풀) 메달 우선 + 정의된 type 순서. */}
                     {e.gym_medals && e.gym_medals.length > 0 && (
-                      <div className="mt-1 flex items-center gap-0.5 flex-wrap">
-                        {e.gym_medals.map((m) => (
-                          <span
-                            key={m.gym_id}
-                            title={`${m.medal_name} — ${m.gym_name} (${m.gym_type})`}
-                            className="inline-flex items-center"
-                          >
-                            <GymMedalIcon
-                              type={m.gym_type as WildType}
-                              size={18}
-                            />
-                          </span>
-                        ))}
+                      <div className="mt-1 flex items-center gap-0.5 overflow-x-auto no-scrollbar -mx-0.5 px-0.5">
+                        {[...e.gym_medals]
+                          .sort(
+                            (a, b) =>
+                              MEDAL_ORDER.indexOf(a.gym_type) -
+                              MEDAL_ORDER.indexOf(b.gym_type)
+                          )
+                          .map((m) => (
+                            <span
+                              key={m.gym_id}
+                              title={`${m.medal_name} — ${m.gym_name} (${m.gym_type})`}
+                              className="inline-flex items-center shrink-0"
+                            >
+                              <GymMedalIcon
+                                type={m.gym_type as WildType}
+                                size={18}
+                              />
+                            </span>
+                          ))}
                       </div>
                     )}
                   </div>
@@ -789,17 +804,21 @@ function ScoreBreakdown({
     const pokedex = (row as { pokedex_bonus?: number }).pokedex_bonus ?? 0;
     const completion = (row as { pokedex_completion_bonus?: number }).pokedex_completion_bonus ?? 0;
     const pet = row.pet_score ?? 0;
-    const gymCount = (row as { gym_count?: number }).gym_count ?? 0;
-    const gymBuff = gymCount * 10000;
+    // 메달 기반 +10K (영구 보유). 점령 중인 체육관 수가 아니라 누적
+    // 메달 수가 기준. server: count(*) from user_gym_medals.
+    const medalCount =
+      (row as { medal_count?: number }).medal_count ??
+      (row.gym_medals?.length ?? 0);
+    const gymBuff = medalCount * 10000;
     const showcase = Math.max(
       0,
       (row.center_power ?? 0) - pokedex - completion - pet - gymBuff
     );
     if (showcase > 0)   items.push({ label: "전시", value: showcase, tone: "fuchsia" });
     if (pokedex > 0)    items.push({ label: "도감", value: pokedex, tone: "emerald" });
-    if (completion > 0) items.push({ label: "도감 완성", value: completion, tone: "cyan" });
+    if (completion > 0) items.push({ label: "도감 세트효과", value: completion, tone: "cyan" });
     if (pet > 0)        items.push({ label: "펫", value: pet, tone: "amber" });
-    if (gymBuff > 0)    items.push({ label: `체육관 ×${gymCount}`, value: gymBuff, tone: "violet" });
+    if (gymBuff > 0)    items.push({ label: `메달 ×${medalCount}`, value: gymBuff, tone: "violet" });
   } else {
     // 펫 — main_cards 의 등급별 정액 합. (rarity_score × 15)
     const cards = row.main_cards ?? [];

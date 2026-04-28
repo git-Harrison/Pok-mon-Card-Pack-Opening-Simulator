@@ -127,18 +127,18 @@ export const BULK_SELL_PRICE: Record<Rarity, number> = {
 };
 
 // Cost in points to open one sealed booster box.
-// 모든 세트 동일 70,000p — 사용자 결정으로 균일 가격제 도입.
-// 서버측 buy_box / refund_box_purchase 도 동일 가격으로 동기화 필수.
+// 모든 세트 동일 30,000p — 균일 가격제. 서버측 buy_box /
+// refund_box_purchase 도 동일 가격으로 동기화 필수.
 export const BOX_COST: Record<string, number> = {
-  m2a: 70_000,
-  m2: 70_000,
-  sv8: 70_000,
-  sv2a: 70_000,
-  sv8a: 70_000,
-  sv5a: 70_000,
-  sv10: 70_000,
-  m1l: 70_000,
-  m1s: 70_000,
-  m3: 70_000,
-  m4: 70_000,
+  m2a: 30_000,
+  m2: 30_000,
+  sv8: 30_000,
+  sv2a: 30_000,
+  sv8a: 30_000,
+  sv5a: 30_000,
+  sv10: 30_000,
+  m1l: 30_000,
+  m1s: 30_000,
+  m3: 30_000,
+  m4: 30_000,
 };
