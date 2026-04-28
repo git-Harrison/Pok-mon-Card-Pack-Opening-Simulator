@@ -323,7 +323,17 @@ export default function UsersView() {
                 e.seconds_since_seen < 300);
             const isExpanded = expandedId === e.id;
             const isTopThree = rank < 3;
-            const trophy = rank === 0 ? "🏆" : rank === 1 ? "🥈" : rank === 2 ? "🥉" : null;
+            // 탭별 top 3 트로피 아이콘. 점수 우측의 ⚔️/🐾 emoji 는 줄바꿈
+            // 깨짐 유발 → 좌측 medal circle 로 이동.
+            //   rank  : 🏆 / 🥈 / 🥉  (랭킹 점수 — 트로피)
+            //   power : ⚔️ / 🛡️ / 🗡️ (전투력 — 무구)
+            //   pet   : 🐉 / 🦊 / 🐢 (펫 — 동물)
+            const trophyByMode: Record<RankingMode, [string, string, string]> = {
+              rank:  ["🏆", "🥈", "🥉"],
+              power: ["⚔️", "🛡️", "🗡️"],
+              pet:   ["🐉", "🦊", "🐢"],
+            };
+            const trophy = isTopThree ? trophyByMode[mode][rank] : null;
 
             return (
               <motion.li
@@ -376,7 +386,21 @@ export default function UsersView() {
                       isTopThree
                         ? "w-12 h-12 md:w-14 md:h-14 text-xl md:text-2xl"
                         : "w-10 h-10 md:w-12 md:h-12 text-sm md:text-base",
-                      rank === 0
+                      // 탭별 top3 색조: rank=amber, power=rose, pet=fuchsia.
+                      // 1위/2위/3위 각자 색감 단계.
+                      isTopThree && mode === "power"
+                        ? rank === 0
+                          ? "bg-rose-500/20 text-rose-200 border-rose-400/60 shadow-[0_0_16px_-4px_rgba(244,63,94,0.7)]"
+                          : rank === 1
+                          ? "bg-rose-500/10 text-rose-200/90 border-rose-400/40"
+                          : "bg-rose-500/10 text-rose-300/85 border-rose-500/30"
+                        : isTopThree && mode === "pet"
+                        ? rank === 0
+                          ? "bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-400/60 shadow-[0_0_16px_-4px_rgba(217,70,239,0.7)]"
+                          : rank === 1
+                          ? "bg-fuchsia-500/10 text-fuchsia-200/90 border-fuchsia-400/40"
+                          : "bg-fuchsia-500/10 text-fuchsia-300/85 border-fuchsia-500/30"
+                        : rank === 0
                         ? "bg-amber-400/20 text-amber-200 border-amber-400/60 shadow-[0_0_16px_-4px_rgba(251,191,36,0.7)]"
                         : rank === 1
                         ? "bg-zinc-300/10 text-zinc-200 border-zinc-300/40"
@@ -440,8 +464,7 @@ export default function UsersView() {
                   <div className="text-right shrink-0">
                     {mode === "power" ? (
                       <>
-                        <div className="text-xl md:text-2xl font-black text-rose-300 tabular-nums leading-none inline-flex items-center gap-1">
-                          <span aria-hidden>⚔️</span>
+                        <div className="text-xl md:text-2xl font-black text-rose-300 tabular-nums leading-none whitespace-nowrap">
                           {(e.center_power ?? 0).toLocaleString("ko-KR")}
                         </div>
                         <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
@@ -450,8 +473,7 @@ export default function UsersView() {
                       </>
                     ) : mode === "pet" ? (
                       <>
-                        <div className="text-2xl md:text-3xl font-black text-fuchsia-300 tabular-nums leading-none inline-flex items-center gap-1">
-                          <span aria-hidden>🐾</span>
+                        <div className="text-2xl md:text-3xl font-black text-fuchsia-300 tabular-nums leading-none whitespace-nowrap">
                           {(e.pet_score ?? 0).toLocaleString("ko-KR")}
                         </div>
                         <div className="mt-1 text-[10px] text-fuchsia-300/70 uppercase tracking-wider">
@@ -460,7 +482,7 @@ export default function UsersView() {
                       </>
                     ) : (
                       <>
-                        <div className="text-xl md:text-2xl font-black text-amber-300 tabular-nums leading-none">
+                        <div className="text-xl md:text-2xl font-black text-amber-300 tabular-nums leading-none whitespace-nowrap">
                           {e.rank_score.toLocaleString("ko-KR")}
                         </div>
                         <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
