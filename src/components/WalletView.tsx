@@ -31,6 +31,7 @@ import PageHeader from "./PageHeader";
 import PageBackdrop from "./PageBackdrop";
 import Portal from "./Portal";
 import UserSelect from "./UserSelect";
+import { groupGradings } from "@/lib/cards/group-gradings";
 
 type Mode = "cards" | "pcl";
 type RarityFilter = "ALL" | Rarity;
@@ -374,14 +375,33 @@ function PclMode({
   const [visibleCount, setVisibleCount] = useState(WALLET_PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
+  // PCL 슬랩은 (card_id, grade) 기준으로 그룹화 — 같은 카드의 같은
+  // 등급 슬랩 여러 장은 한 칸으로 묶고 ×N 뱃지로 수량 표시.
+  // 그룹 내 잠금 상태가 섞여 있으면 사용 가능한 첫 슬랩에 액션 적용.
+  const groups = useMemo(
+    () =>
+      groupGradings(items, (it) => ({
+        cardId: it.card.id,
+        grade: it.grading.grade,
+      })),
+    [items]
+  );
+  const visibleGroups = useMemo(
+    () => groups.slice(0, visibleCount),
+    [groups, visibleCount]
+  );
+  const hasMore = visibleCount < groups.length;
+
   // items 가 바뀌면 (gift / refresh / 정렬 변경 등) 첫 페이지로 리셋.
   useEffect(() => {
     setVisibleCount(WALLET_PAGE_SIZE);
   }, [items]);
 
   // IntersectionObserver: sentinel 이 viewport 에 들어오면 다음 페이지 로드.
+  // 그룹 단위로 페이지네이션 (중복 그룹화 후 길이 기준).
   useEffect(() => {
-    if (items.length <= WALLET_PAGE_SIZE) return;
+    const groupCount = groups.length;
+    if (groupCount <= WALLET_PAGE_SIZE) return;
     const node = sentinelRef.current;
     if (!node) return;
     const io = new IntersectionObserver(
@@ -389,7 +409,7 @@ function PclMode({
         for (const entry of entries) {
           if (entry.isIntersecting) {
             setVisibleCount((n) =>
-              n >= items.length ? n : Math.min(n + WALLET_PAGE_SIZE, items.length)
+              n >= groupCount ? n : Math.min(n + WALLET_PAGE_SIZE, groupCount)
             );
           }
         }
@@ -398,13 +418,7 @@ function PclMode({
     );
     io.observe(node);
     return () => io.disconnect();
-  }, [items.length]);
-
-  const visibleItems = useMemo(
-    () => items.slice(0, visibleCount),
-    [items, visibleCount]
-  );
-  const hasMore = visibleCount < items.length;
+  }, [groups.length]);
 
   if (items.length === 0) {
     return (
@@ -441,22 +455,30 @@ function PclMode({
           },
         }}
       >
-        {visibleItems.map(({ grading, card, isPet, isDisplayed }) => {
-          const locked = isPet || isDisplayed;
-          const giftable = !locked && grading.grade >= 6;
-          const badge = isDisplayed
-            ? { text: "🏛️ 전시 중", cls: "bg-fuchsia-500 text-white" }
-            : isPet
-            ? { text: "🐾 펫", cls: "bg-amber-400 text-zinc-950" }
+        {visibleGroups.map((group) => {
+          // 그룹 안에서 액션 가능한 첫 슬랩 선택 (잠겨 있지 않은 것).
+          const available = group.all.find((it) => !it.isPet && !it.isDisplayed);
+          const rep = available ?? group.rep;
+          const { grading, card } = rep;
+          const allLocked = !available;
+          const lockedCount = group.all.filter(
+            (it) => it.isPet || it.isDisplayed
+          ).length;
+          const giftable = !allLocked && grading.grade >= 6;
+          // 그룹 표시 뱃지 — 모두 잠긴 경우에만 lock 상태 노출.
+          const badge = allLocked
+            ? rep.isDisplayed
+              ? { text: "🏛️ 전시 중", cls: "bg-fuchsia-500 text-white" }
+              : { text: "🐾 펫", cls: "bg-amber-400 text-zinc-950" }
             : null;
           return (
             <motion.button
-              key={grading.id}
+              key={`${card.id}@${grading.grade}`}
               type="button"
               onClick={() =>
-                !locked && giftable && setPreviewTarget({ grading, card })
+                !allLocked && giftable && setPreviewTarget({ grading, card })
               }
-              disabled={locked || !giftable}
+              disabled={allLocked || !giftable}
               style={{ touchAction: "manipulation" }}
               variants={{
                 hidden: reduce
@@ -471,28 +493,36 @@ function PclMode({
               }}
               className={clsx(
                 "relative flex flex-col items-center gap-1 w-full text-left active:scale-[0.98] transition",
-                locked && "cursor-not-allowed",
-                !locked && !giftable && "cursor-not-allowed"
+                allLocked && "cursor-not-allowed",
+                !allLocked && !giftable && "cursor-not-allowed"
               )}
-              aria-disabled={locked || !giftable}
+              aria-disabled={allLocked || !giftable}
               title={
-                isDisplayed
-                  ? "센터에 전시 중 — 선물·관리 불가"
-                  : isPet
-                  ? "펫으로 등록 중 — 선물·관리 불가"
-                  : undefined
+                allLocked
+                  ? rep.isDisplayed
+                    ? "센터에 전시 중 — 선물·관리 불가"
+                    : "펫으로 등록 중 — 선물·관리 불가"
+                  : lockedCount > 0
+                  ? `${group.count}장 보유 (${lockedCount}장 사용 중)`
+                  : `${group.count}장 보유`
               }
             >
               <div className="relative w-full">
                 <div
                   className={clsx(
                     "transition",
-                    locked && "opacity-45 grayscale saturate-50"
+                    allLocked && "opacity-45 grayscale saturate-50"
                   )}
                 >
-                  <PclSlab card={card} grade={grading.grade} size="sm" compact />
+                  <PclSlab
+                    card={card}
+                    grade={grading.grade}
+                    size="sm"
+                    compact
+                    quantity={group.count}
+                  />
                 </div>
-                {locked && (
+                {allLocked && (
                   <div
                     aria-hidden
                     className="absolute inset-0 rounded-md bg-zinc-950/35 ring-1 ring-inset ring-white/10 pointer-events-none"
@@ -512,7 +542,7 @@ function PclMode({
               <p
                 className={clsx(
                   "w-full text-center text-[10px] leading-tight line-clamp-1 px-0.5",
-                  locked ? "text-zinc-500" : "text-zinc-300"
+                  allLocked ? "text-zinc-500" : "text-zinc-300"
                 )}
               >
                 {card.name}
@@ -533,13 +563,14 @@ function PclMode({
           <span className="inline-flex items-center gap-2">
             <span className="w-3 h-3 border-2 border-fuchsia-400/40 border-t-fuchsia-300 rounded-full animate-spin" />
             더 불러오는 중… ({visibleCount.toLocaleString("ko-KR")} /{" "}
-            {items.length.toLocaleString("ko-KR")})
+            {groups.length.toLocaleString("ko-KR")})
           </span>
         </div>
       )}
-      {!hasMore && items.length > WALLET_PAGE_SIZE && (
+      {!hasMore && groups.length > WALLET_PAGE_SIZE && (
         <p className="mt-6 text-center text-[10px] text-zinc-600">
-          전체 {items.length.toLocaleString("ko-KR")}장 모두 표시
+          전체 {items.length.toLocaleString("ko-KR")}장 ·{" "}
+          {groups.length.toLocaleString("ko-KR")}종 표시
         </p>
       )}
 

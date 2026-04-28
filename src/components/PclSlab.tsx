@@ -29,6 +29,8 @@ export default function PclSlab({
   grade,
   size = "md",
   highlight = false,
+  /** 같은 카드 중복 보유 시 표시할 수량. 1 이하면 표시 안 함. */
+  quantity,
   /** @deprecated — 이 컴포넌트는 더 이상 카드 이름/번호를 내부 표시하지
    *  않으므로 compact 분기는 사실상 의미 없음. 호환 위해 prop 만 유지. */
   compact: _compact = false,
@@ -37,6 +39,7 @@ export default function PclSlab({
   grade: number;
   size?: "sm" | "md" | "lg";
   highlight?: boolean;
+  quantity?: number;
   compact?: boolean;
 }) {
   void _compact;
@@ -79,6 +82,15 @@ export default function PclSlab({
           tone.ring
         )}
       >
+        {/* 중복 카드 수량 뱃지 — 우상단, count > 1 일 때만 */}
+        {typeof quantity === "number" && quantity > 1 && (
+          <span
+            className="absolute top-1 right-1 z-20 px-1.5 py-0.5 rounded-md bg-zinc-900/90 ring-1 ring-white/30 text-[10px] font-black text-white tabular-nums shadow-md leading-none"
+            aria-label={`${quantity}장 보유`}
+          >
+            ×{quantity}
+          </span>
+        )}
         {/* 홀로그래픽 sheen */}
         <div
           aria-hidden
