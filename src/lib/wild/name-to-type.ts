@@ -827,4 +827,133 @@ export const CARD_NAME_TO_TYPE: Record<string, WildType | null> = {
   "메가가디안": "에스퍼",
   "메가지가르데 ex": "땅",      // 지가르데는 드래곤/땅 듀얼 → 땅 사용.
   "메가 개굴닌자 ex": "물",
+  // === Bulk-fill (2026-04-29) — 미매핑 카드 일괄 보강 ===
+  // 트레이너/아이템/에너지/스타디움 → null. 포켓몬은 영문 slug 기준
+  // primary type. 메가는 base 종 type 사용. 로켓단의 X 는 base 종 X
+  // type 사용 (예: 로켓단의 헬가 → Houndoom 의 악).
+  "AZ의 고요": null,
+  "거대 포획네트": null,
+  "괴상한 시계": null,
+  "그로우 풀에너지": null,
+  "니트로 불꽃에너지": null,
+  "다투곰 블러드문 ex": "땅",          // Bloodmoon Ursaluna
+  "더스트댓": "독",                     // Garbodor
+  "도구파괴": null,                     // Tool Scrapper
+  "도치보고": "풀",                     // Quilladin
+  "땃주르": "독",                       // Shroodle (독/노말 → 독)
+  "레지락ex": "바위",                   // Regirock
+  "로켓단 에너지": null,
+  "로켓단의 감시탑": null,
+  "로켓단의 깜짝봄": null,              // Venture Bomb 아이템
+  "로켓단의 꼬렛": "노말",
+  "로켓단의 나옹": "노말",
+  "로켓단의 니드런♀": "독",
+  "로켓단의 니드런♂": "독",
+  "로켓단의 니드리나": "독",
+  "로켓단의 니드리노": "독",
+  "로켓단의 니드퀸": "독",
+  "로켓단의 니드킹ex": "독",
+  "로켓단의 데기라스": "바위",          // Pupitar
+  "로켓단의 델빌": "악",                // Houndour
+  "로켓단의 두루지벌레": "벌레",         // Blipbug
+  "로켓단의 또가스": "독",
+  "로켓단의 또도가스": "독",
+  "로켓단의 람다": null,                // Petrel — trainer
+  "로켓단의 랑딸랑": "에스퍼",          // Chingling
+  "로켓단의 랜스": null,                // Proton — trainer
+  "로켓단의 레돔벌레": "벌레",          // Dottler
+  "로켓단의 레트라": "노말",
+  "로켓단의 리시버": null,              // 아이템
+  "로켓단의 마기라스": "바위",          // Tyranitar
+  "로켓단의 마자용": "에스퍼",          // Wobbuffet
+  "로켓단의 메리프": "전기",            // Mareep
+  "로켓단의 뮤츠ex": "에스퍼",
+  "로켓단의 방해로봇": null,            // 아이템
+  "로켓단의 보송송": "전기",            // Flaaffy
+  "로켓단의 비주기": null,              // Giovanni — trainer
+  "로켓단의 슈퍼볼": null,              // Great Ball
+  "로켓단의 슬리퍼": "에스퍼",          // Hypno
+  "로켓단의 슬리프": "에스퍼",          // Drowzee
+  "로켓단의 썬더": "전기",              // Zapdos
+  "로켓단의 아보": "독",
+  "로켓단의 아보크": "독",
+  "로켓단의 아테나": null,              // Ariana — trainer
+  "로켓단의 아폴로": null,              // Archer — trainer
+  "로켓단의 애버라스": "바위",          // Larvitar
+  "로켓단의 이올브": "벌레",            // Orbeetle
+  "로켓단의 전룡": "전기",              // Ampharos
+  "로켓단의 질뻐기": "독",              // Muk
+  "로켓단의 질퍽이": "독",              // Grimer
+  "로켓단의 크로뱃ex": "독",
+  "로켓단의 타랜툴라": "벌레",
+  "로켓단의 통신기": null,              // Transceiver
+  "로켓단의 트래피더": "벌레",          // Spidops
+  "로켓단의 파이어ex": "불꽃",          // Moltres
+  "로켓단의 팩토리": null,              // stadium
+  "로켓단의 페르시온ex": "노말",
+  "로켓단의 폴리곤": "노말",
+  "로켓단의 폴리곤2": "노말",
+  "로켓단의 폴리곤Z": "노말",
+  "로켓단의 헬가": "악",                // Houndoom
+  "록 격투에너지": null,
+  "록시의 퍼포먼스": null,              // Roxie — trainer
+  "릴리에의 결심": null,                // Lillie — trainer
+  "마그넷 강철에너지": null,
+  "마티스의 거래": null,                // Lt. Surge — trainer
+  "메가시그널": null,                   // Mega Signal — item
+  "멜로코": null,                       // Mela — trainer
+  "명희의 격려": null,                  // Rosa — trainer
+  "미끄나": "드래곤",                   // Goomy
+  "미르갈레트": null,                   // Lumiose Galette — item
+  "미르시티": null,                     // Lumiose City — stadium
+  "미스터리 가든": null,                // stadium
+  "민진의 헤아림": null,                // Wally — trainer
+  "밤의 들것": null,                    // Rescue Stretcher — item
+  "버블 물에너지": null,
+  "벌레회피스프레이": null,             // Repel — item
+  "변화의 책": null,                    // Tomes of Transformation
+  "빙슬러": "얼음",                     // Bergmite
+  "샤로자드": "풀",                     // Serperior
+  "서핑 비치": null,                    // Surfing Beach — stadium
+  "성스러운분말": null,                 // Sacred Ash
+  "스컹뿌": "독",                       // Stunky
+  "스페셜 레드 카드": null,
+  "시유": null,                         // Carmine — trainer
+  "아세로라의 장난": null,              // Acerola — trainer
+  "아이언 디펜드업": null,              // Iron X Defense — item
+  "에너지 리사이클": null,
+  "에너지탁치기": null,                 // Energy Swatter
+  "에너지회수": null,                   // Energy Retrieval
+  "에단의 쁘사이저": "벌레",            // Pinsir
+  "엔쥬 플라엣테": "페어리",            // Ange Floette
+  "엠마": null,                         // Emma — trainer
+  "오래된 지느러미화석": null,          // Antique Sail Fossil
+  "오래된 턱화석": null,                // Jaw Fossil
+  "올리르바ex": "풀",                   // Arboliva
+  "우락고래ex": "얼음",                 // Cetitan
+  "워시로토무": "전기",                 // Wash Rotom (전기/물 → 전기)
+  "원더패치": null,                     // Wondrous Patch
+  "위험한 폐허": null,                  // Dangerous Ruins — stadium
+  "유카리": null,                       // Jacinthe — trainer
+  "이노": null,                         // Naveen — trainer
+  "이상한사탕": null,                   // Rare Candy
+  "재밍타워": null,                     // Jamming Tower — stadium
+  "절친 포핀": null,                    // Buddy-Buddy Poffin
+  "카지": null,                         // Kieran — trainer
+  "커트로토무": "풀",                   // Mow Rotom (전기/풀 → 풀)
+  "코어 메모리": null,                  // item
+  "타라곤": null,                       // Tarragon — trainer
+  "텔레패스 초에너지": null,
+  "파도타기 비치": null,                // Surfing Beach — stadium 변형
+  "파워프로틴": null,                   // Premium Power Pro
+  "파이팅공": null,                     // Fight Gong
+  "펌프킨인 ex": "고스트",              // Gourgeist
+  "포켓패드": null,                     // Pokepad
+  "푸스라": "고스트",                   // Phantump (고스트/풀 → 고스트)
+  "풍선": null,                         // Air Balloon
+  "프리즘 타워": null,                  // Prism Tower — stadium
+  "필리프": null,                       // Philippe — trainer
+  "한방": "노말",                       // Buneary
+  "활력의 숲": null,                    // Forest of Vitality — stadium
+  "히트로토무": "불꽃",                 // Heat Rotom (전기/불꽃 → 불꽃)
 };
