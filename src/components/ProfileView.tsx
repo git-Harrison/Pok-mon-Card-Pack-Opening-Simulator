@@ -1269,6 +1269,9 @@ function SlabPicker({
                           <p className="mt-1 px-1 text-[10px] font-bold text-white truncate">
                             {card.name}
                           </p>
+                          <p className="px-1 text-[9px] text-zinc-500 truncate">
+                            {SETS[card.setCode]?.name ?? card.setCode} · #{card.number}
+                          </p>
                           <div className="px-1 flex items-center gap-1 mt-0.5">
                             {ptype && (
                               <span
@@ -1280,9 +1283,6 @@ function SlabPicker({
                                 {ptype}
                               </span>
                             )}
-                            <span className="text-[9px] text-zinc-500 truncate">
-                              #{card.number}
-                            </span>
                           </div>
                           {taken && (
                             <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-300 ring-1 ring-white/10">

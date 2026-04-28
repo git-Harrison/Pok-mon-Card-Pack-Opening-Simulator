@@ -16,7 +16,7 @@ import {
 } from "@/lib/db";
 import { notifySabotage } from "@/lib/discord";
 import { SABOTAGE_BASE_RATE, SHOWCASES, type ShowcaseType } from "@/lib/center";
-import { getCard } from "@/lib/sets";
+import { getCard, SETS } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
 import { getCharacter } from "@/lib/profile";
 import CoinIcon from "./CoinIcon";
@@ -273,7 +273,9 @@ function VisitShowcaseModal({
                   <p className="text-[12px] font-bold text-white truncate max-w-[200px]">
                     {card.name}
                   </p>
-                  <p className="text-[10px] text-zinc-500">#{card.number}</p>
+                  <p className="text-[10px] text-zinc-500">
+                    {SETS[card.setCode]?.name ?? card.setCode} · #{card.number}
+                  </p>
                 </div>
                 {clickable && (
                   <span className="text-xs font-bold text-rose-300">

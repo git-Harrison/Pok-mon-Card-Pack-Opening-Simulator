@@ -30,7 +30,7 @@ import {
   slabIncomeTrade,
   type ShowcaseType,
 } from "@/lib/center";
-import { getCard } from "@/lib/sets";
+import { getCard, SETS } from "@/lib/sets";
 import { compareRarity } from "@/lib/rarity";
 import type { Rarity } from "@/lib/types";
 import { pclTone } from "@/lib/pcl";
@@ -682,7 +682,9 @@ function ManageModal({
                       <p className="text-[12px] font-bold text-white truncate">
                         {card.name}
                       </p>
-                      <p className="text-[10px] text-zinc-500">#{card.number}</p>
+                      <p className="text-[10px] text-zinc-500">
+                        {SETS[card.setCode]?.name ?? card.setCode} · #{card.number}
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -800,6 +802,9 @@ function GradingPickModal({
                     <PclSlab card={card} grade={g.grade} size="sm" />
                     <p className="mt-1 text-[10px] font-bold text-white truncate w-full text-center px-1">
                       {card.name}
+                    </p>
+                    <p className="text-[9px] text-zinc-500 truncate w-full text-center px-1">
+                      {SETS[card.setCode]?.name ?? card.setCode} · #{card.number}
                     </p>
                     <span
                       className={clsx(
@@ -1063,6 +1068,9 @@ function BulkShowcaseCreateModal({
                         <PclSlab card={card} grade={g.grade} size="sm" />
                         <p className="mt-1 text-[10px] font-bold text-white truncate w-full text-center px-1">
                           {card.name}
+                        </p>
+                        <p className="text-[9px] text-zinc-500 truncate w-full text-center px-1">
+                          {SETS[card.setCode]?.name ?? card.setCode} · #{card.number}
                         </p>
                         <div className="flex items-center gap-1 text-[10px] font-bold tabular-nums text-zinc-200">
                           <span

@@ -100,38 +100,56 @@ export default function PclSlab({
           }}
         />
 
-        {/* ── Header — PCL 브랜드 | 등급 라벨 | 등급 숫자 ── */}
-        <div className="relative flex items-stretch h-9 md:h-10">
-          {/* PCL 브랜드 컬럼 */}
-          <div
-            className={clsx(
-              "shrink-0 px-1.5 md:px-2 flex flex-col items-center justify-center border-r border-white/10",
-              tone.text
-            )}
-          >
-            <span className="text-[9px] md:text-[10px] font-black tracking-[0.14em] leading-none">
-              {GRADE_BRAND}
-            </span>
-          </div>
-          {/* 가운데: 등급 라벨 (GEM MINT 등) — 카드 이름 자리 대체 */}
-          <div className="flex-1 min-w-0 px-2 flex items-center justify-center">
+        {/* ── Header — 인증서 스탬프 스타일 ──
+              ┌──────────────────────────┐
+              │ PCL ★★★★★      ⦿ 10 ⦿  │
+              │            GEM MINT       │
+              └──────────────────────────┘ */}
+        <div className="relative px-2.5 md:px-3 py-1.5 md:py-2 flex items-center gap-2">
+          {/* 좌측: PCL 브랜드 + 별점 */}
+          <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+            <div className="flex items-center gap-1.5">
+              <span
+                className={clsx(
+                  "text-[10px] md:text-[11px] font-black tracking-[0.2em] leading-none",
+                  tone.text
+                )}
+                style={{ fontFamily: "monospace" }}
+              >
+                {GRADE_BRAND}
+              </span>
+              <span className={clsx("text-[8px] tracking-widest leading-none", tone.text)}>
+                {"★".repeat(Math.max(0, Math.min(5, safeGrade === "?" ? 0 : safeGrade - 5)))}
+                {"☆".repeat(Math.max(0, 5 - Math.max(0, Math.min(5, safeGrade === "?" ? 0 : (safeGrade as number) - 5))))}
+              </span>
+            </div>
             <span
               className={clsx(
-                "text-[9px] md:text-[10px] uppercase tracking-[0.24em] font-bold truncate",
+                "text-[8px] md:text-[9px] uppercase tracking-[0.22em] font-bold leading-none truncate",
                 tone.text
               )}
             >
               {label}
             </span>
           </div>
-          {/* 우측: 등급 숫자 banner */}
+          {/* 우측: 원형 grade seal */}
           <div
             className={clsx(
-              "shrink-0 flex items-center justify-center px-2 md:px-2.5 font-black tabular-nums",
+              "shrink-0 relative w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center",
+              "ring-2 ring-white/30",
               tone.banner
             )}
+            style={{
+              boxShadow:
+                "inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.35), 0 4px 10px -2px rgba(0,0,0,0.5)",
+            }}
           >
-            <span className="text-base md:text-lg leading-none">
+            {/* 외곽 점선 stamp */}
+            <span
+              aria-hidden
+              className="absolute inset-0.5 rounded-full border border-dashed border-white/40 pointer-events-none"
+            />
+            <span className="relative text-base md:text-lg font-black tabular-nums leading-none">
               {safeGrade}
             </span>
           </div>
@@ -195,27 +213,9 @@ export default function PclSlab({
           </div>
         </div>
 
-        {/* ── 하단 데코 띠 — barcode 만 (cert/번호 텍스트 X) ── */}
-        <div className="relative px-2 pb-1 flex items-center justify-end gap-2">
-          <Barcode />
-        </div>
+        {/* 하단 micro padding — 카드 이미지 ring 과 슬랩 케이스 사이 여유. */}
+        <div className="h-1 md:h-1.5" />
       </div>
     </motion.div>
-  );
-}
-
-/** Decorative barcode — static widths, flat white bars. */
-function Barcode() {
-  const bars = [1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 3, 1];
-  return (
-    <div className="flex items-end h-3.5 gap-[1px] shrink-0 opacity-70">
-      {bars.map((w, i) => (
-        <span
-          key={i}
-          className="bg-white/85"
-          style={{ width: `${w}px`, height: "100%" }}
-        />
-      ))}
-    </div>
   );
 }

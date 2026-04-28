@@ -517,6 +517,9 @@ function PclMode({
               >
                 {card.name}
               </p>
+              <p className="w-full text-center text-[9px] leading-tight line-clamp-1 px-0.5 text-zinc-500">
+                {SETS[card.setCode]?.name ?? card.setCode} · #{card.number}
+              </p>
             </motion.button>
           );
         })}

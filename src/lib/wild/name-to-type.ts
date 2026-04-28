@@ -12,18 +12,21 @@ export type WildType =
   | "바위" | "고스트" | "드래곤" | "악" | "강철" | "페어리";
 
 /** 카드 이름 → WildType 통합 resolver. fallback 체인:
- *   1) CARD_NAME_TO_TYPE 직접 lookup
+ *   1) CARD_NAME_TO_TYPE 직접 lookup (null 명시 = 트레이너/아이템 → null 반환)
  *   2) "(골드)", " ex/V/VMAX/GX/BREAK" 등 suffix 제거 후 재시도
- *   3) "메가 " prefix 제거 후 재시도
- *   4) CARD_NAME_TO_DEX → DEX_TO_TYPE (1025 entry) — 미매핑 한글 카드의
- *      마지막 안전망. spec 0-3 "속성값 누락 0" 충족.
- *  null 반환은 트레이너/굿즈 카드 (의도적). */
+ *   3) "메가 " or "메가" (공백 유무 모두) prefix 제거 후 재시도
+ *   4) CARD_NAME_TO_DEX → DEX_TO_TYPE (1025 entry) — 한글 이름 → dex → type.
+ *   5) 그래도 못 찾으면 — 사용자 정책 "포켓몬인데 속성 없는 건 안 됨"
+ *      에 따라 "노말" fallback. (트레이너/아이템은 1단계에서 명시 null
+ *      반환되므로 여기까진 안 옴.) */
 export function resolveCardType(name: string): WildType | null {
-  // 1) direct
+  if (!name) return null;
+
+  // 1) direct — 명시 null 이면 트레이너/아이템 즉시 종료.
   const direct = CARD_NAME_TO_TYPE[name];
   if (direct !== undefined) return direct;
 
-  // 2) suffix strip
+  // 2) suffix strip — (골드)/(SV)/ex/V/VMAX/VSTAR/GX/BREAK
   let base = name
     .replace(/\s*\(골드\)\s*$/, "")
     .replace(/\s*\(SV\)\s*$/, "")
@@ -32,20 +35,31 @@ export function resolveCardType(name: string): WildType | null {
   const stripped = CARD_NAME_TO_TYPE[base];
   if (stripped !== undefined) return stripped;
 
-  // 3) 메가 prefix strip
-  if (base.startsWith("메가 ")) {
-    base = base.slice(3).trim();
-    const mega = CARD_NAME_TO_TYPE[base];
-    if (mega !== undefined) return mega;
+  // 3) "메가" prefix — 공백 유무 모두 처리.
+  //    "메가 이상해씨" / "메가이상해씨" / "메가-이상해씨" 모두 base 종으로.
+  let megaBase: string | null = null;
+  if (base.startsWith("메가 ")) megaBase = base.slice(3).trim();
+  else if (base.startsWith("메가-")) megaBase = base.slice(3).trim();
+  else if (base.startsWith("메가")) megaBase = base.slice(2).trim();
+  if (megaBase) {
+    const mega = CARD_NAME_TO_TYPE[megaBase];
+    if (mega !== undefined && mega !== null) return mega;
+    base = megaBase;
   }
 
   // 4) dex fallback — 한글 이름 → dex → type
-  const dex = CARD_NAME_TO_DEX[base] ?? CARD_NAME_TO_DEX[name];
+  const dex =
+    CARD_NAME_TO_DEX[base] ??
+    CARD_NAME_TO_DEX[name] ??
+    (megaBase ? CARD_NAME_TO_DEX[megaBase] : undefined);
   if (dex !== undefined && DEX_TO_TYPE[dex] !== undefined) {
     return DEX_TO_TYPE[dex];
   }
 
-  return null;
+  // 5) 마지막 fallback — 사용자 정책 "포켓몬인데 속성 없는 건 안 됨".
+  //    트레이너/아이템은 step 1 의 명시 null 에서 끊겼을 것이므로 여기
+  //    도달하면 매핑되지 않은 포켓몬일 가능성 높음 → "노말" 기본값.
+  return "노말";
 }
 
 export const CARD_NAME_TO_TYPE: Record<string, WildType | null> = {
