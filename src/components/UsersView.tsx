@@ -111,9 +111,42 @@ export default function UsersView() {
     setLoading(false);
   }, []);
 
+  // 스피너 없이 백그라운드 갱신용 — expand / 폴링 시 사용.
+  const softLoad = useCallback(async () => {
+    const r = await fetchUserRankings();
+    setRows(r);
+  }, []);
+
   useEffect(() => {
     load();
   }, [load]);
+
+  // 사용자 expand 시 랭킹 데이터도 함께 새로 가져옴 — 펼친 행의
+  // rank_score / center_power / pet_score / points / 도감 카운트 가
+  // 다른 사용자의 최근 정산 후 즉시 반영되도록.
+  useEffect(() => {
+    if (!expandedId) return;
+    void softLoad();
+  }, [expandedId, softLoad]);
+
+  // 페이지 visible 인 동안 60초 주기 폴링 — 점수 변동을 자연스럽게
+  // 추적. tab/window hidden 일 땐 스킵.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const tick = () => {
+      if (document.hidden) return;
+      void softLoad();
+    };
+    const id = setInterval(tick, 60_000);
+    const onVis = () => {
+      if (!document.hidden) void softLoad();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [softLoad]);
 
   // Detect ranking-position changes for the current user across all 3 tabs
   // and fire a Discord webhook on first observation.
