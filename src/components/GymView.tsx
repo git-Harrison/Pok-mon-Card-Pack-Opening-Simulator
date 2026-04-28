@@ -106,21 +106,16 @@ export default function GymView() {
 
   const refresh = useCallback(async () => {
     if (!userId) return;
-    const list = await fetchGymsState(userId);
+    // gyms 상태 + center_power 를 항상 함께 갱신 — 도전 자격 표시가
+    // 전시/펫/도감 변동 즉시 반영되도록. 이전엔 mount 시 한 번만
+    // 가져와 stale 상태로 도전 거부 케이스 발생.
+    const [list, cp] = await Promise.all([
+      fetchGymsState(userId),
+      computeUserCenterPower(userId),
+    ]);
     setGyms(list);
+    setCenterPower(cp);
     setLoading(false);
-  }, [userId]);
-
-  // center_power 도 함께 로드 (도전 자격 표시용).
-  useEffect(() => {
-    if (!userId) return;
-    let alive = true;
-    computeUserCenterPower(userId).then((cp) => {
-      if (alive) setCenterPower(cp);
-    });
-    return () => {
-      alive = false;
-    };
   }, [userId]);
 
   useEffect(() => {
