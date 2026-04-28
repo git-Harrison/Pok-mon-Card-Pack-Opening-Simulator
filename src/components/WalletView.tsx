@@ -21,9 +21,9 @@ import {
   type PclGradingWithDisplay,
   type WalletSnapshot,
 } from "@/lib/db";
+import Link from "next/link";
 import { fetchProfile } from "@/lib/profile";
 import { notifyGift } from "@/lib/discord";
-import Link from "next/link";
 import PokeCard from "./PokeCard";
 import PclSlab from "./PclSlab";
 import CoinIcon from "./CoinIcon";
@@ -124,7 +124,6 @@ export default function WalletView() {
     [snap.packsOpenedBySet]
   );
 
-  const hasAny = snap.items.length > 0 || pcl.length > 0;
 
   return (
     <div className="relative max-w-6xl mx-auto px-4 md:px-6 py-3 md:py-6 fade-in">
@@ -142,22 +141,7 @@ export default function WalletView() {
             <CountBadge value={snap.totalCards} cap="5만" />
           </ModeTab>
         </div>
-        {hasAny ? (
-          <Link
-            href="/wallet/bulk-sell"
-            style={{ touchAction: "manipulation" }}
-            aria-label="일괄 판매"
-            className="shrink-0 h-10 px-4 rounded-xl text-sm font-black inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-400 to-amber-400 text-zinc-950 shadow-[0_8px_24px_-8px_rgba(251,191,36,0.6)] hover:scale-[1.02] active:scale-[0.98] transition"
-          >
-            <CoinIcon size="sm" />
-            일괄 판매
-          </Link>
-        ) : (
-          <span className="shrink-0 h-10 px-4 rounded-xl text-sm font-black border border-white/10 bg-white/5 text-zinc-500 inline-flex items-center gap-1.5">
-            <CoinIcon size="sm" />
-            일괄 판매
-          </span>
-        )}
+        {/* 일괄 판매 기능 제거됨 — 카드 처리는 감별 페이지에서 자동 삭제로 일원화. */}
       </div>
 
       {loading ? (

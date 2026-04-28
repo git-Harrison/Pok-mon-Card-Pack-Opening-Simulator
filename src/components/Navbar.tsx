@@ -45,7 +45,6 @@ const MOBILE_PRIMARY = ["/", "/wild", "/grading", "/users", "/profile"];
 const HEADER_TITLE_OVERRIDES: Record<string, string> = {
   "/": "포켓몬 카드깡",
   "/wallet": "내 카드지갑",
-  "/wallet/bulk-sell": "일괄 판매",
   "/center": "내 포켓몬센터",
   "/grading": "PCL 감정실",
   "/users": "사용자 랭킹",

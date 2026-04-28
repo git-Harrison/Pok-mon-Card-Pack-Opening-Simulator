@@ -835,7 +835,7 @@ function SealedBox({
 
       {!canAfford && !loading && (
         <p className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">
-          포인트가 부족해요. 일괄판매·감별·전시 수익으로 채워보세요.
+          포인트가 부족해요. 감별·전시 수익으로 채워보세요.
         </p>
       )}
       {capError && (
@@ -853,10 +853,10 @@ function SealedBox({
           </div>
           <div className="flex flex-wrap gap-2 pt-1">
             <Link
-              href="/wallet/bulk-sell"
+              href="/grading"
               className="text-[12px] px-3 py-1.5 rounded-full bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/40 text-amber-100 transition"
             >
-              🎫 일괄 판매로 이동
+              🔎 일괄 감별로 정리
             </Link>
             <Link
               href="/wallet"
