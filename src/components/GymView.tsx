@@ -601,10 +601,11 @@ function PixelTrees({ x, y }: { x: number; y: number }) {
 
 /** 체육관 사이 path 점선 — 위 SVG 배경 위에 한 번 더 SVG 레이어. */
 function PixelRoutes() {
-  // 챕터 1 — 8 체육관 사이 path. 좌표는 20260633 안전 영역 (x 12-88,
-  // y 16-96).
-  // 위치: psychic(20,16) / ice(72,20) / ground(34,28) / rock(18,52) /
-  //       electric(50,48) / fire(80,50) / grass(22,80) / water(62,82).
+  // 챕터 1 — 8 체육관 4-row 정렬 (20260634).
+  //  Row 1 (y=18): psychic(22) / ice(78)
+  //  Row 2 (y=36): ground(50)
+  //  Row 3 (y=56): rock(22) / electric(50) / fire(78)
+  //  Row 4 (y=80): grass(28) / water(72)
   return (
     <svg
       className="absolute inset-0 w-full h-full pointer-events-none"
@@ -614,13 +615,18 @@ function PixelRoutes() {
       aria-hidden
     >
       <g stroke="#fcd34d" strokeWidth="0.6" strokeDasharray="1.2 1.4" fill="none">
-        <path d="M20 16 L34 28" />
-        <path d="M34 28 L50 48" />
-        <path d="M50 48 L18 52" />
-        <path d="M50 48 L80 50" />
-        <path d="M50 48 L22 80" />
-        <path d="M50 48 L62 82" />
-        <path d="M72 20 L80 50" />
+        {/* Row1 → Row2: psychic/ice → ground */}
+        <path d="M22 18 L50 36" />
+        <path d="M78 18 L50 36" />
+        {/* Row2 → Row3: ground → rock/electric/fire */}
+        <path d="M50 36 L22 56" />
+        <path d="M50 36 L50 56" />
+        <path d="M50 36 L78 56" />
+        {/* Row3 → Row4: rock→grass / fire→water / electric→both */}
+        <path d="M22 56 L28 80" />
+        <path d="M78 56 L72 80" />
+        <path d="M50 56 L28 80" />
+        <path d="M50 56 L72 80" />
       </g>
     </svg>
   );
@@ -721,7 +727,7 @@ function PixelTownBackgroundCh2() {
 }
 
 /** 챕터 2 라우트 — 3 체육관 (노말/벌레/격투) 삼각.
- *  위치: 노말(50,30) / 벌레(24,88) / 격투(76,88). */
+ *  위치: 노말(50,28) / 벌레(24,80) / 격투(76,80). */
 function PixelRoutesCh2() {
   return (
     <svg
@@ -732,9 +738,9 @@ function PixelRoutesCh2() {
       aria-hidden
     >
       <g stroke="#ec4899" strokeWidth="0.6" strokeDasharray="1.2 1.4" fill="none">
-        <path d="M50 30 L24 88" />
-        <path d="M50 30 L76 88" />
-        <path d="M24 88 L76 88" />
+        <path d="M50 28 L24 80" />
+        <path d="M50 28 L76 80" />
+        <path d="M24 80 L76 80" />
       </g>
     </svg>
   );
@@ -824,7 +830,7 @@ function PixelTownBackgroundCh3() {
 
 /** 챕터 3 라우트 — 어둠의 협곡 7 체육관.
  *  위치: 독(16,24) / 비행(50,18) / 강철(84,26) / 고스트(30,56) /
- *        페어리(72,60) / 악(22,96) / 드래곤(78,96). */
+ *        페어리(72,60) / 악(22,88) / 드래곤(78,88). */
 function PixelRoutesCh3() {
   return (
     <svg
@@ -844,10 +850,10 @@ function PixelRoutesCh3() {
         {/* 중단 가로 */}
         <path d="M30 56 L72 60" />
         {/* 중단 → 하단 */}
-        <path d="M30 56 L22 96" />
-        <path d="M72 60 L78 96" />
+        <path d="M30 56 L22 88" />
+        <path d="M72 60 L78 88" />
         {/* 하단 가로 */}
-        <path d="M22 96 L78 96" />
+        <path d="M22 88 L78 88" />
       </g>
     </svg>
   );
