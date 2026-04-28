@@ -289,9 +289,9 @@ export default function UsersView() {
       )}
       {mode === "pet" && (
         <p className="mt-2 text-[11px] text-zinc-400 leading-snug">
-          펫 점수 = 등록한 PCL10 펫 슬랩 + 체육관 방어 덱 슬랩 의{" "}
-          <b className="text-zinc-200">희귀도 점수</b>(SR 5·MA 6·SAR 7·UR 8·MUR
-          10) × 15 합산.
+          펫 점수 = 등록한 PCL10 펫 슬랩의 등급별 정액 합산.{" "}
+          <b className="text-zinc-200">MUR 40k · UR 20k · SAR 12k · SR 7k · MA
+          5k · AR 4k · RR 2k · R 1k · U/C 0.5k</b>. PCL 9 이하는 점수 없음.
         </p>
       )}
 
@@ -860,7 +860,8 @@ function ScoreBreakdown({
     if (pet > 0)        items.push({ label: "펫", value: pet, tone: "amber" });
     if (gymBuff > 0)    items.push({ label: `메달 ×${medalCount}`, value: gymBuff, tone: "violet" });
   } else {
-    // 펫 — main_cards 의 등급별 정액 합. (rarity_score × 15)
+    // 펫 — main_cards 의 등급별 정액 합. (pet_rarity_score 절대값)
+    //   서버: supabase/migrations/20260636_pet_score_bump_v3.sql
     const cards = row.main_cards ?? [];
     if (cards.length === 0) {
       return (
@@ -869,16 +870,16 @@ function ScoreBreakdown({
         </p>
       );
     }
-    const RARITY_SCORE: Record<string, number> = {
-      MUR: 10, UR: 8, SAR: 7, MA: 6, SR: 5,
-      AR: 0, RR: 0, R: 0, U: 0, C: 0,
+    const PET_RARITY_SCORE: Record<string, number> = {
+      MUR: 40000, UR: 20000, SAR: 12000, SR: 7000, MA: 5000,
+      AR: 4000, RR: 2000, R: 1000, U: 500, C: 500,
     };
     const counts: Record<string, number> = {};
     for (const c of cards) {
       counts[c.rarity] = (counts[c.rarity] ?? 0) + 1;
     }
     for (const [r, n] of Object.entries(counts)) {
-      const v = (RARITY_SCORE[r] ?? 0) * 15 * n;
+      const v = (PET_RARITY_SCORE[r] ?? 0) * n;
       if (v > 0) items.push({ label: `${r} × ${n}`, value: v, tone: "amber" });
     }
   }

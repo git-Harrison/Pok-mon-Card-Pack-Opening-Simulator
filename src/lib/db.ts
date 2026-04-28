@@ -387,7 +387,8 @@ export interface RankingRow {
   center_power: number;
   /** Selected trainer character key, or null if unset. */
   character: string | null;
-  /** Σ rarity_score × 10 across registered pet slabs. Max 500. */
+  /** Σ pet_rarity_score across registered PCL10 pet slabs.
+   *  MUR 40k / UR 20k / SAR 12k / SR 7k / MA 5k / AR 4k / RR 2k / R 1k / U|C 0.5k. */
   pet_score: number;
   /** Pet slot order — uuid[] of grading rows. */
   main_card_ids?: string[];

@@ -1,51 +1,55 @@
 # 펫 등록 전투력(pet_score) 계산 스펙
 
 > 조사 시점: 2026-04-28
+> 최종 수정: 2026-04-28 (v3 절대값 체계로 전환)
 > 대상 브랜치: `main`
-> 핵심 함수: `compute_user_pet_score(user_id)`
+> 핵심 함수: `compute_user_pet_score(user_id)` + `pet_rarity_score(rarity)`
 
 ## 0. 한 줄 요약
 
-펫 등록 전투력은 **PCL 10 슬랩 한정**으로 `rarity_score(rarity) × 15` 점이 슬롯당 부여된다. 신구조(`main_cards_by_type`)와 구구조(`main_card_ids`)는 SQL `UNION` 으로 합산되어 **중복 가산 위험 없음**. 방어덱 등록 카드는 main_cards 에서 자동 제거되어 펫 점수에서 빠진다.
+펫 등록 전투력은 **PCL 10 슬랩 한정**으로 `pet_rarity_score(rarity)` 절대값이 슬롯당 부여된다 (예: MUR 40,000). 신구조(`main_cards_by_type`)와 구구조(`main_card_ids`)는 SQL `UNION` 으로 합산되어 **중복 가산 위험 없음**. 방어덱 등록 카드는 main_cards 에서 자동 제거되어 펫 점수에서 빠진다.
 
 ---
 
 ## 1. 현재 펫 등록 전투력 지급 수치 (등급별)
 
-### 등급별 점수표 (PCL 10 슬랩당)
+### 등급별 점수표 (PCL 10 슬롯당)
 
-| 희귀도 | rarity_score | × 15 | 슬롯당 점수 |
-|--------|------------:|----:|----------:|
-| **MUR** | 28 | × 15 | **420** |
-| **UR**  | 18 | × 15 | **270** |
-| **SAR** | 12 | × 15 | **180** |
-| **MA**  | 9  | × 15 | **135** |
-| **SR**  | 7  | × 15 | **105** |
-| **AR**  | 4  | × 15 | **60**  |
-| **RR**  | 3  | × 15 | **45**  |
-| **R**   | 2  | × 15 | **30**  |
-| **U**   | 1  | × 15 | **15**  |
-| **C**   | 1  | × 15 | **15**  |
-| 그 외   | 0  | × 15 | 0       |
+| 희귀도 | 슬롯당 점수 |
+|--------|----------:|
+| **MUR** | **40,000** |
+| **UR**  | **20,000** |
+| **SAR** | **12,000** |
+| **SR**  | **7,000**  |
+| **MA**  | **5,000**  |
+| **AR**  | **4,000**  |
+| **RR**  | **2,000**  |
+| **R**   | **1,000**  |
+| **U**   | **500**    |
+| **C**   | **500**    |
+| 그 외   | 0          |
+
+**우선순위**: MUR > UR > SAR > SR > MA > AR > RR > R > U/C
+> ※ MA(5k) 가 SR(7k) 보다 낮은 건 사용자 명시 요청. 기존 위계와 다름.
 
 ### 함수 정의
 
-`supabase/migrations/20260615_medal_buff_set_effect_box_price.sql:64-85`
+`supabase/migrations/20260636_pet_score_bump_v3.sql:54-72`
 
 ```sql
-create or replace function rarity_score(p_rarity text)
+create or replace function pet_rarity_score(p_rarity text)
 returns int language sql immutable as $$
   select case p_rarity
-    when 'MUR' then 28
-    when 'UR'  then 18
-    when 'SAR' then 12
-    when 'MA'  then  9
-    when 'SR'  then  7
-    when 'AR'  then  4
-    when 'RR'  then  3
-    when 'R'   then  2
-    when 'U'   then  1
-    when 'C'   then  1
+    when 'MUR' then 40000
+    when 'UR'  then 20000
+    when 'SAR' then 12000
+    when 'SR'  then  7000
+    when 'MA'  then  5000
+    when 'AR'  then  4000
+    when 'RR'  then  2000
+    when 'R'   then  1000
+    when 'U'   then   500
+    when 'C'   then   500
     else 0
   end::int;
 $$;
@@ -53,14 +57,17 @@ $$;
 
 ### MUR 우대 진화
 
-| 시점 | 마이그레이션 | MUR rarity_score | × multiplier | MUR PCL10 슬롯당 |
-|-----|-------------|---:|---:|---:|
-| 초기 | 20260519 | 10 | × 10 | **100** |
-| 1차 상향 | 20260591 | 10 | × 15 | **150** (×1.5) |
-| 2차 상향 (현재) | 20260615 | **28** | × 15 | **420** (초기 대비 ×4.2) |
+| 시점 | 마이그레이션 | 산식 | MUR PCL10 슬롯당 |
+|-----|-------------|------|---:|
+| 초기 | 20260519 | rarity_score(10) × 10 | **100** |
+| 1차 상향 | 20260591 | rarity_score(10) × 15 | **150** (×1.5) |
+| 2차 상향 | 20260615 | rarity_score(28) × 15 | **420** (초기 대비 ×4.2) |
+| 3차 상향 (현재) | **20260636** | **pet_rarity_score(40000)** | **40,000** (초기 대비 ×400) |
 
-근거 주석 (`20260615_…:14-17`):
-> "펫 등록 전투력 상향. 특히 MUR 등급 더 크게."
+근거 (`20260636_…:1-50`):
+> "메달/도감/체육관 보상이 수천~수만 단위인데, MUR 펫 등록해도 420만 오르는 구조라 체감이 거의 없음. 펫 등록 전투력을 절대값으로 재정의 — MUR 만 단위."
+
+> ⚠️ 기존 `rarity_score(text)` 함수는 활동 피드(`× 10`)와 도감 점수에서 그대로 사용 중이므로 그대로 두고, 펫 점수 전용 헬퍼 `pet_rarity_score(text)` 를 별도로 분리.
 
 ---
 
@@ -68,7 +75,7 @@ $$;
 
 ### 산식 — `compute_user_pet_score(user_id)`
 
-`supabase/migrations/20260619_pet_by_type.sql:39-56`
+`supabase/migrations/20260636_pet_score_bump_v3.sql:75-90`
 
 ```sql
 create or replace function compute_user_pet_score(p_user_id uuid)
@@ -80,7 +87,7 @@ returns int language sql stable as $$
     select unnest(flatten_pet_ids_by_type(main_cards_by_type)) as id
       from users where id = p_user_id
   )
-  select coalesce(sum(rarity_score(g.rarity) * 15), 0)::int
+  select coalesce(sum(pet_rarity_score(g.rarity)), 0)::int
     from psa_gradings g
    where g.id in (select id from all_ids)
      and g.grade = 10;
@@ -232,9 +239,10 @@ update users
 
 | 역할 | 경로 |
 |------|------|
-| rarity_score 함수 | `supabase/migrations/20260615_medal_buff_set_effect_box_price.sql:64-85` |
-| compute_user_pet_score | `supabase/migrations/20260619_pet_by_type.sql:39-56` |
-| pet_score_for(uuid[]) (legacy) | `supabase/migrations/20260616_pet_score_main_only_resolve_validation.sql:49-59` |
+| **pet_rarity_score (현재 절대값)** | `supabase/migrations/20260636_pet_score_bump_v3.sql:54-72` |
+| **compute_user_pet_score (현재)** | `supabase/migrations/20260636_pet_score_bump_v3.sql:75-90` |
+| **pet_score_for(uuid[]) (현재)** | `supabase/migrations/20260636_pet_score_bump_v3.sql:93-105` |
+| rarity_score (활동 피드용 — 펫 점수에 더 이상 사용 X) | `supabase/migrations/20260615_medal_buff_set_effect_box_price.sql:64-85` |
 | set_pet_for_type | `supabase/migrations/20260619_pet_by_type.sql:125-180` |
 | flatten_pet_ids_by_type | `supabase/migrations/20260619_pet_by_type.sql` (helper) |
 | main_cards_by_type 컬럼 | `supabase/migrations/20260619_pet_by_type.sql:20-24` |

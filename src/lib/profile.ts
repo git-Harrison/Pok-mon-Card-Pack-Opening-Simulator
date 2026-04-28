@@ -151,7 +151,8 @@ export interface ProfileSnapshot {
 export const MAX_MAIN_CARDS = 10;
 /** spec 2-1: 한 type 당 슬롯 cap. */
 export const PETS_PER_TYPE = 3;
-/** Σ rarity_power × 10 across MAX_MAIN_CARDS MUR (10) slabs. */
+/** @deprecated 더 이상 의미 없는 상수. 펫 점수는 등급별 절대값 합산
+ *  (MUR 40k 등 — 20260636_pet_score_bump_v3.sql) 으로 변경되어 cap 없음. */
 export const MAX_PET_SCORE = 1000;
 
 export const DISPLAY_NAME_MIN = 2;
