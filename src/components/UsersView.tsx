@@ -473,11 +473,11 @@ export default function UsersView() {
                       </>
                     ) : mode === "pet" ? (
                       <>
-                        <div className="text-2xl md:text-3xl font-black text-fuchsia-300 tabular-nums leading-none whitespace-nowrap">
+                        <div className="text-xl md:text-2xl font-black text-fuchsia-300 tabular-nums leading-none whitespace-nowrap">
                           {(e.pet_score ?? 0).toLocaleString("ko-KR")}
                         </div>
-                        <div className="mt-1 text-[10px] text-fuchsia-300/70 uppercase tracking-wider">
-                          펫 점수
+                        <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
+                          펫 등록 전투력
                         </div>
                       </>
                     ) : (

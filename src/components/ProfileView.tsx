@@ -1239,7 +1239,6 @@ function SlabPicker({
                     const sameCardTaken =
                       !taken && !onDefense && lockedCardIds.has(g.card_id);
                     const blocked = taken || onShowcase || onDefense || sameCardTaken;
-                    const ptype = resolveCardType(card.name);
                     return (
                       <li key={g.id}>
                         <button
@@ -1272,18 +1271,6 @@ function SlabPicker({
                           <p className="px-1 text-[9px] text-zinc-500 truncate">
                             {SETS[card.setCode]?.name ?? card.setCode} · #{card.number}
                           </p>
-                          <div className="px-1 flex items-center gap-1 mt-0.5">
-                            {ptype && (
-                              <span
-                                className={clsx(
-                                  "px-1 py-[1px] rounded text-[8px] font-black",
-                                  TYPE_STYLE[ptype].badge
-                                )}
-                              >
-                                {ptype}
-                              </span>
-                            )}
-                          </div>
                           {taken && (
                             <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-300 ring-1 ring-white/10">
                               등록됨

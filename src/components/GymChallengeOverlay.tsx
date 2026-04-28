@@ -997,7 +997,7 @@ function ResultPhase({
               보상 +{(battle.capture_reward ?? 0).toLocaleString("ko-KR")}P
             </p>
             <p className="text-[10px] text-zinc-300 mt-0.5">
-              12시간 보호 시작
+              1시간 보호 시작
             </p>
           </>
         )}

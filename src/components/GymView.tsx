@@ -1850,8 +1850,9 @@ function DailyClaimButton({
   );
 }
 
-/** /gym 페이지 우하단 floating 도움말 버튼. position: fixed 라 본문
- *  레이아웃에 영향 X. 클릭 시 전체 화면 모달로 시스템 안내. */
+/** /gym 페이지 도움말 버튼. 지도를 가리지 않도록 헤더 영역 안쪽
+ *  (페이지 헤더 우측) 인라인 small 버튼으로 배치. 모바일에서도 지도
+ *  영역을 침범하지 않음. 클릭 시 모달로 단순화된 안내. */
 function GymHelpButton() {
   const [open, setOpen] = useState(false);
   return (
@@ -1861,9 +1862,10 @@ function GymHelpButton() {
         onClick={() => setOpen(true)}
         aria-label="체육관 도움말"
         style={{ touchAction: "manipulation" }}
-        className="fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:right-6 md:bottom-6 z-30 w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-rose-500 text-zinc-950 font-black text-lg shadow-[0_10px_28px_-8px_rgba(244,114,128,0.6)] flex items-center justify-center hover:scale-105 active:scale-95 transition"
+        className="fixed left-3 top-[calc(env(safe-area-inset-top,0px)+4.5rem)] md:left-5 md:top-20 z-30 h-8 px-2.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-white/80 text-[11px] font-bold flex items-center gap-1 active:scale-95 transition backdrop-blur-sm"
       >
-        ?
+        <span aria-hidden>❔</span>
+        도움말
       </button>
       <AnimatePresence>
         {open && <GymHelpModal onClose={() => setOpen(false)} />}
@@ -1920,63 +1922,54 @@ function GymHelpModal({ onClose }: { onClose: () => void }) {
               ✕
             </button>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3 text-[12px] leading-relaxed text-zinc-200">
-            <Section icon="⚔️" title="기본 — 도전과 점령">
-              체육관 8곳은 각자 고유 속성(풀/물/바위/전기/불꽃/땅/얼음/에스퍼).
-              관장 NPC 또는 점령자의 방어 덱과 3:3 펫 배틀로 도전 가능.
-              승리하면 그 체육관의 새 소유자가 됩니다.
-            </Section>
-            <Section icon="🎯" title="도전 조건">
-              • 도전 펫 3마리 모두 <b>체육관 속성과 동일</b>해야 합니다.<br />
-              • 내 <b>전투력(center_power)</b>이 체육관 최소치 이상.<br />
-              • 같은 체육관에 다른 사람이 도전 중이면 대기.<br />
-              • 패배 시 8분 재도전 쿨타임.
-            </Section>
-            <Section icon="🛡️" title="점령 효과 — 보호 시간">
-              점령 직후 <b>1시간 보호</b> — 다른 트레이너 도전 불가.
-              보호 끝난 뒤에는 누구나 도전 가능. 소유자는 10,000,000P 결제로
-              보호를 추가 1시간 연장 가능.
-            </Section>
-            <Section icon="🐾" title="방어 덱 (점령자 전용)">
-              내 PCL10 펫 3마리(체육관 속성 동일)를 <b>방어 덱</b>으로 셋업.
-              다른 트레이너가 도전하면 NPC 대신 이 3마리가 등장.<br />
-              • 방어 덱에 든 펫은 펫 슬롯에서 자동 빠짐 (전투력은 그대로 합산).<br />
-              • <b>MUR 카드는 도전/방어 양측 동일</b>하게 효율 ×2 + 캡 ×10
-              적용 — 같은 power 면 MUR 이 비-MUR 을 압도.<br />
-              • 다른 사람에게 점령당하면 방어 덱 슬랩 <b>영구 삭제</b> + pet_score
-              감소.
-            </Section>
-            <Section icon="💪" title="전투력(center_power) 버프">
-              메달 보유 → 전투력 자동 추가 (난이도 비례, 영구):<br />
-              EASY +10K · NORMAL +20K · HARD +40K · BOSS +80K.<br />
-              여러 곳 메달을 모을수록 누적 — 도감/펫/전시 외 별도 보너스.
-            </Section>
-            <Section icon="🏅" title="메달">
-              체육관을 점령할 때마다 그 속성의 고유 메달이 계정에 등록.
-              같은 메달은 <b>1개씩만</b> 보유 — 이미 있으면 no-op. 메달은
-              <b>영구</b> 보존(점령 잃어도 그대로). 프로필 헤더 / 랭킹 행
-              에 노출.
-            </Section>
-            <Section icon="🎁" title="일일 보상 — 24시간 쿨타임">
-              점령 중인 체육관에서 1일 1회 청구. 보상은 난이도 비례:
-              <br />
-              EASY +1000만P/+3K · NORMAL +2000만P/+8K · HARD +4000만P/+15K
-              · BOSS +8000만P/+25K.<br />
-              체육관 단위 24h 쿨타임 — 다른 사람이 점령해도 이전 청구 시점
-              부터 계산 유지.
-            </Section>
-            <Section icon="📊" title="전투 공식 요약">
-              펫 능력치 = 카드 기본 스탯(slabStats) + center_power 비례 보너스.
-              슬롯 1/2/3 = ATK 보너스 비율 10% / 8% / 6%, 캡 = 기본 ATK × 5.
-              <b>MUR 카드는 양측 동일 ×2 효율 + 캡 ×10</b>. 속성 상성 표
-              (2× / 0.5×) 적용.
-            </Section>
-            <Section icon="💡" title="팁">
-              • 첫 도전은 가장 약한 EASY 체육관으로 메달(+10K 전투력) 확보.<br />
-              • 점령 직후 일일 보상 1회 청구 → 랭킹 +10,000 즉시 반영.<br />
-              • <b>MUR 슬랩</b>은 도전/방어 모두 강력 — power 동등 시 비-MUR 압도.<br />
-              • 도감/펫/전시 전투력으로 min_power 부족 시 도감 채우기 우선.
-            </Section>
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-2 text-[12px] leading-relaxed text-zinc-200">
+            {/* 핵심 한 줄 요약 — 처음 본 사람도 즉시 이해 */}
+            <div className="rounded-xl border border-amber-400/30 bg-amber-400/[0.06] px-3 py-2 text-[12px] text-amber-100 leading-snug">
+              <b className="text-white">PCL 10 펫 3마리</b>로 체육관 관장과
+              3:3 배틀. 이기면 그 체육관을 점령하고 메달을 받습니다.
+            </div>
+            <Collapsible icon="⚔️" title="도전 방법">
+              • 펫 3마리 모두 <b>체육관과 같은 속성</b> 이어야 합니다.<br />
+              • PCL 등급 <b>10 슬랩만</b> 출전 가능.<br />
+              • 내 <b>총 전투력</b>이 체육관 최소치 이상.<br />
+              • 패배 시 8분 재도전 대기.
+            </Collapsible>
+            <Collapsible icon="🛡️" title="점령 후 보호 시간">
+              점령 직후 <b>1시간</b> 동안 다른 트레이너의 도전을 받지 않아요.
+              보호가 끝나면 누구나 도전 가능. 1,000만P 로 1시간 추가 연장 가능.
+            </Collapsible>
+            <Collapsible icon="🐾" title="방어 덱">
+              점령 후 내 PCL 10 펫 3마리를 방어 덱으로 등록하면, 다른
+              트레이너가 도전할 때 관장 대신 내 펫 3마리가 막아요.
+              방어 덱에 등록된 카드는 펫 등록 슬롯에서 자동 빠집니다.
+              <br />· 패배 시 <b>방어 덱 슬랩은 영구 삭제</b> 됩니다.
+            </Collapsible>
+            <Collapsible icon="🏅" title="메달 — 영구 업적">
+              체육관 점령 시 해당 속성 메달이 계정에 영구 등록 (점령 잃어도
+              그대로). 같은 메달은 1개만 — 중복 지급 X. 메달마다 고유한
+              <b> 메달 전투력</b>이 총 전투력에 합산돼요.
+            </Collapsible>
+            <Collapsible icon="🎁" title="일일 보상">
+              점령 중인 체육관에서 1일 1회 청구. 난이도가 높을수록 보상이
+              커요. 체육관 단위 24시간 쿨타임.
+            </Collapsible>
+            <Collapsible icon="💪" title="총 전투력은 어떻게 결정되나요?">
+              <b>총 전투력</b> = 전시 슬랩 + 도감 보너스 + 도감 세트효과 +
+              펫 등록 전투력 + 메달 전투력. 펫 등록 전투력은 등급별 정액:
+              MUR 40k · UR 20k · SAR 12k · SR 7k · MA 5k · AR 4k · RR 2k ·
+              R 1k · U/C 0.5k. PCL 9 이하는 0점.
+            </Collapsible>
+            <Collapsible icon="📊" title="전투 능력치 결정 방식">
+              펫 능력치 = <b>카드 희귀도</b> 기본값 + 총 전투력 비례 보정.
+              체육관과 속성이 일치하면 공격력 +10%. 도전자는 항상 선공,
+              방어자는 HP 보정 +10%. <b>MUR 카드는 공격/방어 모두 최고 효율</b>.
+            </Collapsible>
+            <Collapsible icon="💡" title="공략 팁">
+              • 처음엔 가장 쉬운 풀 체육관부터 — 메달 확보 시 총 전투력 즉시 +10K.<br />
+              • 점령 직후 일일 보상 1회 청구.<br />
+              • MUR 슬랩은 도전/방어 모두 압도적 — 우선 확보.<br />
+              • 도감을 채우면 총 전투력이 같이 올라가 더 강한 체육관 도전 가능.
+            </Collapsible>
           </div>
         </motion.div>
       </motion.div>
@@ -1984,8 +1977,8 @@ function GymHelpModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** 도움말 모달 내부 카드 1개 — 아이콘 + 제목 + 본문. */
-function Section({
+/** 도움말 접기/펼치기 — 첫 화면은 제목만 보이고 클릭 시 본문 노출. */
+function Collapsible({
   icon,
   title,
   children,
@@ -1994,15 +1987,34 @@ function Section({
   title: string;
   children: ReactNode;
 }) {
+  const [open, setOpen] = useState(false);
   return (
-    <section className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-      <h3 className="text-[12px] font-black text-white mb-1 inline-flex items-center gap-1.5">
+    <section className="rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full px-3 py-2.5 flex items-center gap-2 text-left active:bg-white/5"
+        style={{ touchAction: "manipulation" }}
+      >
         <span aria-hidden>{icon}</span>
-        {title}
-      </h3>
-      <div className="text-[11.5px] leading-relaxed text-zinc-300">
-        {children}
-      </div>
+        <span className="text-[12px] font-black text-white flex-1">
+          {title}
+        </span>
+        <span
+          aria-hidden
+          className={clsx(
+            "text-[11px] text-zinc-400 transition-transform",
+            open && "rotate-180"
+          )}
+        >
+          ▾
+        </span>
+      </button>
+      {open && (
+        <div className="px-3 pb-3 text-[11.5px] leading-relaxed text-zinc-300 border-t border-white/5">
+          <div className="pt-2">{children}</div>
+        </div>
+      )}
     </section>
   );
 }
