@@ -386,41 +386,20 @@ export default function UsersView() {
                       전시 {e.showcase_count ?? 0}장 · 부수기{" "}
                       {e.sabotage_wins ?? 0}회
                     </p>
-                    {/* 체육관 메달 — 모든 탭 공통 노출. 각 메달 = type
-                        색 SVG 아이콘. 호버 시 상세 (체육관/난이도).
-                        flex-wrap — 메달이 많아져도 다음 줄로 자연스럽게
-                        넘어가서 잘리지 않음. 잎새(풀) 메달 우선 + 정의된
-                        type 순서. */}
+                    {/* 체육관 메달 — 기본 행에는 카운트 pill 만 (단일 줄
+                        고정, 메달 많아져도 height 변화 없음). 행 펼침 시
+                        ScoreBreakdown 아래에 전체 메달 그리드 노출. */}
                     {e.gym_medals && e.gym_medals.length > 0 && (
-                      <div className="mt-1 flex items-center gap-1 flex-wrap">
-                        {[...e.gym_medals]
-                          .sort(
-                            (a, b) =>
-                              MEDAL_ORDER.indexOf(a.gym_type) -
-                              MEDAL_ORDER.indexOf(b.gym_type)
-                          )
-                          .map((m) => (
-                            <span
-                              key={m.gym_id}
-                              title={`${m.medal_name} — ${m.gym_name} (${m.gym_type})`}
-                              className="inline-flex items-center shrink-0"
-                            >
-                              <GymMedalIcon
-                                type={m.gym_type as WildType}
-                                size={18}
-                              />
-                            </span>
-                          ))}
-                        <span className="ml-0.5 text-[10px] tabular-nums text-zinc-500 self-center">
-                          {e.gym_medals.length}
-                        </span>
+                      <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-400/10 border border-amber-400/30 text-amber-200 text-[10px] font-bold whitespace-nowrap">
+                        <span aria-hidden>🏅</span>
+                        <span className="tabular-nums">×{e.gym_medals.length}</span>
                       </div>
                     )}
                   </div>
                   <div className="text-right shrink-0">
                     {mode === "power" ? (
                       <>
-                        <div className="text-xl md:text-2xl font-black text-rose-300 tabular-nums leading-none whitespace-nowrap">
+                        <div className="text-base md:text-xl font-black text-rose-300 tabular-nums leading-none whitespace-nowrap">
                           {(e.center_power ?? 0).toLocaleString("ko-KR")}
                         </div>
                         <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
@@ -429,7 +408,7 @@ export default function UsersView() {
                       </>
                     ) : mode === "pet" ? (
                       <>
-                        <div className="text-xl md:text-2xl font-black text-fuchsia-300 tabular-nums leading-none whitespace-nowrap">
+                        <div className="text-base md:text-xl font-black text-fuchsia-300 tabular-nums leading-none whitespace-nowrap">
                           {(e.pet_score ?? 0).toLocaleString("ko-KR")}
                         </div>
                         <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
@@ -438,7 +417,7 @@ export default function UsersView() {
                       </>
                     ) : (
                       <>
-                        <div className="text-xl md:text-2xl font-black text-amber-300 tabular-nums leading-none whitespace-nowrap">
+                        <div className="text-base md:text-xl font-black text-amber-300 tabular-nums leading-none whitespace-nowrap">
                           {e.rank_score.toLocaleString("ko-KR")}
                         </div>
                         <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
@@ -472,6 +451,36 @@ export default function UsersView() {
                       <div className="px-3 md:px-4 pt-1 pb-2">
                         <ScoreBreakdown row={e} mode={mode} />
                       </div>
+                      {/* 펼친 영역에 보유 메달 전체 노출 — 잎새/정의된
+                          type 순서로 정렬. 기본 행에는 카운트 pill 만 있고
+                          상세는 여기. */}
+                      {e.gym_medals && e.gym_medals.length > 0 && (
+                        <div className="px-3 md:px-4 pt-1 pb-3">
+                          <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
+                            보유 메달 ({e.gym_medals.length})
+                          </p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {[...e.gym_medals]
+                              .sort(
+                                (a, b) =>
+                                  MEDAL_ORDER.indexOf(a.gym_type) -
+                                  MEDAL_ORDER.indexOf(b.gym_type)
+                              )
+                              .map((m) => (
+                                <span
+                                  key={m.gym_id}
+                                  title={`${m.medal_name} — ${m.gym_name} (${m.gym_type})`}
+                                  className="inline-flex items-center shrink-0"
+                                >
+                                  <GymMedalIcon
+                                    type={m.gym_type as WildType}
+                                    size={22}
+                                  />
+                                </span>
+                              ))}
+                          </div>
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
