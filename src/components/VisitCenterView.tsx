@@ -269,6 +269,12 @@ function VisitShowcaseModal({
                 )}
               >
                 <PclSlab card={card} grade={row.grade} size="lg" />
+                <div className="text-center">
+                  <p className="text-[12px] font-bold text-white truncate max-w-[200px]">
+                    {card.name}
+                  </p>
+                  <p className="text-[10px] text-zinc-500">#{card.number}</p>
+                </div>
                 {clickable && (
                   <span className="text-xs font-bold text-rose-300">
                     💥 부수기 가능

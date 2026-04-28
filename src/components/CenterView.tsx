@@ -678,6 +678,12 @@ function ManageModal({
                 {card && row ? (
                   <>
                     <PclSlab card={card} grade={row.grade} size="lg" />
+                    <div className="text-center">
+                      <p className="text-[12px] font-bold text-white truncate">
+                        {card.name}
+                      </p>
+                      <p className="text-[10px] text-zinc-500">#{card.number}</p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => onUndisplay(i)}
@@ -792,6 +798,9 @@ function GradingPickModal({
                     style={{ touchAction: "manipulation" }}
                   >
                     <PclSlab card={card} grade={g.grade} size="sm" />
+                    <p className="mt-1 text-[10px] font-bold text-white truncate w-full text-center px-1">
+                      {card.name}
+                    </p>
                     <span
                       className={clsx(
                         "text-[10px] font-bold tabular-nums",
@@ -1052,6 +1061,9 @@ function BulkShowcaseCreateModal({
                         style={{ touchAction: "manipulation" }}
                       >
                         <PclSlab card={card} grade={g.grade} size="sm" />
+                        <p className="mt-1 text-[10px] font-bold text-white truncate w-full text-center px-1">
+                          {card.name}
+                        </p>
                         <div className="flex items-center gap-1 text-[10px] font-bold tabular-nums text-zinc-200">
                           <span
                             className={clsx(
