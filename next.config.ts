@@ -1,13 +1,18 @@
 import type { NextConfig } from "next";
 
-// 'unsafe-eval' 제거됨 — Chrome DevTools Issues 패널의 보안 권고
-// (advisory) 대응. Next.js 프로덕션 번들은 eval / new Function 을
-// 쓰지 않으므로 안전. 만약 특정 라이브러리(framer-motion 일부 모드,
-// JIT 템플릿 등) 가 깨지면 다시 추가.
-// 'wasm-unsafe-eval' 은 wasm 모듈 컴파일에 필요할 수 있어 명시 추가.
+// 'unsafe-eval' — production 번들에서는 React/Next.js 가 사용하지 않으므로
+// 제거 (Chrome DevTools Issues 보안 권고 + XSS 표면적 축소). 그러나
+// React DEV 모드는 callstack 재구성 등에 eval() 을 직접 사용 →
+// dev 에서 CSP 위반으로 콘솔 에러 ("eval() is not supported...") 발생.
+// 환경별 분기: development 에만 'unsafe-eval' 포함, production 은 제외.
+// 'wasm-unsafe-eval' 은 wasm 모듈 컴파일에 필요할 수 있어 양쪽 모두 유지.
+const IS_DEV = process.env.NODE_ENV !== "production";
+const SCRIPT_EVAL_TOKENS = IS_DEV
+  ? "'unsafe-eval' 'wasm-unsafe-eval'"
+  : "'wasm-unsafe-eval'";
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://vercel.live https://*.vercel.live",
+  `script-src 'self' 'unsafe-inline' ${SCRIPT_EVAL_TOKENS} https://cdn.jsdelivr.net https://vercel.live https://*.vercel.live`,
   "script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://vercel.live https://*.vercel.live",
   "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://vercel.live https://*.vercel.live https://fonts.googleapis.com",
   "img-src 'self' data: blob: https:",
