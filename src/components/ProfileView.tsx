@@ -432,7 +432,11 @@ export default function ProfileView() {
             displayedIds={displayedIds}
             slotIndex={picker.slot}
             forcedType={picker.type}
-            onClose={() => setPicker(null)}
+            error={error}
+            onClose={() => {
+              setError(null);
+              setPicker(null);
+            }}
             onPick={(id) => onSelectSlabForType(picker.type, picker.slot, id)}
           />
         )}
@@ -1015,6 +1019,7 @@ function SlabPicker({
   defenseIds,
   slotIndex,
   forcedType = null,
+  error = null,
   onClose,
   onPick,
 }: {
@@ -1026,6 +1031,8 @@ function SlabPicker({
   slotIndex: number;
   /** 속성별 슬롯에서 호출되면 type 강제. filter chip 숨김 + 초기값 고정. */
   forcedType?: WildType | null;
+  /** 등록 시도 후 서버에서 받은 에러 메시지. 모달 안에서 노출. */
+  error?: string | null;
   onClose: () => void;
   onPick: (id: string) => void;
 }) {
@@ -1351,6 +1358,12 @@ function SlabPicker({
               </>
             )}
           </div>
+
+          {error && (
+            <div className="shrink-0 mx-3 mb-2 px-3 py-2 rounded-lg bg-rose-500/15 border border-rose-500/40 text-rose-200 text-[12px] leading-snug">
+              {error}
+            </div>
+          )}
 
           <div className="shrink-0 border-t border-white/10 p-3 bg-black/40">
             <button
