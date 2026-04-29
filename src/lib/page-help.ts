@@ -88,7 +88,7 @@ const HOME_SECTIONS: HelpSection[] = [
         "li",
         { key: 2 },
         h("b", null, "센터"),
-        " · 6×6 그리드, 보관함 4종에 슬랩 전시 + 시간당 자동 수익"
+        " · 6×6 그리드, 보관함 4종에 슬랩 전시 + 30분당 자동 수익"
       ),
       h(
         "li",
@@ -136,8 +136,8 @@ const HOME_SECTIONS: HelpSection[] = [
       h("b", null, "30,000~50,000p"),
       ") → 카드 → ",
       h("b", null, "전시 수익"),
-      "(MUR PCL 10 시간당 ",
-      h("b", { className: "text-amber-300" }, "200,000p"),
+      "(MUR PCL 10 30분당 ",
+      h("b", { className: "text-amber-300" }, "600,000p"),
       "), ",
       h("b", null, "야생 승리"),
       " (",
@@ -265,7 +265,7 @@ const WALLET_SECTIONS: HelpSection[] = [
         "li",
         { key: 1 },
         h("b", null, "센터 전시"),
-        " · 시간당 거래 포인트 + 랭킹 점수 (PCL 9·10 슬랩만)"
+        " · 30분당 거래 포인트 + 랭킹 점수"
       ),
       h(
         "li",
@@ -682,8 +682,8 @@ const VISIT_CENTER_SECTIONS: HelpSection[] = [
       h(
         "li",
         { key: 3 },
-        h("b", null, "시간당 거래 / 랭킹"),
-        " · 전시 수익과 시간당 적립 랭킹 점수"
+        h("b", null, "30분당 거래 / 랭킹"),
+        " · 전시 수익과 30분당 적립 랭킹 점수"
       )
     ),
   },
@@ -903,9 +903,9 @@ const USERS_SECTIONS: HelpSection[] = [
         "li",
         { key: 2 },
         h("b", { className: "text-violet-300" }, "센터 전시 자동 적립"),
-        " · 시간당 거래 포인트의 ",
-        h("b", null, "1/400"),
-        " (MUR PCL 10 = 시간당 +500점)"
+        " · 30분당 거래 포인트의 ",
+        h("b", null, "1/1200"),
+        " (MUR PCL 10 = 30분당 +500점)"
       ),
       h(
         "li",
