@@ -8,6 +8,7 @@ import {
   bulkRegisterPokedex,
   fetchPokedex,
   getAllCatalogCards,
+  pokedexCompletionBonus,
   pokedexPowerBonus,
   POKEDEX_RARITY_SCORE,
   RARITY_COMPLETION_BONUS,
@@ -97,7 +98,12 @@ export default function PokedexView() {
   }, [hasMore, visibleCount, activeRarity]);
 
   const count = entries.length;
+  // 등록 정액 합 + 세트효과(부분 진행도 비례) 합. 서버 pokedex_power_bonus +
+  // pokedex_completion_bonus 와 동일 공식의 클라 mirror — 도감 페이지에서
+  // 추가 RPC 없이 즉시 갱신.
   const bonus = pokedexPowerBonus(entries);
+  const completion = pokedexCompletionBonus(entries);
+  const totalBonus = bonus + completion;
 
   const handleBulk = async () => {
     if (!user || submitting) return;
@@ -137,8 +143,14 @@ export default function PokedexView() {
             <span className="px-2 py-1 rounded-full bg-amber-400/15 border border-amber-400/40 text-amber-100 text-[11px] font-bold">
               등록 {count}장
             </span>
+            <span className="px-2 py-1 rounded-full bg-emerald-400/15 border border-emerald-400/40 text-emerald-100 text-[11px] font-bold">
+              등록 +{bonus.toLocaleString("ko-KR")}p
+            </span>
+            <span className="px-2 py-1 rounded-full bg-cyan-400/15 border border-cyan-400/40 text-cyan-100 text-[11px] font-bold">
+              세트효과 +{completion.toLocaleString("ko-KR")}p
+            </span>
             <span className="px-2 py-1 rounded-full bg-fuchsia-400/15 border border-fuchsia-400/40 text-fuchsia-100 text-[11px] font-bold">
-              전투력 +{bonus.toLocaleString("ko-KR")}p
+              합계 +{totalBonus.toLocaleString("ko-KR")}p
             </span>
           </>
         }
@@ -181,6 +193,9 @@ export default function PokedexView() {
           <h2 className="text-sm font-bold text-fuchsia-100">
             도감 세트효과 (희귀도별 완전 컬렉션)
           </h2>
+          <span className="ml-auto px-2 py-0.5 rounded-full bg-cyan-400/15 border border-cyan-400/40 text-cyan-100 text-[10px] font-bold tabular-nums">
+            누적 +{completion.toLocaleString("ko-KR")}p
+          </span>
         </div>
         <p className="text-[12px] text-zinc-300 leading-relaxed mb-2">
           카드 희귀도별 <b className="text-white">진행률 비례</b>로 전투력

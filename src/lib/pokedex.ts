@@ -76,6 +76,28 @@ export function pokedexPowerBonus(entries: PokedexEntry[]): number {
   return sum;
 }
 
+/** 등록된 도감 항목들의 세트효과(완전 컬렉션) 부분 진행도 합산.
+ *  서버 pokedex_completion_bonus(uuid) RPC 와 동일 공식 — 희귀도별
+ *  floor(full_bonus × min(1, count/total)). 클라가 도감 페이지에서
+ *  서버 호출 없이 자기 누적값을 바로 표시할 때 사용. */
+export function pokedexCompletionBonus(entries: PokedexEntry[]): number {
+  const counts: Partial<Record<Rarity, number>> = {};
+  for (const e of entries) {
+    const r = e.rarity as Rarity | null;
+    if (!r) continue;
+    counts[r] = (counts[r] ?? 0) + 1;
+  }
+  let sum = 0;
+  for (const r of Object.keys(RARITY_COMPLETION_BONUS) as Rarity[]) {
+    const count = counts[r] ?? 0;
+    const total = RARITY_TOTALS[r];
+    if (total <= 0) continue;
+    const ratio = Math.min(1, count / total);
+    sum += Math.floor(RARITY_COMPLETION_BONUS[r] * ratio);
+  }
+  return sum;
+}
+
 /** 다음 추가 등록으로 얻을 수 있는 희귀도별 잠재 보너스 (희귀도별 미보유
  *  슬랩 1장 추가 시 환산값). UI 의 "어떤 희귀도를 더 모으면 +N" 안내용. */
 export function pokedexNextDelta(): {

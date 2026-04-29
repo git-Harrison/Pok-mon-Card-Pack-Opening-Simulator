@@ -572,33 +572,14 @@ function ScoreBreakdown({
     if (daily > 0)    items.push({ label: "체육관 일일", value: daily, tone: "cyan" });
     if (sabotage > 0) items.push({ label: "부수기 / 방어", value: sabotage, tone: "rose" });
   } else if (mode === "power") {
-    const pokedex = (row as { pokedex_bonus?: number }).pokedex_bonus ?? 0;
-    const completion = (row as { pokedex_completion_bonus?: number }).pokedex_completion_bonus ?? 0;
+    const pokedex = row.pokedex_bonus ?? 0;
+    const completion = row.pokedex_completion_bonus ?? 0;
     const pet = row.pet_score ?? 0;
-    // 메달 buff — 난이도 비례 합산 (서버 medal_buff 우선,
-    // fallback: gym_medals 의 difficulty 기준 클라 합산, 마지막 fallback:
-    // medal_count × 10000 추정).
-    const MEDAL_BUFF_BY_DIFFICULTY: Record<string, number> = {
-      EASY: 10000, NORMAL: 20000, HARD: 40000, BOSS: 80000,
-    };
-    const medalCount =
-      (row as { medal_count?: number }).medal_count ??
-      (row.gym_medals?.length ?? 0);
-    const serverBuff = (row as { medal_buff?: number }).medal_buff;
-    const computedBuff = (row.gym_medals ?? []).reduce(
-      (s, m) =>
-        s +
-        (MEDAL_BUFF_BY_DIFFICULTY[
-          (m as { gym_difficulty?: string }).gym_difficulty ?? "EASY"
-        ] ?? 10000),
-      0
-    );
-    const gymBuff =
-      typeof serverBuff === "number"
-        ? serverBuff
-        : computedBuff > 0
-        ? computedBuff
-        : medalCount * 10000;
+    // 메달 buff — server medal_buff 가 source-of-truth (20260638 부터
+    // per-gym 차등 합산). 이전엔 클라가 per-difficulty 식으로 fallback
+    // 추정했으나 그 식은 stale 이라 제거.
+    const medalCount = row.medal_count ?? row.gym_medals?.length ?? 0;
+    const gymBuff = row.medal_buff ?? 0;
     const showcase = Math.max(
       0,
       (row.center_power ?? 0) - pokedex - completion - pet - gymBuff

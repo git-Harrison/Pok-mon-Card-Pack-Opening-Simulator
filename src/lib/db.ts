@@ -388,9 +388,12 @@ export interface RankingRow {
   gym_daily_rank_pts?: number;
   /** Owned gyms count (현재 점령 중인 수, 표시용). */
   gym_count?: number;
-  /** 보유 메달 수 — 영구 누적. center_power 의 +10,000 buff 기준 (이전:
-   *  gym_count 기준에서 변경, 메달은 점령 잃어도 유지되므로). */
+  /** 보유 메달 수 — 영구 누적. 메달은 점령 잃어도 유지. UI 카운트 표기용
+   *  (메달당 buff 는 per-gym 차등이라 단순 곱셈으로 환산 X — medal_buff 참조). */
   medal_count?: number;
+  /** 메달 buff 합 — 서버에서 per-gym 차등 (gym_medal_buff(gym_id)) 합산.
+   *  20260638 부터 source-of-truth. center_power 분해 표기에 사용. */
+  medal_buff?: number;
   /** Seconds since last_seen_at — used to render the online dot. */
   seconds_since_seen?: number;
   gradings: RankingPclGrading[];
