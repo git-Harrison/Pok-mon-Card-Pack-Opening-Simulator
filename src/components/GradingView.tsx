@@ -1067,8 +1067,10 @@ function BulkGradingModal({
         if (res.status !== "processing" && res.status !== "pending") {
           return;
         }
-        // 다음 청크 사이 짧은 휴식 — DB 부하 분산 + UI 진행 표시 부드럽게.
-        await new Promise((r) => setTimeout(r, 250));
+        // 다음 청크 사이 짧은 휴식 — chunk 자체가 set-based 로 빨라져
+        // (20260667) 250ms → 50ms 로 단축. 진행 막대 갱신은 setBatchProgress
+        // 가 chunk 마다 호출돼 자연스레 부드러움.
+        await new Promise((r) => setTimeout(r, 50));
       }
     },
     [applyJobState]
