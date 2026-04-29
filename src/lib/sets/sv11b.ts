@@ -28,7 +28,9 @@ export const sv11b: SetInfo = {
     { label: "C 2", weights: { C: 100 } },
     { label: "C/U", weights: { C: 55, U: 45 } },
     { label: "U/R", weights: { U: 70, R: 30 } },
-    { label: "Hit", weights: { R: 25, RR: 25, AR: 35, SR: 7, SAR: 7, MUR: 0.5 } },
+    // MUR 0.5 → 0.0625 정상화 (M3/M4 와 동등). 이전 0.5 는 다른 세트 대비
+    // ~6.6× 높아 #174 (BWR-원본) 가 체감 과다 등장하는 원인이었음.
+    { label: "Hit", weights: { R: 25, RR: 25, AR: 35, SR: 7, SAR: 7, MUR: 0.0625 } },
   ],
   cards: [
     // 1-86 main set
