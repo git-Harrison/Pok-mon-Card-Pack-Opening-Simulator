@@ -18,6 +18,8 @@ export type SetCode =
   | "sv8a"
   | "sv5a"
   | "sv10"
+  | "sv11b"
+  | "sv11w"
   | "m1l"
   | "m1s"
   | "m3"

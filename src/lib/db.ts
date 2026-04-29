@@ -163,6 +163,8 @@ export async function fetchWallet(userId: string): Promise<WalletSnapshot> {
     sv8a: 0,
     sv5a: 0,
     sv10: 0,
+    sv11b: 0,
+    sv11w: 0,
     m1l: 0,
     m1s: 0,
     m3: 0,

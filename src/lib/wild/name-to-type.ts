@@ -956,4 +956,22 @@ export const CARD_NAME_TO_TYPE: Record<string, WildType | null> = {
   "한방": "노말",                       // Buneary
   "활력의 숲": null,                    // Forest of Vitality — stadium
   "히트로토무": "불꽃",                 // Heat Rotom (전기/불꽃 → 불꽃)
+
+  // SV11B / SV11W trainer / item / energy (PR-C 추가, 2026-04-29)
+  // 명시 null — resolveCardType step 1 에서 즉시 종료, "노말" fallback 차단.
+  "에너지 동전": null,                  // Energy Coin (SV11B 79)
+  "에너지 회수": null,                  // Energy Retrieval (SV11W 79)
+  "오래된 덮개화석": null,              // Antique Cover Fossil (SV11B 80)
+  "오래된 깃털화석": null,              // Antique Plume Fossil (SV11W 81)
+  "포켓기어 3.0": null,                 // Pokégear 3.0 (SV11B 81)
+  "N의 방안": null,                     // N's Plot (SV11B 83/165/173)
+  "박사의 연구": null,                  // Professor's Research (SV11B 84)
+  "주리": null,                         // Fennel (SV11B 85/166) — 트레이너 캐릭터
+  "프리즘 에너지": null,                // Prism Energy (SV11B 86)
+  "툴스크래퍼": null,                   // Tool Scrapper (SV11W 80)
+  "브레이브뱅글": null,                 // Brave Bangle (SV11W 82)
+  "어릿광대": null,                     // Harlequin (SV11W 83/165)
+  "체렌": null,                         // Cheren (SV11W 84) — 트레이너 캐릭터
+  "투희": null,                         // Hilda (SV11W 85/166/173) — 트레이너 캐릭터
+  "이그니션 에너지": null,              // Ignition Energy (SV11W 86)
 };

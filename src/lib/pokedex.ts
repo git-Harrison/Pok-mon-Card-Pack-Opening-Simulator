@@ -7,20 +7,21 @@ import type { Card, Rarity } from "@/lib/types";
 
 const supabase = createClient();
 
-// 11 세트(m1l/m1s/m2/m2a/m3/m4/sv2a/sv5a/sv8/sv8a/sv10) 카탈로그
+// 13 세트(m1l/m1s/m2/m2a/m3/m4/sv2a/sv5a/sv8/sv8a/sv10/sv11b/sv11w) 카탈로그
 // 실측 카운트. 신규 세트가 들어올 때마다 src/lib/sets/* 와 함께 갱신.
 // 서버 pokedex_completion_bonus(SQL) 의 임계값과 반드시 동기화.
+// (마지막 갱신: 20260664_pokedex_completion_bonus_v3_sv11.sql, SV11B/W 174×2 추가)
 export const RARITY_TOTALS: Record<Rarity, number> = {
-  MUR: 6,
+  MUR: 8,
   UR: 17,
-  SAR: 101,
+  SAR: 115,
   MA: 5,
-  SR: 153,
-  AR: 134,
-  RR: 129,
-  R: 134,
-  U: 334,
-  C: 587,
+  SR: 169,
+  AR: 278,
+  RR: 141,
+  R: 154,
+  U: 397,
+  C: 664,
 };
 
 // 카드 희귀도별 완전 컬렉션 보너스 — 어렵게 모이는 희귀도일수록 더
