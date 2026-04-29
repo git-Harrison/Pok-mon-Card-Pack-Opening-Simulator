@@ -26,7 +26,7 @@ export const m3: SetInfo = {
     { label: "C 2", weights: { C: 100 } },
     { label: "C/U", weights: { C: 55, U: 45 } },
     { label: "U/R", weights: { U: 70, R: 30 } },
-    { label: "Hit", weights: { R: 30, RR: 30, AR: 10, SR: 7, SAR: 5, MUR: 0.125 } },
+    { label: "Hit", weights: { R: 30, RR: 30, AR: 10, SR: 7, SAR: 5, MUR: 0.0625 } },
   ],
   cards: [
     { id: "m3-001", setCode: "m3", number: "001", name: "페이검", rarity: "C", imageUrl: pk("Spinarak", "001", "60195") },

@@ -21,16 +21,14 @@ export const sv11b: SetInfo = {
   totalCards: 174,
   primaryColor: "#1e1b4b",
   accentColor: "#a5b4fc",
-  // Pokellector 공식 셋 로고 (직접 URL — m4 등 다른 set 처럼 자체 mirror
-  // 가 아니라 임시. 후속 PR 에서 박스/팩 실제 아트로 교체 가능).
-  boxImage: "https://den-media.pokellector.com/logos/Black-Bolt.logo.414.png",
-  packImage: "https://den-media.pokellector.com/logos/Black-Bolt.logo.414.png",
+  boxImage: "/images/sets/sv11b/box.webp",
+  packImage: "/images/sets/sv11b/pack.webp",
   slots: [
     { label: "C 1", weights: { C: 100 } },
     { label: "C 2", weights: { C: 100 } },
     { label: "C/U", weights: { C: 55, U: 45 } },
     { label: "U/R", weights: { U: 70, R: 30 } },
-    { label: "Hit", weights: { R: 25, RR: 25, AR: 35, SR: 7, SAR: 7, MUR: 1.0 } },
+    { label: "Hit", weights: { R: 25, RR: 25, AR: 35, SR: 7, SAR: 7, MUR: 0.5 } },
   ],
   cards: [
     // 1-86 main set
