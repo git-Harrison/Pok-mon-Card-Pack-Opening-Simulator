@@ -43,6 +43,42 @@ export const SET_ORDER: SetCode[] = [
   "sv2a",
 ];
 
+// 시리즈 분류 — HomeView 필터 칩이 이 레지스트리를 그대로 순회. 신규
+// 시리즈 추가 시 항목만 push 하면 칩 / 카운트 자동 반영. matcher 는
+// set code prefix 기반 (m / sv). 만약 어느 신규 set code 가 prefix 패턴
+// 을 벗어나면 explicit 코드 리스트로 전환할 것.
+export type SeriesKey = "mega" | "sv";
+
+export interface SeriesInfo {
+  key: SeriesKey;
+  label: string; // 풀 라벨 (데스크탑/장문)
+  short: string; // 칩에 노출되는 짧은 라벨
+  icon: string;  // 이모지
+  matcher: (code: SetCode) => boolean;
+}
+
+export const SERIES: SeriesInfo[] = [
+  {
+    key: "mega",
+    label: "MEGA 시리즈",
+    short: "MEGA",
+    icon: "🔮",
+    matcher: (c) => /^m/.test(c),
+  },
+  {
+    key: "sv",
+    label: "스칼렛 & 바이올렛",
+    short: "SV",
+    icon: "⚔️",
+    matcher: (c) => /^sv/.test(c),
+  },
+];
+
+export function getSetSeries(code: SetCode): SeriesKey | null {
+  for (const s of SERIES) if (s.matcher(code)) return s.key;
+  return null;
+}
+
 export function getSet(code: string): SetInfo | null {
   return (SETS as Record<string, SetInfo | undefined>)[code] ?? null;
 }

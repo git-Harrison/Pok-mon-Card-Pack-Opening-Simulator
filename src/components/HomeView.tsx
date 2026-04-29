@@ -6,7 +6,7 @@ import clsx from "clsx";
 import { memo, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
-import { getCard, SET_ORDER, SETS } from "@/lib/sets";
+import { getCard, SERIES, SET_ORDER, SETS, type SeriesKey } from "@/lib/sets";
 import type { SetCode } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { useIsMobile } from "@/lib/useIsMobile";
@@ -82,10 +82,10 @@ export default function HomeView() {
   const [stats, setStats] = useState<HomeStats>(FALLBACK_STATS);
   const [teasers, setTeasers] = useState<ActivityTeasers>(FALLBACK_TEASERS);
   const [topRankers, setTopRankers] = useState<RankingRow[]>([]);
-  // 시리즈 탭 — 박스 종류가 11개로 늘면서 한 화면에 다 띄우면 스크롤이
-  // 너무 길어져, MEGA / SV 두 그룹을 탭으로 분리해 한 번에 한 그룹만
-  // 노출. 모바일 우선. 기본값은 최신 라인업인 MEGA.
-  const [series, setSeries] = useState<"mega" | "sv">("mega");
+  // 시리즈 필터 — 기본 "전체" 로 모든 박스를 가로 스크롤 노출. 칩으로
+  // 시리즈 좁히기 가능. 신규 시리즈 추가 시 lib/sets/index.ts 의 SERIES
+  // 레지스트리에 항목만 추가하면 칩이 자동으로 늘어남.
+  const [series, setSeries] = useState<SeriesKey | "all">("all");
 
   // 슬랩 / 도감 / 최근 활동 — 메인 페이지 hero 와 팩 그리드 첫 페인트 후
   // requestIdleCallback 로 deferred 페치. 셀 단위 loading 플래그.
@@ -256,81 +256,87 @@ export default function HomeView() {
         {/* ---------- Hero ---------- */}
         <Hero reduce={!!reduce} displayName={user?.display_name ?? null} />
 
-        {/* ---------- Pack grid — 시리즈 탭 ----------
-            박스 11종이 한 페이지에 깔리면 스크롤이 너무 길어, MEGA /
-            SV 탭으로 분리. 한 화면에 한 그룹만 노출 → 스크롤 절반 이하. */}
+        {/* ---------- Pack list — 시리즈 필터 칩 + 가로 스크롤 ----------
+            박스 종류가 늘어나도 가로 스크롤 + 칩으로 자연스럽게 확장.
+            기본 "전체" 칩 → 모든 박스 노출. SERIES 레지스트리 항목만
+            추가하면 칩이 자동으로 늘어남. */}
         <section className="mt-8 md:mt-12">
           <SectionTitle
             label="팩 선택"
-            sub="시리즈를 골라 박스를 까보세요"
+            sub="필터를 골라 좌우로 스와이프"
             reduce={!!reduce}
           />
           {(() => {
-            const megaCodes = SET_ORDER.filter((c) => /^m/.test(c));
-            const svCodes = SET_ORDER.filter((c) => /^sv/.test(c));
-            const tabs = [
+            const filteredCodes =
+              series === "all"
+                ? SET_ORDER
+                : SET_ORDER.filter(
+                    (c) =>
+                      SERIES.find((s) => s.key === series)?.matcher(c) ?? false
+                  );
+
+            // 칩별 active 색상 — 데이터(SERIES)와 분리해 presentation 만 여기.
+            const activeClassFor = (key: SeriesKey | "all"): string => {
+              if (key === "mega")
+                return "bg-gradient-to-r from-fuchsia-500 to-violet-500 text-white shadow-[0_8px_24px_-12px_rgba(168,85,247,0.7)]";
+              if (key === "sv")
+                return "bg-gradient-to-r from-amber-400 to-orange-400 text-zinc-950 shadow-[0_8px_24px_-12px_rgba(251,146,60,0.7)]";
+              return "bg-gradient-to-r from-zinc-100 to-zinc-300 text-zinc-900 shadow-[0_8px_24px_-12px_rgba(255,255,255,0.45)]";
+            };
+
+            const chips: Array<{
+              key: SeriesKey | "all";
+              label: string;
+              icon: string;
+              count: number;
+            }> = [
               {
-                key: "mega" as const,
-                label: "MEGA 시리즈",
-                short: "MEGA",
-                icon: "🔮",
-                count: megaCodes.length,
-                codes: megaCodes,
-                activeClass:
-                  "bg-gradient-to-r from-fuchsia-500 to-violet-500 text-white shadow-[0_8px_24px_-12px_rgba(168,85,247,0.7)]",
+                key: "all",
+                label: "전체",
+                icon: "🎴",
+                count: SET_ORDER.length,
               },
-              {
-                key: "sv" as const,
-                label: "스칼렛 & 바이올렛",
-                short: "SV",
-                icon: "⚔️",
-                count: svCodes.length,
-                codes: svCodes,
-                activeClass:
-                  "bg-gradient-to-r from-amber-400 to-orange-400 text-zinc-950 shadow-[0_8px_24px_-12px_rgba(251,146,60,0.7)]",
-              },
+              ...SERIES.map((s) => ({
+                key: s.key,
+                label: s.short,
+                icon: s.icon,
+                count: SET_ORDER.filter(s.matcher).length,
+              })),
             ];
-            const active = tabs.find((t) => t.key === series) ?? tabs[0];
+
             return (
               <>
                 <div
                   role="tablist"
-                  aria-label="박스 시리즈"
-                  className="grid grid-cols-2 gap-2 md:gap-3 rounded-2xl bg-white/5 border border-white/10 p-1.5"
+                  aria-label="박스 시리즈 필터"
+                  className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 md:-mx-6 md:px-6"
                 >
-                  {tabs.map((t) => {
-                    const isActive = t.key === series;
+                  {chips.map((c) => {
+                    const isActive = c.key === series;
                     return (
                       <button
-                        key={t.key}
+                        key={c.key}
                         type="button"
                         role="tab"
                         aria-selected={isActive}
-                        onClick={() => setSeries(t.key)}
+                        onClick={() => setSeries(c.key)}
                         style={{ touchAction: "manipulation" }}
                         className={clsx(
-                          "relative h-12 md:h-14 rounded-xl px-3 inline-flex items-center justify-center gap-2 text-sm md:text-base font-black transition-colors",
+                          "shrink-0 h-10 md:h-11 rounded-full px-4 inline-flex items-center gap-1.5 text-xs md:text-sm font-bold transition-colors whitespace-nowrap",
                           isActive
-                            ? t.activeClass
-                            : "text-zinc-300 hover:bg-white/5"
+                            ? activeClassFor(c.key)
+                            : "bg-white/5 border border-white/10 text-zinc-300 hover:bg-white/10"
                         )}
                       >
-                        <span aria-hidden className="text-base md:text-lg">
-                          {t.icon}
-                        </span>
-                        <span className="truncate">
-                          <span className="hidden sm:inline">{t.label}</span>
-                          <span className="sm:hidden">{t.short}</span>
-                        </span>
+                        <span aria-hidden>{c.icon}</span>
+                        <span>{c.label}</span>
                         <span
                           className={clsx(
-                            "ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] md:text-[11px] font-bold tabular-nums",
-                            isActive
-                              ? "bg-black/30 text-white"
-                              : "bg-white/10 text-zinc-200"
+                            "ml-0.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold tabular-nums",
+                            isActive ? "bg-black/25" : "bg-white/10"
                           )}
                         >
-                          {t.count}종
+                          {c.count}종
                         </span>
                       </button>
                     );
@@ -338,17 +344,17 @@ export default function HomeView() {
                 </div>
 
                 <motion.div
-                  key={active.key}
-                  className="mt-4 md:mt-6 grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5"
+                  key={series}
+                  className="mt-4 md:mt-6 flex gap-3 md:gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2 -mx-4 px-4 md:-mx-6 md:px-6"
                   initial="hidden"
                   animate="show"
                   variants={gridVariants}
                 >
-                  {active.codes.map((code, i) => (
+                  {filteredCodes.map((code, i) => (
                     <motion.div
                       key={code}
                       variants={itemVariants}
-                      className="relative"
+                      className="snap-start shrink-0 w-[44vw] sm:w-[240px] md:w-[260px] relative"
                     >
                       {i === 0 && (
                         <span
