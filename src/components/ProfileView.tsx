@@ -209,6 +209,12 @@ export default function ProfileView() {
 
   // 속성별 펫 등록 — 한 type 슬롯의 한 자리를 새 카드로 교체.
   // 서버 set_pet_for_type 에 type 의 ids 배열 통째로 전달.
+  //
+  // UX: 카드 등록 후 picker 를 닫지 않고 다음 빈 슬롯으로 자동 이동.
+  //   · SlabPicker 컴포넌트는 unmount 안 되므로 스크롤 위치/필터/페이지
+  //     상태가 그대로 유지됨 → 연속 등록 시 화면이 튀지 않음.
+  //   · 같은 슬롯에 카드 교체 시도면 slot 그대로 (picker 유지).
+  //   · 그 type 의 모든 슬롯이 가득 차면 picker 자동 닫기.
   const onSelectSlabForType = useCallback(
     async (type: WildType, slot: number, gradingId: string) => {
       if (!user || !profile) return;
@@ -222,6 +228,7 @@ export default function ProfileView() {
       }
       // 같은 type 에 이미 등록된 ID 들에서, 해당 슬롯 자리에 새 ID 삽입.
       const current = (profile.main_cards_by_type[type] ?? []).map((c) => c.id);
+      const prevCount = current.length;
       const filtered = current.filter((id) => id !== gradingId);
       while (filtered.length <= slot) filtered.push("");
       filtered[slot] = gradingId;
@@ -234,7 +241,16 @@ export default function ProfileView() {
         setError(res.error ?? "펫을 등록하지 못했어요.");
         return;
       }
-      setPicker(null);
+      const filledCount = cleaned.length;
+      if (filledCount >= PETS_PER_TYPE) {
+        // 슬롯 가득 — picker 자동 닫기.
+        setPicker(null);
+      } else if (filledCount > prevCount) {
+        // 새 슬롯 채움 — 다음 빈 슬롯으로 자동 advance. SlabPicker 의
+        // mount 가 유지되므로 스크롤/필터 상태가 그대로.
+        setPicker({ type, slot: filledCount });
+      }
+      // 같은 슬롯 카드 교체면 picker 의 slot 그대로 (filledCount === prevCount).
       await refresh();
     },
     [user, profile, displayedIds, defenseIds, refresh]
