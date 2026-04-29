@@ -47,18 +47,19 @@ export interface PokedexEntry {
 }
 
 /** 서버 pokedex_rarity_score(text) 와 정확히 동일한 매핑.
- *  20260563_pokedex_per_rarity_power.sql 와 sync 필수. */
+ *  20260663_pokedex_rarity_score_rebalance.sql 와 sync 필수.
+ *  카드 희귀도 strict 단조 (MUR > UR > SAR > SR > AR > MA > RR > R > U > C). */
 export const POKEDEX_RARITY_SCORE: Record<Rarity, number> = {
   MUR: 1000,
   UR:  400,
   SAR: 250,
-  AR:  180,
-  SR:  130,
-  MA:  100,
-  RR:  50,
-  R:   30,
-  U:   15,
-  C:   8,
+  SR:  180,
+  AR:  120,
+  MA:   80,
+  RR:   50,
+  R:    30,
+  U:    15,
+  C:     8,
 };
 
 /** 등록된 도감 항목들의 rarity 별 정액 합계.
