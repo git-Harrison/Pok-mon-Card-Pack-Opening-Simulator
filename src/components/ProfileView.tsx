@@ -1,6 +1,6 @@
 "use client";
 
-import PokeLoader from "./PokeLoader";
+import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
@@ -277,9 +277,7 @@ export default function ProfileView() {
       />
 
       {loading ? (
-        <div className="mt-12 flex items-center justify-center">
-          <PokeLoader size="md" label="불러오는 중..." />
-        </div>
+        <CenteredPokeLoader label="불러오는 중..." />
       ) : (
         <>
           <ProfileBanner

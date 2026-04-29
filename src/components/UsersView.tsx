@@ -1,6 +1,6 @@
 "use client";
 
-import PokeLoader from "./PokeLoader";
+import { CenteredPokeLoader } from "./PokeLoader";
 import {
   memo,
   useCallback,
@@ -260,9 +260,7 @@ export default function UsersView() {
       )}
 
       {loading ? (
-        <div className="mt-12 flex items-center justify-center">
-          <PokeLoader size="md" label="랭킹 불러오는 중..." />
-        </div>
+        <CenteredPokeLoader label="랭킹 불러오는 중..." />
       ) : entries.length === 0 ? (
         <p className="mt-16 text-center text-zinc-400 text-sm">
           아직 사용자가 없습니다.

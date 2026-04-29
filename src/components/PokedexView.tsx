@@ -23,6 +23,7 @@ import PageHeader from "./PageHeader";
 import Portal from "./Portal";
 import PokeCard from "./PokeCard";
 import RarityBadge from "./RarityBadge";
+import { CenteredPokeLoader } from "./PokeLoader";
 
 // spec 0-2: 카드 리스트는 무한 스크롤. 페이지 버튼/이전 다음 버튼 금지.
 // 첫 60장 노출, 스크롤 하단 도달 시 +60.
@@ -382,9 +383,7 @@ function Book({
         }}
       />
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-sm text-zinc-400">
-          도감을 펼치는 중...
-        </div>
+        <CenteredPokeLoader label="도감을 펼치는 중..." />
       ) : emptyForRarity ? (
         <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
           <div className="text-5xl mb-3">📖</div>
