@@ -302,34 +302,14 @@ async function expirePendingGifts() {
 
 // ---------- PCL grading ----------
 
-/** 단일 결과 행 — 더 이상 서버가 results 배열을 반환하지 않음. 타입은
- *  과거 호출자 호환용으로만 export 유지. */
-export interface BulkGradingResultItem {
-  card_id: string;
-  ok: boolean;
-  failed?: boolean;
-  grade?: number;
-  bonus?: number;
-  auto_sold?: boolean;
-  sell_payout?: number;
-  error?: string;
-}
-
 export interface BulkGradingResult {
   ok: boolean;
   error?: string;
-  /** @deprecated 서버가 더 이상 per-card 결과를 반환하지 않음 (spec 3-1). */
-  results?: BulkGradingResultItem[];
   success_count?: number;
   fail_count?: number;
   skipped_count?: number;
   cap_skipped_count?: number;
-  /** 신규 — 자동 삭제된 카드 수 (이전 auto_sold_count 가 의미 변경). */
   auto_deleted_count?: number;
-  /** @deprecated 판매 기능 폐기. 항상 0. */
-  auto_sold_count?: number;
-  /** @deprecated 판매 기능 폐기. 항상 0. */
-  auto_sold_earned?: number;
   bonus?: number;
   points?: number;
 }
@@ -454,27 +434,6 @@ export async function fetchUserActivity(
     console.warn("get_user_activity threw", err);
     return [];
   }
-}
-
-export interface BulkSellItem {
-  card_id: string;
-  count: number;
-  rarity: string;
-}
-
-export async function bulkSellCards(userId: string, items: BulkSellItem[]) {
-  const { data, error } = await supabase.rpc("bulk_sell_cards", {
-    p_user_id: userId,
-    p_items: items,
-  });
-  if (error) return { ok: false as const, error: error.message };
-  return data as {
-    ok: boolean;
-    error?: string;
-    sold?: number;
-    earned?: number;
-    points?: number;
-  };
 }
 
 export async function fetchPclGradings(

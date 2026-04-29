@@ -978,8 +978,8 @@ function BulkGradingModal({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<BulkGradingResult | null>(null);
 
-  // PCL 자동 판매 임계 — localStorage 에 영구 저장. 모달 닫았다가 다시
-  // 열어도 마지막 선택 유지. (이전엔 매번 null 로 초기화돼 풀려있었음.)
+  // PCL 자동 삭제 임계 — localStorage 에 영구 저장. 모달 닫았다가 다시
+  // 열어도 마지막 선택 유지. (키/변수명은 호환 위해 옛 auto_sell 유지.)
   const AUTO_SELL_KEY = "pcl_auto_sell_below";
   const [autoSellBelow, setAutoSellBelow] = useState<number | null>(() => {
     if (typeof window === "undefined") return null;
@@ -1740,7 +1740,7 @@ function BulkSubmittingScreen({
 
 /** 일괄 감별 결과 — 성공 개수 위주 단순 표시 (spec 3-1).
  *  서버가 더 이상 per-card results 배열을 반환하지 않음 → 합산 카운트
- *  4종 + 안내 문구만. 자동판매 폐기 → 자동삭제 카운트로 라벨 변경. */
+ *  4종 + 안내 문구만. */
 function BulkResults({
   result,
   onClose,
@@ -1752,9 +1752,7 @@ function BulkResults({
   const fail = result.fail_count ?? 0;
   const skipped = result.skipped_count ?? 0;
   const capSkipped = result.cap_skipped_count ?? 0;
-  // 신규 키 우선, 구 키 fallback (마이그레이션 timing 보호).
-  const autoDeleted =
-    result.auto_deleted_count ?? result.auto_sold_count ?? 0;
+  const autoDeleted = result.auto_deleted_count ?? 0;
 
   // NPC reaction — 성공률 / 절대 성공장수 따라 톤 변화.
   const total = success + fail;

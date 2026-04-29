@@ -146,7 +146,7 @@ const HOME_SECTIONS: HelpSection[] = [
       h("b", null, "부수기 전리품"),
       " (보관함가 ",
       h("b", null, "80%"),
-      ") 으로 회수해요. PCL 슬랩은 일괄 판매로도 환산 가능."
+      ") 으로 회수해요."
     ),
   },
   {
@@ -247,18 +247,12 @@ const WALLET_SECTIONS: HelpSection[] = [
       "이 차면 박스를 못 사요. ",
       h(
         Link,
-        { href: "/wallet/bulk-sell", className: "underline text-amber-300" },
-        "일괄 판매"
-      ),
-      "에서 등급별로 한 번에 처분할 수 있어요. ",
-      h("b", null, "SR 이상"),
-      "은 ",
-      h(
-        Link,
         { href: "/grading", className: "underline text-amber-300" },
         "감별"
       ),
-      "로 슬랩을 만드는 게 보통 더 이득이에요."
+      "에서 자동 삭제 옵션으로 잡카드를 정리하거나, ",
+      h("b", null, "SR 이상"),
+      "은 슬랩으로 만드는 게 보통 더 이득이에요."
     ),
   },
   {
@@ -303,21 +297,6 @@ const WALLET_SECTIONS: HelpSection[] = [
         " · PCL 6 이상만 · ",
         h("b", null, "하루 5회"),
         " 한도"
-      ),
-      h(
-        "li",
-        { key: 6 },
-        h("b", null, "일괄 판매"),
-        " · PCL 10 ",
-        h("b", { className: "text-amber-300" }, "20,000p"),
-        " / 9 ",
-        h("b", null, "10,000p"),
-        " / 8 ",
-        h("b", null, "2,000p"),
-        " / 7 ",
-        h("b", null, "300p"),
-        " / 6 ",
-        h("b", null, "200p")
       )
     ),
   },
@@ -329,112 +308,8 @@ const WALLET_SECTIONS: HelpSection[] = [
       null,
       h("b", null, "전시 중"),
       " 배지가 붙은 슬랩은 지금 센터 보관함에 들어가 있어요. 전시 슬랩은 ",
-      h("b", null, "일괄 판매 · 야생 · 선물 · 도감 박제 · 펫 등록"),
+      h("b", null, "야생 · 선물 · 도감 박제 · 펫 등록"),
       "에 사용할 수 없고, 직접 꺼내거나 부서지기 전까지 잠겨 있어요."
-    ),
-  },
-];
-
-const BULK_SELL_SECTIONS: HelpSection[] = [
-  {
-    heading: "일괄 판매란",
-    icon: "💰",
-    body: "지갑의 일반 카드와 PCL 슬랩을 등급/그레이드별로 묶어 한 번에 처분하는 화면이에요. 단가가 낮은 대신 빠르고, 전시 중인 슬랩은 자동 제외돼요.",
-  },
-  {
-    heading: "일반 카드 단가",
-    icon: "🪙",
-    body: h(
-      "ul",
-      null,
-      h(
-        "li",
-        { key: 1 },
-        h("b", { className: "text-amber-300" }, "MUR"),
-        " · ",
-        h("b", null, "5,000p")
-      ),
-      h("li", { key: 2 }, h("b", null, "UR"), " · 2,500p"),
-      h("li", { key: 3 }, h("b", null, "SAR"), " · 1,500p"),
-      h("li", { key: 4 }, h("b", null, "SR"), " · 750p"),
-      h("li", { key: 5 }, h("b", null, "AR"), " · 400p"),
-      h("li", { key: 6 }, h("b", null, "MA"), " · 250p"),
-      h("li", { key: 7 }, h("b", null, "RR"), " · 100p"),
-      h("li", { key: 8 }, h("b", null, "R"), " · 50p"),
-      h("li", { key: 9 }, h("b", null, "U"), " · 25p"),
-      h("li", { key: 10 }, h("b", null, "C"), " · 10p")
-    ),
-  },
-  {
-    heading: "PCL 슬랩 단가",
-    icon: "💎",
-    body: h(
-      "ul",
-      null,
-      h(
-        "li",
-        { key: 1 },
-        h("b", { className: "text-amber-300" }, "PCL 10 (GEM MINT)"),
-        " · ",
-        h("b", null, "20,000p")
-      ),
-      h(
-        "li",
-        { key: 2 },
-        h("b", { className: "text-slate-100" }, "PCL 9 (MINT)"),
-        " · 10,000p"
-      ),
-      h("li", { key: 3 }, h("b", null, "PCL 8 (NM-MT)"), " · 2,000p"),
-      h("li", { key: 4 }, h("b", null, "PCL 7 (NEAR MINT)"), " · 300p"),
-      h("li", { key: 5 }, h("b", null, "PCL 6 (EX-MT)"), " · 200p")
-    ),
-  },
-  {
-    heading: "추천 흐름",
-    icon: "✨",
-    body: h(
-      "ul",
-      null,
-      h(
-        "li",
-        { key: 1 },
-        h("b", null, "SR 이상"),
-        " 일반 카드는 우선 ",
-        h(
-          Link,
-          { href: "/grading", className: "underline text-amber-300" },
-          "PCL 감별"
-        ),
-        "에 도전 — PCL 9·10이 터지면 슬랩 가치가 훨씬 커요."
-      ),
-      h(
-        "li",
-        { key: 2 },
-        h("b", null, "AR 이하"),
-        " 잡카드만 일괄 판매로 정리하는 게 효율적이에요."
-      ),
-      h(
-        "li",
-        { key: 3 },
-        "박스 개봉 화면의 ",
-        h("b", null, "“자동 판매 등급”"),
-        " 옵션을 켜면 처음부터 지갑에 들어오지 않고 즉시 환산돼요."
-      )
-    ),
-  },
-  {
-    heading: "주의",
-    icon: "⚠️",
-    body: h(
-      "div",
-      null,
-      "각 행을 누르면 ",
-      h("b", null, "확인 팝업"),
-      " 후 즉시 판매. 되돌릴 수 없어요. PCL 10 슬랩은 ",
-      h("b", null, "도감 박제"),
-      " · ",
-      h("b", null, "프로필 펫"),
-      "에 쓰는 게 보통 훨씬 큰 가치예요."
     ),
   },
 ];
@@ -901,13 +776,11 @@ const GRADING_SECTIONS: HelpSection[] = [
       h("b", null, "야생 보상"),
       " · ",
       h("b", null, "도감/펫 점수"),
-      " · ",
-      h("b", null, "일괄 판매 단가"),
       "에서 발생합니다.",
       h(
         "p",
         { className: "mt-1.5 text-zinc-400" },
-        "일괄 감별의 자동 판매 옵션을 켜면 낮은 등급은 슬랩 발급 없이 단가만큼 즉시 환산돼요."
+        "일괄 감별의 자동 삭제 옵션을 켜면 낮은 등급은 슬랩 발급 없이 즉시 폐기됩니다."
       )
     ),
   },
@@ -940,8 +813,8 @@ const GRADING_SECTIONS: HelpSection[] = [
       "여러 장을 한 번에 감별. ",
       h("b", null, "한 번 최대 5,000장"),
       "까지 (그 이상은 나눠서 의뢰). ",
-      h("b", null, "“PCL N 미만 자동 판매”"),
-      " (7·8·9·10 미만 선택) 옵션을 켜면 낮은 등급은 슬랩으로 만들지 않고 즉시 환산돼요. 슬랩 한도 ",
+      h("b", null, "“PCL N 미만 자동 삭제”"),
+      " (7·8·9·10 미만 선택) 옵션을 켜면 낮은 등급은 슬랩으로 만들지 않고 즉시 폐기돼요. 슬랩 한도 ",
       h("b", null, "50,000장"),
       "에 가까울 때 유용."
     ),
@@ -1769,13 +1642,13 @@ const SET_SECTIONS: HelpSection[] = [
       null,
       "일반 카드 ",
       h("b", null, "20,000장"),
-      "을 넘기면 박스가 거부되고 비용이 자동 환불돼요. 자동 판매 옵션을 켜거나 ",
+      "을 넘기면 박스가 거부되고 비용이 자동 환불돼요. 박스 자동 판매 옵션을 켜거나 ",
       h(
         Link,
-        { href: "/wallet/bulk-sell", className: "underline text-amber-300" },
-        "일괄 판매"
+        { href: "/grading", className: "underline text-amber-300" },
+        "감별"
       ),
-      "로 잡카드를 정리한 뒤 다시 시도하세요."
+      "의 자동 삭제로 잡카드를 정리한 뒤 다시 시도하세요."
     ),
   },
   {
@@ -1819,7 +1692,6 @@ const SET_SECTIONS: HelpSection[] = [
 export const PAGE_HELP: Record<string, PageHelp> = {
   "/": { title: "홈", sections: HOME_SECTIONS },
   "/wallet": { title: "내 카드지갑", sections: WALLET_SECTIONS },
-  "/wallet/bulk-sell": { title: "일괄 판매", sections: BULK_SELL_SECTIONS },
   "/center": { title: "포켓몬센터", sections: CENTER_SECTIONS },
   "/grading": { title: "PCL 감별", sections: GRADING_SECTIONS },
   "/users": { title: "사용자 랭킹", sections: USERS_SECTIONS },

@@ -128,8 +128,8 @@ export default function SetView({ set }: { set: SetInfo }) {
   } | null>(null);
   const [multiProgress, setMultiProgress] = useState({ done: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
-  // Separate channel for "wallet is full" so the UI can show a bigger
-  // banner with a direct link to 일괄 판매 instead of a tiny tooltip.
+  // 지갑 한도 초과 전용 채널 — 단순 토스트 대신 "감별로 자동 삭제" 등
+  // 안내를 큰 배너로 보여주기 위해 별도 state.
   const [capError, setCapError] = useState<string | null>(null);
   const [autoSellRarities, setAutoSellRarities] = useState<string[]>([]);
   const [autoSellEarned, setAutoSellEarned] = useState(0);
