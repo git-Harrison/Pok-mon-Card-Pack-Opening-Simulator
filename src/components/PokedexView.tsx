@@ -74,7 +74,7 @@ export default function PokedexView() {
   const visibleCards = cardsForTab.slice(0, visibleCount);
   const hasMore = visibleCount < cardsForTab.length;
 
-  // 등급 탭 전환 시 visibleCount 리셋.
+  // 희귀도 탭 전환 시 visibleCount 리셋.
   useEffect(() => {
     setVisibleCount(CARDS_PER_BATCH);
   }, [activeRarity]);
@@ -147,7 +147,7 @@ export default function PokedexView() {
       <div className="rounded-xl border border-white/10 bg-gradient-to-r from-amber-500/10 via-fuchsia-500/5 to-indigo-500/10 p-3 md:p-4 mb-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="text-[12px] md:text-[13px] text-zinc-200">
-            등급별 정액 — MUR{" "}
+            희귀도별 정액 — MUR{" "}
             <b className="text-amber-200">+{POKEDEX_RARITY_SCORE.MUR}</b>·UR{" "}
             <b className="text-amber-200">+{POKEDEX_RARITY_SCORE.UR}</b>·SAR{" "}
             <b className="text-amber-200">+{POKEDEX_RARITY_SCORE.SAR}</b>·SR{" "}
@@ -172,21 +172,21 @@ export default function PokedexView() {
         </div>
       </div>
 
-      {/* 셋트 효과(완전 컬렉션 보너스) 안내 — 등급별 모든 카드를
-          도감에 박제하면 추가 전투력. 신규 세트 추가 시 totals 가
+      {/* 도감 세트효과(완전 컬렉션 보너스) 안내 — 한 카드 희귀도의
+          모든 카드를 박제하면 추가 전투력. 신규 세트 추가 시 totals 가
           늘어 미완성으로 바뀌면 보너스도 자동 회수. */}
       <div className="rounded-xl border border-fuchsia-400/30 bg-fuchsia-500/5 p-3 md:p-4 mb-4">
         <div className="flex items-center gap-2 mb-2">
           <span aria-hidden className="text-base">✨</span>
           <h2 className="text-sm font-bold text-fuchsia-100">
-            등급 셋트 효과 (완전 컬렉션)
+            도감 세트효과 (희귀도별 완전 컬렉션)
           </h2>
         </div>
         <p className="text-[12px] text-zinc-300 leading-relaxed mb-2">
-          등급별 <b className="text-white">진행률 비례</b>로 전투력 보너스가
-          즉시 적립돼요. 등급의 모든 카드를 박제하면 아래 표시된{" "}
-          <b className="text-fuchsia-200">최대 보너스</b>를 받습니다. 부분
-          진행도 비례 가산 (예: 절반 모으면 절반 보너스).
+          카드 희귀도별 <b className="text-white">진행률 비례</b>로 전투력
+          보너스가 즉시 적립돼요. 한 희귀도의 모든 카드를 박제하면 아래
+          표시된 <b className="text-fuchsia-200">최대 보너스</b>를 받습니다.
+          부분 진행도 비례 가산 (예: 절반 모으면 절반 보너스).
         </p>
         <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1 text-[11px] tabular-nums">
           {RARITY_ORDER.map((r) => (
@@ -377,7 +377,7 @@ function Book({
             {rarityLabel} 카드가 없어요
           </p>
           <p className="mt-1 text-[12px] text-zinc-500">
-            다른 등급 탭을 눌러 보세요.
+            다른 희귀도 탭을 눌러 보세요.
           </p>
         </div>
       ) : (

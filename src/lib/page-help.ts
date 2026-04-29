@@ -953,7 +953,7 @@ const USERS_SECTIONS: HelpSection[] = [
         { className: "mt-1.5" },
         "+ ",
         h("b", null, "도감 보너스"),
-        " (등급별 정액 + 등급 완전 컬렉션) + ",
+        " (희귀도별 정액 + 희귀도 완전 컬렉션) + ",
         h("b", null, "펫 점수"),
         " 도 합산. PCL 6~8 슬랩은 전투력 0."
       )
@@ -1501,7 +1501,7 @@ const POKEDEX_SECTIONS: HelpSection[] = [
       "div",
       null,
       "도감에 등록한 카드 ",
-      h("b", null, "한 장당 등급별 정액"),
+      h("b", null, "한 장당 희귀도별 정액"),
       "이 ",
       h("b", null, "센터 전투력"),
       "에 합산돼요.",
@@ -1527,12 +1527,12 @@ const POKEDEX_SECTIONS: HelpSection[] = [
     ),
   },
   {
-    heading: "등급 완전 컬렉션 보너스",
+    heading: "도감 세트효과 (희귀도 완전 컬렉션)",
     icon: "✨",
     body: h(
       "div",
       null,
-      "한 등급의 모든 카드를 도감에 박제하면 추가 ",
+      "한 희귀도의 모든 카드를 도감에 박제하면 추가 ",
       h("b", null, "전투력 보너스"),
       "가 영구 적용.",
       h(
@@ -1554,7 +1554,7 @@ const POKEDEX_SECTIONS: HelpSection[] = [
   {
     heading: "책 넘기기",
     icon: "📖",
-    body: "한 페이지에 24장. 등급 탭을 누르면 그 등급만 보이고, 좌우 화살표로 페이지를 넘기면 3D 페이지 플립 애니메이션이 재생돼요.",
+    body: "한 페이지에 24장. 희귀도 탭을 누르면 그 희귀도만 보이고, 좌우 화살표로 페이지를 넘기면 3D 페이지 플립 애니메이션이 재생돼요.",
   },
 ];
 

@@ -23,19 +23,20 @@ export const RARITY_TOTALS: Record<Rarity, number> = {
   C: 587,
 };
 
-// 등급별 완전 컬렉션 보너스 — 어렵게 모이는 등급일수록 더 큰 보상.
-// 카드 수 늘어난 만큼 보너스도 비례 상향.
+// 카드 희귀도별 완전 컬렉션 보너스 — 어렵게 모이는 희귀도일수록 더
+// 큰 보상. 서버 pokedex_completion_bonus(uuid) 의 풀세트 값과 sync 필수
+// (마지막 갱신: 20260662_pokedex_completion_bonus_round2.sql, 라운드 2).
 export const RARITY_COMPLETION_BONUS: Record<Rarity, number> = {
-  MUR: 15000,
-  UR:   9000,
-  SAR:  8000,
-  MA:   5000,
-  SR:   7500,
-  AR:   6500,
-  RR:   5500,
-  R:    4500,
-  U:    3500,
-  C:    3000,
+  MUR: 60000,
+  UR:  28000,
+  SAR: 20000,
+  SR:  15000,
+  AR:  12000,
+  MA:   9000,
+  RR:   7000,
+  R:    5000,
+  U:    3000,
+  C:    2000,
 };
 
 export interface PokedexEntry {
@@ -74,8 +75,8 @@ export function pokedexPowerBonus(entries: PokedexEntry[]): number {
   return sum;
 }
 
-/** 다음 추가 등록으로 얻을 수 있는 rarity 별 잠재 보너스 (등급별 미보유
- *  슬랩 1장 추가 시 환산값). UI 의 "어떤 등급을 더 모으면 +N" 안내용. */
+/** 다음 추가 등록으로 얻을 수 있는 희귀도별 잠재 보너스 (희귀도별 미보유
+ *  슬랩 1장 추가 시 환산값). UI 의 "어떤 희귀도를 더 모으면 +N" 안내용. */
 export function pokedexNextDelta(): {
   rarity: Rarity;
   bonus: number;
