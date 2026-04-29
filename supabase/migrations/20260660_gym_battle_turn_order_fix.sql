@@ -1,0 +1,408 @@
+-- ============================================================
+-- 체육관 전투 턴 순서 유지 픽스.
+--
+-- 사용자 리포트:
+--   "포켓몬이 죽어서 다음 포켓몬으로 넘어갈 때 무조건 내가 먼저 1회
+--    공격하는 구조로 리셋됨. 결과적으로 플레이어가 항상 유리."
+--
+-- 원인:
+--   기존 resolve_gym_battle 의 turn loop 가 "한 iteration = 양쪽 한 번씩
+--   공격" 구조. 적이 죽으면 continue → 다음 iteration 에서 펫이 또
+--   먼저 공격. 즉 적 사망마다 펫이 부전승으로 추가 선공 1회를 얻는 셈.
+--
+-- 픽스: turn loop 를 "한 iteration = 한 쪽의 공격 1회" 로 재구성.
+--   · v_current_turn ('pet' | 'enemy') 상태를 함수 시작 시 'pet' 으로 1회
+--     설정 (선공). 이후 매 공격 후 flip.
+--   · 한 쪽 unit 사망 시 그 쪽 idx 만 +1, v_current_turn 은 건드리지 않음
+--     → 다음 iteration 에서도 "그 다음 차례" 가 누구인지 유지.
+--   · turn_log 는 매 iteration 1 entry (이전엔 1 iteration 에 2 entry).
+--   · 그 외 데미지 산식 / 효과/크리/jitter 등은 동일.
+--
+-- 그 외 함수 본문 (검증, 능력치 적재, 보상 처리 등) 은 20260628 의
+-- 정의 그대로. CREATE OR REPLACE 로 통째 재정의.
+--
+-- 의존성: 20260628 (현재 정의), 20260619 (main_cards_by_type),
+--         gym_protection_interval, gym_pet_battle_stats,
+--         gym_type_effectiveness, gym_compute_user_center_power.
+-- ============================================================
+
+create or replace function resolve_gym_battle(
+  p_user_id uuid,
+  p_gym_id text,
+  p_challenge_id uuid,
+  p_pet_grading_ids uuid[],
+  p_pet_types text[]
+) returns json
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_challenge record;
+  v_gym record;
+  v_medal record;
+  v_main_ids uuid[];
+  v_by_type_data jsonb;
+  v_center_power int;
+  v_user_points int;
+  v_pet_id uuid;
+  v_pet record;
+  v_owner_record record;
+  v_def_center_power int;
+  v_def_pet record;
+  v_pet_states jsonb := '[]'::jsonb;
+  v_enemy_states jsonb := '[]'::jsonb;
+  v_pet_idx int := 1;
+  v_enemy_idx int := 1;
+  v_turn_log jsonb := '[]'::jsonb;
+  v_turn int := 0;
+  v_max_turns constant int := 200;
+  v_eff numeric;
+  v_jitter numeric;
+  v_dmg int;
+  v_crit boolean;
+  v_pets_alive int;
+  v_enemies_alive int;
+  v_winner text;
+  v_capture_reward int;
+  v_difficulty_mult numeric;
+  v_protection_until timestamptz;
+  v_destroyed_count int := 0;
+  v_enemy_record record;
+  v_enemy_count int := 0;
+  v_def_valid_count int := 0;
+  v_use_defenders boolean := false;
+  -- 신규 — 턴 주도권 상태. 전투 시작 시 'pet' (펫 선공) 으로 1회 설정.
+  -- 이후 매 공격 후 flip. unit 사망 시 건드리지 않음.
+  v_current_turn text := 'pet';
+begin
+  if p_user_id is null or p_gym_id is null or p_challenge_id is null then
+    return json_build_object('ok', false, 'error', '요청이 올바르지 않아요.');
+  end if;
+  if p_pet_grading_ids is null
+     or coalesce(array_length(p_pet_grading_ids, 1), 0) <> 3 then
+    return json_build_object('ok', false, 'error', '펫 3마리를 선택해주세요.');
+  end if;
+  if p_pet_types is null
+     or coalesce(array_length(p_pet_types, 1), 0) <> 3 then
+    return json_build_object('ok', false, 'error', '펫 타입 정보가 부족해요.');
+  end if;
+
+  perform pg_advisory_xact_lock(hashtext('gym:' || p_gym_id));
+
+  select * into v_challenge
+    from gym_challenges where id = p_challenge_id for update;
+  if not found then return json_build_object('ok', false, 'error', '도전 기록을 찾을 수 없어요.'); end if;
+  if v_challenge.challenger_user_id <> p_user_id then
+    return json_build_object('ok', false, 'error', '본인 도전만 진행할 수 있어요.');
+  end if;
+  if v_challenge.gym_id <> p_gym_id then
+    return json_build_object('ok', false, 'error', '도전 정보가 일치하지 않아요.');
+  end if;
+  if v_challenge.status <> 'active' then
+    return json_build_object('ok', false, 'error', '이미 종료된 도전이에요.');
+  end if;
+
+  select * into v_gym from gyms where id = p_gym_id;
+  select * into v_medal from gym_medals where gym_id = p_gym_id;
+
+  for i in 1..3 loop
+    if p_pet_types[i] is null or p_pet_types[i] <> v_gym.type then
+      update gym_challenges
+         set status = 'abandoned', ended_at = now(), result = 'wrong_type'
+       where id = p_challenge_id;
+      return json_build_object('ok', false,
+        'error', format('이 체육관은 %s 속성 펫만 도전 가능합니다.', v_gym.type),
+        'gym_type', v_gym.type);
+    end if;
+  end loop;
+
+  select coalesce(main_card_ids, '{}'::uuid[]),
+         coalesce(main_cards_by_type, '{}'::jsonb)
+    into v_main_ids, v_by_type_data
+    from users where id = p_user_id;
+  if v_main_ids is null then v_main_ids := '{}'::uuid[]; end if;
+  v_main_ids := v_main_ids || coalesce(
+    flatten_pet_ids_by_type(v_by_type_data),
+    '{}'::uuid[]
+  );
+
+  if (select count(distinct id) from unnest(p_pet_grading_ids) as id) <> 3 then
+    return json_build_object('ok', false, 'error', '펫 3마리는 서로 달라야 해요.');
+  end if;
+  for v_pet_id in select unnest(p_pet_grading_ids) loop
+    if not exists (
+      select 1 from psa_gradings g
+       where g.id = v_pet_id and g.user_id = p_user_id
+         and g.grade = 10 and g.id = any(v_main_ids)
+    ) then
+      update gym_challenges
+         set status = 'abandoned', ended_at = now(), result = 'pet_invalid'
+       where id = p_challenge_id;
+      return json_build_object('ok', false,
+        'error', '본인 펫(PCL10·등록 슬랩) 만 출전할 수 있어요.');
+    end if;
+  end loop;
+
+  v_center_power := gym_compute_user_center_power(p_user_id);
+  if v_center_power < coalesce(v_gym.min_power, 0) then
+    update gym_challenges
+       set status = 'abandoned', ended_at = now(), result = 'underpowered'
+     where id = p_challenge_id;
+    return json_build_object('ok', false,
+      'error', '도전 최소 전투력에 못 미쳐요.',
+      'min_power', v_gym.min_power, 'center_power', v_center_power);
+  end if;
+
+  for i in 1..3 loop
+    select * into v_pet
+      from gym_pet_battle_stats(
+        p_pet_grading_ids[i], i, v_center_power, v_gym.type, p_pet_types[i], false);
+    if not found or v_pet.hp is null or v_pet.atk is null then
+      update gym_challenges
+         set status = 'abandoned', ended_at = now(), result = 'pet_stat_load_failed'
+       where id = p_challenge_id;
+      return json_build_object('ok', false,
+        'error', format('펫 %s번 슬롯의 능력치를 불러오지 못했어요.', i));
+    end if;
+    v_pet_states := v_pet_states || jsonb_build_object(
+      'slot', i, 'grading_id', p_pet_grading_ids[i],
+      'card_id', v_pet.card_id, 'name', v_pet.name, 'type', v_pet.type,
+      'rarity', v_pet.rarity, 'grade', v_pet.grade,
+      'hp_max', v_pet.hp, 'hp', v_pet.hp, 'atk', v_pet.atk);
+  end loop;
+
+  select * into v_owner_record from gym_ownerships where gym_id = p_gym_id;
+  if v_owner_record.owner_user_id is not null
+     and v_owner_record.defense_pet_ids is not null
+     and coalesce(array_length(v_owner_record.defense_pet_ids, 1), 0) = 3
+  then
+    select count(*)::int into v_def_valid_count
+      from psa_gradings gd
+     where gd.id = any(v_owner_record.defense_pet_ids)
+       and gd.user_id = v_owner_record.owner_user_id
+       and gd.grade = 10;
+    if v_def_valid_count = 3 then
+      v_use_defenders := true;
+    else
+      update gym_ownerships
+         set defense_pet_ids = null, defense_pet_types = null
+       where gym_id = p_gym_id;
+      select * into v_owner_record from gym_ownerships where gym_id = p_gym_id;
+    end if;
+  end if;
+
+  if v_use_defenders then
+    v_def_center_power := gym_compute_user_center_power(v_owner_record.owner_user_id);
+    for i in 1..3 loop
+      select * into v_def_pet
+        from gym_pet_battle_stats(
+          v_owner_record.defense_pet_ids[i], i, v_def_center_power,
+          v_gym.type, v_owner_record.defense_pet_types[i], true);
+      if not found or v_def_pet.hp is null or v_def_pet.atk is null then
+        update gym_challenges
+           set status = 'abandoned', ended_at = now(),
+               result = 'defender_stat_load_failed'
+         where id = p_challenge_id;
+        return json_build_object('ok', false,
+          'error', format('상대 방어덱 %s번 슬롯의 능력치를 불러오지 못했어요.', i),
+          'reason', 'defender_stat_load_failed');
+      end if;
+      v_enemy_states := v_enemy_states || jsonb_build_object(
+        'slot', i, 'card_id', v_def_pet.card_id, 'name', v_def_pet.name,
+        'type', v_def_pet.type, 'rarity', v_def_pet.rarity, 'grade', v_def_pet.grade,
+        'hp_max', v_def_pet.hp, 'hp', v_def_pet.hp, 'atk', v_def_pet.atk,
+        'is_defender', true);
+    end loop;
+  else
+    for v_enemy_record in
+      select gp.slot, gp.name, gp.type, gp.dex, gp.hp, gp.atk, gp.def, gp.spd
+        from gym_pokemon gp where gp.gym_id = p_gym_id order by gp.slot
+    loop
+      declare v_e_atk int := v_enemy_record.atk;
+      begin
+        if v_enemy_record.type = v_gym.type then
+          v_e_atk := round(v_e_atk * 1.10)::int;
+        end if;
+        v_enemy_states := v_enemy_states || jsonb_build_object(
+          'slot', v_enemy_record.slot, 'name', v_enemy_record.name,
+          'type', v_enemy_record.type, 'dex', v_enemy_record.dex,
+          'hp_max', v_enemy_record.hp, 'hp', v_enemy_record.hp,
+          'atk', v_e_atk, 'is_defender', false);
+      end;
+    end loop;
+  end if;
+
+  v_enemy_count := jsonb_array_length(v_enemy_states);
+  if v_enemy_count <> 3 then
+    update gym_challenges
+       set status = 'abandoned', ended_at = now(), result = 'enemy_count_mismatch'
+     where id = p_challenge_id;
+    return json_build_object('ok', false,
+      'error', format('상대 펫 데이터가 비정상이에요 (%s/3).', v_enemy_count),
+      'reason', 'enemy_count_mismatch');
+  end if;
+
+  -- ── 턴 시뮬 — 각 iteration = 한 쪽의 공격 1회. v_current_turn 으로
+  --    누가 다음 차례인지 추적. unit 사망 시 idx 만 +1, turn 은 유지.
+  while v_pet_idx <= 3 and v_enemy_idx <= 3 and v_turn < v_max_turns loop
+    v_turn := v_turn + 1;
+
+    if v_current_turn = 'pet' then
+      declare
+        v_pet_atk int := (v_pet_states -> (v_pet_idx - 1) ->> 'atk')::int;
+        v_pet_type text := v_pet_states -> (v_pet_idx - 1) ->> 'type';
+        v_e_type text := v_enemy_states -> (v_enemy_idx - 1) ->> 'type';
+        v_pet_hp int := (v_pet_states -> (v_pet_idx - 1) ->> 'hp')::int;
+        v_e_hp int := (v_enemy_states -> (v_enemy_idx - 1) ->> 'hp')::int;
+      begin
+        v_eff := gym_type_effectiveness(v_pet_type, v_e_type);
+        v_jitter := 0.9 + (random() * 0.2);
+        v_dmg := round(v_pet_atk * v_eff * v_jitter)::int;
+        v_crit := random() < 0.05;
+        if v_crit then v_dmg := round(v_dmg * 1.5)::int; end if;
+        v_dmg := greatest(case when v_eff = 0 then 0 else 1 end, v_dmg);
+        v_e_hp := greatest(0, v_e_hp - v_dmg);
+        v_enemy_states := jsonb_set(v_enemy_states,
+          array[(v_enemy_idx - 1)::text, 'hp'], to_jsonb(v_e_hp));
+        v_turn_log := v_turn_log || jsonb_build_object(
+          'turn', v_turn, 'side', 'pet', 'attacker_slot', v_pet_idx,
+          'defender_slot', v_enemy_idx, 'damage', v_dmg, 'eff', v_eff,
+          'crit', v_crit, 'enemy_hp_left', v_e_hp, 'pet_hp_left', v_pet_hp);
+        if v_e_hp <= 0 then
+          v_enemy_idx := v_enemy_idx + 1;
+          -- unit 교체만 — turn 은 그대로 'pet' → flip 후 다음 iteration
+          -- 은 'enemy' 차례. 단 enemy 가 더 이상 없으면 loop 종료.
+        end if;
+      end;
+      v_current_turn := 'enemy';
+    else
+      -- enemy 차례
+      declare
+        v_pet_type text := v_pet_states -> (v_pet_idx - 1) ->> 'type';
+        v_e_atk int := (v_enemy_states -> (v_enemy_idx - 1) ->> 'atk')::int;
+        v_e_type text := v_enemy_states -> (v_enemy_idx - 1) ->> 'type';
+        v_pet_hp int := (v_pet_states -> (v_pet_idx - 1) ->> 'hp')::int;
+        v_e_hp int := (v_enemy_states -> (v_enemy_idx - 1) ->> 'hp')::int;
+      begin
+        v_eff := gym_type_effectiveness(v_e_type, v_pet_type);
+        v_jitter := 0.9 + (random() * 0.2);
+        v_dmg := round(v_e_atk * v_eff * v_jitter)::int;
+        v_crit := random() < 0.05;
+        if v_crit then v_dmg := round(v_dmg * 1.5)::int; end if;
+        v_dmg := greatest(case when v_eff = 0 then 0 else 1 end, v_dmg);
+        v_pet_hp := greatest(0, v_pet_hp - v_dmg);
+        v_pet_states := jsonb_set(v_pet_states,
+          array[(v_pet_idx - 1)::text, 'hp'], to_jsonb(v_pet_hp));
+        v_turn_log := v_turn_log || jsonb_build_object(
+          'turn', v_turn, 'side', 'enemy', 'attacker_slot', v_enemy_idx,
+          'defender_slot', v_pet_idx, 'damage', v_dmg, 'eff', v_eff,
+          'crit', v_crit, 'enemy_hp_left', v_e_hp, 'pet_hp_left', v_pet_hp);
+        if v_pet_hp <= 0 then
+          v_pet_idx := v_pet_idx + 1;
+        end if;
+      end;
+      v_current_turn := 'pet';
+    end if;
+  end loop;
+
+  v_pets_alive := 0; v_enemies_alive := 0;
+  for i in 0..2 loop
+    if coalesce((v_pet_states -> i ->> 'hp')::int, 0) > 0 then
+      v_pets_alive := v_pets_alive + 1;
+    end if;
+    if coalesce((v_enemy_states -> i ->> 'hp')::int, 0) > 0 then
+      v_enemies_alive := v_enemies_alive + 1;
+    end if;
+  end loop;
+  v_winner := case when v_pets_alive > 0 and v_enemies_alive = 0 then 'won' else 'lost' end;
+
+  if v_winner = 'won' then
+    v_difficulty_mult := case v_gym.difficulty
+      when 'EASY' then 1.0 when 'NORMAL' then 1.6
+      when 'HARD' then 2.4 when 'BOSS' then 4.0 else 1.0 end;
+    v_capture_reward := round(150000 * v_difficulty_mult)::int;
+    if v_medal.id is not null then
+      insert into user_gym_medals (user_id, gym_id, medal_id, used_pets)
+        values (p_user_id, p_gym_id, v_medal.id,
+          jsonb_build_object('pets', v_pet_states))
+        on conflict (user_id, gym_id) do nothing;
+    end if;
+    v_protection_until := now() + gym_protection_interval();
+
+    if v_use_defenders
+       and v_owner_record.owner_user_id is not null
+       and v_owner_record.defense_pet_ids is not null
+       and coalesce(array_length(v_owner_record.defense_pet_ids, 1), 0) > 0
+    then
+      with del as (
+        delete from psa_gradings
+         where id = any(v_owner_record.defense_pet_ids)
+        returning id
+      )
+      select count(*)::int into v_destroyed_count from del;
+      update users
+         set main_card_ids = array(
+               select id from unnest(coalesce(main_card_ids, '{}'::uuid[])) as id
+                where not (id = any(v_owner_record.defense_pet_ids)))
+       where id = v_owner_record.owner_user_id;
+      update users
+         set pet_score = compute_user_pet_score(v_owner_record.owner_user_id)
+       where id = v_owner_record.owner_user_id;
+    end if;
+
+    insert into gym_ownerships (
+      gym_id, owner_user_id, captured_at, protection_until,
+      defense_pet_ids, defense_pet_types
+    ) values (p_gym_id, p_user_id, now(), v_protection_until, null, null)
+    on conflict (gym_id) do update
+      set owner_user_id = excluded.owner_user_id,
+          captured_at = excluded.captured_at,
+          protection_until = excluded.protection_until,
+          defense_pet_ids = null, defense_pet_types = null;
+
+    update users set points = points + v_capture_reward
+      where id = p_user_id returning points into v_user_points;
+    update users set pet_score = compute_user_pet_score(p_user_id)
+      where id = p_user_id;
+    insert into gym_rewards (user_id, gym_id, reward_type, amount)
+      values (p_user_id, p_gym_id, 'capture', v_capture_reward);
+    update gym_challenges set status = 'won', ended_at = now(), result = 'won'
+      where id = p_challenge_id;
+  else
+    insert into gym_cooldowns (user_id, gym_id, cooldown_until)
+      values (p_user_id, p_gym_id, now() + interval '8 minutes')
+      on conflict (user_id, gym_id) do update set cooldown_until = excluded.cooldown_until;
+    update gym_challenges set status = 'lost', ended_at = now(), result = 'lost'
+      where id = p_challenge_id;
+    select points into v_user_points from users where id = p_user_id;
+  end if;
+
+  insert into gym_battle_logs (
+    challenge_id, gym_id, challenger_user_id, defender_user_id,
+    result, used_pets, turn_log, started_at
+  ) values (
+    p_challenge_id, p_gym_id, p_user_id,
+    case when v_use_defenders and v_owner_record.owner_user_id is not null
+         then v_owner_record.owner_user_id else null end,
+    v_winner,
+    jsonb_build_object('pets', v_pet_states, 'enemies', v_enemy_states,
+      'destroyed_defense_count', v_destroyed_count,
+      'used_defenders', v_use_defenders),
+    v_turn_log, v_challenge.started_at);
+
+  return json_build_object(
+    'ok', true, 'result', v_winner,
+    'pets', v_pet_states, 'enemies', v_enemy_states, 'turn_log', v_turn_log,
+    'capture_reward', case when v_winner = 'won' then v_capture_reward else 0 end,
+    'medal_id', case when v_winner = 'won' then v_medal.id else null end,
+    'protection_until', case when v_winner = 'won' then v_protection_until else null end,
+    'destroyed_defense_count', v_destroyed_count,
+    'used_defenders', v_use_defenders,
+    'points', v_user_points);
+end;
+$$;
+
+grant execute on function resolve_gym_battle(uuid, text, uuid, uuid[], text[]) to anon, authenticated;
+
+notify pgrst, 'reload schema';
