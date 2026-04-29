@@ -9,8 +9,10 @@ import type { Card, SetInfo } from "@/lib/types";
 import { drawBox } from "@/lib/pack-draw";
 import {
   buyBox,
+  buyBoxesBulk,
   recordPackPullsBatch,
   refundBoxPurchase,
+  refundBoxesBulk,
   type BatchPullPack,
 } from "@/lib/db";
 
@@ -85,7 +87,6 @@ import { BOX_COST, RARITY_STYLE } from "@/lib/rarity";
 import PokeLoader, { LoadingText } from "./PokeLoader";
 import PackOpeningStage from "./PackOpeningStage";
 import RarityBadge from "./RarityBadge";
-import CoinIcon from "./CoinIcon";
 
 // Persist an in-progress box across navigations so that pressing the
 // browser back button (e.g. from wallet → back to set) doesn't nuke
@@ -111,8 +112,10 @@ type Phase =
   | "multi-buying"
   | "multi-result";
 
-// Bulk-purchase sizes offered by the "여러 박스 한번에" shortcut.
-const MULTI_OPTIONS: number[] = [5, 10, 30];
+// 일괄 구매 단위. 단일 50박스로 단순화 (기존 5/10/30 옵션 폐기) —
+// 모바일에서 한 줄에 [1박스] [50박스] 만 노출. 서버 RPC 도 1회로
+// 단축 (buyBoxesBulk) 해 round-trip 비용 크게 감소.
+const MULTI_BOX_COUNT = 50;
 
 export default function SetView({ set }: { set: SetInfo }) {
   const { user, setPoints } = useAuth();
@@ -260,28 +263,28 @@ export default function SetView({ set }: { set: SetInfo }) {
       }
       clearErrors();
       setPhase("multi-buying");
+      // 진행률 setState 는 phase transition 2번 (구매 시작 / persist 시작)
+      // 만 — 박스마다 setState 하면 50박스 × N rerender 비용. 단일 bulk
+      // RPC 라 박스별 갱신 의미도 없음.
       setMultiProgress({ done: 0, total: boxCount });
       setAutoSellEarned(0);
       setAutoSellSoldCount(0);
 
+      // (1) 박스 일괄 구매 — 단일 RPC.
+      const buyRes = await buyBoxesBulk(user.id, set.code, boxCount);
+      if (!buyRes.ok || typeof buyRes.points !== "number") {
+        setError(buyRes.error ?? "박스 일괄 구매 실패");
+        setPhase("sealed");
+        return;
+      }
+      setPoints(buyRes.points);
+      const spent = buyRes.total_spent ?? totalCost;
+
+      // (2) 카드 추첨 — 클라 측 cheap loop. 50박스 ≈ 1250장 (5팩×5장×50)
+      // 단순 객체 생성이라 동기 처리해도 ms 단위.
       const allCards: Card[] = [];
       const batchPulls: BatchPullPack[] = [];
-      let spent = 0;
-      let boxesPurchased = 0;
-
       for (let i = 0; i < boxCount; i++) {
-        const res = await buyBox(user.id, set.code);
-        if (!res.ok || typeof res.points !== "number") {
-          for (let r = 0; r < boxesPurchased; r++) {
-            await refundBoxPurchase(user.id, set.code);
-          }
-          setError(res.error ?? "박스 구매 실패");
-          setPhase("sealed");
-          return;
-        }
-        setPoints(res.points);
-        spent += res.price ?? cost;
-        boxesPurchased += 1;
         const drawn = drawBox(set);
         for (const pack of drawn) {
           batchPulls.push({
@@ -290,8 +293,10 @@ export default function SetView({ set }: { set: SetInfo }) {
           });
           for (const c of pack) allCards.push(c);
         }
-        setMultiProgress({ done: i + 1, total: boxCount });
       }
+
+      // (3) persist 단계로 진입 — UI 메시지 갱신.
+      setMultiProgress({ done: boxCount, total: boxCount });
 
       try {
         const r = await persistBatchWithRetry(
@@ -304,8 +309,8 @@ export default function SetView({ set }: { set: SetInfo }) {
           setPoints(r.points);
         }
         // 자동판매 대상은 결과 모달 그리드에서 제외 — 보유로 저장된
-        // 카드만 노출. 박스 ×10 같은 케이스에서 1500+ 장이 통째로
-        // 렌더되던 비용을 절반 이하로 줄임.
+        // 카드만 노출. 50박스에서 ~1250장 렌더 → autoSell 켜면 보통
+        // 100~300장 수준으로 떨어져 모바일 그리드 부담 완화.
         const sellSet = new Set(autoSellRarities);
         const keptCards = allCards
           .filter((c) => !sellSet.has(c.rarity))
@@ -319,22 +324,16 @@ export default function SetView({ set }: { set: SetInfo }) {
       } catch (e) {
         console.error("multi-box batch persist failed", e);
         const serverMsg = errorMessage(e);
-        let refundedTotal = 0;
-        let refundOk = true;
-        for (let r = 0; r < boxesPurchased; r++) {
-          const refund = await refundBoxPurchase(user.id, set.code);
-          if (refund.ok) {
-            refundedTotal += refund.refunded ?? cost;
-            if (typeof refund.points === "number") {
-              setPoints(refund.points);
-            }
-          } else {
-            refundOk = false;
-          }
+        // 일괄 환불 — 단일 RPC.
+        const refund = await refundBoxesBulk(user.id, set.code, boxCount);
+        const refundOk = refund.ok === true;
+        const refundedTotal = refundOk ? refund.refunded ?? 0 : 0;
+        if (refundOk && typeof refund.points === "number") {
+          setPoints(refund.points);
         }
         const refundTail = refundOk
           ? `${refundedTotal.toLocaleString("ko-KR")}p 환불됐어요.`
-          : "일부 환불에 실패했어요. 관리자에게 문의해주세요.";
+          : "환불에 실패했어요. 관리자에게 문의해주세요.";
         if (isIntentionalRejection(e) && serverMsg) {
           setCapError(`${serverMsg}\n(${refundTail})`);
         } else {
@@ -688,42 +687,57 @@ function SealedBox({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
     >
-      {/* 일괄 박스 열기 — 모바일 가시성 우선이라 박스 이미지 위로 올림.
-          스크롤 안 하고 첫 화면에서 바로 5/10/30 박스 일괄을 눌러 살 수
-          있어야 한다는 사용자 피드백 반영. */}
+      {/* 박스 열기 — 모바일 가시성 우선. 스크롤 없이 첫 화면에서 바로
+          [1박스] [50박스] 둘 중 선택해 누를 수 있도록 박스 이미지 위에
+          배치. 두 버튼 같은 높이 (h-14) + 동일 폭으로 오터치 방지. */}
       <div className="w-full max-w-[420px] rounded-2xl border border-amber-400/30 bg-amber-400/5 px-3 py-2.5">
         <div className="flex items-center justify-between gap-2 mb-1.5">
           <p className="text-[11px] md:text-xs font-bold text-amber-100 inline-flex items-center gap-1">
-            ⚡ 박스 일괄 열기
+            📦 박스 열기
           </p>
           <p className="text-[10px] text-zinc-400 tabular-nums">
             보유 {userPoints.toLocaleString("ko-KR")}p
           </p>
         </div>
-        <div className="grid grid-cols-3 gap-1.5">
-          {MULTI_OPTIONS.map((n) => {
-            const total = cost * n;
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={onOpen}
+            disabled={!canAfford || loading}
+            style={{ touchAction: "manipulation" }}
+            className={clsx(
+              "h-14 rounded-xl text-sm font-black inline-flex flex-col items-center justify-center transition",
+              canAfford && !loading
+                ? "bg-gradient-to-br from-amber-400 to-rose-500 text-zinc-950 shadow-[0_10px_30px_-10px_rgba(251,113,133,0.7)] hover:scale-[1.02] active:scale-[0.97]"
+                : "bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed"
+            )}
+          >
+            <span className="leading-none">1박스 열기</span>
+            <span className="mt-0.5 text-[10px] font-semibold opacity-85 tabular-nums">
+              {cost.toLocaleString("ko-KR")}p
+            </span>
+          </button>
+          {(() => {
+            const total = cost * MULTI_BOX_COUNT;
             const afford = userPoints >= total;
             return (
               <button
-                key={n}
-                onClick={() => onOpenMulti(n)}
+                onClick={() => onOpenMulti(MULTI_BOX_COUNT)}
                 disabled={!afford || loading}
                 style={{ touchAction: "manipulation" }}
                 className={clsx(
-                  "h-11 md:h-12 rounded-lg text-xs md:text-sm font-black inline-flex flex-col items-center justify-center transition",
+                  "h-14 rounded-xl text-sm font-black inline-flex flex-col items-center justify-center transition",
                   afford && !loading
-                    ? "bg-gradient-to-br from-amber-400/30 to-rose-500/20 border border-amber-400/50 text-white hover:scale-[1.02] active:scale-[0.97]"
+                    ? "bg-gradient-to-br from-amber-400/40 to-rose-500/30 border border-amber-400/60 text-white hover:scale-[1.02] active:scale-[0.97]"
                     : "bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed"
                 )}
               >
-                <span className="leading-none">×{n} 박스</span>
+                <span className="leading-none">{MULTI_BOX_COUNT}박스 열기</span>
                 <span className="mt-0.5 text-[10px] font-semibold opacity-85 tabular-nums">
                   {total.toLocaleString("ko-KR")}p
                 </span>
               </button>
             );
-          })}
+          })()}
         </div>
       </div>
 
@@ -808,30 +822,6 @@ function SealedBox({
           선택한 등급 카드는 지갑에 저장되지 않고 즉시 삭제돼요 (포인트 X)
         </div>
       </div>
-
-      <button
-        onClick={onOpen}
-        disabled={!canAfford || loading}
-        style={{ touchAction: "manipulation" }}
-        className={clsx(
-          "h-12 md:h-14 px-6 md:px-8 rounded-xl font-bold text-sm md:text-base inline-flex items-center gap-2 transition",
-          canAfford && !loading
-            ? "bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 shadow-[0_12px_40px_-10px_rgba(251,113,133,0.8)] hover:scale-[1.03] active:scale-[0.98]"
-            : "bg-white/5 text-zinc-400 cursor-not-allowed border border-white/10"
-        )}
-      >
-        {loading ? (
-          "구매 중..."
-        ) : (
-          <>
-            📦 박스 열기
-            <span className="inline-flex items-center gap-1 font-black">
-              <CoinIcon size="sm" />
-              {cost.toLocaleString("ko-KR")}p
-            </span>
-          </>
-        )}
-      </button>
 
       {!canAfford && !loading && (
         <p className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">

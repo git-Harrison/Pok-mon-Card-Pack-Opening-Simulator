@@ -235,6 +235,49 @@ export async function buyBox(userId: string, setCode: SetCode) {
   };
 }
 
+/** 박스 N개 일괄 구매 — 단일 트랜잭션. 모바일 50박스 일괄 시
+ *  N × buyBox round-trip 을 1회로 축약. 서버: 20260665. */
+export async function buyBoxesBulk(
+  userId: string,
+  setCode: SetCode,
+  count: number
+) {
+  const { data, error } = await supabase.rpc("buy_boxes_bulk", {
+    p_user_id: userId,
+    p_set_code: setCode,
+    p_count: count,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    error?: string;
+    price?: number;
+    count?: number;
+    total_spent?: number;
+    points?: number;
+  };
+}
+
+/** 박스 N개 일괄 환불 — buyBoxesBulk 후 persist 실패 시 rollback. */
+export async function refundBoxesBulk(
+  userId: string,
+  setCode: SetCode,
+  count: number
+) {
+  const { data, error } = await supabase.rpc("refund_boxes_bulk", {
+    p_user_id: userId,
+    p_set_code: setCode,
+    p_count: count,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    refunded?: number;
+    count?: number;
+    points?: number;
+  };
+}
+
 // ---------- Gifts ----------
 
 export async function createGift(
