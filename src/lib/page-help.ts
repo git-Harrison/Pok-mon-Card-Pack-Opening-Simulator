@@ -80,7 +80,7 @@ const HOME_SECTIONS: HelpSection[] = [
         { key: 1 },
         h("b", null, "지갑"),
         " · 카드 최대 ",
-        h("b", null, "20,000장"),
+        h("b", null, "100,000장"),
         " + PCL 슬랩 최대 ",
         h("b", null, "50,000장")
       ),
@@ -203,7 +203,7 @@ const WALLET_SECTIONS: HelpSection[] = [
         { key: 2 },
         h("b", null, "장수"),
         " · 총 카드 장수 / 한도 ",
-        h("b", null, "20,000장")
+        h("b", null, "100,000장")
       ),
       h("li", { key: 3 }, h("b", null, "개봉"), " · 지금까지 깐 팩 수"),
       h(
