@@ -16,6 +16,20 @@ export async function fetchGymsState(userId: string | null): Promise<Gym[]> {
   return (data ?? []) as Gym[];
 }
 
+/** 사용자가 점령 중인 체육관들의 방어덱 grading_id 모음.
+ *  카드 지갑 PclMode 가 "체육관 방어덱 사용중" 뱃지를 띄우고 해당
+ *  슬랩의 클릭을 차단하려면 이 데이터가 필요. 서버는 단일 진입점
+ *  get_my_defense_pet_ids 로 통일 (20260658). */
+export async function fetchMyDefensePetIds(
+  userId: string
+): Promise<Set<string>> {
+  const { data, error } = await supabase.rpc("get_my_defense_pet_ids", {
+    p_user_id: userId,
+  });
+  if (error) return new Set();
+  return new Set((data ?? []) as string[]);
+}
+
 export async function startGymChallenge(userId: string, gymId: string) {
   const { data, error } = await supabase.rpc("start_gym_challenge", {
     p_user_id: userId,

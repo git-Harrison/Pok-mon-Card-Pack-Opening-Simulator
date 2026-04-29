@@ -23,6 +23,7 @@ import {
 } from "@/lib/db";
 import Link from "next/link";
 import { fetchProfile } from "@/lib/profile";
+import { fetchMyDefensePetIds } from "@/lib/gym/db";
 import { notifyGift } from "@/lib/discord";
 import PokeCard from "./PokeCard";
 import PclSlab from "./PclSlab";
@@ -49,16 +50,18 @@ export default function WalletView() {
   });
   const [pcl, setPcl] = useState<PclGradingWithDisplay[]>([]);
   const [petIds, setPetIds] = useState<Set<string>>(new Set());
+  const [defenseIds, setDefenseIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>("ALL");
 
   const userId = user?.id ?? null;
   const refresh = useCallback(async () => {
     if (!userId) return;
-    const [w, g, p] = await Promise.all([
+    const [w, g, p, def] = await Promise.all([
       fetchWallet(userId),
       fetchAllGradingsWithDisplay(userId),
       fetchProfile(userId),
+      fetchMyDefensePetIds(userId),
     ]);
     setSnap(w);
     setPcl(g);
@@ -69,6 +72,7 @@ export default function WalletView() {
       for (const c of arr) petSet.add(c.id);
     }
     setPetIds(petSet);
+    setDefenseIds(def);
     setLoading(false);
   }, [userId]);
 
@@ -94,7 +98,14 @@ export default function WalletView() {
         const card = getCard(g.card_id);
         if (!card) return null;
         const isPet = petIds.has(g.id);
-        return { grading: g, card, isPet, isDisplayed: g.displayed };
+        const isDefense = defenseIds.has(g.id);
+        return {
+          grading: g,
+          card,
+          isPet,
+          isDisplayed: g.displayed,
+          isDefense,
+        };
       })
       .filter(
         (v): v is {
@@ -102,17 +113,18 @@ export default function WalletView() {
           card: Card;
           isPet: boolean;
           isDisplayed: boolean;
+          isDefense: boolean;
         } => v !== null
       )
       .sort((a, b) => {
-        const ar = a.isDisplayed || a.isPet ? 1 : 0;
-        const br = b.isDisplayed || b.isPet ? 1 : 0;
-        if (ar !== br) return ar - br;
+        const aBusy = a.isDisplayed || a.isPet || a.isDefense ? 1 : 0;
+        const bBusy = b.isDisplayed || b.isPet || b.isDefense ? 1 : 0;
+        if (aBusy !== bBusy) return aBusy - bBusy;
         const rd = compareRarity(a.card.rarity, b.card.rarity);
         if (rd !== 0) return rd;
         return b.grading.grade - a.grading.grade;
       });
-  }, [pcl, petIds]);
+  }, [pcl, petIds, defenseIds]);
 
   const rarityCounts = useMemo(() => {
     const counts = new Map<Rarity, number>();
@@ -358,6 +370,7 @@ function PclMode({
     card: Card;
     isPet: boolean;
     isDisplayed: boolean;
+    isDefense: boolean;
   }[];
   onAfterGift: () => void | Promise<void>;
 }) {
@@ -456,20 +469,27 @@ function PclMode({
         }}
       >
         {visibleGroups.map((group) => {
-          // 그룹 안에서 액션 가능한 첫 슬랩 선택 (잠겨 있지 않은 것).
-          const available = group.all.find((it) => !it.isPet && !it.isDisplayed);
+          // 그룹 안에서 액션 가능한 첫 슬랩 선택 — 펫/전시/방어덱
+          // 어디에도 안 묶인 것.
+          const available = group.all.find(
+            (it) => !it.isPet && !it.isDisplayed && !it.isDefense
+          );
           const rep = available ?? group.rep;
           const { grading, card } = rep;
           const allLocked = !available;
           const lockedCount = group.all.filter(
-            (it) => it.isPet || it.isDisplayed
+            (it) => it.isPet || it.isDisplayed || it.isDefense
           ).length;
           const giftable = !allLocked && grading.grade >= 6;
-          // 그룹 표시 뱃지 — 모두 잠긴 경우에만 lock 상태 노출.
+          // 우선순위: 체육관 > 펫 > 센터 (사용자 명시).
           const badge = allLocked
-            ? rep.isDisplayed
-              ? { text: "🏛️ 전시 중", cls: "bg-fuchsia-500 text-white" }
-              : { text: "🐾 펫", cls: "bg-amber-400 text-zinc-950" }
+            ? rep.isDefense
+              ? { text: "⚔️ 체육관 사용중", cls: "bg-rose-500 text-white" }
+              : rep.isPet
+              ? { text: "🐾 펫 사용중", cls: "bg-amber-400 text-zinc-950" }
+              : rep.isDisplayed
+              ? { text: "🏛️ 센터 사용중", cls: "bg-fuchsia-500 text-white" }
+              : null
             : null;
           return (
             <motion.button
@@ -499,9 +519,13 @@ function PclMode({
               aria-disabled={allLocked || !giftable}
               title={
                 allLocked
-                  ? rep.isDisplayed
+                  ? rep.isDefense
+                    ? "체육관 방어덱에 등록 중 — 선물·관리 불가"
+                    : rep.isPet
+                    ? "펫으로 등록 중 — 선물·관리 불가"
+                    : rep.isDisplayed
                     ? "센터에 전시 중 — 선물·관리 불가"
-                    : "펫으로 등록 중 — 선물·관리 불가"
+                    : "사용 중"
                   : lockedCount > 0
                   ? `${group.count}장 보유 (${lockedCount}장 사용 중)`
                   : `${group.count}장 보유`
