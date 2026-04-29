@@ -492,8 +492,10 @@ function VisitStatsPanel({
   displayName?: string;
 }) {
   const character = getCharacter(stats.character ?? null);
+  // 서버 응답 필드명은 옛 income_per_hour_* 지만, slab_income_trade 가
+  // 30분 cycle 1회당 값이므로 실제 단위는 30분당. UI 라벨도 "30분" 으로.
   const trade = stats.income_per_hour_trade ?? 0;
-  const rankPerHr = stats.income_per_hour_rank ?? 0;
+  const rankPerCycle = stats.income_per_hour_rank ?? 0;
   const pos = stats.income_rank_position ?? 0;
   const total = stats.income_rank_total ?? 0;
   return (
@@ -525,9 +527,9 @@ function VisitStatsPanel({
           </span>
           <span className="text-emerald-200/70 text-[10px]">/</span>
           <span className="text-xs font-bold tabular-nums text-sky-200">
-            +{rankPerHr.toLocaleString("ko-KR")}점
+            +{rankPerCycle.toLocaleString("ko-KR")}점
           </span>
-          <span className="text-[10px] text-zinc-300/70">시간</span>
+          <span className="text-[10px] text-zinc-300/70">30분</span>
         </div>
       </div>
     </div>
