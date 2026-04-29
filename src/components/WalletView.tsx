@@ -50,6 +50,8 @@ export default function WalletView() {
   });
   const [pcl, setPcl] = useState<PclGradingWithDisplay[]>([]);
   const [petIds, setPetIds] = useState<Set<string>>(new Set());
+  // grading_id → 펫 등록된 type. 사용 위치 라벨 ("펫 (물)") 용.
+  const [petTypeMap, setPetTypeMap] = useState<Map<string, string>>(new Map());
   const [defenseIds, setDefenseIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>("ALL");
@@ -66,12 +68,18 @@ export default function WalletView() {
     setSnap(w);
     setPcl(g);
     // spec 2-1: 펫은 main_cards_by_type 으로 옮겨감. legacy main_card_ids
-    // 와 union 으로 펫 표시 (펫 뱃지 / 비활성화 등).
+    // 와 union 으로 펫 표시. type 정보는 별도 Map 으로 보존 (사용 위치
+    // 라벨에 "펫 (물)" 처럼 type 표기 위해).
     const petSet = new Set<string>(p.main_card_ids ?? []);
-    for (const arr of Object.values(p.main_cards_by_type ?? {})) {
-      for (const c of arr) petSet.add(c.id);
+    const typeMap = new Map<string, string>();
+    for (const [type, arr] of Object.entries(p.main_cards_by_type ?? {})) {
+      for (const c of arr) {
+        petSet.add(c.id);
+        typeMap.set(c.id, type);
+      }
     }
     setPetIds(petSet);
+    setPetTypeMap(typeMap);
     setDefenseIds(def);
     setLoading(false);
   }, [userId]);
@@ -99,12 +107,14 @@ export default function WalletView() {
         if (!card) return null;
         const isPet = petIds.has(g.id);
         const isDefense = defenseIds.has(g.id);
+        const petType = isPet ? petTypeMap.get(g.id) ?? null : null;
         return {
           grading: g,
           card,
           isPet,
           isDisplayed: g.displayed,
           isDefense,
+          petType,
         };
       })
       .filter(
@@ -114,6 +124,7 @@ export default function WalletView() {
           isPet: boolean;
           isDisplayed: boolean;
           isDefense: boolean;
+          petType: string | null;
         } => v !== null
       )
       .sort((a, b) => {
@@ -124,7 +135,7 @@ export default function WalletView() {
         if (rd !== 0) return rd;
         return b.grading.grade - a.grading.grade;
       });
-  }, [pcl, petIds, defenseIds]);
+  }, [pcl, petIds, petTypeMap, defenseIds]);
 
   const rarityCounts = useMemo(() => {
     const counts = new Map<Rarity, number>();
@@ -371,6 +382,7 @@ function PclMode({
     isPet: boolean;
     isDisplayed: boolean;
     isDefense: boolean;
+    petType: string | null;
   }[];
   onAfterGift: () => void | Promise<void>;
 }) {
@@ -480,13 +492,48 @@ function PclMode({
           const lockedCount = group.all.filter(
             (it) => it.isPet || it.isDisplayed || it.isDefense
           ).length;
+          const availableCount = group.count - lockedCount;
           const giftable = !allLocked && grading.grade >= 6;
-          // 우선순위: 체육관 > 펫 > 센터 (사용자 명시).
+          // 사용 위치 요약 — 그룹 내 모든 슬랩의 사용 위치를 카테고리별로
+          // 카운트. "펫 (물 1, 불 1) · 체육관 1 · 전시 1" 같이 노출.
+          const petLocations = new Map<string, number>();
+          let defenseCount = 0;
+          let displayCount = 0;
+          for (const it of group.all) {
+            if (it.isPet && it.petType) {
+              petLocations.set(
+                it.petType,
+                (petLocations.get(it.petType) ?? 0) + 1
+              );
+            } else if (it.isPet) {
+              petLocations.set("?", (petLocations.get("?") ?? 0) + 1);
+            }
+            if (it.isDefense) defenseCount += 1;
+            if (it.isDisplayed) displayCount += 1;
+          }
+          const usageParts: string[] = [];
+          if (petLocations.size > 0) {
+            const inner = Array.from(petLocations.entries())
+              .map(([t, n]) => (n > 1 ? `${t} ${n}` : t))
+              .join(", ");
+            usageParts.push(`펫(${inner})`);
+          }
+          if (defenseCount > 0)
+            usageParts.push(`체육관${defenseCount > 1 ? ` ${defenseCount}` : ""}`);
+          if (displayCount > 0)
+            usageParts.push(`전시${displayCount > 1 ? ` ${displayCount}` : ""}`);
+          const usageSummary = usageParts.join(" · ");
+          // 우선순위: 체육관 > 펫 > 센터 (사용자 명시). 펫이면 type 도 함께.
           const badge = allLocked
             ? rep.isDefense
               ? { text: "⚔️ 체육관 사용중", cls: "bg-rose-500 text-white" }
               : rep.isPet
-              ? { text: "🐾 펫 사용중", cls: "bg-amber-400 text-zinc-950" }
+              ? {
+                  text: rep.petType
+                    ? `🐾 펫 (${rep.petType})`
+                    : "🐾 펫 사용중",
+                  cls: "bg-amber-400 text-zinc-950",
+                }
               : rep.isDisplayed
               ? { text: "🏛️ 센터 사용중", cls: "bg-fuchsia-500 text-white" }
               : null
@@ -518,17 +565,11 @@ function PclMode({
               )}
               aria-disabled={allLocked || !giftable}
               title={
-                allLocked
-                  ? rep.isDefense
-                    ? "체육관 방어덱에 등록 중 — 선물·관리 불가"
-                    : rep.isPet
-                    ? "펫으로 등록 중 — 선물·관리 불가"
-                    : rep.isDisplayed
-                    ? "센터에 전시 중 — 선물·관리 불가"
-                    : "사용 중"
-                  : lockedCount > 0
-                  ? `${group.count}장 보유 (${lockedCount}장 사용 중)`
-                  : `${group.count}장 보유`
+                lockedCount > 0
+                  ? `총 ${group.count}장 · 사용가능 ${availableCount}장${
+                      usageSummary ? ` · ${usageSummary}` : ""
+                    }`
+                  : `${group.count}장 보유 · 모두 사용가능`
               }
             >
               <div className="relative w-full">
@@ -574,6 +615,22 @@ function PclMode({
               <p className="w-full text-center text-[9px] leading-tight line-clamp-1 px-0.5 text-zinc-500">
                 {SETS[card.setCode]?.name ?? card.setCode} · #{card.number}
               </p>
+              {group.count > 1 && (
+                <p
+                  className={clsx(
+                    "w-full text-center text-[9px] leading-tight line-clamp-1 px-0.5 tabular-nums",
+                    availableCount > 0 ? "text-emerald-300/90" : "text-rose-300/80"
+                  )}
+                >
+                  사용가능 {availableCount}/{group.count}
+                  {usageSummary ? ` · ${usageSummary}` : ""}
+                </p>
+              )}
+              {group.count === 1 && lockedCount === 1 && usageSummary && (
+                <p className="w-full text-center text-[9px] leading-tight line-clamp-1 px-0.5 text-zinc-400">
+                  {usageSummary}
+                </p>
+              )}
             </motion.button>
           );
         })}
