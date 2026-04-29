@@ -64,17 +64,24 @@ export default function ProfileView() {
   const [tauntOpen, setTauntOpen] = useState(false);
 
   const userId = user?.id ?? null;
-  const refresh = useCallback(async () => {
-    if (!userId) return;
-    setLoading(true);
-    const [p, g] = await Promise.all([
-      fetchProfile(userId),
-      fetchAllGradingsWithDisplay(userId),
-    ]);
-    setProfile(p);
-    setPcl(g);
-    setLoading(false);
-  }, [userId]);
+  // refresh — opts.silent=true 시 loading 토글 안 함 → CenteredPokeLoader
+  // 안 뜨고 컨텐츠 unmount/remount 없어 스크롤 위치 유지. mutation 후
+  // (펫 등록/해제, 캐릭터 확정 등) 재조회에 사용. 초기 mount 만 비-silent.
+  const refresh = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!userId) return;
+      const silent = opts?.silent ?? false;
+      if (!silent) setLoading(true);
+      const [p, g] = await Promise.all([
+        fetchProfile(userId),
+        fetchAllGradingsWithDisplay(userId),
+      ]);
+      setProfile(p);
+      setPcl(g);
+      if (!silent) setLoading(false);
+    },
+    [userId]
+  );
 
   useEffect(() => {
     refresh();
@@ -117,7 +124,7 @@ export default function ProfileView() {
           await setPetForType(user.id, type, ids);
         }
       }
-      await refresh();
+      await refresh({ silent: true });
     })();
   }, [user, profile, refresh]);
 
@@ -202,7 +209,7 @@ export default function ProfileView() {
         setError(res.error ?? "캐릭터를 저장하지 못했어요.");
         return;
       }
-      await refresh();
+      await refresh({ silent: true });
     },
     [user, profile?.character_locked, refresh, savingChar]
   );
@@ -244,7 +251,7 @@ export default function ProfileView() {
         return;
       }
       setPicker(null);
-      await refresh();
+      await refresh({ silent: true });
     },
     [user, profile, displayedIds, defenseIds, refresh]
   );
@@ -263,7 +270,7 @@ export default function ProfileView() {
         setError(res.error ?? "펫을 해제하지 못했어요.");
         return;
       }
-      await refresh();
+      await refresh({ silent: true });
     },
     [user, profile, refresh]
   );
