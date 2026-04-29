@@ -2,6 +2,7 @@
 
 import PokeLoader from "./PokeLoader";
 import {
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -31,12 +32,15 @@ import GymMedalIcon from "./GymMedalIcon";
 
 type RankingMode = "rank" | "power" | "pet";
 
-// 메달 표시 순서. 잎새(풀) 우선 + 정해진 8 type 순서. 알 수 없는
-// type 은 indexOf=-1 라 자연스레 맨 앞으로 — 그래도 잎새가 0 으로
-// 가장 먼저 (-1 < 0 이지만 sort 시 둘 다 -1 이면 stable order 유지).
-const MEDAL_ORDER: string[] = [
-  "풀", "불꽃", "물", "전기", "얼음", "바위", "땅", "에스퍼",
-];
+// 탭별 top 3 트로피 — 매 row 마다 객체 새로 만들지 않도록 모듈 스코프.
+//   rank  : 🏆 / 🥈 / 🥉  (랭킹 점수 — 트로피)
+//   power : ⚔️ / 🛡️ / 🗡️ (전투력 — 무구)
+//   pet   : 🐉 / 🦊 / 🐢 (펫 — 동물)
+const TROPHY_BY_MODE: Record<RankingMode, [string, string, string]> = {
+  rank:  ["🏆", "🥈", "🥉"],
+  power: ["⚔️", "🛡️", "🗡️"],
+  pet:   ["🐉", "🦊", "🐢"],
+};
 
 export default function UsersView() {
   const { user: currentUser } = useAuth();
@@ -59,6 +63,14 @@ export default function UsersView() {
   );
   const [tauntTarget, setTauntTarget] = useState<RankingRow | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // 핸들러는 안정적인 reference 로 유지 — RankingRow memo 비교에 들어감.
+  const handleToggle = useCallback((id: string) => {
+    setExpandedId((cur) => (cur === id ? null : id));
+  }, []);
+  const handleTaunt = useCallback((row: RankingRow) => {
+    setTauntTarget(row);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -265,263 +277,24 @@ export default function UsersView() {
         <ul className="mt-6 space-y-2.5">
           {entries.map((e, rank) => {
             const isMe = currentUser?.id === e.id;
-            const def = getCharacter(e.character);
-            // 온라인 dot 발화: 실시간 presence channel OR 5분 이내
-            // last_seen_at heartbeat. presence 가 RLS / 네트워크로
-            // 실패해도 last_seen 으로 fallback.
             const isOnline =
               onlineSet.has(e.id) ||
               (typeof e.seconds_since_seen === "number" &&
                 e.seconds_since_seen < 300);
-            const isExpanded = expandedId === e.id;
-            const isTopThree = rank < 3;
-            // 탭별 top 3 트로피 아이콘. 점수 우측의 ⚔️/🐾 emoji 는 줄바꿈
-            // 깨짐 유발 → 좌측 medal circle 로 이동.
-            //   rank  : 🏆 / 🥈 / 🥉  (랭킹 점수 — 트로피)
-            //   power : ⚔️ / 🛡️ / 🗡️ (전투력 — 무구)
-            //   pet   : 🐉 / 🦊 / 🐢 (펫 — 동물)
-            const trophyByMode: Record<RankingMode, [string, string, string]> = {
-              rank:  ["🏆", "🥈", "🥉"],
-              power: ["⚔️", "🛡️", "🗡️"],
-              pet:   ["🐉", "🦊", "🐢"],
-            };
-            const trophy = isTopThree ? trophyByMode[mode][rank] : null;
-
             return (
-              <motion.li
+              <RankingRow
                 key={e.id}
-                // 모바일에서는 layout="position" 을 끈다. 50+ 행을 한꺼번에
-                // 측정/리페인트하는 비용이 mid-tier 모바일 GPU 에서 200~400ms
-                // 스톨을 만들어 탭 응답이 끊겨 보이는 주범이었음. CSS 위치
-                // 점프로 즉시 재정렬되고, 데스크탑은 부드럽게 morph.
-                layout={reduce || isMobile ? false : "position"}
-                initial={reduce || isMobile ? false : { opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  delay: reduce || isMobile ? 0 : Math.min(rank * 0.015, 0.2),
-                  layout: { duration: 0.18, ease: "easeOut" },
-                }}
-                onClick={() =>
-                  setExpandedId((cur) => (cur === e.id ? null : e.id))
-                }
-                role="button"
-                tabIndex={0}
-                aria-expanded={isExpanded}
-                aria-label={`${e.display_name} 상세 통계 ${isExpanded ? "닫기" : "열기"}`}
-                onKeyDown={(ev) => {
-                  if (ev.key === "Enter" || ev.key === " ") {
-                    ev.preventDefault();
-                    setExpandedId((cur) => (cur === e.id ? null : e.id));
-                  }
-                }}
-                style={{ touchAction: "manipulation" }}
-                className={clsx(
-                  "rounded-2xl border overflow-hidden cursor-pointer hover:bg-white/5 hover:border-white/20 transition-colors",
-                  isMe
-                    ? "bg-amber-400/5 border-amber-400/50 shadow-[0_0_24px_-6px_rgba(251,191,36,0.4)]"
-                    : "bg-white/5 border-white/10"
-                )}
-              >
-                <div className="p-3 md:p-4 flex items-center gap-3 md:gap-4">
-                  <motion.div
-                    whileHover={
-                      reduce || !isTopThree
-                        ? undefined
-                        : {
-                            rotate: [0, -10, 10, -8, 8, 0],
-                            scale: 1.1,
-                            transition: { duration: 0.5, ease: "easeInOut" },
-                          }
-                    }
-                    className={clsx(
-                      "shrink-0 rounded-full flex items-center justify-center font-black border",
-                      isTopThree
-                        ? "w-12 h-12 md:w-14 md:h-14 text-xl md:text-2xl"
-                        : "w-10 h-10 md:w-12 md:h-12 text-sm md:text-base",
-                      // 탭별 top3 색조: rank=amber, power=rose, pet=fuchsia.
-                      // 1위/2위/3위 각자 색감 단계.
-                      isTopThree && mode === "power"
-                        ? rank === 0
-                          ? "bg-rose-500/20 text-rose-200 border-rose-400/60 shadow-[0_0_16px_-4px_rgba(244,63,94,0.7)]"
-                          : rank === 1
-                          ? "bg-rose-500/10 text-rose-200/90 border-rose-400/40"
-                          : "bg-rose-500/10 text-rose-300/85 border-rose-500/30"
-                        : isTopThree && mode === "pet"
-                        ? rank === 0
-                          ? "bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-400/60 shadow-[0_0_16px_-4px_rgba(217,70,239,0.7)]"
-                          : rank === 1
-                          ? "bg-fuchsia-500/10 text-fuchsia-200/90 border-fuchsia-400/40"
-                          : "bg-fuchsia-500/10 text-fuchsia-300/85 border-fuchsia-500/30"
-                        : rank === 0
-                        ? "bg-amber-400/20 text-amber-200 border-amber-400/60 shadow-[0_0_16px_-4px_rgba(251,191,36,0.7)]"
-                        : rank === 1
-                        ? "bg-zinc-300/10 text-zinc-200 border-zinc-300/40"
-                        : rank === 2
-                        ? "bg-orange-500/10 text-orange-200 border-orange-500/40"
-                        : "bg-white/5 text-zinc-400 border-white/10"
-                    )}
-                    aria-label={`${rank + 1}위`}
-                  >
-                    {trophy ?? rank + 1}
-                  </motion.div>
-                  {def ? (
-                    <div className="shrink-0 flex items-center justify-center">
-                      <CharacterAvatar def={def} size="sm" />
-                    </div>
-                  ) : null}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {isOnline && (
-                        <span
-                          aria-label="온라인"
-                          title="5분 이내 활동"
-                          className="inline-block w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
-                        />
-                      )}
-                      <h2 className="text-base md:text-lg font-bold text-white break-words">
-                        {e.display_name}
-                      </h2>
-                    </div>
-                    <p className="text-[11px] md:text-xs text-zinc-400 mt-0.5 whitespace-nowrap">
-                      전시 {e.showcase_count ?? 0}장 · 부수기{" "}
-                      {e.sabotage_wins ?? 0}회
-                    </p>
-                    {/* 체육관 메달 — 기본 행에는 카운트 pill 만 (단일 줄
-                        고정, 메달 많아져도 height 변화 없음). 행 펼침 시
-                        ScoreBreakdown 아래에 전체 메달 그리드 노출. */}
-                    {e.gym_medals && e.gym_medals.length > 0 && (
-                      <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-400/10 border border-amber-400/30 text-amber-200 text-[10px] font-bold whitespace-nowrap">
-                        <span aria-hidden>🏅</span>
-                        <span className="tabular-nums">×{e.gym_medals.length}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-right shrink-0">
-                    {mode === "power" ? (
-                      <>
-                        <div className="text-base md:text-xl font-black text-rose-300 tabular-nums leading-none whitespace-nowrap">
-                          {(e.center_power ?? 0).toLocaleString("ko-KR")}
-                        </div>
-                        <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
-                          전투력
-                        </div>
-                      </>
-                    ) : mode === "pet" ? (
-                      <>
-                        <div className="text-base md:text-xl font-black text-fuchsia-300 tabular-nums leading-none whitespace-nowrap">
-                          {(e.pet_score ?? 0).toLocaleString("ko-KR")}
-                        </div>
-                        <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
-                          펫 등록 전투력
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="text-base md:text-xl font-black text-amber-300 tabular-nums leading-none whitespace-nowrap">
-                          {e.rank_score.toLocaleString("ko-KR")}
-                        </div>
-                        <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
-                          랭킹 점수
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <span
-                    aria-hidden
-                    className={clsx(
-                      "shrink-0 w-6 h-6 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-zinc-300 text-[11px] transition-transform",
-                      isExpanded ? "rotate-180" : "rotate-0"
-                    )}
-                  >
-                    ▾
-                  </span>
-                </div>
-
-                <AnimatePresence initial={false}>
-                  {isExpanded && (
-                    <motion.div
-                      key="activity"
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2, ease: "easeOut" }}
-                      className="overflow-hidden"
-                    >
-                      {/* 점수 출처 분해 — 탭별로 어디서 몇 점인지 노출. */}
-                      <div className="px-3 md:px-4 pt-1 pb-2">
-                        <ScoreBreakdown row={e} mode={mode} />
-                      </div>
-                      {/* 펼친 영역에 보유 메달 전체 노출 — 잎새/정의된
-                          type 순서로 정렬. 기본 행에는 카운트 pill 만 있고
-                          상세는 여기. */}
-                      {e.gym_medals && e.gym_medals.length > 0 && (
-                        <div className="px-3 md:px-4 pt-1 pb-3">
-                          <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
-                            보유 메달 ({e.gym_medals.length})
-                          </p>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {[...e.gym_medals]
-                              .sort(
-                                (a, b) =>
-                                  MEDAL_ORDER.indexOf(a.gym_type) -
-                                  MEDAL_ORDER.indexOf(b.gym_type)
-                              )
-                              .map((m) => (
-                                <span
-                                  key={m.gym_id}
-                                  title={`${m.medal_name} — ${m.gym_name} (${m.gym_type})`}
-                                  className="inline-flex items-center shrink-0"
-                                >
-                                  <GymMedalIcon
-                                    type={m.gym_type as WildType}
-                                    size={22}
-                                  />
-                                </span>
-                              ))}
-                          </div>
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <div
-                  className="px-3 md:px-4 pb-3 flex items-center gap-2"
-                  onClick={(ev) => ev.stopPropagation()}
-                >
-                  <Link
-                    href={
-                      isMe
-                        ? "/center"
-                        : `/center/${encodeURIComponent(e.user_id)}`
-                    }
-                    aria-label={
-                      isMe
-                        ? "내 포켓몬센터로 이동"
-                        : `${e.display_name}님의 포켓몬센터 방문`
-                    }
-                    style={{ touchAction: "manipulation" }}
-                    onClick={(ev) => ev.stopPropagation()}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 px-3 rounded-xl bg-gradient-to-r from-fuchsia-500/90 to-indigo-500/90 hover:from-fuchsia-500 hover:to-indigo-500 active:scale-[0.98] text-white text-sm font-bold transition"
-                  >
-                    🏛️ {isMe ? "내 센터" : "센터 방문"}
-                  </Link>
-                  {!isMe && (
-                    <button
-                      type="button"
-                      onClick={(ev) => {
-                        ev.stopPropagation();
-                        setTauntTarget(e);
-                      }}
-                      aria-label={`${e.display_name}에게 조롱 보내기`}
-                      style={{ touchAction: "manipulation" }}
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 px-3 rounded-xl bg-gradient-to-r from-rose-500/90 to-amber-500/90 hover:from-rose-500 hover:to-amber-500 active:scale-[0.98] text-white text-sm font-bold transition"
-                    >
-                      🔥 조롱하기
-                    </button>
-                  )}
-                </div>
-              </motion.li>
+                e={e}
+                rank={rank}
+                mode={mode}
+                isMe={isMe}
+                isOnline={isOnline}
+                isExpanded={expandedId === e.id}
+                isMobile={isMobile}
+                reduce={!!reduce}
+                onToggle={handleToggle}
+                onTaunt={handleTaunt}
+              />
             );
           })}
         </ul>
@@ -540,6 +313,304 @@ export default function UsersView() {
     </div>
   );
 }
+
+/** 단일 랭킹 행 — React.memo + custom comparator 로 폴링/탭 전환 시
+ *  실제로 변경된 행만 리렌더. 표시되는 scalar 필드 + 핸들러 reference
+ *  만 비교 — gym_medals 등 array 는 length 만 (서버에서 정렬 보장 후
+ *  컨텐츠 변동은 거의 없음). */
+interface RankingRowProps {
+  e: RankingRow;
+  rank: number;
+  mode: RankingMode;
+  isMe: boolean;
+  isOnline: boolean;
+  isExpanded: boolean;
+  isMobile: boolean;
+  reduce: boolean;
+  onToggle: (id: string) => void;
+  onTaunt: (row: RankingRow) => void;
+}
+
+function RankingRowImpl({
+  e,
+  rank,
+  mode,
+  isMe,
+  isOnline,
+  isExpanded,
+  isMobile,
+  reduce,
+  onToggle,
+  onTaunt,
+}: RankingRowProps) {
+  const def = getCharacter(e.character);
+  const isTopThree = rank < 3;
+  const trophy = isTopThree ? TROPHY_BY_MODE[mode][rank] : null;
+  const handleClick = useCallback(() => onToggle(e.id), [onToggle, e.id]);
+  const handleKey = useCallback(
+    (ev: React.KeyboardEvent) => {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        onToggle(e.id);
+      }
+    },
+    [onToggle, e.id]
+  );
+  const handleTaunt = useCallback(
+    (ev: React.MouseEvent) => {
+      ev.stopPropagation();
+      onTaunt(e);
+    },
+    [onTaunt, e]
+  );
+
+  return (
+    <motion.li
+      // 모바일에서는 layout="position" 을 끈다. 50+ 행을 한꺼번에
+      // 측정/리페인트하는 비용이 mid-tier 모바일 GPU 에서 200~400ms
+      // 스톨을 만들어 탭 응답이 끊겨 보이는 주범이었음. CSS 위치
+      // 점프로 즉시 재정렬되고, 데스크탑은 부드럽게 morph.
+      layout={reduce || isMobile ? false : "position"}
+      initial={reduce || isMobile ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        delay: reduce || isMobile ? 0 : Math.min(rank * 0.015, 0.2),
+        layout: { duration: 0.18, ease: "easeOut" },
+      }}
+      onClick={handleClick}
+      role="button"
+      tabIndex={0}
+      aria-expanded={isExpanded}
+      aria-label={`${e.display_name} 상세 통계 ${isExpanded ? "닫기" : "열기"}`}
+      onKeyDown={handleKey}
+      style={{ touchAction: "manipulation" }}
+      className={clsx(
+        "rounded-2xl border overflow-hidden cursor-pointer hover:bg-white/5 hover:border-white/20 transition-colors",
+        isMe
+          ? "bg-amber-400/5 border-amber-400/50 shadow-[0_0_24px_-6px_rgba(251,191,36,0.4)]"
+          : "bg-white/5 border-white/10"
+      )}
+    >
+      <div className="p-3 md:p-4 flex items-center gap-3 md:gap-4">
+        <motion.div
+          whileHover={
+            reduce || !isTopThree
+              ? undefined
+              : {
+                  rotate: [0, -10, 10, -8, 8, 0],
+                  scale: 1.1,
+                  transition: { duration: 0.5, ease: "easeInOut" },
+                }
+          }
+          className={clsx(
+            "shrink-0 rounded-full flex items-center justify-center font-black border",
+            isTopThree
+              ? "w-12 h-12 md:w-14 md:h-14 text-xl md:text-2xl"
+              : "w-10 h-10 md:w-12 md:h-12 text-sm md:text-base",
+            // 탭별 top3 색조: rank=amber, power=rose, pet=fuchsia.
+            isTopThree && mode === "power"
+              ? rank === 0
+                ? "bg-rose-500/20 text-rose-200 border-rose-400/60 shadow-[0_0_16px_-4px_rgba(244,63,94,0.7)]"
+                : rank === 1
+                ? "bg-rose-500/10 text-rose-200/90 border-rose-400/40"
+                : "bg-rose-500/10 text-rose-300/85 border-rose-500/30"
+              : isTopThree && mode === "pet"
+              ? rank === 0
+                ? "bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-400/60 shadow-[0_0_16px_-4px_rgba(217,70,239,0.7)]"
+                : rank === 1
+                ? "bg-fuchsia-500/10 text-fuchsia-200/90 border-fuchsia-400/40"
+                : "bg-fuchsia-500/10 text-fuchsia-300/85 border-fuchsia-500/30"
+              : rank === 0
+              ? "bg-amber-400/20 text-amber-200 border-amber-400/60 shadow-[0_0_16px_-4px_rgba(251,191,36,0.7)]"
+              : rank === 1
+              ? "bg-zinc-300/10 text-zinc-200 border-zinc-300/40"
+              : rank === 2
+              ? "bg-orange-500/10 text-orange-200 border-orange-500/40"
+              : "bg-white/5 text-zinc-400 border-white/10"
+          )}
+          aria-label={`${rank + 1}위`}
+        >
+          {trophy ?? rank + 1}
+        </motion.div>
+        {def ? (
+          <div className="shrink-0 flex items-center justify-center">
+            <CharacterAvatar def={def} size="sm" />
+          </div>
+        ) : null}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            {isOnline && (
+              <span
+                aria-label="온라인"
+                title="5분 이내 활동"
+                className="inline-block w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+              />
+            )}
+            <h2 className="text-base md:text-lg font-bold text-white break-words">
+              {e.display_name}
+            </h2>
+          </div>
+          <p className="text-[11px] md:text-xs text-zinc-400 mt-0.5 whitespace-nowrap">
+            전시 {e.showcase_count ?? 0}장 · 부수기 {e.sabotage_wins ?? 0}회
+          </p>
+          {e.gym_medals && e.gym_medals.length > 0 && (
+            <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-400/10 border border-amber-400/30 text-amber-200 text-[10px] font-bold whitespace-nowrap">
+              <span aria-hidden>🏅</span>
+              <span className="tabular-nums">×{e.gym_medals.length}</span>
+            </div>
+          )}
+        </div>
+        <div className="text-right shrink-0">
+          {mode === "power" ? (
+            <>
+              <div className="text-base md:text-xl font-black text-rose-300 tabular-nums leading-none whitespace-nowrap">
+                {(e.center_power ?? 0).toLocaleString("ko-KR")}
+              </div>
+              <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
+                전투력
+              </div>
+            </>
+          ) : mode === "pet" ? (
+            <>
+              <div className="text-base md:text-xl font-black text-fuchsia-300 tabular-nums leading-none whitespace-nowrap">
+                {(e.pet_score ?? 0).toLocaleString("ko-KR")}
+              </div>
+              <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
+                펫 등록 전투력
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-base md:text-xl font-black text-amber-300 tabular-nums leading-none whitespace-nowrap">
+                {e.rank_score.toLocaleString("ko-KR")}
+              </div>
+              <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
+                랭킹 점수
+              </div>
+            </>
+          )}
+        </div>
+        <span
+          aria-hidden
+          className={clsx(
+            "shrink-0 w-6 h-6 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-zinc-300 text-[11px] transition-transform",
+            isExpanded ? "rotate-180" : "rotate-0"
+          )}
+        >
+          ▾
+        </span>
+      </div>
+
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.div
+            key="activity"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <div className="px-3 md:px-4 pt-1 pb-2">
+              <ScoreBreakdown row={e} mode={mode} />
+            </div>
+            {/* 보유 메달 — 서버(20260666 get_user_rankings) 가 type 우선
+                정렬해 jsonb_agg 하므로 클라 sort 불필요. */}
+            {e.gym_medals && e.gym_medals.length > 0 && (
+              <div className="px-3 md:px-4 pt-1 pb-3">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
+                  보유 메달 ({e.gym_medals.length})
+                </p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {e.gym_medals.map((m) => (
+                    <span
+                      key={m.gym_id}
+                      title={`${m.medal_name} — ${m.gym_name} (${m.gym_type})`}
+                      className="inline-flex items-center shrink-0"
+                    >
+                      <GymMedalIcon
+                        type={m.gym_type as WildType}
+                        size={22}
+                      />
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div
+        className="px-3 md:px-4 pb-3 flex items-center gap-2"
+        onClick={(ev) => ev.stopPropagation()}
+      >
+        <Link
+          href={isMe ? "/center" : `/center/${encodeURIComponent(e.user_id)}`}
+          aria-label={
+            isMe
+              ? "내 포켓몬센터로 이동"
+              : `${e.display_name}님의 포켓몬센터 방문`
+          }
+          style={{ touchAction: "manipulation" }}
+          onClick={(ev) => ev.stopPropagation()}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 px-3 rounded-xl bg-gradient-to-r from-fuchsia-500/90 to-indigo-500/90 hover:from-fuchsia-500 hover:to-indigo-500 active:scale-[0.98] text-white text-sm font-bold transition"
+        >
+          🏛️ {isMe ? "내 센터" : "센터 방문"}
+        </Link>
+        {!isMe && (
+          <button
+            type="button"
+            onClick={handleTaunt}
+            aria-label={`${e.display_name}에게 조롱 보내기`}
+            style={{ touchAction: "manipulation" }}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 px-3 rounded-xl bg-gradient-to-r from-rose-500/90 to-amber-500/90 hover:from-rose-500 hover:to-amber-500 active:scale-[0.98] text-white text-sm font-bold transition"
+          >
+            🔥 조롱하기
+          </button>
+        )}
+      </div>
+    </motion.li>
+  );
+}
+
+/** 비교 — 화면에 그려지는 scalar 필드 + 핸들러 reference 만.
+ *  array (gym_medals, main_cards) 은 length 만 비교 — 서버 정렬 보장
+ *  하 컨텐츠 변동은 length 동치 시 거의 없음. main_cards 의 경우 펫
+ *  변경 시 length 가 바뀌거나 mode==='pet' 진입 시 별도 비교 필요는
+ *  없음 (mode 변경이 prop 으로 들어옴).
+ *  새 필드 표시 추가 시 여기에 비교 추가. */
+function rankingRowEqual(a: RankingRowProps, b: RankingRowProps) {
+  return (
+    a.e.id === b.e.id &&
+    a.e.rank_score === b.e.rank_score &&
+    a.e.center_power === b.e.center_power &&
+    a.e.pet_score === b.e.pet_score &&
+    a.e.points === b.e.points &&
+    a.e.display_name === b.e.display_name &&
+    a.e.character === b.e.character &&
+    a.e.showcase_count === b.e.showcase_count &&
+    a.e.sabotage_wins === b.e.sabotage_wins &&
+    a.e.pokedex_bonus === b.e.pokedex_bonus &&
+    a.e.pokedex_completion_bonus === b.e.pokedex_completion_bonus &&
+    a.e.medal_buff === b.e.medal_buff &&
+    a.e.medal_count === b.e.medal_count &&
+    (a.e.gym_medals?.length ?? 0) === (b.e.gym_medals?.length ?? 0) &&
+    (a.e.main_cards?.length ?? 0) === (b.e.main_cards?.length ?? 0) &&
+    a.e.seconds_since_seen === b.e.seconds_since_seen &&
+    a.rank === b.rank &&
+    a.mode === b.mode &&
+    a.isMe === b.isMe &&
+    a.isOnline === b.isOnline &&
+    a.isExpanded === b.isExpanded &&
+    a.isMobile === b.isMobile &&
+    a.reduce === b.reduce &&
+    a.onToggle === b.onToggle &&
+    a.onTaunt === b.onTaunt
+  );
+}
+
+const RankingRow = memo(RankingRowImpl, rankingRowEqual);
 
 const STAT_TONES: Record<string, { bg: string; text: string }> = {
   amber: { bg: "bg-amber-400/10 border-amber-400/30", text: "text-amber-200" },
