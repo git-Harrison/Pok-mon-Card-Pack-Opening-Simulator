@@ -1799,7 +1799,7 @@ function BulkResults({
 
         {capSkipped > 0 && (
           <p className="mt-2 text-[12px] text-rose-300 max-w-sm leading-snug">
-            ⚠️ PCL 한도(20,000장) 초과 — {capSkipped.toLocaleString("ko-KR")}
+            ⚠️ PCL 한도(50,000장) 초과 — {capSkipped.toLocaleString("ko-KR")}
             장은 보유 한도에 막혀 감별 못 받았어요. 카드는 지갑에 남아있어요.
           </p>
         )}

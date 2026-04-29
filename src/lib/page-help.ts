@@ -243,7 +243,7 @@ const WALLET_SECTIONS: HelpSection[] = [
       "div",
       null,
       "카드 한도 ",
-      h("b", null, "20,000장"),
+      h("b", null, "100,000장"),
       "이 차면 박스를 못 사요. ",
       h(
         Link,
@@ -1611,7 +1611,7 @@ const SET_SECTIONS: HelpSection[] = [
           "li",
           { key: 1 },
           "지갑 한도(",
-          h("b", null, "20,000장"),
+          h("b", null, "100,000장"),
           ")에 잘 안 닿게 해줘요"
         ),
         h(
@@ -1641,7 +1641,7 @@ const SET_SECTIONS: HelpSection[] = [
       "div",
       null,
       "일반 카드 ",
-      h("b", null, "20,000장"),
+      h("b", null, "100,000장"),
       "을 넘기면 박스가 거부되고 비용이 자동 환불돼요. 박스 자동 판매 옵션을 켜거나 ",
       h(
         Link,
