@@ -82,10 +82,13 @@ export default function HomeView() {
   const [stats, setStats] = useState<HomeStats>(FALLBACK_STATS);
   const [teasers, setTeasers] = useState<ActivityTeasers>(FALLBACK_TEASERS);
   const [topRankers, setTopRankers] = useState<RankingRow[]>([]);
-  // 시리즈 필터 — 기본 "전체" 로 모든 박스를 가로 스크롤 노출. 칩으로
-  // 시리즈 좁히기 가능. 신규 시리즈 추가 시 lib/sets/index.ts 의 SERIES
-  // 레지스트리에 항목만 추가하면 칩이 자동으로 늘어남.
+  // 시리즈 필터 — 기본 "전체". 칩으로 시리즈 좁히기. 신규 시리즈 추가 시
+  // lib/sets/index.ts 의 SERIES 레지스트리에 항목 추가만으로 칩 자동 노출.
   const [series, setSeries] = useState<SeriesKey | "all">("all");
+  // 검색어 — 팩 이름 부분 일치 필터. 빈 문자열이면 검색 비활성. 한국어 IME
+  // 입력 시 onCompositionEnd 등 별도 처리 없이 substring 매치만 — 단순함을
+  // 우선시. 검색어 입력 시 시리즈 필터와 AND 결합.
+  const [packQuery, setPackQuery] = useState("");
 
   // 슬랩 / 도감 / 최근 활동 — 메인 페이지 hero 와 팩 그리드 첫 페인트 후
   // requestIdleCallback 로 deferred 페치. 셀 단위 loading 플래그.
@@ -256,18 +259,29 @@ export default function HomeView() {
         {/* ---------- Hero ---------- */}
         <Hero reduce={!!reduce} displayName={user?.display_name ?? null} />
 
-        {/* ---------- Pack list — 시리즈 필터 칩 + 가로 스크롤 ----------
-            박스 종류가 늘어나도 가로 스크롤 + 칩으로 자연스럽게 확장.
-            기본 "전체" 칩 → 모든 박스 노출. SERIES 레지스트리 항목만
-            추가하면 칩이 자동으로 늘어남. */}
+        {/* ---------- Pack list — 검색 + 시리즈 칩 + 그룹 그리드 ----------
+            팩이 19종을 넘는 상황에서 가로 스크롤 단일 행으론 한눈에 안
+            들어와 grid 레이아웃 + 검색 + 시리즈 그룹화로 재설계.
+
+            구조:
+              1) 상단 검색 input (팩명 부분 일치)
+              2) 시리즈 칩 (전체 / MEGA / SV / SWSH ...)
+              3) "전체 + 검색 없음" 일 때만 시리즈별 subheader 로 그룹.
+                 그 외엔 flat grid (필터 결과 ≤ 한 시리즈 분량이라 그룹 불필요).
+              4) 모바일 2칸 / md 3칸 / lg 4칸 grid. 첫 카드에 NEW 배지.
+              5) 검색 매치 0 건이면 "검색 결과 없음" empty state.
+
+            확장: 신규 시리즈/이벤트성 팩 추가 시 SERIES 레지스트리에 항목만
+            추가하면 칩 + 그룹 헤더 자동. ----------------------------------- */}
         <section className="mt-8 md:mt-12">
           <SectionTitle
             label="팩 선택"
-            sub="필터를 골라 좌우로 스와이프"
+            sub={`총 ${SET_ORDER.length}종 · 검색하거나 시리즈로 필터`}
             reduce={!!reduce}
           />
           {(() => {
-            const filteredCodes =
+            // 1차: 시리즈 필터.
+            const seriesFiltered =
               series === "all"
                 ? SET_ORDER
                 : SET_ORDER.filter(
@@ -275,12 +289,23 @@ export default function HomeView() {
                       SERIES.find((s) => s.key === series)?.matcher(c) ?? false
                   );
 
-            // 칩별 active 색상 — 데이터(SERIES)와 분리해 presentation 만 여기.
+            // 2차: 검색 필터 (팩 이름 부분 일치, 한글 자모 보정 X — 단순 substring).
+            const q = packQuery.trim().toLowerCase();
+            const filteredCodes = q
+              ? seriesFiltered.filter((c) =>
+                  SETS[c].name.toLowerCase().includes(q) ||
+                  SETS[c].subtitle.toLowerCase().includes(q) ||
+                  c.toLowerCase().includes(q)
+                )
+              : seriesFiltered;
+
             const activeClassFor = (key: SeriesKey | "all"): string => {
               if (key === "mega")
                 return "bg-gradient-to-r from-fuchsia-500 to-violet-500 text-white shadow-[0_8px_24px_-12px_rgba(168,85,247,0.7)]";
               if (key === "sv")
                 return "bg-gradient-to-r from-amber-400 to-orange-400 text-zinc-950 shadow-[0_8px_24px_-12px_rgba(251,146,60,0.7)]";
+              if (key === "swsh")
+                return "bg-gradient-to-r from-sky-400 to-cyan-400 text-zinc-950 shadow-[0_8px_24px_-12px_rgba(56,189,248,0.7)]";
               return "bg-gradient-to-r from-zinc-100 to-zinc-300 text-zinc-900 shadow-[0_8px_24px_-12px_rgba(255,255,255,0.45)]";
             };
 
@@ -304,8 +329,56 @@ export default function HomeView() {
               })),
             ];
 
+            // "전체 + 검색 없음" → 시리즈별 그룹화. 그 외엔 단일 그룹.
+            const useGroups = series === "all" && q === "";
+            const groups: Array<{
+              key: SeriesKey | "flat";
+              label: string;
+              icon: string;
+              codes: SetCode[];
+            }> = useGroups
+              ? SERIES.map((s) => ({
+                  key: s.key,
+                  label: s.label,
+                  icon: s.icon,
+                  codes: SET_ORDER.filter(s.matcher),
+                })).filter((g) => g.codes.length > 0)
+              : [{ key: "flat", label: "", icon: "", codes: filteredCodes }];
+
             return (
               <>
+                {/* 검색 input + clear 버튼 */}
+                <div className="mb-3 md:mb-4">
+                  <label className="relative block">
+                    <span className="sr-only">팩 검색</span>
+                    <span
+                      aria-hidden
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm pointer-events-none"
+                    >
+                      🔍
+                    </span>
+                    <input
+                      type="search"
+                      inputMode="search"
+                      value={packQuery}
+                      onChange={(e) => setPackQuery(e.target.value)}
+                      placeholder="팩 이름으로 검색 (예: 클라이맥스, m4, 이브이)"
+                      className="w-full h-10 md:h-11 pl-9 pr-9 rounded-full bg-white/5 border border-white/10 focus:border-amber-400/60 focus:bg-white/10 outline-none text-sm text-white placeholder:text-zinc-500 transition-colors"
+                    />
+                    {packQuery && (
+                      <button
+                        type="button"
+                        aria-label="검색어 지우기"
+                        onClick={() => setPackQuery("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-zinc-300 text-xs flex items-center justify-center"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </label>
+                </div>
+
+                {/* 시리즈 칩 */}
                 <div
                   role="tablist"
                   aria-label="박스 시리즈 필터"
@@ -343,31 +416,69 @@ export default function HomeView() {
                   })}
                 </div>
 
-                <motion.div
-                  key={series}
-                  className="mt-4 md:mt-6 flex gap-3 md:gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2 -mx-4 px-4 md:-mx-6 md:px-6"
-                  initial="hidden"
-                  animate="show"
-                  variants={gridVariants}
-                >
-                  {filteredCodes.map((code, i) => (
-                    <motion.div
-                      key={code}
-                      variants={itemVariants}
-                      className="snap-start shrink-0 w-[44vw] sm:w-[240px] md:w-[260px] relative"
+                {/* 결과 영역 */}
+                {filteredCodes.length === 0 ? (
+                  <div className="mt-6 md:mt-8 rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center">
+                    <div className="text-2xl mb-2" aria-hidden>🔍</div>
+                    <p className="text-sm text-zinc-300">
+                      &quot;{packQuery}&quot; 와 일치하는 팩이 없어요.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPackQuery("");
+                        setSeries("all");
+                      }}
+                      className="mt-3 inline-flex h-9 px-4 rounded-full bg-amber-400 text-zinc-950 text-xs font-bold items-center"
                     >
-                      {i === 0 && (
-                        <span
-                          className="absolute -top-1.5 -right-1.5 z-10 px-1.5 py-0.5 rounded-full bg-amber-400 text-zinc-950 text-[9px] font-black shadow-lg"
-                          aria-label="최신 발매"
-                        >
-                          NEW
-                        </span>
-                      )}
-                      <PackTile code={code} />
-                    </motion.div>
-                  ))}
-                </motion.div>
+                      필터 초기화
+                    </button>
+                  </div>
+                ) : (
+                  <motion.div
+                    key={`${series}|${q}`}
+                    className="mt-4 md:mt-6 space-y-6 md:space-y-8"
+                    initial="hidden"
+                    animate="show"
+                    variants={gridVariants}
+                  >
+                    {groups.map((g) => (
+                      <div key={g.key}>
+                        {useGroups && (
+                          <div className="mb-2 md:mb-3 flex items-center gap-2">
+                            <span aria-hidden className="text-base">{g.icon}</span>
+                            <h3 className="text-xs md:text-sm font-bold text-zinc-300 tracking-wide uppercase">
+                              {g.label}
+                            </h3>
+                            <span className="text-[10px] md:text-xs text-zinc-500 tabular-nums">
+                              {g.codes.length}종
+                            </span>
+                            <div className="flex-1 h-px bg-white/5 ml-1" />
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+                          {g.codes.map((code) => (
+                            <motion.div
+                              key={code}
+                              variants={itemVariants}
+                              className="relative"
+                            >
+                              {code === SET_ORDER[0] && (
+                                <span
+                                  className="absolute -top-1.5 -right-1.5 z-10 px-1.5 py-0.5 rounded-full bg-amber-400 text-zinc-950 text-[9px] font-black shadow-lg"
+                                  aria-label="최신 발매"
+                                >
+                                  NEW
+                                </span>
+                              )}
+                              <PackTile code={code} />
+                            </motion.div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
               </>
             );
           })()}

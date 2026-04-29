@@ -112,11 +112,13 @@ for (const code of codes) {
     issues.push(`${code}: totalCards(${recon.totalCards}) ≠ cards.length(${cards.length})`);
   }
 
-  // 카드 직렬화.
+  // 카드 직렬화. type 필드는 의도적으로 생략 — 기존 시스템 (m4/sv5a/...) 이
+  // resolveCardType (이름 → 한글 WildType) 로 동적 변환하고, card_types DB 시드도
+  // 그 함수 결과를 dump 함. recon JSON 의 영문 type ("Grass"/"Fire"/...) 은
+  // 시드 마이그레이션 단계에서 사용 (선택적 검증용) — Card interface 에는 미사용.
   const serializedCards = cards
     .map((c) => {
-      const typeField = c.type ? `, type: ${JSON.stringify(c.type)}` : "";
-      return `    { id: "${code}-${c.number}", setCode: "${code}", number: "${c.number}", name: ${JSON.stringify(c.name)}, rarity: "${c.rarity}", imageUrl: ${JSON.stringify(c.imageUrl)}${typeField} },`;
+      return `    { id: "${code}-${c.number}", setCode: "${code}", number: "${c.number}", name: ${JSON.stringify(c.name)}, rarity: "${c.rarity}", imageUrl: ${JSON.stringify(c.imageUrl)} },`;
     })
     .join("\n");
 
