@@ -1032,29 +1032,66 @@ export const CARD_NAME_TO_DEX: Record<string, number> = {
   "복숭악동": 1025
 };
 
-/** 이름으로 dex 조회. 카드 변형(ex/V/VMAX/GX/BREAK/메가) / 골드/SV
- *  suffix 등을 base 이름으로 점진적 strip 하며 매칭 시도.
- *  Gen5 BW sprite 는 메가 진화 형태 자체가 없어, 메가는 base 형태의
- *  dex 로 fallback (메가 루카리오 → 루카리오 dex 448). */
+/** 이름으로 dex 조회. 카드 변형(ex/V/VMAX/VSTAR/GX/BREAK/메가) /
+ *  골드/SV suffix / 지역폼 prefix (가라르/알로라/히스이/팔데아) /
+ *  트레이너 "X의 Y" 패턴을 점진적 strip 하며 매칭 시도.
+ *  Gen5 BW sprite 는 메가/지역폼이 없어, 그런 변형은 base 형태의
+ *  dex 로 fallback (메가 루카리오 / 가라르 나옹 → base 종 dex). */
 export function lookupDex(name: string): number | null {
   if (!name) return null;
   const tryName = (n: string) => CARD_NAME_TO_DEX[n];
   if (tryName(name) !== undefined) return tryName(name);
 
-  // 1) 후미 카드 표시 (골드/SV suffix + 카드 변형 키워드) 제거.
+  // 1) 후미 카드 표시 (괄호 suffix + 카드 변형 키워드) 제거.
   let base = name
-    .replace(/\s*\(골드\)\s*$/, "")
-    .replace(/\s*\(SV\)\s*$/, "")
-    .replace(/\s+(ex|V|VMAX|GX|BREAK)\s*$/i, "")
+    .replace(/\s*\([^)]*\)\s*$/, "")
+    .replace(/\s+(ex|V|VMAX|VSTAR|VUNION|GX|BREAK)\s*$/i, "")
     .trim();
   if (tryName(base) !== undefined) return tryName(base);
 
-  // 2) 메가 / 메가- prefix strip — 메가 진화는 base 종 sprite 사용.
-  if (base.startsWith("메가 ")) base = base.slice(3).trim();
-  else if (base.startsWith("메가-")) base = base.slice(3).trim();
-  if (tryName(base) !== undefined) return tryName(base);
+  // 2) 메가 prefix strip — 메가 진화는 base 종 sprite 사용.
+  for (const p of ["메가 ", "메가-", "메가"]) {
+    if (base.startsWith(p)) {
+      const stripped = base.slice(p.length).trim();
+      if (tryName(stripped) !== undefined) return tryName(stripped);
+      base = stripped;
+      break;
+    }
+  }
 
-  // 3) 가운데 끼어있는 "ex"/"V"/etc 도 한 번 더 시도.
+  // 3) 지역폼 prefix strip — Gen5 BW sprite 에 지역폼 없으므로 base
+  //    dex 로 fallback (가라르 나옹 → 나옹 = Meowth dex 52).
+  for (const p of [
+    "가라르 ", "알로라 ", "히스이 ", "팔데아 ", "파라데아 ",
+    "가라르", "알로라", "히스이", "팔데아", "파라데아",
+  ]) {
+    if (base.startsWith(p)) {
+      const stripped = base.slice(p.length).trim();
+      if (tryName(stripped) !== undefined) return tryName(stripped);
+    }
+  }
+
+  // 4) "X의 Y" trainer-pokemon 패턴 — Y 가 base 포켓몬.
+  const trainer = base.match(/^(.+?)의\s+(.+)$/);
+  if (trainer) {
+    const inner = trainer[2].trim();
+    if (tryName(inner) !== undefined) return tryName(inner);
+    // inner 에도 변형 suffix 가 있을 수 있음.
+    const innerStripped = inner
+      .replace(/\s*\([^)]*\)\s*$/, "")
+      .replace(/\s+(ex|V|VMAX|VSTAR|VUNION|GX|BREAK)\s*$/i, "")
+      .trim();
+    if (tryName(innerStripped) !== undefined) return tryName(innerStripped);
+    // inner 가 메가/지역폼일 수도.
+    for (const p of ["메가 ", "가라르 ", "알로라 ", "히스이 ", "팔데아 "]) {
+      if (innerStripped.startsWith(p)) {
+        const reg = innerStripped.slice(p.length).trim();
+        if (tryName(reg) !== undefined) return tryName(reg);
+      }
+    }
+  }
+
+  // 5) 최종 fallback — 가운데 끼어있는 변형 키워드 제거.
   base = base.replace(/\s+(ex|V|VMAX|GX|BREAK)\s*$/i, "").trim();
   return tryName(base) ?? null;
 }

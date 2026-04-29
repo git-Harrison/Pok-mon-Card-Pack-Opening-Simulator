@@ -51,23 +51,37 @@ const CARD_NAME_TO_PS_SLUG: Record<string, string> = {
   "메가 비크티니": "victini",
 };
 
-/** 카드 이름 → 픽셀 스프라이트 URL. 메가 폼 등 특수 매핑 우선,
- *  없으면 null 반환 (caller 가 dex sprite 로 fallback). */
+/** 카드 이름 → 픽셀 스프라이트 URL. 메가/지역폼 PS slug 매칭 우선.
+ *  카드 suffix (ex/V/VMAX/...) / 트레이너 "X의 Y" prefix 도 같이 strip.
+ *  매칭 없으면 null 반환 (caller 가 dex sprite 로 fallback). */
 export function cardSpriteUrl(cardName: string): string | null {
   if (!cardName) return null;
 
+  const tryName = (n: string) => CARD_NAME_TO_PS_SLUG[n];
+
   // 직접 매칭.
-  const direct = CARD_NAME_TO_PS_SLUG[cardName];
+  const direct = tryName(cardName);
   if (direct) return `${PS_BASE}/${direct}.gif`;
 
-  // suffix 제거 후 매칭.
+  // suffix / 괄호 제거 후 매칭.
   const stripped = cardName
-    .replace(/\s*\(골드\)\s*$/, "")
-    .replace(/\s*\(SV\)\s*$/, "")
-    .replace(/\s+(ex|V|VMAX|VSTAR|GX|BREAK|EX)\s*$/i, "")
+    .replace(/\s*\([^)]*\)\s*$/, "")
+    .replace(/\s+(ex|V|VMAX|VSTAR|VUNION|GX|BREAK|EX)\s*$/i, "")
     .trim();
-  const slug = CARD_NAME_TO_PS_SLUG[stripped];
+  const slug = tryName(stripped);
   if (slug) return `${PS_BASE}/${slug}.gif`;
+
+  // "X의 Y" trainer-prefix — Y 가 base 포켓몬.
+  const trainer = stripped.match(/^(.+?)의\s+(.+)$/);
+  if (trainer) {
+    const inner = trainer[2].trim();
+    if (tryName(inner)) return `${PS_BASE}/${tryName(inner)}.gif`;
+    const innerStripped = inner
+      .replace(/\s*\([^)]*\)\s*$/, "")
+      .replace(/\s+(ex|V|VMAX|VSTAR|VUNION|GX|BREAK|EX)\s*$/i, "")
+      .trim();
+    if (tryName(innerStripped)) return `${PS_BASE}/${tryName(innerStripped)}.gif`;
+  }
 
   return null;
 }
