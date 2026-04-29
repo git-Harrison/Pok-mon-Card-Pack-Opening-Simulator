@@ -12,6 +12,13 @@ import { m1l } from "./m1l";
 import { m1s } from "./m1s";
 import { m3 } from "./m3";
 import { m4 } from "./m4";
+// S 시리즈 (소드&실드, 2020-2022). 카드 데이터는 다음 턴 recon 에이전트가 채움.
+import { s4a } from "./s4a";
+import { s6a } from "./s6a";
+import { s7r } from "./s7r";
+import { s8ap } from "./s8ap";
+import { s8b } from "./s8b";
+import { s9a } from "./s9a";
 
 export const SETS: Record<SetCode, SetInfo> = {
   m2a,
@@ -27,12 +34,21 @@ export const SETS: Record<SetCode, SetInfo> = {
   m1s,
   m3,
   m4,
+  s4a,
+  s6a,
+  s7r,
+  s8ap,
+  s8b,
+  s9a,
 };
 
 // 메인 페이지 카드 노출 순서 (최신 정발 → 옛 세트).
 //   m4 (2026-03-13) > m3 (2026-03) > m2a (2026-01) > m2 (2025-11)
 //   > m1l/m1s (2025-09) > sv11b/sv11w (2025-08, KR 정발) > sv10 (2025-06)
 //   > sv8a (2024-12) > sv8 (2024-11) > sv5a (2024-03) > sv2a (2023-06)
+//   > S 시리즈 (소드&실드, 2020-2022, 가장 옛 세트):
+//     s9a (2022-08) > s8b (2022-05) > s8ap (2022-02) > s7r (2021-12)
+//     > s6a (2021-08) > s4a (2020-12)
 export const SET_ORDER: SetCode[] = [
   "m4",
   "m3",
@@ -47,13 +63,19 @@ export const SET_ORDER: SetCode[] = [
   "sv8",
   "sv5a",
   "sv2a",
+  "s9a",
+  "s8b",
+  "s8ap",
+  "s7r",
+  "s6a",
+  "s4a",
 ];
 
 // 시리즈 분류 — HomeView 필터 칩이 이 레지스트리를 그대로 순회. 신규
 // 시리즈 추가 시 항목만 push 하면 칩 / 카운트 자동 반영. matcher 는
-// set code prefix 기반 (m / sv). 만약 어느 신규 set code 가 prefix 패턴
-// 을 벗어나면 explicit 코드 리스트로 전환할 것.
-export type SeriesKey = "mega" | "sv";
+// set code prefix 기반 (m / sv / s+digit). SV 와 S 가 충돌하지 않도록
+// S 시리즈 matcher 는 /^s\d/ — sv* 는 's' 다음 'v' 가 와서 매칭 안 됨.
+export type SeriesKey = "mega" | "sv" | "swsh";
 
 export interface SeriesInfo {
   key: SeriesKey;
@@ -77,6 +99,13 @@ export const SERIES: SeriesInfo[] = [
     short: "SV",
     icon: "⚔️",
     matcher: (c) => /^sv/.test(c),
+  },
+  {
+    key: "swsh",
+    label: "소드 & 실드",
+    short: "SWSH",
+    icon: "🗡️",
+    matcher: (c) => /^s\d/.test(c),
   },
 ];
 
@@ -111,4 +140,7 @@ export function getCard(id: string): Card | null {
   return getCardIndex().get(id) ?? null;
 }
 
-export { m2a, m2, sv8, sv2a, sv8a, sv5a, sv10, sv11b, sv11w, m1l, m1s, m3, m4 };
+export {
+  m2a, m2, sv8, sv2a, sv8a, sv5a, sv10, sv11b, sv11w, m1l, m1s, m3, m4,
+  s4a, s6a, s7r, s8ap, s8b, s9a,
+};
