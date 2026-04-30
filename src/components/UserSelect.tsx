@@ -78,12 +78,13 @@ export default function UserSelect({
       if (e.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     setQuery("");
     const t = setTimeout(() => inputRef.current?.focus(), 60);
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
+      document.body.style.overflow = prev;
       clearTimeout(t);
     };
   }, [open]);
