@@ -19,7 +19,7 @@ import {
 } from "@/lib/db";
 
 const PROGRESS_POLL_MS = 3000;
-import { isPclEligible, PCL_LABEL, pclTone } from "@/lib/pcl";
+import { isPclEligible } from "@/lib/pcl";
 import { PCL_CAP_TEXT } from "@/lib/limits";
 import { compareRarity } from "@/lib/rarity";
 import PageBackdrop from "./PageBackdrop";
@@ -951,26 +951,6 @@ function LabScene({
             border: "1px solid rgba(168,85,247,0.3)",
           }}
         />
-      </div>
-    </div>
-  );
-}
-
-function Tip({
-  icon,
-  title,
-  children,
-}: {
-  icon: string;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-2 text-center">
-      <div className="text-base md:text-lg leading-none">{icon}</div>
-      <div className="mt-1 text-[11px] font-bold text-zinc-100">{title}</div>
-      <div className="mt-0.5 text-[10px] text-zinc-400 leading-tight">
-        {children}
       </div>
     </div>
   );
