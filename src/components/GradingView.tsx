@@ -20,6 +20,7 @@ import {
 
 const PROGRESS_POLL_MS = 3000;
 import { isPclEligible, PCL_LABEL, pclTone } from "@/lib/pcl";
+import { PCL_CAP_TEXT } from "@/lib/limits";
 import { compareRarity } from "@/lib/rarity";
 import PageBackdrop from "./PageBackdrop";
 import Portal from "./Portal";
@@ -2082,8 +2083,10 @@ function BulkResults({
 
         {capSkipped > 0 && (
           <p className="mt-2 text-[12px] text-rose-300 max-w-sm leading-snug">
-            ⚠️ PCL 한도(50,000장) 초과 — {capSkipped.toLocaleString("ko-KR")}
-            장은 보유 한도에 막혀 감별 못 받았어요. 카드는 지갑에 남아있어요.
+            ⚠️ PCL 카드 보유 한도({PCL_CAP_TEXT}) 초과 —{" "}
+            {capSkipped.toLocaleString("ko-KR")}장은 저장 공간이 없어 감별
+            결과 저장에 실패했어요. 카드지갑에서 PCL 슬랩을 정리한 뒤 다시
+            시도해주세요. 입력 카드는 지갑에 그대로 남아있어요.
           </p>
         )}
         {skipped > 0 && (

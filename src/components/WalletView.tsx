@@ -22,6 +22,7 @@ import {
   type PclGradingWithDisplay,
   type WalletSnapshot,
 } from "@/lib/db";
+import { CARD_CAP_LABEL, PCL_CAP_LABEL } from "@/lib/limits";
 import Link from "next/link";
 import { fetchProfile } from "@/lib/profile";
 import { fetchMyDefensePetIds } from "@/lib/gym/db";
@@ -165,11 +166,11 @@ export default function WalletView() {
         <div className="inline-flex items-stretch rounded-xl bg-white/5 border border-white/10 p-1">
           <ModeTab active={mode === "pcl"} onClick={() => setMode("pcl")}>
             PCL 감별
-            <CountBadge value={pclItems.length} cap="5만" />
+            <CountBadge value={pclItems.length} cap={PCL_CAP_LABEL} />
           </ModeTab>
           <ModeTab active={mode === "cards"} onClick={() => setMode("cards")}>
             보유 카드
-            <CountBadge value={snap.totalCards} cap="5만" />
+            <CountBadge value={snap.totalCards} cap={CARD_CAP_LABEL} />
           </ModeTab>
         </div>
         {/* 일괄 판매 기능 제거됨 — 카드 처리는 감별 페이지에서 자동 삭제로 일원화. */}
