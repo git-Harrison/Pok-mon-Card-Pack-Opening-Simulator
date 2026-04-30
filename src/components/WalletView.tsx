@@ -202,7 +202,12 @@ export default function WalletView() {
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
             >
-              <PclMode items={pclItems} onAfterGift={refresh} />
+              <PclMode
+                items={pclItems}
+                userId={user?.id ?? null}
+                onAfterGift={refresh}
+                onAfterBulkDelete={refresh}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -375,7 +380,9 @@ const WALLET_PAGE_SIZE = 30;
 
 function PclMode({
   items,
+  userId,
   onAfterGift,
+  onAfterBulkDelete,
 }: {
   items: {
     grading: PclGradingWithDisplay;
@@ -385,9 +392,12 @@ function PclMode({
     isDefense: boolean;
     petType: string | null;
   }[];
+  userId: string | null;
   onAfterGift: () => void | Promise<void>;
+  onAfterBulkDelete: () => void | Promise<void>;
 }) {
   const reduce = useReducedMotion();
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [previewTarget, setPreviewTarget] = useState<{
     grading: PclGradingWithDisplay;
     card: Card;
@@ -467,6 +477,17 @@ function PclMode({
   }
   return (
     <>
+      {/* PCL 등급별 일괄 삭제 toolbar — 카드지갑 정리용. */}
+      <div className="mt-3 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setBulkDeleteOpen(true)}
+          style={{ touchAction: "manipulation" }}
+          className="h-9 px-3 rounded-lg bg-rose-500/15 border border-rose-500/40 text-rose-200 text-[12px] font-bold hover:bg-rose-500/25 transition"
+        >
+          🗑️ PCL 일괄 삭제
+        </button>
+      </div>
       <motion.div
         className="mt-4 grid grid-cols-3 gap-2 md:gap-3 place-items-stretch"
         initial="hidden"
@@ -675,6 +696,20 @@ function PclMode({
           await onAfterGift();
         }}
       />
+
+      <AnimatePresence>
+        {bulkDeleteOpen && userId && (
+          <BulkDeletePclModal
+            items={items}
+            userId={userId}
+            onClose={() => setBulkDeleteOpen(false)}
+            onAfterDelete={async () => {
+              setBulkDeleteOpen(false);
+              await onAfterBulkDelete();
+            }}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }
