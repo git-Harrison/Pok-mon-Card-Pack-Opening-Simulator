@@ -49,6 +49,23 @@ const CARD_NAME_TO_PS_SLUG: Record<string, string> = {
   "메가 번치코": "blaziken-mega",
   "메가 대짱이": "swampert-mega",
   "메가 비크티니": "victini",
+
+  // ── 특수 폼 (오거폰 가면 / 블러드문 / 공중날기 피카츄) ──
+  // PS Showdown ani sprites 에 별도 slug 존재. base dex 로는 가면별
+  // 다른 모습을 구분 못 함 → 직접 매핑.
+  // 오거폰 (Ogerpon) — 가면 4종.
+  "벽록의 가면 오거폰": "ogerpon",              // m2a-017 — 초록 가면 (base)
+  "초록가면 오거폰": "ogerpon",                  // sv8a-020 — 초록 (base)
+  "화염가면 오거폰": "ogerpon-hearthflame",      // sv8a 화염
+  "화염구슬 가면 오거폰": "ogerpon-hearthflame", // sv8a 화염구슬 (alt 표기)
+  "우물가면 오거폰": "ogerpon-wellspring",       // sv8a 우물
+  "주춧돌 가면 오거폰": "ogerpon-cornerstone",   // sv8a 주춧돌
+  // 블러드문 우르사루나 (Bloodmoon Ursaluna).
+  "다투곰 블러드문": "ursaluna-bloodmoon",       // sv8a — 다투곰 (canonical) + 블러드문
+  "블러드문 우르스루가": "ursaluna-bloodmoon",   // sv5a — 우르스루가 (영문 transliteration)
+  // 공중날기 피카츄 (Flying Pikachu).
+  "공중날기 피카츄": "pikachu-flying",            // s8ap V/VMAX
+  "공중날기피카츄": "pikachu-flying",             // 공백 없는 변형 대응
 };
 
 /** 카드 이름 → 픽셀 스프라이트 URL. 메가/지역폼 PS slug 매칭 우선.

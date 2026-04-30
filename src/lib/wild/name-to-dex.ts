@@ -1029,7 +1029,16 @@ export const CARD_NAME_TO_DEX: Record<string, number> = {
   "무쇠암석": 1022,
   "무쇠감투": 1023,
   "테라파고스": 1024,
-  "복숭악동": 1025
+  "복숭악동": 1025,
+
+  // ── 카드 카탈로그 alias ── 같은 포켓몬의 옛/팬/번역 변형 이름.
+  // 카드 데이터가 canonical dex 한국 이름과 다른 표기를 쓰는 경우 매핑.
+  "듀라루돈": 884,        // alt of 두랄루돈 (Duraludon)
+  "무쓰리랑": 862,        // alt of 가로막구리 (Obstagoon)
+  "매시": 865,            // alt of 창파나이트 (Sirfetch'd)
+  "다루마짱": 554,        // alt of 달막화 (Darumaka)
+  "달마기": 555,          // alt of 불비달마 (Darmanitan)
+  "우르스루가": 901,      // alt of 다투곰 (Ursaluna)
 };
 
 /** 이름으로 dex 조회. 카드 변형(ex/V/VMAX/VSTAR/GX/BREAK/메가) /

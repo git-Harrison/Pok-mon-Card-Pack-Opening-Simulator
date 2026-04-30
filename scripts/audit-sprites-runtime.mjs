@@ -160,8 +160,26 @@ console.log(`여전히 MISSING: ${stillMissing.length}`);
 
 if (process.argv.includes("--list")) {
   console.log("");
-  console.log("=== 여전히 MISSING (최대 100) ===");
-  for (const { name, ids, rarities } of stillMissing.slice(0, 100)) {
+  console.log("=== 여전히 MISSING (전체) ===");
+  for (const { name, ids, rarities } of stillMissing) {
     console.log(`  "${name}"  ids:${ids[0]}${ids.length > 1 ? "+" + (ids.length - 1) : ""}  [${rarities.join("/")}]`);
   }
+}
+if (process.argv.includes("--regional")) {
+  const regions = ["가라르", "알로라", "히스이", "팔데아", "파라데아"];
+  console.log("");
+  console.log("=== 지역폼 missing ===");
+  for (const { name, ids } of stillMissing) {
+    if (regions.some((r) => name.startsWith(r))) {
+      console.log(`  "${name}"  ids:${ids[0]}`);
+    }
+  }
+}
+if (process.argv.includes("--save")) {
+  fs.writeFileSync("scripts/_missing-full.txt",
+    stillMissing.map(({ name, ids, rarities }) =>
+      `${name}\t${ids[0]}\t${rarities.join("/")}\t${ids.length}`
+    ).join("\n")
+  );
+  console.log("Saved scripts/_missing-full.txt");
 }
