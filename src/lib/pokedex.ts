@@ -7,37 +7,40 @@ import type { Card, Rarity } from "@/lib/types";
 
 const supabase = createClient();
 
-// 13 세트(m1l/m1s/m2/m2a/m3/m4/sv2a/sv5a/sv8/sv8a/sv10/sv11b/sv11w) 카탈로그
-// 실측 카운트. 신규 세트가 들어올 때마다 src/lib/sets/* 와 함께 갱신.
-// 서버 pokedex_completion_bonus(SQL) 의 임계값과 반드시 동기화.
-// (마지막 갱신: 20260664_pokedex_completion_bonus_v3_sv11.sql, SV11B/W 174×2 추가)
+// 19 세트 카탈로그 실측 카운트 — 기존 13 (m*/sv*) + 신규 6 (S 시리즈
+// s4a/s6a/s7r/s8ap/s8b/s9a, 957장 추가). 신규 세트 추가 시 src/lib/sets/*
+// 와 함께 갱신. 서버 pokedex_completion_bonus(SQL) 의 임계값과 반드시 동기화.
+// (마지막 갱신: 20260680_pokedex_completion_bonus_v4_swsh.sql)
 export const RARITY_TOTALS: Record<Rarity, number> = {
-  MUR: 8,
-  UR: 17,
-  SAR: 115,
-  MA: 5,
-  SR: 169,
-  AR: 278,
-  RR: 141,
-  R: 154,
-  U: 397,
-  C: 664,
+  MUR: 8,    // 직전과 동일 (M 시대 한정 등급)
+  UR: 61,    // 17 → 61 (S 시대 HR/Gold 다수, 가장 큰 분모 증가)
+  SAR: 184,  // 115 → 184
+  MA: 5,     // 직전과 동일 (특수 등급, 분포 거의 없음)
+  SR: 243,   // 169 → 243
+  AR: 414,   // 278 → 414
+  RR: 253,   // 141 → 253 (S 시대 V/VMAX/VSTAR 매핑)
+  R: 288,    // 154 → 288
+  U: 604,    // 397 → 604
+  C: 845,    // 664 → 845
 };
 
 // 카드 희귀도별 완전 컬렉션 보너스 — 어렵게 모이는 희귀도일수록 더
-// 큰 보상. 서버 pokedex_completion_bonus(uuid) 의 풀세트 값과 sync 필수
-// (마지막 갱신: 20260662_pokedex_completion_bonus_round2.sql, 라운드 2).
+// 큰 보상. 서버 pokedex_completion_bonus(uuid) 의 풀세트 값과 sync 필수.
+// 라운드 4 (20260680_pokedex_completion_bonus_v4_swsh.sql) — 신규 6팩 추가로
+// 분모 +49% 증가에 맞춘 +66% 평균 상향. UR/RR/R 은 분모 +80%대 폭증으로
+// 보너스도 +70~85%, MUR/MA 는 분모 그대로지만 전반 상승 차원 +50/67%.
+// 희귀도 순서 strict 단조 유지 (MUR > UR > SAR > SR > AR > MA > RR > R > U > C).
 export const RARITY_COMPLETION_BONUS: Record<Rarity, number> = {
-  MUR: 60000,
-  UR:  28000,
-  SAR: 20000,
-  SR:  15000,
-  AR:  12000,
-  MA:   9000,
-  RR:   7000,
-  R:    5000,
-  U:    3000,
-  C:    2000,
+  MUR: 90000,
+  UR:  52000,
+  SAR: 35000,
+  SR:  26000,
+  AR:  20000,
+  MA:  15000,
+  RR:  12000,
+  R:    9000,
+  U:    5000,
+  C:    4000,
 };
 
 export interface PokedexEntry {
