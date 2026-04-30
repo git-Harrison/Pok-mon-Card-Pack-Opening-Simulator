@@ -1066,3 +1066,40 @@ export async function fetchGifts(userId: string): Promise<{
     });
   return { received: shape(recv.data ?? []), sent: shape(sent.data ?? []) };
 }
+
+// ─────────── 내 포켓몬 (스타터) ───────────
+
+export interface MyStarter {
+  species: string;
+  nickname: string;
+  level: number;
+  caught_at: string;
+}
+
+export async function fetchMyStarter(userId: string): Promise<MyStarter | null> {
+  const { data, error } = await supabase.rpc("get_my_starter", {
+    p_user_id: userId,
+  });
+  if (error || !data) return null;
+  return data as MyStarter;
+}
+
+export interface PickStarterResult {
+  ok: boolean;
+  error?: string;
+  starter?: MyStarter;
+}
+
+export async function pickMyStarter(
+  userId: string,
+  species: string,
+  nickname: string
+): Promise<PickStarterResult> {
+  const { data, error } = await supabase.rpc("pick_my_starter", {
+    p_user_id: userId,
+    p_species: species,
+    p_nickname: nickname,
+  });
+  if (error) return { ok: false, error: error.message };
+  return data as PickStarterResult;
+}
