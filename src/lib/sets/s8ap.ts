@@ -19,13 +19,18 @@ export const s8ap: SetInfo = {
   accentColor: "#fef08a",
   boxImage: "/images/sets/s8ap/box.webp",
   packImage: "/images/sets/s8ap/box.webp", // TODO(images)
+  // 25주년 컬렉션 박스 — 카드 풀이 30장으로 작고 R/RR 위주 (C/U/AR/SAR/MA
+  // 풀 0장). 일반 부스터 슬롯 (C/U 슬롯 등) 을 그대로 두면 pack-draw 의
+  // fallbackDown 이 set.cards 전체에서 random pick 으로 떨어지면서 UR/SR
+  // 까지 휩쓸어 per-pack UR 12.24% 폭주 (sv5a baseline 의 20배).
+  // 풀에 실제 존재하는 rarity (R/RR/SR/UR) 만 슬롯에 사용 — fallback 차단.
+  // UR 가중치는 Hit 슬롯에서만 1% (sv5a baseline 0.6% 와 유사).
   slots: [
-    // TODO(recon): 25주년 박스는 고정 슬롯 구성일 수 있어 재조정 필요.
-    { label: "C 1", weights: { C: 100 } },
-    { label: "C 2", weights: { C: 100 } },
-    { label: "C/U", weights: { C: 55, U: 45 } },
-    { label: "U/R", weights: { U: 65, R: 35 } },
-    { label: "Hit", weights: { R: 30, RR: 30, AR: 10, SR: 7, SAR: 5, UR: 0.5 } },
+    { label: "R 1",  weights: { R: 100 } },
+    { label: "R 2",  weights: { R: 100 } },
+    { label: "R/RR", weights: { R: 60, RR: 40 } },
+    { label: "RR",   weights: { RR: 100 } },
+    { label: "Hit",  weights: { RR: 96, SR: 3, UR: 1 } },
   ],
   cards: [
     { id: "s8ap-001", setCode: "s8ap", number: "001", name: "피카츄", rarity: "R", imageUrl: "https://den-cards.pokellector.com/327/Pikachu.S8A.1.39585.png" },
