@@ -42,7 +42,7 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
       </head>
-      <body className="font-sans">
+      <body className="font-sans" suppressHydrationWarning>
         <AuthProvider>
           <Navbar />
           <main className="relative w-full pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">

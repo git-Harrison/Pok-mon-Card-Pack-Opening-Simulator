@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { memo, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -815,10 +816,23 @@ function ActivityCard({
       : tone === "rose"
       ? "from-rose-400/20 to-rose-400/0"
       : "from-emerald-400/20 to-emerald-400/0";
+  const router = useRouter();
+  // 카드 전체 클릭은 href, 안쪽 CTA 는 ctaHref (다를 수 있음 — 예: 슬랩
+  // 미보유 시 ctaHref="/grading"). 외곽을 <Link>로 감싸면 안쪽 <Link>가
+  // nested <a> 가 되어 hydration 에러 → 외곽은 div + onClick + role="link"
+  // 으로 처리해 안쪽 Link 는 진짜 link 로 유지.
   return (
-    <Link
-      href={href}
-      className="group relative block rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/20 transition overflow-hidden"
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={() => router.push(href)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          router.push(href);
+        }
+      }}
+      className="group relative block rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/20 transition overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
     >
       <div
         className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r ${ring}`}
@@ -832,13 +846,14 @@ function ActivityCard({
         <div className="mt-3 flex items-center justify-between">
           <Link
             href={ctaHref}
+            onClick={(e) => e.stopPropagation()}
             className="text-[11px] font-semibold text-amber-200 hover:underline"
           >
             {cta} →
           </Link>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
 
