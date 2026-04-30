@@ -381,13 +381,6 @@ export async function bulkSubmitPclGrading(
   return data as BulkGradingResult;
 }
 
-export interface RankingPclGrading {
-  id: string;
-  card_id: string;
-  grade: number;
-  graded_at: string;
-}
-
 export interface RankingMainCard {
   id: string;
   card_id: string;
@@ -447,7 +440,6 @@ export interface RankingRow {
   medal_buff?: number;
   /** Seconds since last_seen_at — used to render the online dot. */
   seconds_since_seen?: number;
-  gradings: RankingPclGrading[];
   /** Gym medals earned (sorted newest first). */
   gym_medals?: RankingGymMedal[];
 }
