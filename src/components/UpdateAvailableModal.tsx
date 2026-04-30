@@ -6,6 +6,7 @@ import { BUILD_ID } from "@/lib/build-id";
 import Portal from "./Portal";
 
 const POLL_INTERVAL_MS = 60_000; // 1분
+const DISMISSED_KEY = "update-available:dismissed-build-id";
 
 /**
  * 새 deploy 감지 모달.
@@ -14,13 +15,27 @@ const POLL_INTERVAL_MS = 60_000; // 1분
  * 채워짐) 응답을 1분 주기 + 탭 복귀 시 비교. 다르면 "업데이트가
  * 있어요" 모달 → "새로고침하기" 버튼이 location.reload(true) 호출.
  *
+ * 사용자가 "나중에" 로 닫은 BUILD_ID 는 sessionStorage 에 기록 — 같은
+ * 버전에 대해 1 분 폴링/탭 복귀마다 모달이 다시 튀어나오는 걸 방지
+ * (감별 페이지에서 작업 중인 사용자가 반복 노출되어 작업 끊기는 이슈).
+ * 그 후 새 deploy 가 또 일어나 buildId 가 다시 바뀌면 정상 발화.
+ *
  * dev / 첫 deploy 에선 둘 다 "dev" 라 발화되지 않음.
  */
 export default function UpdateAvailableModal() {
   const [stale, setStale] = useState(false);
+  const [latestBuildId, setLatestBuildId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+
+    function readDismissed(): string | null {
+      try {
+        return window.sessionStorage.getItem(DISMISSED_KEY);
+      } catch {
+        return null;
+      }
+    }
 
     async function check() {
       try {
@@ -31,9 +46,9 @@ export default function UpdateAvailableModal() {
         if (!res.ok) return;
         const data = (await res.json()) as { buildId?: string };
         const latest = data.buildId;
-        // 발화 조건: 양쪽 모두 정상 ID 이고 서로 다를 때만.
-        // BUILD_ID 가 unknown / 빈 값이면 빌드 환경 자체가 이상한 거라
-        // 모달 띄우지 않음 (false-positive 방지).
+        const dismissed = readDismissed();
+        // 발화 조건: 양쪽 모두 정상 ID 이고 서로 다를 때만, 그리고 이번 세션에
+        // 동일 latest 를 사용자가 이미 닫은 적 없을 때만.
         if (
           !cancelled &&
           typeof latest === "string" &&
@@ -42,8 +57,10 @@ export default function UpdateAvailableModal() {
           latest !== "runtime-no-build-id" &&
           BUILD_ID.length > 0 &&
           BUILD_ID !== "unknown" &&
-          latest !== BUILD_ID
+          latest !== BUILD_ID &&
+          latest !== dismissed
         ) {
+          setLatestBuildId(latest);
           setStale(true);
         }
       } catch {
@@ -68,6 +85,18 @@ export default function UpdateAvailableModal() {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
+
+  function dismiss() {
+    // 현재 latest 를 기록 — 같은 버전엔 다시 안 띄움.
+    if (latestBuildId) {
+      try {
+        window.sessionStorage.setItem(DISMISSED_KEY, latestBuildId);
+      } catch {
+        // sessionStorage 못 쓰면 그냥 modal 만 닫음 (폴링이 다시 띄울 수도 있음).
+      }
+    }
+    setStale(false);
+  }
 
   function reload() {
     // 캐시 우회를 위해 새 timestamp 쿼리도 함께. 일부 모바일 브라우저
@@ -119,7 +148,7 @@ export default function UpdateAvailableModal() {
               <div className="mt-4 flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setStale(false)}
+                  onClick={dismiss}
                   className="flex-1 h-10 rounded-xl bg-white/5 border border-white/10 text-zinc-200 text-xs font-bold hover:bg-white/10 transition"
                   style={{ touchAction: "manipulation" }}
                 >

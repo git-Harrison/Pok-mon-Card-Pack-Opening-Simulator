@@ -63,14 +63,23 @@ export default function GradingView() {
 
   const refreshWallet = useCallback(async () => {
     if (!user) return;
-    const w = await fetchWallet(user.id);
-    setWallet(w);
+    try {
+      const w = await fetchWallet(user.id);
+      setWallet(w);
+    } catch (e) {
+      // 일시 네트워크 장애는 조용히 무시 — 다음 ticker 가 회복.
+      console.warn("[grading] fetchWallet threw:", e);
+    }
   }, [user]);
 
   const refreshActiveJob = useCallback(async () => {
     if (!user) return;
-    const job = await getActiveGradingJob(user.id);
-    setActiveJob(job);
+    try {
+      const job = await getActiveGradingJob(user.id);
+      setActiveJob(job);
+    } catch (e) {
+      console.warn("[grading] getActiveGradingJob threw:", e);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -1022,18 +1031,36 @@ function BulkGradingModal({
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const cancelledRef = useRef(false);
 
-  // 활성 잡 상태 → UI state 적용.
+  // GradingJob 응답이 최소 필드를 가졌는지 검증 — 서버 SQL 함수 변경/
+  // 스키마 캐시 mismatch 로 일부 필드가 빠진 객체가 흘러올 때 렌더 단계에서
+  // undefined.toLocaleString() 으로 throw 되는 걸 차단.
+  const isJobShape = (x: unknown): x is GradingJob => {
+    if (!x || typeof x !== "object") return false;
+    const o = x as Record<string, unknown>;
+    return (
+      typeof o.job_id === "string" &&
+      typeof o.status === "string" &&
+      typeof o.cursor === "number" &&
+      typeof o.total === "number"
+    );
+  };
+
+  // 활성 잡 상태 → UI state 적용. 입력 GradingJob 이 검증된 상태에서만 호출.
   const applyJobState = useCallback(
     (job: GradingJob) => {
-      setBatchProgress({ done: job.cursor, total: job.total });
+      // 음수/NaN 방어 — 서버가 비정상 값 보낼 때 progress bar 가 NaN% 되거나
+      // toLocaleString 에서 throw 되지 않게.
+      const safeCursor = Number.isFinite(job.cursor) ? Math.max(0, job.cursor) : 0;
+      const safeTotal = Number.isFinite(job.total) ? Math.max(0, job.total) : 0;
+      setBatchProgress({ done: safeCursor, total: safeTotal });
       if (job.status === "completed") {
         const aggregated: BulkGradingResult = {
           ok: true,
-          success_count: job.success_count,
-          fail_count: job.fail_count,
-          skipped_count: job.skipped_count,
-          cap_skipped_count: job.cap_skipped_count,
-          auto_deleted_count: job.auto_deleted_count,
+          success_count: job.success_count ?? 0,
+          fail_count: job.fail_count ?? 0,
+          skipped_count: job.skipped_count ?? 0,
+          cap_skipped_count: job.cap_skipped_count ?? 0,
+          auto_deleted_count: job.auto_deleted_count ?? 0,
         };
         setResult(aggregated);
         setActiveJobId(null);
@@ -1052,18 +1079,88 @@ function BulkGradingModal({
     []
   );
 
-  // 청크 폴링 루프 — 1초 간격, 잡 완료/실패까지.
+  // 청크 폴링 루프 — 잡 완료/실패까지. 강화된 안정성:
+  //  · processGradingJobChunk 가 throw 해도 (네트워크 끊김 / Supabase
+  //    timeout / fetch abort) try/catch 로 catch 하고 짧은 backoff 후 재시도
+  //  · 연속 실패 횟수 cap (5회) — 그 이상은 in-page 에러로 끝내고 사용자에게
+  //    안내. 페이지 전체 풀스크린 에러로 빠지지 않음
+  //  · 응답 shape 검증 — cursor/total/status 누락된 객체로 setState 안 함
+  //  · 언마운트 / 명시적 취소 시 cancelledRef 로 즉시 종료
   const pollJob = useCallback(
     async (jobId: string) => {
+      const MAX_TRANSIENT_ERRORS = 5;
+      const TRANSIENT_BACKOFF_MS = 1500;
+      let transientErrors = 0;
+
       while (!cancelledRef.current) {
-        const res = await processGradingJobChunk(jobId, BULK_GRADING_MAX);
-        if (!("ok" in res) || !res.ok) {
-          setError(("error" in res && res.error) || "잡 처리 실패.");
-          setPhase("picking");
-          setActiveJobId(null);
+        let res:
+          | { ok: false; error: string }
+          | (GradingJob & { ok: true })
+          | undefined;
+        try {
+          res = await processGradingJobChunk(jobId, BULK_GRADING_MAX);
+        } catch (e) {
+          // 네트워크 / fetch reject 등 throw — 이전엔 unhandled rejection
+          // 으로 떠서 노이즈 생겼음. 이제 transient 로 보고 재시도.
+          transientErrors += 1;
+          console.warn(
+            `[grading] chunk fetch threw (try ${transientErrors}/${MAX_TRANSIENT_ERRORS}):`,
+            e
+          );
+          if (transientErrors >= MAX_TRANSIENT_ERRORS) {
+            if (!cancelledRef.current) {
+              setError(
+                "네트워크가 불안정해서 감별 진행을 잠시 멈췄어요. 잠시 후 다시 시도해주세요. (이미 처리된 카드는 보존)"
+              );
+              setPhase("picking");
+              setActiveJobId(null);
+            }
+            return;
+          }
+          await new Promise((r) => setTimeout(r, TRANSIENT_BACKOFF_MS));
+          continue;
+        }
+
+        // 명시적 server-side 실패 응답.
+        if (!res || !("ok" in res) || !res.ok) {
+          if (!cancelledRef.current) {
+            setError(
+              (res && "error" in res && res.error) || "잡 처리 실패."
+            );
+            setPhase("picking");
+            setActiveJobId(null);
+          }
           return;
         }
-        applyJobState(res as unknown as GradingJob);
+
+        // 응답 shape 검증 — server SQL 시그니처 변경 / postgrest 캐시 등으로
+        // 비정상 객체 받았을 때 UI 가 박살나지 않게.
+        if (!isJobShape(res)) {
+          transientErrors += 1;
+          console.warn(
+            `[grading] chunk response shape invalid (try ${transientErrors}/${MAX_TRANSIENT_ERRORS}):`,
+            res
+          );
+          if (transientErrors >= MAX_TRANSIENT_ERRORS) {
+            if (!cancelledRef.current) {
+              setError(
+                "감별 응답 형식이 비정상이에요. 페이지를 한번 닫았다 다시 열어주세요. (이미 처리된 카드는 보존)"
+              );
+              setPhase("picking");
+              setActiveJobId(null);
+            }
+            return;
+          }
+          await new Promise((r) => setTimeout(r, TRANSIENT_BACKOFF_MS));
+          continue;
+        }
+
+        // 정상 응답 받았으면 카운터 리셋.
+        transientErrors = 0;
+
+        if (cancelledRef.current) return;
+        applyJobState(res);
+
         if (res.status !== "processing" && res.status !== "pending") {
           return;
         }
@@ -1076,17 +1173,32 @@ function BulkGradingModal({
     [applyJobState]
   );
 
-  // mount 시 active 잡 확인 → 자동 재개.
+  // mount 시 active 잡 확인 → 자동 재개. 모든 async 작업은 try/catch 로
+  // 묶어서 일시 네트워크 장애가 페이지 단 에러로 번지지 않게.
   useEffect(() => {
     cancelledRef.current = false;
     let alive = true;
     (async () => {
-      const active = await getActiveGradingJob(userId);
-      if (!alive || !active) return;
-      setActiveJobId(active.job_id);
-      setBatchProgress({ done: active.cursor, total: active.total });
-      setPhase("submitting");
-      pollJob(active.job_id);
+      try {
+        const active = await getActiveGradingJob(userId);
+        if (!alive || !active) return;
+        if (!isJobShape(active)) {
+          // 서버 응답 비정상 — 조용히 무시 (이번 mount 사이클에선 재개 X).
+          console.warn("[grading] getActiveGradingJob shape invalid:", active);
+          return;
+        }
+        setActiveJobId(active.job_id);
+        setBatchProgress({
+          done: Number.isFinite(active.cursor) ? active.cursor : 0,
+          total: Number.isFinite(active.total) ? active.total : 0,
+        });
+        setPhase("submitting");
+        // pollJob 자체가 내부 try/catch — fire-and-forget OK.
+        void pollJob(active.job_id);
+      } catch (e) {
+        // 여기까지 오면 logic bug — 콘솔만 남기고 페이지는 살려둠.
+        console.warn("[grading] mount-effect failed:", e);
+      }
     })();
     return () => {
       alive = false;
@@ -1111,7 +1223,17 @@ function BulkGradingModal({
     const total = allCardIds.length;
     setBatchProgress({ done: 0, total });
 
-    const enq = await enqueueGradingJob(userId, allCardIds, allRarities, autoSellBelow);
+    // enqueue 단계도 throw 가능 (네트워크 끊김) — try/catch 로 감싸서
+    // 페이지 풀스크린 에러로 번지지 않게.
+    let enq: Awaited<ReturnType<typeof enqueueGradingJob>>;
+    try {
+      enq = await enqueueGradingJob(userId, allCardIds, allRarities, autoSellBelow);
+    } catch (e) {
+      console.warn("[grading] enqueue threw:", e);
+      setError("감별 시작 요청이 실패했어요. 잠시 후 다시 시도해주세요.");
+      setPhase("picking");
+      return;
+    }
     if (!enq.ok || !enq.job_id) {
       setError(enq.error ?? "잡 등록 실패.");
       setPhase("picking");
@@ -1119,7 +1241,7 @@ function BulkGradingModal({
     }
     setActiveJobId(enq.job_id);
     cancelledRef.current = false;
-    pollJob(enq.job_id);
+    void pollJob(enq.job_id);
     void onPointsChange; // 잡 완료 시 부모가 wallet refresh 로 갱신.
   }, [
     totalEligibleCount,
