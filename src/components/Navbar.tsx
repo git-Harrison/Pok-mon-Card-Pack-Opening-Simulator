@@ -18,6 +18,7 @@ import {
   LeafIcon,
   MagnifyIcon,
   MuseumIcon,
+  PokeballNavIcon,
   TrophyIcon,
   UserIcon,
   WalletIcon,
@@ -32,10 +33,11 @@ const NAV_ITEMS = [
   { href: "/wild",    label: "야생",   Icon: LeafIcon },
   { href: "/profile", label: "프로필", Icon: UserIcon },
   // ── 더보기 시트 (위 6개 외) ──
-  { href: "/users",   label: "랭킹",   Icon: TrophyIcon },
-  { href: "/center",  label: "센터",   Icon: MuseumIcon },
-  { href: "/wallet",  label: "지갑",   Icon: WalletIcon },
-  { href: "/gifts",   label: "선물함", Icon: GiftIcon },
+  { href: "/users",       label: "랭킹",     Icon: TrophyIcon },
+  { href: "/center",      label: "센터",     Icon: MuseumIcon },
+  { href: "/wallet",      label: "지갑",     Icon: WalletIcon },
+  { href: "/gifts",       label: "선물함",   Icon: GiftIcon },
+  { href: "/my-pokemon",  label: "내 포켓몬", Icon: PokeballNavIcon },
 ];
 
 // 모바일 하단 바에 띄울 6개. 그 외는 더보기 시트로.
@@ -58,6 +60,7 @@ const HEADER_TITLE_OVERRIDES: Record<string, string> = {
   "/admin": "관리자",
   "/login": "로그인",
   "/signup": "회원가입",
+  "/my-pokemon": "내 포켓몬",
 };
 
 function resolveHeaderTitle(pathname: string): string {
@@ -108,6 +111,11 @@ export default function Navbar() {
   }, [userId, pathname]);
 
   useRealtimeInbox(userId, undefined, refreshGiftBadge);
+
+  // /my-pokemon 은 풀스크린 전용 컨텐츠 — 상단 header / 하단 nav 모두 숨김.
+  // (hooks 는 항상 호출되어야 하므로 early return 은 모든 hook 뒤에서.)
+  const isMyPokemon = pathname.startsWith("/my-pokemon");
+  if (isMyPokemon) return null;
 
   return (
     <>

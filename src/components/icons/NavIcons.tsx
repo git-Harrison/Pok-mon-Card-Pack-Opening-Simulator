@@ -197,3 +197,80 @@ export function BookIcon({ className = "w-6 h-6" }: IconProps) {
   );
 }
 
+export function ArrowLeftIcon({ className = "w-6 h-6" }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M15 18l-6-6 6-6" />
+    </svg>
+  );
+}
+
+// 외곽 원 없이 굵은 ? 만 — 흰 둥근 버튼 위에 또렷하게 보임. iOS/Android
+// 폰트와 무관하게 동일 렌더 (path 기반).
+export function HelpIcon({ className = "w-6 h-6" }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M8.5 8.6c.2-2.1 1.7-3.3 3.6-3.3 2 0 3.5 1.3 3.5 3.1 0 1.4-.8 2.1-1.9 2.7-1.1.6-1.7 1.2-1.7 2.6" />
+      <circle cx="12" cy="18.5" r="0.85" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function InfoIcon({ className = "w-6 h-6" }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5" />
+      <circle cx="12" cy="8" r="0.6" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+// 내 포켓몬 메뉴 — 몬스터볼 외곽 라인 아이콘.
+export function PokeballNavIcon({ className = "w-6 h-6" }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h6.5" />
+      <path d="M14.5 12H21" />
+      <circle cx="12" cy="12" r="2.4" />
+    </svg>
+  );
+}
+
