@@ -26,21 +26,21 @@ export const RARITY_TOTALS: Record<Rarity, number> = {
 
 // 카드 희귀도별 완전 컬렉션 보너스 — 어렵게 모이는 희귀도일수록 더
 // 큰 보상. 서버 pokedex_completion_bonus(uuid) 의 풀세트 값과 sync 필수.
-// 라운드 4 (20260680_pokedex_completion_bonus_v4_swsh.sql) — 신규 6팩 추가로
-// 분모 +49% 증가에 맞춘 +66% 평균 상향. UR/RR/R 은 분모 +80%대 폭증으로
-// 보너스도 +70~85%, MUR/MA 는 분모 그대로지만 전반 상승 차원 +50/67%.
+// 라운드 5 (20260681_pokedex_completion_bonus_v5_dialup.sql) — 라운드 4 가
+// 체감 부족하다는 피드백에 맞춰 전반 추가 상향. 저등급(C~SR)은 약 2x,
+// 고등급(SAR/UR/MUR)도 +73~92%. 풀세트 최대 268,000 → 485,000 (+81%).
 // 희귀도 순서 strict 단조 유지 (MUR > UR > SAR > SR > AR > MA > RR > R > U > C).
 export const RARITY_COMPLETION_BONUS: Record<Rarity, number> = {
-  MUR: 90000,
-  UR:  52000,
-  SAR: 35000,
-  SR:  26000,
-  AR:  20000,
-  MA:  15000,
-  RR:  12000,
-  R:    9000,
-  U:    5000,
-  C:    4000,
+  MUR: 150000,
+  UR:   90000,
+  SAR:  65000,
+  SR:   50000,
+  AR:   40000,
+  MA:   30000,
+  RR:   24000,
+  R:    18000,
+  U:    10000,
+  C:     8000,
 };
 
 export interface PokedexEntry {
