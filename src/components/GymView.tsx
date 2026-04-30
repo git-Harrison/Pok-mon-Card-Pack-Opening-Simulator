@@ -8,8 +8,10 @@ import {
   claimGymDaily,
   computeUserCenterPower,
   extendGymProtection,
+  fetchGymBattleHistory,
   fetchGymsState,
   startGymChallenge,
+  type GymBattleLogEntry,
 } from "@/lib/gym/db";
 import {
   deriveGymStatus,
@@ -1467,6 +1469,9 @@ function GymDetailModal({
               </section>
             )}
 
+            {/* 체육관 전투 기록 — 최신 20건. */}
+            <GymBattleHistorySection gymId={gym.id} myUserId={myUserId} />
+
           </div>
 
           {/* Footer — CTA */}
@@ -1580,6 +1585,108 @@ function GymDetailModal({
         )}
       </AnimatePresence>
     </Portal>
+  );
+}
+
+/* ─────────────── 체육관 전투 기록 섹션 ─────────────── */
+
+function relTimeKr(iso: string): string {
+  const t = new Date(iso).getTime();
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "방금";
+  if (mins < 60) return `${mins}분 전`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}시간 전`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}일 전`;
+  return new Date(iso).toLocaleDateString("ko-KR");
+}
+
+function GymBattleHistorySection({
+  gymId,
+  myUserId,
+}: {
+  gymId: string;
+  myUserId: string | null;
+}) {
+  const [logs, setLogs] = useState<GymBattleLogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    (async () => {
+      const r = await fetchGymBattleHistory(gymId, 20);
+      if (!alive) return;
+      setLogs(r);
+      setLoading(false);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [gymId]);
+
+  const formatLine = useCallback(
+    (l: GymBattleLogEntry) => {
+      const challengerName =
+        (myUserId && l.challenger_user_id === myUserId
+          ? l.challenger_display_name ?? "나"
+          : l.challenger_display_name) ?? "도전자";
+      const defenderName =
+        l.defender_user_id === null
+          ? "기본 관장"
+          : (myUserId && l.defender_user_id === myUserId
+              ? l.defender_display_name ?? "나"
+              : l.defender_display_name) ?? "점령자";
+      // 도전자 won → defender(패) VS challenger(승)
+      // 도전자 lost → challenger(패) VS defender(승)
+      if (l.result === "won") {
+        return { loser: defenderName, winner: challengerName };
+      }
+      return { loser: challengerName, winner: defenderName };
+    },
+    [myUserId]
+  );
+
+  return (
+    <section>
+      <h3 className="text-[11px] uppercase tracking-wider text-zinc-400 mb-2">
+        전투 기록
+      </h3>
+      <div className="rounded-xl border border-white/10 bg-white/[0.03] divide-y divide-white/5 overflow-hidden">
+        {loading ? (
+          <p className="text-[12px] text-zinc-500 text-center py-4">
+            불러오는 중...
+          </p>
+        ) : logs.length === 0 ? (
+          <p className="text-[12px] text-zinc-500 text-center py-4">
+            아직 전투 기록이 없어요.
+          </p>
+        ) : (
+          logs.map((l) => {
+            const { loser, winner } = formatLine(l);
+            return (
+              <div
+                key={l.id}
+                className="px-3 py-2 flex items-center gap-2 text-[12px]"
+              >
+                <span className="shrink-0 text-zinc-500 tabular-nums w-[60px]">
+                  {relTimeKr(l.ended_at)}
+                </span>
+                <span className="min-w-0 flex-1 text-zinc-300 break-keep">
+                  <span className="text-rose-300/90">{loser}</span>
+                  <span className="text-rose-400/80">(패)</span>
+                  <span className="text-zinc-500 mx-1">vs</span>
+                  <span className="text-emerald-300/90">{winner}</span>
+                  <span className="text-emerald-400/80">(승)</span>
+                </span>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </section>
   );
 }
 

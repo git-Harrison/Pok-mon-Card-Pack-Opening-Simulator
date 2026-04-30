@@ -150,6 +150,34 @@ export async function computeUserCenterPower(userId: string): Promise<number> {
   return (data as number) ?? 0;
 }
 
+/** 체육관 전투 기록 — 단일 gym 의 최근 결과 (도전자 won/lost).
+ *  서버: 20260683_get_gym_battle_history.sql.
+ *  defender_display_name null = 기본 NPC 방어. */
+export interface GymBattleLogEntry {
+  id: string;
+  result: "won" | "lost";
+  challenger_user_id: string;
+  challenger_display_name: string | null;
+  defender_user_id: string | null;
+  defender_display_name: string | null;
+  ended_at: string;
+}
+
+export async function fetchGymBattleHistory(
+  gymId: string,
+  limit = 20
+): Promise<GymBattleLogEntry[]> {
+  const { data, error } = await supabase.rpc("get_gym_battle_history", {
+    p_gym_id: gymId,
+    p_limit: limit,
+  });
+  if (error) {
+    console.warn("get_gym_battle_history error", error.message);
+    return [];
+  }
+  return (data ?? []) as GymBattleLogEntry[];
+}
+
 export interface RawPetGrading {
   grading_id: string;
   card_id: string;
