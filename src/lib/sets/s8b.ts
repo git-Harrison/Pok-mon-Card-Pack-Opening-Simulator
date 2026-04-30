@@ -19,7 +19,10 @@ export const s8b: SetInfo = {
   accentColor: "#fecaca",
   boxImage: "/images/sets/s8b/box.webp",
   packImage: "/images/sets/s8b/box.webp", // TODO(images)
-  // TODO(recon): 하이클래스 팩 슬롯 구조로 재조정 (RR/AR/SR 비율 상향).
+  // 하이클래스 팩 — RR/AR/SR/SAR 비율은 일반 팩보다 후하게, 단 UR 은
+  // sv*/s4a/s6a/s7r/s8ap/s9a 와 동일 baseline (~0.5~1% per slot) 으로
+  // 매칭. 이전 5%/10% 가중치는 팩당 UR 14.5% (다른 세트의 24배) 폭주
+  // 였음 — 정상화 (라운드 6, 2026-04-30).
   slots: [
     { label: "C 1", weights: { C: 100 } },
     { label: "C 2", weights: { C: 100 } },
@@ -29,8 +32,10 @@ export const s8b: SetInfo = {
     { label: "U/R", weights: { U: 60, R: 40 } },
     { label: "R", weights: { R: 100 } },
     { label: "RR/AR", weights: { RR: 60, AR: 40 } },
-    { label: "Hit 1", weights: { RR: 40, AR: 30, SR: 15, SAR: 10, UR: 5 } },
-    { label: "Hit 2", weights: { RR: 30, AR: 25, SR: 20, SAR: 15, UR: 10 } },
+    // Hit 1: RR/AR 위주, UR 0.5% (sv5a Hit 슬롯과 동일 비율)
+    { label: "Hit 1", weights: { RR: 50, AR: 30, SR: 13, SAR: 6.5, UR: 0.5 } },
+    // Hit 2: SR/SAR 비중 ↑ (하이클래스 차별점), UR 1%
+    { label: "Hit 2", weights: { RR: 30, AR: 30, SR: 22, SAR: 17, UR: 1 } },
   ],
   cards: [
     { id: "s8b-001", setCode: "s8b", number: "001", name: "뿔충이", rarity: "C", imageUrl: "https://den-cards.pokellector.com/338/Weedle.S8B.1.41281.png" },
