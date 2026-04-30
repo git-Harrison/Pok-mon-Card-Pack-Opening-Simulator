@@ -22,7 +22,6 @@ import {
   UserIcon,
   WalletIcon,
 } from "./icons/NavIcons";
-import { PokeballNavIcon } from "./icons/PokemonSprites";
 
 const NAV_ITEMS = [
   // ── Primary (모바일 하단 바, 좌→우 순서) ──
@@ -33,11 +32,10 @@ const NAV_ITEMS = [
   { href: "/wild",    label: "야생",   Icon: LeafIcon },
   { href: "/profile", label: "프로필", Icon: UserIcon },
   // ── 더보기 시트 (위 6개 외) ──
-  { href: "/users",       label: "랭킹",     Icon: TrophyIcon },
-  { href: "/center",      label: "센터",     Icon: MuseumIcon },
-  { href: "/wallet",      label: "지갑",     Icon: WalletIcon },
-  { href: "/gifts",       label: "선물함",   Icon: GiftIcon },
-  { href: "/my-pokemon",  label: "내 포켓몬", Icon: PokeballNavIcon },
+  { href: "/users",   label: "랭킹",   Icon: TrophyIcon },
+  { href: "/center",  label: "센터",   Icon: MuseumIcon },
+  { href: "/wallet",  label: "지갑",   Icon: WalletIcon },
+  { href: "/gifts",   label: "선물함", Icon: GiftIcon },
 ];
 
 // 모바일 하단 바에 띄울 6개. 그 외는 더보기 시트로.
@@ -60,7 +58,6 @@ const HEADER_TITLE_OVERRIDES: Record<string, string> = {
   "/admin": "관리자",
   "/login": "로그인",
   "/signup": "회원가입",
-  "/my-pokemon": "내 포켓몬",
 };
 
 function resolveHeaderTitle(pathname: string): string {
