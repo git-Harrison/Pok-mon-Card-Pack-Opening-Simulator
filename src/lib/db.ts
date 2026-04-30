@@ -1074,6 +1074,16 @@ export interface MyStarter {
   nickname: string;
   level: number;
   caught_at: string;
+  /** 현재 레벨 누적 EXP (Lv30 도달 시 0). */
+  xp?: number;
+  /** 진화 단계 — 0 base / 1 1차 / 2 2차. */
+  evolution_stage?: number;
+  /** 다음 레벨까지 필요 EXP (Lv30 = 0). */
+  next_exp?: number;
+  /** 종 별 최대 진화 stage. mew/mewtwo = 0, pikachu = 1, 그 외 = 2. */
+  max_stage?: number;
+  /** Lv30 여부. */
+  is_max?: boolean;
 }
 
 export async function fetchMyStarter(userId: string): Promise<MyStarter | null> {
@@ -1121,4 +1131,74 @@ export async function fetchStarterCompanionCounts(
   });
   if (error || !data) return { mur: 0, ur: 0, sar: 0 };
   return data as StarterCompanionCounts;
+}
+
+/** 강화 재료 후보 — PCL10 MUR/UR/SAR 중 사용 중 아닌 슬랩. */
+export interface StarterMaterial {
+  id: string;
+  card_id: string;
+  rarity: "MUR" | "UR" | "SAR";
+  wild_type: string | null;
+  graded_at: string;
+}
+
+export async function fetchStarterMaterials(
+  userId: string
+): Promise<StarterMaterial[]> {
+  const { data, error } = await supabase.rpc("get_starter_materials", {
+    p_user_id: userId,
+  });
+  if (error || !data) return [];
+  return data as StarterMaterial[];
+}
+
+/** 강화 결과 — RPC enhance_my_starter 응답. */
+export interface EnhanceResult {
+  ok: boolean;
+  error?: string;
+  xp_gained?: number;
+  log?: Array<{
+    grading_id: string;
+    rarity: "MUR" | "UR" | "SAR";
+    same_type: boolean;
+    grade: "normal" | "great" | "crit";
+    exp: number;
+  }>;
+  pre_level?: number;
+  level?: number;
+  levels_up?: number;
+  xp?: number;
+  next_exp?: number;
+  evolution_stage?: number;
+  max_stage?: number;
+  evolution_eligible?: boolean;
+  evolution_state?: "none" | "first" | "second";
+  is_max?: boolean;
+}
+
+export async function enhanceMyStarter(
+  userId: string,
+  gradingIds: string[]
+): Promise<EnhanceResult> {
+  const { data, error } = await supabase.rpc("enhance_my_starter", {
+    p_user_id: userId,
+    p_grading_ids: gradingIds,
+  });
+  if (error) return { ok: false, error: error.message };
+  return data as EnhanceResult;
+}
+
+export interface EvolveResult {
+  ok: boolean;
+  error?: string;
+  evolution_stage?: number;
+  level?: number;
+}
+
+export async function evolveMyStarter(userId: string): Promise<EvolveResult> {
+  const { data, error } = await supabase.rpc("evolve_my_starter", {
+    p_user_id: userId,
+  });
+  if (error) return { ok: false, error: error.message };
+  return data as EvolveResult;
 }

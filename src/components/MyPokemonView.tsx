@@ -6,11 +6,16 @@ import clsx from "clsx";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import {
+  enhanceMyStarter,
+  evolveMyStarter,
   fetchMyStarter,
   fetchStarterCompanionCounts,
+  fetchStarterMaterials,
   pickMyStarter,
+  type EnhanceResult,
   type MyStarter,
   type StarterCompanionCounts,
+  type StarterMaterial,
 } from "@/lib/db";
 import { wildSpriteUrl } from "@/lib/wild/pool";
 import PokeLoader from "./PokeLoader";
@@ -79,9 +84,71 @@ function computePower(meta: SpeciesMeta, level: number): number {
   return meta.basePower + Math.max(0, level) * 100;
 }
 
-/** LV1 시작 — 다음 레벨까지 100 xp 가정. 등록 직후 0/100. */
-function levelXp(_level: number): { cur: number; max: number } {
-  return { cur: 0, max: 100 };
+/* ─────────── 진화 라인 ─────────── */
+interface EvolutionStageInfo {
+  dex: number;
+  name: string;
+}
+
+/** 종 → stage[0..max] (인덱스 = evolution_stage). mew/mewtwo 는 진화 없음. */
+const EVOLUTION_LINES: Record<StarterSpecies, EvolutionStageInfo[]> = {
+  pikachu:    [{ dex: 25,  name: "피카츄"   }, { dex: 26,  name: "라이츄"   }],
+  charmander: [{ dex: 4,   name: "파이리"   }, { dex: 5,   name: "리자드"   }, { dex: 6,   name: "리자몽"   }],
+  squirtle:   [{ dex: 7,   name: "꼬부기"   }, { dex: 8,   name: "어니부기" }, { dex: 9,   name: "거북왕"   }],
+  bulbasaur:  [{ dex: 1,   name: "이상해씨" }, { dex: 2,   name: "이상해풀" }, { dex: 3,   name: "이상해꽃" }],
+  gastly:     [{ dex: 92,  name: "고오스"   }, { dex: 93,  name: "고우스트" }, { dex: 94,  name: "팬텀"     }],
+  dratini:    [{ dex: 147, name: "미뇽"     }, { dex: 148, name: "신뇽"     }, { dex: 149, name: "망나뇽"   }],
+  pidgey:     [{ dex: 16,  name: "구구"     }, { dex: 17,  name: "피죤"     }, { dex: 18,  name: "피죤투"   }],
+  piplup:     [{ dex: 393, name: "팽도리"   }, { dex: 394, name: "팽태자"   }, { dex: 395, name: "엠페르트" }],
+  mew:        [{ dex: 151, name: "뮤"       }],
+  mewtwo:     [{ dex: 150, name: "뮤츠"     }],
+};
+
+/** 현재 stage 에 보여줄 dex/이름 — 진화 후 캐릭터 변경에 사용. */
+function effectiveStage(species: StarterSpecies, stage: number): EvolutionStageInfo {
+  const line = EVOLUTION_LINES[species];
+  const idx = Math.max(0, Math.min(stage, line.length - 1));
+  return line[idx]!;
+}
+
+/** 진화 가능한 다음 stage 정보 — 없으면 null. mew/mewtwo / 라이츄 (1차 끝) / 2차 진화 끝 모두 null. */
+function nextEvolveStage(
+  species: StarterSpecies,
+  stage: number,
+  level: number
+): EvolutionStageInfo | null {
+  const line = EVOLUTION_LINES[species];
+  if (stage >= line.length - 1) return null;
+  if (stage === 0 && level >= 10) return line[1] ?? null;
+  if (stage === 1 && level >= 20) return line[2] ?? null;
+  return null;
+}
+
+/* ─────────── 레벨별 필요 EXP (기획 그대로) ─────────── */
+/** index = 현재 레벨 (1..29). value = 다음 레벨까지 필요 EXP. Lv30 = MAX. */
+const LEVEL_EXP_TABLE: Record<number, number> = {
+  1: 1200, 2: 1700, 3: 2300, 4: 3000, 5: 3900,
+  6: 5000, 7: 6300, 8: 7800, 9: 9500,
+  10: 12000, 11: 15000, 12: 18500, 13: 22500, 14: 27000,
+  15: 32000, 16: 37500, 17: 43500, 18: 50000, 19: 57000,
+  20: 70000, 21: 83000, 22: 98000, 23: 115000, 24: 134000,
+  25: 155000, 26: 178000, 27: 203000, 28: 230000, 29: 260000,
+};
+
+/** 재료 base EXP — 동일 속성 ×1.03 / 등급 일반×1.0·대성공×1.2·초대성공×1.5. */
+const MATERIAL_EXP: Record<"MUR" | "UR" | "SAR", number> = {
+  MUR: 10000,
+  UR: 200,
+  SAR: 20,
+};
+
+/** 재료 1장의 일반 성공(보너스 없음) 예상 EXP — 미리보기 표시용. */
+function previewMaterialExp(
+  rarity: "MUR" | "UR" | "SAR",
+  sameType: boolean
+): number {
+  const base = MATERIAL_EXP[rarity];
+  return Math.floor(base * (sameType ? 1.03 : 1.0));
 }
 
 const STARTER_LIST: StarterSpecies[] = [
@@ -1436,21 +1503,38 @@ function DoneOverlay({ starter }: { starter: MyStarter }) {
    /만난날 + 캐릭터)가 도감 한 화면에 정리. 강화하기 버튼 포함.
    외부 상단에 작은 라운드 버튼 2개 (뒤로 / 메인).
 */
-function OwnedView({ starter }: { starter: MyStarter }) {
+function OwnedView({ starter: initialStarter }: { starter: MyStarter }) {
   const { user } = useAuth();
-  const species = starter.species as StarterSpecies;
-  const meta = STARTER_META[species];
   const reduce = useReducedMotion();
   const router = useRouter();
-  const [counts, setCounts] = useState<StarterCompanionCounts | null>(null);
+  const [starter, setStarter] = useState<MyStarter>(initialStarter);
+  const species = starter.species as StarterSpecies;
+  const meta = STARTER_META[species];
+  const stage = starter.evolution_stage ?? 0;
+  const stageInfo = effectiveStage(species, stage);
+  const isMax = (starter.is_max ?? starter.level >= 30) === true;
+  const evoTarget = nextEvolveStage(species, stage, starter.level);
+  const canEvolve = !isMax && evoTarget !== null;
 
-  // 동일 속성 PCL10 카운트 조회 (사용 중 제외).
-  useEffect(() => {
+  const [counts, setCounts] = useState<StarterCompanionCounts | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [feedOpen, setFeedOpen] = useState(false);
+  const [evolveOpen, setEvolveOpen] = useState(false);
+  const evoToastShownRef = useRef<Set<number>>(new Set());
+
+  // 동일 속성 PCL10 카운트 (사용 중 제외) — 캐릭터 속성 기준.
+  const reloadCounts = useCallback(() => {
     if (!user) return;
+    fetchStarterCompanionCounts(user.id, meta.type).then(setCounts);
+  }, [user, meta.type]);
+  useEffect(() => {
     let alive = true;
-    fetchStarterCompanionCounts(user.id, meta.type).then((c) => {
-      if (alive) setCounts(c);
-    });
+    if (user) {
+      fetchStarterCompanionCounts(user.id, meta.type).then((c) => {
+        if (alive) setCounts(c);
+      });
+    }
     return () => {
       alive = false;
     };
@@ -1465,13 +1549,62 @@ function OwnedView({ starter }: { starter: MyStarter }) {
     };
   }, []);
 
+  // 진화 가능 토스트 — stage 별 1회. 새로 도달했거나 진입 시 이미 가능 상태.
+  useEffect(() => {
+    if (!canEvolve) return;
+    const key = stage;
+    if (evoToastShownRef.current.has(key)) return;
+    evoToastShownRef.current.add(key);
+    setToast(pickEvolveToast());
+    const id = window.setTimeout(() => setToast(null), 3200);
+    return () => clearTimeout(id);
+  }, [canEvolve, stage]);
+
   const power = computePower(meta, starter.level);
-  const xp = levelXp(starter.level);
-  const [toast, setToast] = useState<string | null>(null);
-  const [helpOpen, setHelpOpen] = useState(false);
-  const onEnhance = useCallback(() => {
-    setToast("강화 시스템은 곧 추가될 예정이에요.");
-    window.setTimeout(() => setToast(null), 2200);
+  const xpCur = starter.xp ?? 0;
+  const xpMax = starter.next_exp ?? LEVEL_EXP_TABLE[starter.level] ?? 100;
+  const xpDisplay = isMax ? { cur: 0, max: 1 } : { cur: xpCur, max: xpMax };
+
+  const onFeedClick = useCallback(() => {
+    if (isMax) return;
+    setFeedOpen(true);
+  }, [isMax]);
+  const onEvolveClick = useCallback(() => {
+    if (!canEvolve) return;
+    setEvolveOpen(true);
+  }, [canEvolve]);
+
+  /** 강화 응답을 starter 상태에 머지. 진화 가능 토스트는 별도 effect 가 잡음. */
+  const applyEnhanceResult = useCallback(
+    (r: EnhanceResult) => {
+      if (!r.ok) return;
+      setStarter((prev) => ({
+        ...prev,
+        level: r.level ?? prev.level,
+        xp: r.xp ?? prev.xp,
+        next_exp: r.next_exp ?? prev.next_exp,
+        evolution_stage: r.evolution_stage ?? prev.evolution_stage,
+        is_max: r.is_max ?? prev.is_max,
+        max_stage: r.max_stage ?? prev.max_stage,
+      }));
+      // 카운트 갱신 (재료 소비됨)
+      reloadCounts();
+    },
+    [reloadCounts]
+  );
+
+  const applyEvolveSuccess = useCallback(
+    (newStage: number) => {
+      setStarter((prev) => ({ ...prev, evolution_stage: newStage }));
+      // 토스트 리셋 — 다음 진화 단계 도달 시 다시 표시되도록.
+      // 현재 stage 는 이미 보여줬으므로 그대로 둠.
+    },
+    []
+  );
+
+  const showToast = useCallback((msg: string, ms = 2400) => {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), ms);
   }, []);
 
   return (
@@ -1521,27 +1654,31 @@ function OwnedView({ starter }: { starter: MyStarter }) {
           <PokedexDevice
             meta={meta}
             starter={starter}
+            stageInfo={stageInfo}
             power={power}
-            xp={xp}
+            xp={xpDisplay}
+            isMax={isMax}
+            canEvolve={canEvolve}
             reduce={reduce ?? false}
-            onEnhance={onEnhance}
+            onFeed={onFeedClick}
+            onEvolve={onEvolveClick}
             onHome={() => router.push("/")}
             onHelp={() => setHelpOpen(true)}
             counts={counts}
           />
         </div>
 
-        {/* 토스트 — 강화 안내 */}
+        {/* 토스트 */}
         <AnimatePresence>
           {toast && (
             <motion.div
-              key="toast"
+              key={toast}
               initial={{ y: -12, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -8, opacity: 0 }}
               className="absolute top-16 inset-x-3 z-40 flex justify-center pointer-events-none"
             >
-              <div className="rounded-full bg-amber-400 text-zinc-950 px-4 py-2 text-sm font-black shadow-[0_8px_22px_-8px_rgba(0,0,0,0.7)] border-2 border-zinc-900">
+              <div className="rounded-2xl bg-amber-400 text-zinc-950 px-4 py-2.5 text-[13px] font-black shadow-[0_8px_22px_-8px_rgba(0,0,0,0.7)] border-2 border-zinc-900 max-w-md text-center leading-snug whitespace-pre-line">
                 {toast}
               </div>
             </motion.div>
@@ -1552,6 +1689,53 @@ function OwnedView({ starter }: { starter: MyStarter }) {
         <AnimatePresence>
           {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
         </AnimatePresence>
+
+        {/* 먹이주기 모달 */}
+        <AnimatePresence>
+          {feedOpen && user && (
+            <FeedModal
+              userId={user.id}
+              meta={meta}
+              starter={starter}
+              onClose={() => setFeedOpen(false)}
+              onResult={(r) => {
+                applyEnhanceResult(r);
+                if (r.ok && r.xp_gained != null) {
+                  // 결과 토스트 (등급 다양성 — log 의 가장 좋은 등급)
+                  const best = pickBestGrade(r.log ?? []);
+                  showToast(
+                    `${best.tag} +${r.xp_gained.toLocaleString("ko-KR")} EXP${
+                      (r.levels_up ?? 0) > 0
+                        ? `\nLv.${r.level} 로 ${r.levels_up}단계 성장!`
+                        : ""
+                    }`,
+                    3000
+                  );
+                }
+              }}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* 진화 모달 */}
+        <AnimatePresence>
+          {evolveOpen && user && evoTarget && (
+            <EvolveModal
+              userId={user.id}
+              fromInfo={stageInfo}
+              toInfo={evoTarget}
+              meta={meta}
+              onClose={() => setEvolveOpen(false)}
+              onSuccess={(newStage) => {
+                applyEvolveSuccess(newStage);
+                showToast(
+                  `${stageInfo.name} → ${evoTarget.name}!\n진화 완료!`,
+                  3200
+                );
+              }}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </Portal>
   );
@@ -1561,26 +1745,38 @@ function OwnedView({ starter }: { starter: MyStarter }) {
 function PokedexDevice({
   meta,
   starter,
+  stageInfo,
   power,
   xp,
+  isMax,
+  canEvolve,
   reduce,
-  onEnhance,
+  onFeed,
+  onEvolve,
   onHome,
   onHelp,
   counts,
 }: {
   meta: SpeciesMeta;
   starter: MyStarter;
+  stageInfo: EvolutionStageInfo;
   power: number;
   xp: { cur: number; max: number };
+  isMax: boolean;
+  canEvolve: boolean;
   reduce: boolean;
-  onEnhance: () => void;
+  onFeed: () => void;
+  onEvolve: () => void;
   onHome: () => void;
   onHelp: () => void;
   counts: StarterCompanionCounts | null;
 }) {
   const typeColor = TYPE_COLOR[meta.type];
-  const xpPct = Math.min(100, Math.max(0, (xp.cur / xp.max) * 100));
+  const xpPct = isMax
+    ? 100
+    : xp.max > 0
+    ? Math.min(100, Math.max(0, (xp.cur / xp.max) * 100))
+    : 0;
 
   return (
     <motion.div
@@ -1624,13 +1820,14 @@ function PokedexDevice({
             "linear-gradient(180deg, #d6202e 0%, #b71625 50%, #8a0d1c 100%)",
         }}
       >
-        {/* 본체 광택 */}
+        {/* 본체 광택 — 헤더 영역 위는 transparent (모바일 회색끼 방지),
+            LCD 베젤 부근부터 약하게 들어가 광택감만 살림. */}
         <span
           aria-hidden
-          className="absolute inset-x-0 top-0 h-[35%] pointer-events-none"
+          className="absolute inset-x-0 top-[18%] h-[20%] pointer-events-none"
           style={{
             background:
-              "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 100%)",
+              "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.08) 60%, rgba(255,255,255,0) 100%)",
           }}
         />
         {/* 우측 힌지 라인 — 접이식 도감 느낌 */}
@@ -1732,31 +1929,27 @@ function PokedexDevice({
                   "repeating-linear-gradient(0deg, transparent 0, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 3px)",
               }}
             />
-            {/* 캐릭터 — LCD 안에 단독 */}
+            {/* 캐릭터 — LCD 안 (현재 stage dex 사용) */}
             <motion.div
               animate={reduce ? undefined : { y: [0, -3, 0] }}
               transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
               style={{ filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.4))" }}
             >
-              <PokemonImg dex={meta.dex} name={meta.name} size={110} />
+              <PokemonImg dex={stageInfo.dex} name={stageInfo.name} size={110} />
             </motion.div>
           </div>
         </div>
 
-        {/* 강화하기 — 캐릭터(LCD)와 정보 패널 사이 */}
+        {/* 액션 버튼 — 캐릭터(LCD)와 정보 패널 사이.
+            상태별 분기: MAX / 진화 가능 / 일반 (먹이 주기). */}
         <div className="px-4 mb-3">
-          <button
-            type="button"
-            onClick={onEnhance}
-            style={{ touchAction: "manipulation" }}
-            className="group relative w-full h-12 rounded-xl border-[3px] border-zinc-900 bg-gradient-to-b from-amber-300 to-amber-500 text-zinc-900 text-sm font-black tracking-[0.18em] active:translate-y-[2px] transition-all shadow-[0_4px_0_0_rgba(15,23,42,0.85)] active:shadow-[0_1px_0_0_rgba(15,23,42,0.85)]"
-          >
-            <span className="inline-flex items-center justify-center gap-1.5">
-              <BoltGlyph />
-              강화하기
-              <BoltGlyph flipped />
-            </span>
-          </button>
+          <ActionButton
+            isMax={isMax}
+            canEvolve={canEvolve}
+            onFeed={onFeed}
+            onEvolve={onEvolve}
+            reduce={reduce}
+          />
         </div>
 
         {/* 정보 패널 — 베이지 종이 */}
@@ -1779,12 +1972,19 @@ function PokedexDevice({
             <div className="flex items-center justify-between text-[10px] font-black text-zinc-500 tracking-wider">
               <span>EXP</span>
               <span className="tabular-nums">
-                {xp.cur} / {xp.max}
+                {isMax
+                  ? "MAX"
+                  : `${xp.cur.toLocaleString("ko-KR")} / ${xp.max.toLocaleString("ko-KR")}`}
               </span>
             </div>
             <div className="relative h-2.5 rounded-full bg-zinc-200 overflow-hidden border border-zinc-400">
               <motion.div
-                className="h-full bg-gradient-to-r from-emerald-400 to-cyan-400"
+                className={clsx(
+                  "h-full",
+                  isMax
+                    ? "bg-gradient-to-r from-amber-300 to-orange-400"
+                    : "bg-gradient-to-r from-emerald-400 to-cyan-400"
+                )}
                 initial={{ width: 0 }}
                 animate={{ width: `${xpPct}%` }}
                 transition={{ duration: 0.6, ease: "easeOut" }}
@@ -1795,7 +1995,7 @@ function PokedexDevice({
           {/* 정보 row */}
           <dl className="space-y-1.5 text-[12.5px]">
             <Row label="포켓몬">
-              <span className="font-black text-zinc-900">{meta.name}</span>
+              <span className="font-black text-zinc-900">{stageInfo.name}</span>
             </Row>
             <Row label="속성">
               <TypeBadge type={meta.type} />
@@ -1957,9 +2157,17 @@ function HelpModal({ onClose }: { onClose: () => void }) {
               {" "}카드 개수예요. 같은 카드 종류는 1번만 셉니다.
             </HelpRow>
 
-            <HelpRow label="강화하기">
-              곧 추가될 예정이에요. 동속성 PCL10 카드를 재료로 사용해 능력을
-              올릴 수 있게 됩니다.
+            <HelpRow label="먹이 주기">
+              PCL10 카드(MUR / UR / SAR)를 재료로 줘서 EXP 를 얻고 레벨업해요.
+              <strong className="font-black"> SAR 20 / UR 200 / MUR 10,000 EXP</strong>
+              가 기본이고, 동속성 재료는 <strong className="font-black">+3%</strong>{" "}
+              보너스. 7% 확률로 대성공(×1.2), 1% 확률로 초대성공(×1.5).
+            </HelpRow>
+
+            <HelpRow label="진화">
+              Lv.10 / Lv.20 도달 시 진화 가능 상태가 돼요. 진화는{" "}
+              <strong className="font-black">100% 성공</strong>이며, 진화하면
+              새로운 모습으로 바뀌어요. (특수 포켓몬 뮤·뮤츠는 진화 없음.)
             </HelpRow>
 
             <HelpRow label="HOME / HELP">
@@ -1987,6 +2195,550 @@ function HelpRow({
       </p>
       <p className="text-[12.5px] text-zinc-800 leading-relaxed">{children}</p>
     </div>
+  );
+}
+
+/* ─────────── 액션 버튼 — 먹이주기 / 진화하기 / MAX 분기 ─────────── */
+function ActionButton({
+  isMax,
+  canEvolve,
+  onFeed,
+  onEvolve,
+  reduce,
+}: {
+  isMax: boolean;
+  canEvolve: boolean;
+  onFeed: () => void;
+  onEvolve: () => void;
+  reduce: boolean;
+}) {
+  if (isMax) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="w-full h-12 rounded-xl border-[3px] border-zinc-900 bg-gradient-to-b from-zinc-200 to-zinc-400 text-zinc-700 text-sm font-black tracking-[0.32em] shadow-[0_4px_0_0_rgba(15,23,42,0.65)] cursor-not-allowed"
+      >
+        ★ MAX
+      </button>
+    );
+  }
+  if (canEvolve) {
+    return (
+      <motion.button
+        type="button"
+        onClick={onEvolve}
+        style={{ touchAction: "manipulation" }}
+        animate={
+          reduce
+            ? undefined
+            : {
+                boxShadow: [
+                  "0 4px 0 0 rgba(15,23,42,0.85), 0 0 0 0 rgba(236,72,153,0.0)",
+                  "0 4px 0 0 rgba(15,23,42,0.85), 0 0 18px 4px rgba(236,72,153,0.55)",
+                  "0 4px 0 0 rgba(15,23,42,0.85), 0 0 0 0 rgba(236,72,153,0.0)",
+                ],
+              }
+        }
+        transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+        className="w-full h-12 rounded-xl border-[3px] border-zinc-900 bg-gradient-to-b from-violet-400 via-fuchsia-400 to-rose-400 text-white text-sm font-black tracking-[0.22em] active:translate-y-[2px] transition-transform shadow-[0_4px_0_0_rgba(15,23,42,0.85)] active:shadow-[0_1px_0_0_rgba(15,23,42,0.85)]"
+      >
+        <span
+          className="inline-flex items-center justify-center gap-1.5"
+          style={{ textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}
+        >
+          <StarGlyph />
+          진화하기
+          <StarGlyph />
+        </span>
+      </motion.button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onFeed}
+      style={{ touchAction: "manipulation" }}
+      className="w-full h-12 rounded-xl border-[3px] border-zinc-900 bg-gradient-to-b from-amber-300 to-amber-500 text-zinc-900 text-sm font-black tracking-[0.22em] active:translate-y-[2px] transition-all shadow-[0_4px_0_0_rgba(15,23,42,0.85)] active:shadow-[0_1px_0_0_rgba(15,23,42,0.85)]"
+    >
+      <span className="inline-flex items-center justify-center gap-1.5">
+        <BoltGlyph />
+        먹이 주기
+        <BoltGlyph flipped />
+      </span>
+    </button>
+  );
+}
+
+function StarGlyph() {
+  return (
+    <svg
+      viewBox="0 0 12 12"
+      width={10}
+      height={10}
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M6 0 L7.4 4.3 L12 4.3 L8.3 7 L9.7 11.5 L6 8.7 L2.3 11.5 L3.7 7 L0 4.3 L4.6 4.3 Z" />
+    </svg>
+  );
+}
+
+/* ─────────── 진화 가능 토스트 메시지 ─────────── */
+const EVOLVE_TOAST_MESSAGES = [
+  "진화 준비 완료!\n포켓몬이 갑자기 반짝거리기 시작했어요.",
+  "지금입니다! 진화 타이밍!\n포켓몬 표정이 비장합니다.",
+  "어라? 분위기가 이상한데요?\n주변 공기가 웅성웅성해요.",
+  "포켓몬이 꿈틀댑니다!\n설마… 아니 맞아요, 진화할 준비가 됐어요!",
+  "진화 가능!\n포켓몬이 오늘따라 주인공처럼 빛나고 있어요.",
+];
+function pickEvolveToast(): string {
+  const i = Math.floor(Math.random() * EVOLVE_TOAST_MESSAGES.length);
+  return EVOLVE_TOAST_MESSAGES[i]!;
+}
+
+function pickBestGrade(
+  log: Array<{ grade: "normal" | "great" | "crit" }>
+): { tag: string } {
+  if (log.some((l) => l.grade === "crit")) return { tag: "초대성공!!" };
+  if (log.some((l) => l.grade === "great")) return { tag: "대성공!" };
+  return { tag: "냠냠!" };
+}
+
+/* ─────────── 먹이 주기 모달 ─────────── */
+function FeedModal({
+  userId,
+  meta,
+  onClose,
+  onResult,
+}: {
+  userId: string;
+  meta: SpeciesMeta;
+  starter: MyStarter;
+  onClose: () => void;
+  onResult: (r: EnhanceResult) => void;
+}) {
+  const [materials, setMaterials] = useState<StarterMaterial[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    fetchStarterMaterials(userId).then((list) => {
+      if (!alive) return;
+      setMaterials(list);
+      setLoading(false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [userId]);
+
+  // ESC + body lock
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const toggle = useCallback((id: string) => {
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  }, []);
+
+  const groups = useMemo(() => {
+    const g: Record<"MUR" | "UR" | "SAR", StarterMaterial[]> = {
+      MUR: [],
+      UR: [],
+      SAR: [],
+    };
+    for (const m of materials) g[m.rarity].push(m);
+    return g;
+  }, [materials]);
+
+  const previewExp = useMemo(() => {
+    let sum = 0;
+    for (const id of selected) {
+      const m = materials.find((x) => x.id === id);
+      if (!m) continue;
+      sum += previewMaterialExp(m.rarity, m.wild_type === meta.type);
+    }
+    return sum;
+  }, [selected, materials, meta.type]);
+
+  const submit = useCallback(async () => {
+    if (selected.size === 0 || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    const r = await enhanceMyStarter(userId, Array.from(selected));
+    setSubmitting(false);
+    if (!r.ok) {
+      setError(r.error ?? "먹이를 줄 수 없었어요.");
+      return;
+    }
+    onResult(r);
+    onClose();
+  }, [selected, submitting, userId, onResult, onClose]);
+
+  return (
+    <motion.div
+      className="absolute inset-0 z-[210] flex items-end md:items-center justify-center bg-black/85 backdrop-blur-sm px-3"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      style={{
+        paddingTop: "max(env(safe-area-inset-top, 0px), 16px)",
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)",
+      }}
+    >
+      <motion.div
+        className="w-full max-w-md"
+        onClick={(e) => e.stopPropagation()}
+        initial={{ y: 24, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 16, opacity: 0 }}
+        transition={{ duration: 0.32, ease: "easeOut" }}
+      >
+        <div
+          className="relative rounded-2xl overflow-hidden border-[3px] border-zinc-900 shadow-[0_18px_36px_-10px_rgba(0,0,0,0.85)]"
+          style={{
+            background:
+              "linear-gradient(180deg, #d6202e 0%, #b71625 55%, #8a0d1c 100%)",
+          }}
+        >
+          <div className="px-4 pt-4 pb-2 flex items-center gap-2">
+            <p className="text-[12px] font-black tracking-[0.22em] text-zinc-900">
+              먹이 주기
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="닫기"
+              style={{ touchAction: "manipulation" }}
+              className="ml-auto w-8 h-8 rounded-full bg-zinc-900 text-white text-sm font-black inline-flex items-center justify-center active:scale-95"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* 예상 EXP */}
+          <div className="mx-4 mb-3 rounded-md bg-black/25 border border-black/40 px-3 py-2 flex items-center justify-between">
+            <span className="text-[11px] font-black tracking-wider text-zinc-100">
+              선택 {selected.size}장
+            </span>
+            <span
+              className="text-[13px] font-black text-white tabular-nums"
+              style={{ textShadow: "0 1px 2px rgba(0,0,0,0.7)" }}
+            >
+              +{previewExp.toLocaleString("ko-KR")} EXP
+            </span>
+          </div>
+
+          {/* 재료 리스트 */}
+          <div className="mx-4 mb-3 rounded-md bg-[#fafaf5] border-[3px] border-zinc-900 px-3 py-3 max-h-[50dvh] overflow-y-auto">
+            {loading ? (
+              <p className="text-[12px] font-bold text-zinc-700 text-center py-6">
+                재료 불러오는 중…
+              </p>
+            ) : materials.length === 0 ? (
+              <p className="text-[12px] font-bold text-zinc-700 text-center py-6">
+                사용할 수 있는 PCL10 재료가 없어요.
+              </p>
+            ) : (
+              (["MUR", "UR", "SAR"] as const).map(
+                (r) =>
+                  groups[r].length > 0 && (
+                    <div key={r} className="mb-3 last:mb-0">
+                      <p className="text-[10px] font-black tracking-[0.18em] text-zinc-600 mb-1.5">
+                        {r} ({groups[r].length})
+                      </p>
+                      <ul className="grid grid-cols-2 gap-1.5">
+                        {groups[r].map((m) => {
+                          const sameType = m.wild_type === meta.type;
+                          const exp = previewMaterialExp(m.rarity, sameType);
+                          const isSelected = selected.has(m.id);
+                          return (
+                            <li key={m.id}>
+                              <button
+                                type="button"
+                                onClick={() => toggle(m.id)}
+                                style={{ touchAction: "manipulation" }}
+                                className={clsx(
+                                  "w-full rounded-md border-2 px-2 py-1.5 text-left transition active:scale-[0.98]",
+                                  isSelected
+                                    ? "bg-amber-300 border-zinc-900 shadow-[0_2px_0_0_rgba(15,23,42,0.7)]"
+                                    : "bg-white border-zinc-300"
+                                )}
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  <span
+                                    className={clsx(
+                                      "text-[9px] font-black px-1 py-0.5 rounded",
+                                      m.rarity === "MUR"
+                                        ? "bg-amber-500 text-white"
+                                        : m.rarity === "UR"
+                                        ? "bg-fuchsia-500 text-white"
+                                        : "bg-sky-500 text-white"
+                                    )}
+                                  >
+                                    {m.rarity}
+                                  </span>
+                                  {sameType && (
+                                    <span className="text-[8px] font-black text-emerald-700 tracking-wider">
+                                      ●동속성
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="mt-0.5 text-[10px] font-bold text-zinc-800 truncate">
+                                  {m.card_id}
+                                </p>
+                                <p className="text-[10px] font-black text-amber-700 tabular-nums">
+                                  +{exp.toLocaleString("ko-KR")} EXP
+                                </p>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )
+              )
+            )}
+          </div>
+
+          {error && (
+            <p className="px-4 mb-2 text-[12px] font-bold text-amber-200">
+              {error}
+            </p>
+          )}
+
+          <div className="px-4 pb-4 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              style={{ touchAction: "manipulation" }}
+              className="h-12 rounded-xl bg-white/10 border border-white/20 text-white text-sm font-bold active:scale-[0.98]"
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={submit}
+              disabled={selected.size === 0 || submitting}
+              style={{ touchAction: "manipulation" }}
+              className={clsx(
+                "h-12 rounded-xl border-[3px] border-zinc-900 text-sm font-black active:translate-y-[2px] transition-all shadow-[0_4px_0_0_rgba(15,23,42,0.85)] active:shadow-[0_1px_0_0_rgba(15,23,42,0.85)]",
+                selected.size > 0 && !submitting
+                  ? "bg-gradient-to-b from-amber-300 to-amber-500 text-zinc-900"
+                  : "bg-zinc-300 text-zinc-500 cursor-not-allowed"
+              )}
+            >
+              {submitting ? "주는 중…" : `먹이 주기 (${selected.size})`}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* ─────────── 진화 모달 ─────────── */
+function EvolveModal({
+  userId,
+  fromInfo,
+  toInfo,
+  meta,
+  onClose,
+  onSuccess,
+}: {
+  userId: string;
+  fromInfo: EvolutionStageInfo;
+  toInfo: EvolutionStageInfo;
+  meta: SpeciesMeta;
+  onClose: () => void;
+  onSuccess: (newStage: number) => void;
+}) {
+  const [phase, setPhase] = useState<"confirm" | "animating" | "done">(
+    "confirm"
+  );
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && phase === "confirm") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, phase]);
+
+  const submit = useCallback(async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    const r = await evolveMyStarter(userId);
+    setSubmitting(false);
+    if (r.ok && r.evolution_stage != null) {
+      setPhase("animating");
+      window.setTimeout(() => {
+        setPhase("done");
+        onSuccess(r.evolution_stage!);
+      }, 1700);
+      window.setTimeout(onClose, 2900);
+    } else {
+      onClose();
+    }
+  }, [submitting, userId, onSuccess, onClose]);
+
+  return (
+    <motion.div
+      className="absolute inset-0 z-[230] flex items-center justify-center bg-black/90 backdrop-blur-md px-3"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      {phase === "confirm" && (
+        <motion.div
+          className="w-full max-w-sm"
+          initial={{ scale: 0.92, opacity: 0, y: 12 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.95, opacity: 0 }}
+          transition={{ duration: 0.28, ease: [0.2, 1.4, 0.4, 1] }}
+        >
+          <div className="rounded-2xl overflow-hidden border-[3px] border-zinc-900 bg-gradient-to-b from-violet-500 via-fuchsia-500 to-rose-500 shadow-[0_18px_36px_-10px_rgba(0,0,0,0.85)]">
+            <div className="px-5 pt-5 pb-3 text-center">
+              <p
+                className="text-[11px] font-black tracking-[0.32em] text-white/90"
+                style={{ textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}
+              >
+                EVOLUTION
+              </p>
+              <p
+                className="mt-1 text-base font-black text-white"
+                style={{ textShadow: "0 1px 2px rgba(0,0,0,0.7)" }}
+              >
+                {fromInfo.name} → {toInfo.name}
+              </p>
+            </div>
+            <div className="mx-4 mb-3 rounded-md bg-zinc-900 p-2 ring-2 ring-black/60">
+              <div
+                className="rounded aspect-[16/9] flex items-center justify-around overflow-hidden"
+                style={{
+                  background: `linear-gradient(180deg, ${TYPE_COLOR[meta.type].soft}55 0%, #d8d6a5 30%, #b8b687 100%)`,
+                }}
+              >
+                <PokemonImg
+                  dex={fromInfo.dex}
+                  name={fromInfo.name}
+                  size={70}
+                />
+                <span className="text-zinc-700 text-xl font-black">→</span>
+                <PokemonImg dex={toInfo.dex} name={toInfo.name} size={70} />
+              </div>
+            </div>
+            <p className="px-5 pb-3 text-[12px] font-bold text-white/90 text-center leading-relaxed">
+              진화하면 되돌릴 수 없어요. 함께할 준비됐나요?
+            </p>
+            <div className="px-4 pb-4 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                style={{ touchAction: "manipulation" }}
+                className="h-12 rounded-xl bg-white/15 border border-white/25 text-white text-sm font-bold active:scale-[0.98]"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={submit}
+                disabled={submitting}
+                style={{ touchAction: "manipulation" }}
+                className="h-12 rounded-xl border-[3px] border-zinc-900 bg-gradient-to-b from-amber-300 to-amber-500 text-zinc-900 text-sm font-black active:translate-y-[2px] shadow-[0_4px_0_0_rgba(15,23,42,0.85)] active:shadow-[0_1px_0_0_rgba(15,23,42,0.85)]"
+              >
+                {submitting ? "진화 중…" : "진화하기"}
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {phase === "animating" && (
+        <EvolveAnimation fromInfo={fromInfo} toInfo={toInfo} />
+      )}
+
+      {phase === "done" && (
+        <motion.div
+          initial={{ scale: 0.6, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 180, damping: 14 }}
+          className="text-center"
+        >
+          <div
+            className="inline-flex items-center justify-center w-44 h-44 rounded-3xl mb-2"
+            style={{
+              background: `radial-gradient(circle, ${meta.accent}55 0%, transparent 70%)`,
+            }}
+          >
+            <PokemonImg dex={toInfo.dex} name={toInfo.name} size={150} />
+          </div>
+          <p className="text-[11px] uppercase tracking-[0.32em] text-amber-300 font-black">
+            EVOLVED!
+          </p>
+          <h2 className="mt-1 text-2xl font-black text-white">
+            {toInfo.name}
+          </h2>
+        </motion.div>
+      )}
+    </motion.div>
+  );
+}
+
+function EvolveAnimation({
+  fromInfo,
+  toInfo,
+}: {
+  fromInfo: EvolutionStageInfo;
+  toInfo: EvolutionStageInfo;
+}) {
+  return (
+    <motion.div
+      className="relative w-44 h-44 flex items-center justify-center"
+      initial={{ scale: 0.9 }}
+      animate={{ scale: 1 }}
+    >
+      {/* 빛 폭발 */}
+      <motion.span
+        aria-hidden
+        className="absolute inset-0 rounded-full bg-white"
+        initial={{ scale: 0.4, opacity: 0.95 }}
+        animate={{ scale: [0.4, 2.2, 4], opacity: [0.95, 0.6, 0] }}
+        transition={{ duration: 1.6, ease: "easeOut" }}
+      />
+      {/* 캐릭터 cross-fade */}
+      <motion.div
+        className="absolute"
+        initial={{ opacity: 1, scale: 1 }}
+        animate={{ opacity: 0, scale: 1.4 }}
+        transition={{ duration: 0.8 }}
+      >
+        <PokemonImg dex={fromInfo.dex} name={fromInfo.name} size={140} />
+      </motion.div>
+      <motion.div
+        className="absolute"
+        initial={{ opacity: 0, scale: 0.7 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6, delay: 0.9 }}
+      >
+        <PokemonImg dex={toInfo.dex} name={toInfo.name} size={140} />
+      </motion.div>
+    </motion.div>
   );
 }
 
