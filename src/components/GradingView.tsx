@@ -1862,9 +1862,13 @@ function BulkSubmittingScreen({
   );
 }
 
-/** 일괄 감별 결과 — 성공 개수 위주 단순 표시 (spec 3-1).
- *  서버가 더 이상 per-card results 배열을 반환하지 않음 → 합산 카운트
- *  4종 + 안내 문구만. */
+/** 일괄 감별 결과 — 성공 + 자동 삭제 동등 노출 (자동 삭제 옵션 활성 시).
+ *
+ *  배경: "PCL10 미만 삭제" 옵션을 켜면 서버가 등급 6~9 카드를 auto_deleted
+ *  카운터로, PCL10 만 success 카운터로 분리한다. 사용자 시각엔 "감별이
+ *  처리됐는데 성공 0 장만 크게 노출돼서 작업이 안 된 것처럼 보임" 이슈가
+ *  있었음. 자동 삭제가 발생한 경우엔 success 옆에 자동 삭제도 동등 비중
+ *  으로 노출, 헤드라인 / 이모지 / NPC 대사도 모드별로 분기. */
 function BulkResults({
   result,
   onClose,
@@ -1877,24 +1881,42 @@ function BulkResults({
   const skipped = result.skipped_count ?? 0;
   const capSkipped = result.cap_skipped_count ?? 0;
   const autoDeleted = result.auto_deleted_count ?? 0;
+  const cleanupMode = autoDeleted > 0;
 
-  // NPC reaction — 성공률 / 절대 성공장수 따라 톤 변화.
+  // NPC 대사 — 자동삭제 모드 / 일반 모드 / 실패만 / 압승 등 케이스 분기.
   const total = success + fail;
   const successRate = total > 0 ? success / total : 0;
-  const oakLine =
-    success === 0 && fail > 0
-      ? "음... 이번엔 운이 좋지 않았군. 다음에 다시 도전하게."
-      : success >= 50
-      ? `대단하군! ${success.toLocaleString("ko-KR")}장이나 성공이라니!`
-      : successRate >= 0.4
-      ? "꽤 괜찮은 결과야. 잘 해냈군."
-      : "수고했네. 카드 상태가 들쭉날쭉했군 그래.";
+  const oakLine = (() => {
+    if (cleanupMode && success === 0) {
+      return `정리 완료! 미만 등급 ${autoDeleted.toLocaleString(
+        "ko-KR"
+      )}장 처분했다네.`;
+    }
+    if (cleanupMode && success > 0) {
+      return `슬랩 ${success.toLocaleString(
+        "ko-KR"
+      )}장 + 정리 ${autoDeleted.toLocaleString("ko-KR")}장 — 깔끔하게 끝났군!`;
+    }
+    if (success === 0 && fail > 0) {
+      return "음... 이번엔 운이 좋지 않았군. 다음에 다시 도전하게.";
+    }
+    if (success >= 50) {
+      return `대단하군! ${success.toLocaleString("ko-KR")}장이나 성공이라니!`;
+    }
+    if (successRate >= 0.4) {
+      return "꽤 괜찮은 결과야. 잘 해냈군.";
+    }
+    return "수고했네. 카드 상태가 들쭉날쭉했군 그래.";
+  })();
+
+  // 이모지 — cleanup 모드일 땐 빗자루, 성공 있으면 파티, 아무것도 없으면 검색.
+  const emoji = cleanupMode ? "🧹" : success === 0 ? "🔍" : "🎉";
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
       <div className="flex-1 min-h-0 overflow-y-auto p-6 md:p-8 flex flex-col items-center justify-center text-center gap-4">
         <span aria-hidden className="text-5xl md:text-6xl">
-          {success === 0 ? "🔍" : "🎉"}
+          {emoji}
         </span>
 
         {/* 오박사 reaction 말풍선 */}
@@ -1910,16 +1932,71 @@ function BulkResults({
           <p className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">
             감별 완료
           </p>
-          <p className="mt-2 text-3xl md:text-4xl font-black text-white tabular-nums">
-            성공 <span className="text-emerald-300">{success.toLocaleString("ko-KR")}</span>
-            <span className="text-base text-zinc-500 font-bold"> 장</span>
-          </p>
+          {cleanupMode ? (
+            // 자동 삭제 옵션 활성 — PCL 슬랩 + 자동 삭제 동등 비중으로 노출.
+            // 이전엔 "성공 N장" 헤드라인만 크게 떠서 PCL10 (~0.3%) 만 잡힐 때
+            // 사용자가 "감별이 처리 안 됐다" 고 오해하는 이슈 있었음.
+            <div className="mt-2 flex items-center justify-center gap-3 md:gap-4">
+              <div className="flex flex-col items-center">
+                <span className="text-[9px] uppercase tracking-[0.18em] text-emerald-300/70 font-bold">
+                  PCL 슬랩
+                </span>
+                <span className="text-2xl md:text-3xl font-black text-emerald-300 tabular-nums leading-tight">
+                  {success.toLocaleString("ko-KR")}
+                  <span className="text-sm text-emerald-400/60 font-bold ml-0.5">
+                    장
+                  </span>
+                </span>
+              </div>
+              <span aria-hidden className="text-zinc-600 text-2xl">
+                +
+              </span>
+              <div className="flex flex-col items-center">
+                <span className="text-[9px] uppercase tracking-[0.18em] text-amber-300/70 font-bold">
+                  자동 삭제
+                </span>
+                <span className="text-2xl md:text-3xl font-black text-amber-300 tabular-nums leading-tight">
+                  {autoDeleted.toLocaleString("ko-KR")}
+                  <span className="text-sm text-amber-400/60 font-bold ml-0.5">
+                    장
+                  </span>
+                </span>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-2 text-3xl md:text-4xl font-black text-white tabular-nums">
+              성공{" "}
+              <span className="text-emerald-300">
+                {success.toLocaleString("ko-KR")}
+              </span>
+              <span className="text-base text-zinc-500 font-bold"> 장</span>
+            </p>
+          )}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 w-full max-w-sm mt-2">
-          <SummaryChip label="실패" value={fail.toLocaleString("ko-KR")} tone="rose" />
-          <SummaryChip label="자동 삭제" value={autoDeleted.toLocaleString("ko-KR")} tone="amber" />
-        </div>
+        {cleanupMode ? (
+          // cleanup 모드: 실패만 칩으로 (자동 삭제는 헤드라인에서 이미 노출).
+          <div className="w-full max-w-sm mt-2">
+            <SummaryChip
+              label="실패"
+              value={fail.toLocaleString("ko-KR")}
+              tone="rose"
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2 w-full max-w-sm mt-2">
+            <SummaryChip
+              label="실패"
+              value={fail.toLocaleString("ko-KR")}
+              tone="rose"
+            />
+            <SummaryChip
+              label="자동 삭제"
+              value={autoDeleted.toLocaleString("ko-KR")}
+              tone="amber"
+            />
+          </div>
+        )}
 
         {capSkipped > 0 && (
           <p className="mt-2 text-[12px] text-rose-300 max-w-sm leading-snug">
