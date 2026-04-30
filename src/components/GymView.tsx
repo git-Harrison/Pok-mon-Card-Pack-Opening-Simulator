@@ -1627,6 +1627,10 @@ function GymBattleHistorySection({
     };
   }, [gymId]);
 
+  // 항상 "점령자(defender) vs 도전자(challenger)" 고정 순서로 노출.
+  // 결과(result)에 따라 양쪽의 승/패 라벨/색만 바뀜. 이전엔 loser-winner
+  // 순이라 결과에 따라 좌우가 뒤바뀌어 사용자가 어느 쪽이 도전자인지
+  // 매번 다시 읽어야 했음.
   const formatLine = useCallback(
     (l: GymBattleLogEntry) => {
       const challengerName =
@@ -1639,12 +1643,15 @@ function GymBattleHistorySection({
           : (myUserId && l.defender_user_id === myUserId
               ? l.defender_display_name ?? "나"
               : l.defender_display_name) ?? "점령자";
-      // 도전자 won → defender(패) VS challenger(승)
-      // 도전자 lost → challenger(패) VS defender(승)
-      if (l.result === "won") {
-        return { loser: defenderName, winner: challengerName };
-      }
-      return { loser: challengerName, winner: defenderName };
+      // result === "won" → 도전자 승 → 점령자(패) vs 도전자(승)
+      // result === "lost" → 도전자 패 → 점령자(승) vs 도전자(패)
+      const challengerWon = l.result === "won";
+      return {
+        defenderName,
+        defenderWon: !challengerWon,
+        challengerName,
+        challengerWon,
+      };
     },
     [myUserId]
   );
@@ -1665,7 +1672,20 @@ function GymBattleHistorySection({
           </p>
         ) : (
           logs.map((l) => {
-            const { loser, winner } = formatLine(l);
+            const { defenderName, defenderWon, challengerName, challengerWon } =
+              formatLine(l);
+            const defenderColor = defenderWon
+              ? "text-emerald-300/90"
+              : "text-rose-300/90";
+            const defenderTagColor = defenderWon
+              ? "text-emerald-400/80"
+              : "text-rose-400/80";
+            const challengerColor = challengerWon
+              ? "text-emerald-300/90"
+              : "text-rose-300/90";
+            const challengerTagColor = challengerWon
+              ? "text-emerald-400/80"
+              : "text-rose-400/80";
             return (
               <div
                 key={l.id}
@@ -1675,11 +1695,15 @@ function GymBattleHistorySection({
                   {relTimeKr(l.ended_at)}
                 </span>
                 <span className="min-w-0 flex-1 text-zinc-300 break-keep">
-                  <span className="text-rose-300/90">{loser}</span>
-                  <span className="text-rose-400/80">(패)</span>
+                  <span className={defenderColor}>{defenderName}</span>
+                  <span className={defenderTagColor}>
+                    ({defenderWon ? "승" : "패"})
+                  </span>
                   <span className="text-zinc-500 mx-1">vs</span>
-                  <span className="text-emerald-300/90">{winner}</span>
-                  <span className="text-emerald-400/80">(승)</span>
+                  <span className={challengerColor}>{challengerName}</span>
+                  <span className={challengerTagColor}>
+                    ({challengerWon ? "승" : "패"})
+                  </span>
                 </span>
               </div>
             );
