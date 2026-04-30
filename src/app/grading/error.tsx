@@ -6,10 +6,14 @@ import Link from "next/link";
 /**
  * /grading 세그먼트 에러 바운더리.
  *
- * 감별 페이지 내부의 어떤 React 렌더 에러도 여기서 잡아 in-page 복구 UI 로
- * 표시 — Next.js 기본 풀스크린 에러 폴백("Something went wrong") 으로
- * 빠지지 않게. reset() 호출 시 동일 라우트 다시 마운트 (페이지 전체
- * navigation 없이 해당 세그먼트만 재시도). 사용자가 새로고침할 필요 없음.
+ * 감별 페이지 렌더 단계 throw 를 잡아 in-page 복구 UI 로 표시 — Next.js
+ * 기본 풀스크린 폴백("Something went wrong") 으로 빠지지 않게.
+ *
+ * "다시 시도" 동작: window.location.reload() (cache-bust 쿼리 포함). 이전엔
+ * Next.js 의 `reset()` 콜백을 호출했지만 모듈/컨텍스트 상태가 살아남아
+ * 같은 에러 즉시 재발 → 사용자가 직접 브라우저 새로고침해야 했음. 이제
+ * 버튼 한 번 = 진짜 페이지 리로드. `reset` prop 은 시그니처상 받되 내부
+ * 호출은 reload 우선.
  *
  * 비고: async / promise rejection 은 React 에러 바운더리로 안 잡힘. 그쪽은
  *       GradingView 내부의 try/catch 가 처리. 이 파일은 렌더 단계 throw
@@ -26,6 +30,23 @@ export default function GradingError({
     // 콘솔 + 향후 telemetry 훅 자리.
     console.error("[grading] route-level error:", error);
   }, [error]);
+
+  function reload() {
+    // cache-bust 쿼리 + replace — UpdateAvailableModal 패턴과 동일.
+    // 일부 모바일 브라우저가 disk cache 에서 그대로 응답하는 경우 대비.
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set("_v", Date.now().toString());
+      window.location.replace(url.toString());
+    } catch {
+      try {
+        window.location.reload();
+      } catch {
+        // 최후 fallback — Next.js reset (이전 동작).
+        reset();
+      }
+    }
+  }
 
   return (
     <div className="relative min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-10">
@@ -48,7 +69,7 @@ export default function GradingError({
         <div className="mt-5 flex flex-col gap-2">
           <button
             type="button"
-            onClick={reset}
+            onClick={reload}
             className="w-full h-11 rounded-xl bg-gradient-to-r from-fuchsia-500 to-indigo-500 text-white text-sm font-black hover:scale-[1.01] active:scale-[0.98] transition"
             style={{ touchAction: "manipulation" }}
           >
