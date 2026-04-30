@@ -68,6 +68,9 @@ function mergePet(g: RawPetGrading): MyPet | null {
  *  에서 빠진 슬랩이라 fetchMyPets 결과엔 안 들어옴 — 풀 합치기 위해. */
 function mergeFromDefender(d: DefenderPokemonInfo): MyPet | null {
   if (!d.grading_id) return null;
+  // stale 슬롯 (server 가 card_id null 반환) 은 pet 풀에 머지해도
+  // 의미 없으므로 skip — 사용자가 set 시 정상 슬랩으로 교체.
+  if (!d.card_id) return null;
   const card = getCard(d.card_id);
   const rarity = safeRarity(card?.rarity ?? d.rarity);
   const name = card?.name ?? d.card_id ?? "?";

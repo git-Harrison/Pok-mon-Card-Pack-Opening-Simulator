@@ -23,12 +23,17 @@ export interface GymMedal {
 
 export interface DefenderPokemonInfo {
   slot: number;
-  /** PCL 슬랩 uuid — 본인 소유자가 방어덱 편집 시 풀에 머지하기 위해. */
+  /** PCL 슬랩 uuid — 본인 소유자가 방어덱 편집 시 풀에 머지하기 위해.
+   *  stale 슬롯도 보존되어 클라가 graceful 표시 가능. */
   grading_id?: string;
-  card_id: string;
+  /** stale 슬롯 (psa_gradings row 가 사라진 경우) 은 null. 클라는
+   *  "데이터 손상" placeholder 로 표시하고, server resolve_gym_battle
+   *  은 명시적 에러로 도전 차단 (점령 + 방어덱 셋업이라는 사실 자체는
+   *  유지하되 default NPC 로 떨어지지 않게). */
+  card_id: string | null;
   type: WildType;
-  rarity: string;
-  grade: number;
+  rarity: string | null;
+  grade: number | null;
 }
 
 export interface GymOwnership {

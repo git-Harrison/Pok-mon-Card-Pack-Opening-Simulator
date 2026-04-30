@@ -402,39 +402,82 @@ function PickerPhase({
           </span>
         )}
       </div>
-      {/* 상대 라인업 요약 */}
+      {/* 상대 라인업 요약 — 점령 + 방어덱 셋업 시 점령자 펫, 그 외 NPC.
+          (점령됐지만 방어덱 미설정인 경우는 server 정책상 NPC 경로로
+           도전 진행되므로 NPC 표시.) */}
       <section className="rounded-xl border border-white/10 bg-white/5 p-2.5">
         <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-1.5">
-          상대 — {gym.leader_name} ({gym.type})
+          {gym.ownership?.has_defense_deck && gym.ownership.defender_pokemon
+            ? `상대 — ${gym.ownership.display_name} (방어 덱)`
+            : `상대 — ${gym.leader_name} (${gym.type})`}
         </p>
         <div className="grid grid-cols-3 gap-1.5">
-          {gym.pokemon.map((p) => {
-            const ts = TYPE_STYLE[p.type as WildType];
-            return (
-              <div
-                key={p.id}
-                className="rounded-lg bg-zinc-900/60 border border-white/10 p-1.5 flex flex-col items-center gap-0.5"
-              >
-                <div className="w-10 h-10">
-                  <img
-                    src={wildSpriteUrl(p.dex, true)}
-                    alt=""
-                    draggable={false}
-                    decoding="async"
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-contain"
-                    style={{ imageRendering: "pixelated" }}
-                  />
-                </div>
-                <p className="text-[9px] font-bold text-white truncate w-full text-center">
-                  {p.name}
-                </p>
-                <span className={clsx("px-1 py-[1px] rounded text-[7px] font-black", ts.badge)}>
-                  {p.type}
-                </span>
-              </div>
-            );
-          })}
+          {gym.ownership?.has_defense_deck && gym.ownership.defender_pokemon
+            ? gym.ownership.defender_pokemon.map((d) => {
+                const ts = TYPE_STYLE[d.type as WildType];
+                // stale 슬롯 — server 가 card_id null 로 반환. placeholder.
+                if (d.card_id == null) {
+                  return (
+                    <div
+                      key={`def-${d.slot}`}
+                      className="rounded-lg bg-rose-500/[0.06] border border-rose-400/40 p-1.5 flex flex-col items-center gap-0.5"
+                    >
+                      <div className="w-10 h-10 flex items-center justify-center text-lg">⚠️</div>
+                      <p className="text-[9px] font-bold text-rose-200 truncate w-full text-center">
+                        데이터 손상
+                      </p>
+                      <span className={clsx("px-1 py-[1px] rounded text-[7px] font-black", ts.badge)}>
+                        {d.type}
+                      </span>
+                    </div>
+                  );
+                }
+                const card = getCard(d.card_id);
+                const cardName = card?.name ?? d.card_id;
+                return (
+                  <div
+                    key={`def-${d.slot}`}
+                    className="rounded-lg bg-zinc-900/60 border border-fuchsia-400/30 p-1.5 flex flex-col items-center gap-0.5"
+                  >
+                    <div className="w-10 h-10">
+                      <CardOrDexSprite cardId={d.card_id} name={cardName} />
+                    </div>
+                    <p className="text-[9px] font-bold text-white truncate w-full text-center">
+                      {cardName}
+                    </p>
+                    <span className={clsx("px-1 py-[1px] rounded text-[7px] font-black", ts.badge)}>
+                      {d.type}
+                    </span>
+                  </div>
+                );
+              })
+            : gym.pokemon.map((p) => {
+                const ts = TYPE_STYLE[p.type as WildType];
+                return (
+                  <div
+                    key={p.id}
+                    className="rounded-lg bg-zinc-900/60 border border-white/10 p-1.5 flex flex-col items-center gap-0.5"
+                  >
+                    <div className="w-10 h-10">
+                      <img
+                        src={wildSpriteUrl(p.dex, true)}
+                        alt=""
+                        draggable={false}
+                        decoding="async"
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-contain"
+                        style={{ imageRendering: "pixelated" }}
+                      />
+                    </div>
+                    <p className="text-[9px] font-bold text-white truncate w-full text-center">
+                      {p.name}
+                    </p>
+                    <span className={clsx("px-1 py-[1px] rounded text-[7px] font-black", ts.badge)}>
+                      {p.type}
+                    </span>
+                  </div>
+                );
+              })}
         </div>
       </section>
 

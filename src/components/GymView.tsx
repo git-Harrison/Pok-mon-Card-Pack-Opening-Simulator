@@ -1852,18 +1852,36 @@ function DefenderStatCard({
   const t = defender.type as keyof typeof TYPE_STYLE;
   const style = TYPE_STYLE[t];
   const sameAsGym = defender.type === gymType;
-  const card = getCard(defender.card_id);
-  const cardName = card?.name ?? defender.card_id;
-  const dex = lookupDex(cardName);
-  // 메가/특수 폼 카드 sprite 우선 (메가 리자몽 X, 메가가디안 등 — gen5
-  // BW 에 없는 폼). 매칭 없으면 dex 기반 PokeAPI sprite 로 fallback.
-  const megaSprite = cardSpriteUrl(cardName);
-  const baseStats = slabStats(
-    (card?.rarity ?? defender.rarity) as Rarity,
-    defender.grade
-  );
+  // stale 슬롯 — psa_gradings row 가 사라진 경우 server 가 card_id/
+  // rarity/grade null 로 반환. "데이터 손상" placeholder 표시해
+  // 점령은 그대로 인지하되 default NPC 로 떨어지지 않게.
+  const isStale = defender.card_id == null;
+  const card = defender.card_id ? getCard(defender.card_id) : null;
+  const cardName = card?.name ?? defender.card_id ?? "?";
+  const dex = !isStale ? lookupDex(cardName) : null;
+  const megaSprite = !isStale ? cardSpriteUrl(cardName) : null;
+  const baseStats = !isStale
+    ? slabStats(
+        (card?.rarity ?? defender.rarity ?? "C") as Rarity,
+        defender.grade ?? 10
+      )
+    : { hp: 0, atk: 0 };
   const [broken, setBroken] = useState(false);
   const [megaBroken, setMegaBroken] = useState(false);
+  if (isStale) {
+    return (
+      <div className="relative rounded-lg border border-rose-400/40 bg-rose-500/[0.06] p-2 flex flex-col items-center gap-1 aspect-[5/7]">
+        <div className="w-14 h-14 flex items-center justify-center text-2xl">⚠️</div>
+        <p className="text-[10px] font-bold text-rose-200 truncate max-w-full">데이터 손상</p>
+        <span className={clsx("px-1 py-0.5 rounded text-[8px] font-black", style.badge)}>
+          {defender.type}
+        </span>
+        <p className="text-[8px] text-rose-300/85 text-center leading-tight">
+          점령자 재셋업 필요
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="relative rounded-lg border bg-zinc-900/60 p-2 flex flex-col items-center gap-1 border-fuchsia-400/30">
       <div className="relative w-14 h-14 shrink-0 overflow-hidden flex items-center justify-center">
