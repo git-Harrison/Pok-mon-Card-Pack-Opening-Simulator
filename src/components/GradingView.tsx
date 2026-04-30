@@ -1,6 +1,6 @@
 "use client";
 
-import PokeLoader, { LoadingText } from "./PokeLoader";
+import { LoadingText } from "./PokeLoader";
 import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -19,7 +19,6 @@ import {
 } from "@/lib/db";
 
 const PROGRESS_POLL_MS = 3000;
-import { getCard } from "@/lib/sets";
 import { isPclEligible, PCL_LABEL, pclTone } from "@/lib/pcl";
 import { compareRarity } from "@/lib/rarity";
 import PageBackdrop from "./PageBackdrop";

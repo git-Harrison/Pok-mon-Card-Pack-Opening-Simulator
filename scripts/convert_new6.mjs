@@ -43,7 +43,7 @@
 // - 카드 누락 / 깨진 이미지 발견 시 recon 단계에서 보고 — 이 컨버터는 "주어진 데이터" 만 통과.
 // - 속성(type) 은 향후 카드 ↔ 속성 매핑 테이블(card_types) 시드 갱신 시 사용.
 
-import { readFile, writeFile, access } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";

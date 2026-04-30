@@ -1,7 +1,6 @@
 // One-off generator for SV10 cards.json. Not part of the runtime build.
 // Run with: node scripts/data/sv10/_build.mjs
 import fs from "node:fs";
-import path from "node:path";
 
 // Pokellector mapping: jp_num -> [slug, assetId]
 // Extracted from https://www.pokellector.com/Glory-of-Team-Rocket-Expansion/

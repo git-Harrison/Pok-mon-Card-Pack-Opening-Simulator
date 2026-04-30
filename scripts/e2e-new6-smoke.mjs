@@ -7,7 +7,6 @@ import { chromium } from "playwright";
 import { createClient } from "@supabase/supabase-js";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
-const SESSION_KEY = "pokemon-tcg-sim:session:v3";
 
 // 1) supabase auth_login 으로 유저 객체 확보 → 2) page.addInitScript 로
 // localStorage 에 직접 주입 → 3) 페이지 로드 시 auth gate 통과.

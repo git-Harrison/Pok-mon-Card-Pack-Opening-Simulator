@@ -26,7 +26,7 @@ const resolveCardType: (name: string) => string | null =
   (
     wildMod as Record<string, { resolveCardType?: (name: string) => string | null }>
   )["module.exports"]?.resolveCardType ||
-  ((_: string) => null);
+  (() => null);
 
 interface Row {
   id: string;

@@ -228,6 +228,9 @@ export default function GiftsView() {
                       ) : (
                         <div className="w-14 h-20 md:w-16 md:h-24 rounded-lg overflow-hidden bg-zinc-900 ring-1 ring-white/10">
                           {card.imageUrl ? (
+                            // 카드 이미지 호스트가 다양한 외부 도메인이라
+                            // next/image domains 화이트리스트 비효율 — <img> 유지.
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={card.imageUrl}
                               alt=""

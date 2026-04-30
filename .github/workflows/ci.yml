@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+# Node.js 20 deprecation (forced removal 2026-09-16) 대비 — 액션 호스트
+# Node 를 24 로 전환. actions/checkout@v4 / setup-node@v4 는 Node 20
+# bundle 사용하지만 이 env 가 24 로 강제 실행함.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build:
     name: Type-check & build
@@ -15,7 +21,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies

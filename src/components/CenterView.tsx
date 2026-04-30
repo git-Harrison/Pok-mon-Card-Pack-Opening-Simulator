@@ -2,7 +2,6 @@
 
 import PokeLoader, { CenteredPokeLoader } from "./PokeLoader";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";

@@ -2,10 +2,6 @@
 // from compiled module to count exact coverage post-fallback rules.
 import fs from "node:fs";
 import path from "node:path";
-import { execSync } from "node:child_process";
-
-// Compile to CJS via swc/esbuild quickly for runtime check
-// (we can also re-implement the strip logic in JS, but easier to grep+regex).
 
 // Load mapping tables
 const dexFile = fs.readFileSync("src/lib/wild/name-to-dex.ts", "utf8");
