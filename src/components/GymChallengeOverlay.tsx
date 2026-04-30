@@ -9,6 +9,7 @@ import {
   computeUserCenterPower,
   fetchMyPets,
   resolveGymBattle,
+  setGymDefenseDeck,
   type RawPetGrading,
 } from "@/lib/gym/db";
 import type {
@@ -85,9 +86,10 @@ function mergePet(g: RawPetGrading): MyPet | null {
 }
 
 type Phase =
-  | "picking"      // 펫 3마리 선택
-  | "fighting"     // 서버에 전투 요청 + 턴 로그 애니메이션
-  | "result";      // 결과 패널
+  | "picking"          // 펫 3마리 선택
+  | "fighting"         // 서버에 전투 요청 + 턴 로그 애니메이션
+  | "result"           // 결과 패널 (도전자 won/lost 모두)
+  | "defense_setup";   // won 직후 방어 덱 등록 — 사용자 명시 점령 마무리
 
 interface Props {
   gym: Gym;
@@ -116,6 +118,12 @@ export default function GymChallengeOverlay({
   const [error, setError] = useState<string | null>(null);
   const [battle, setBattle] = useState<GymBattleResult | null>(null);
   const resolvedRef = useRef(false);
+  // 점령 후 방어 덱 등록 단계 — 도전 picker 와 별개의 출전 순서.
+  const [defenseOrder, setDefenseOrder] = useState<string[]>([]);
+  const [savingDefense, setSavingDefense] = useState(false);
+  const [defenseError, setDefenseError] = useState<string | null>(null);
+  // 방어 덱 등록 완료 후엔 닫기 가드 해제.
+  const defenseSavedRef = useRef(false);
 
   const userId = user?.id ?? null;
 
@@ -140,6 +148,21 @@ export default function GymChallengeOverlay({
   }, [userId]);
 
   const doClose = useCallback(async () => {
+    // won + 방어 덱 미등록 상태로 닫기 시도 → confirm 경고.
+    // 사용자 정책: 방어 덱 3개 등록까지가 점령 마무리. 미등록 시 NPC
+    // 경로로 다른 도전자에게 즉시 빼앗길 수 있음을 명시.
+    const wonUnsaved =
+      resolvedRef.current
+      && battle?.result === "won"
+      && !defenseSavedRef.current;
+    if (wonUnsaved) {
+      const ok = window.confirm(
+        "⚠️ 방어 덱을 등록하지 않으면 점령을 유지할 수 없어요.\n\n" +
+        "방어 덱 3마리를 등록하기 전엔 다른 트레이너가 NPC 경로로 " +
+        "도전해 점령을 즉시 빼앗을 수 있습니다.\n\n정말 닫으시겠어요?"
+      );
+      if (!ok) return;
+    }
     if (resolvedRef.current) {
       onClose();
       return;
@@ -149,12 +172,13 @@ export default function GymChallengeOverlay({
       await abandonGymChallenge(userId, challengeId).catch(() => {});
     }
     onClose();
-  }, [onClose, userId, phase, challengeId]);
+  }, [onClose, userId, phase, challengeId, battle]);
 
   // 2) ESC + body lock. doClose 이후 정의되어야 TDZ 회피.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && phase !== "fighting") doClose();
+      // fighting + 방어덱 저장 중엔 ESC 무시 — 의도치 않은 중단 방지.
+      if (e.key === "Escape" && phase !== "fighting" && !savingDefense) doClose();
     };
     window.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
@@ -163,7 +187,7 @@ export default function GymChallengeOverlay({
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [phase, doClose]);
+  }, [phase, doClose, savingDefense]);
 
   const togglePet = useCallback(
     (id: string) => {
@@ -256,6 +280,74 @@ export default function GymChallengeOverlay({
       .filter((p): p is MyPet => Boolean(p));
   }, [order, pets]);
 
+  // ── 방어 덱 등록 단계 ───────────────────────────────────
+  const toggleDefense = useCallback((id: string) => {
+    setDefenseOrder((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= 3) return prev;
+      return [...prev, id];
+    });
+  }, []);
+
+  const moveDefense = useCallback((id: string, dir: -1 | 1) => {
+    setDefenseOrder((prev) => {
+      const idx = prev.indexOf(id);
+      if (idx < 0) return prev;
+      const next = [...prev];
+      const target = idx + dir;
+      if (target < 0 || target >= next.length) return prev;
+      const t = next[target];
+      next[target] = next[idx];
+      next[idx] = t;
+      return next;
+    });
+  }, []);
+
+  const orderedDefensePets = useMemo(() => {
+    const map = new Map(pets.map((p) => [p.grading_id, p]));
+    return defenseOrder
+      .map((id) => map.get(id))
+      .filter((p): p is MyPet => Boolean(p));
+  }, [defenseOrder, pets]);
+
+  const startDefenseSetup = useCallback(() => {
+    setPhase("defense_setup");
+    // 도전 출전 펫 3마리는 이미 살아남아서 그대로 방어덱 후보 — 사용자
+    // 편의로 기본 pre-select 해 둠. 사용자가 자유롭게 변경 가능.
+    setDefenseOrder((prev) => (prev.length === 3 ? prev : order));
+    setDefenseError(null);
+  }, [order]);
+
+  const saveDefenseDeck = useCallback(async () => {
+    if (!userId) return;
+    if (defenseOrder.length !== 3) {
+      setDefenseError("방어 덱 3마리를 모두 선택해주세요.");
+      return;
+    }
+    setDefenseError(null);
+    setSavingDefense(true);
+    const idMap = new Map(pets.map((p) => [p.grading_id, p]));
+    const selected = defenseOrder
+      .map((id) => idMap.get(id))
+      .filter((p): p is MyPet => Boolean(p));
+    if (selected.length !== 3) {
+      setDefenseError("펫 정보가 일치하지 않아요.");
+      setSavingDefense(false);
+      return;
+    }
+    const ids = selected.map((p) => p.grading_id);
+    const types = selected.map((p) => p.type ?? gym.type);
+    const res = await setGymDefenseDeck(userId, gym.id, ids, types);
+    setSavingDefense(false);
+    if (!res.ok) {
+      setDefenseError(res.error ?? "방어 덱 등록에 실패했어요. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+    defenseSavedRef.current = true;
+    onResolved();
+    onClose();
+  }, [userId, defenseOrder, pets, gym.id, gym.type, onResolved, onClose]);
+
   return (
     <Portal>
       <motion.div
@@ -274,17 +366,20 @@ export default function GymChallengeOverlay({
         >
           {/* Header */}
           <div className="px-3 py-2 border-b border-white/10 flex items-center gap-2">
-            <span aria-hidden className="text-base">⚔️</span>
+            <span aria-hidden className="text-base">
+              {phase === "defense_setup" ? "🛡️" : "⚔️"}
+            </span>
             <h2 className="text-sm font-black text-white truncate flex-1">
-              {gym.name} · 도전
+              {gym.name}
+              {phase === "defense_setup" ? " · 방어 덱 등록" : " · 도전"}
             </h2>
             <button
               type="button"
               onClick={doClose}
-              disabled={phase === "fighting"}
+              disabled={phase === "fighting" || savingDefense}
               className={clsx(
                 "shrink-0 w-8 h-8 rounded-lg text-sm font-bold",
-                phase === "fighting"
+                phase === "fighting" || savingDefense
                   ? "bg-white/5 text-zinc-600 cursor-not-allowed"
                   : "bg-white/5 hover:bg-white/10 text-white/80"
               )}
@@ -320,7 +415,26 @@ export default function GymChallengeOverlay({
               </div>
             )}
             {phase === "result" && battle && (
-              <ResultPhase battle={battle} gym={gym} onClose={doClose} />
+              <ResultPhase
+                battle={battle}
+                gym={gym}
+                onClose={doClose}
+                onSetupDefense={startDefenseSetup}
+              />
+            )}
+            {phase === "defense_setup" && battle && (
+              <DefenseSetupPhase
+                gym={gym}
+                pets={pets}
+                loading={loadingPets}
+                order={defenseOrder}
+                orderedPets={orderedDefensePets}
+                onToggle={toggleDefense}
+                onMove={moveDefense}
+                onSave={saveDefenseDeck}
+                saving={savingDefense}
+                error={defenseError}
+              />
             )}
           </div>
         </motion.div>
@@ -708,7 +822,7 @@ function BattlePlayback({
   onEnd: () => void;
   reduce: boolean;
 }) {
-  const turns = battle.turn_log ?? [];
+  const turns = useMemo(() => battle.turn_log ?? [], [battle.turn_log]);
   const initialPets = battle.pets ?? [];
   const initialEnemies = battle.enemies ?? [];
 
@@ -1010,10 +1124,12 @@ function ResultPhase({
   battle,
   gym,
   onClose,
+  onSetupDefense,
 }: {
   battle: GymBattleResult;
   gym: Gym;
   onClose: () => void;
+  onSetupDefense: () => void;
 }) {
   const won = battle.result === "won";
   return (
@@ -1050,12 +1166,270 @@ function ResultPhase({
         )}
       </div>
 
+      {won ? (
+        <>
+          {/* 점령 마무리 안내 — 사용자가 정확히 이해하도록. */}
+          <div className="rounded-xl border border-fuchsia-400/40 bg-fuchsia-500/[0.08] px-3 py-2.5 text-[12px] text-fuchsia-100 leading-snug space-y-1">
+            <p className="font-black text-white">⚠️ 점령은 아직 마무리되지 않았어요.</p>
+            <p>
+              점령을 유지하려면 <b className="text-white">방어 덱 3마리</b> 를 등록해야 합니다.
+            </p>
+            <p className="text-fuchsia-200/85 text-[11px]">
+              방어 덱을 등록하지 않으면 다른 트레이너가 NPC 경로로 즉시 도전해
+              점령을 빼앗을 수 있어요.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onSetupDefense}
+            style={{ touchAction: "manipulation" }}
+            className="w-full h-12 rounded-xl bg-gradient-to-r from-fuchsia-500 to-violet-500 text-white font-black text-base active:scale-[0.98]"
+          >
+            🛡️ 방어 덱 3마리 등록하기
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full h-9 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 text-[11px]"
+          >
+            나중에 등록 (방어 덱 미등록 상태로 닫기)
+          </button>
+        </>
+      ) : (
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full h-11 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-zinc-950 font-bold text-sm"
+        >
+          닫기
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────── Defense Setup ─────────────── */
+
+/** 점령 직후 방어 덱 3마리 등록 단계. PickerPhase 와 비슷한 펫 picker
+ *  지만, 도전 출전이 아닌 set_gym_defense_deck RPC 호출. 카드 부족 /
+ *  실패 케이스 모두 명시적 안내. */
+function DefenseSetupPhase({
+  gym,
+  pets,
+  loading,
+  order,
+  orderedPets,
+  onToggle,
+  onMove,
+  onSave,
+  saving,
+  error,
+}: {
+  gym: Gym;
+  pets: MyPet[];
+  loading: boolean;
+  order: string[];
+  orderedPets: MyPet[];
+  onToggle: (id: string) => void;
+  onMove: (id: string, dir: -1 | 1) => void;
+  onSave: () => void;
+  saving: boolean;
+  error: string | null;
+}) {
+  const matchingPets = useMemo(
+    () => pets.filter((p) => p.type === gym.type),
+    [pets, gym.type]
+  );
+  const insufficient = !loading && matchingPets.length < 3;
+
+  return (
+    <div className="p-3 md:p-4 space-y-3">
+      {/* 점령 마무리 안내 */}
+      <div className="rounded-xl border border-fuchsia-400/40 bg-fuchsia-500/[0.08] px-3 py-2.5 text-[12px] text-fuchsia-100 leading-snug space-y-1">
+        <p className="font-black text-white">🏆 {gym.name} 점령 성공!</p>
+        <p>
+          점령을 유지하려면 <b className="text-white">{gym.type}</b> 속성 펫
+          <b className="text-white"> 3마리</b> 를 방어 덱으로 등록해야 합니다.
+        </p>
+        <p className="text-fuchsia-200/85 text-[11px]">
+          등록하지 않으면 다른 트레이너가 NPC 경로로 즉시 도전해 점령을 빼앗을 수 있어요.
+        </p>
+      </div>
+
+      {/* 출전 순서 */}
+      <section className="rounded-xl border border-fuchsia-400/30 bg-fuchsia-500/[0.06] p-2.5">
+        <p className="text-[11px] uppercase tracking-wider text-fuchsia-200 mb-1.5">
+          방어 덱 순서 ({order.length}/3)
+        </p>
+        {orderedPets.length === 0 && (
+          <p className="text-[11px] text-zinc-500 text-center py-2">
+            아래에서 펫 3마리를 선택하세요.
+          </p>
+        )}
+        <ul className="flex flex-col gap-1">
+          {orderedPets.map((p, idx) => {
+            const slot = idx + 1;
+            return (
+              <li
+                key={p.grading_id}
+                className="rounded-lg bg-zinc-900/70 border border-white/10 px-2 py-1.5 flex items-center gap-2"
+              >
+                <span className="text-[10px] font-black text-fuchsia-200 w-6 text-center">
+                  #{slot}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-bold text-white truncate">
+                    {p.card_name}
+                  </p>
+                  <p className="text-[9px] text-zinc-400">
+                    HP {p.baseHp} · ATK {p.baseAtk}
+                    {p.type && (
+                      <>
+                        {" · "}
+                        <span className="text-zinc-200">{p.type}</span>
+                      </>
+                    )}
+                  </p>
+                </div>
+                <div className="flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => onMove(p.grading_id, -1)}
+                    disabled={idx === 0 || saving}
+                    className="w-6 h-6 rounded bg-white/5 disabled:opacity-30 text-white text-[10px]"
+                    aria-label="앞 슬롯으로"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onMove(p.grading_id, +1)}
+                    disabled={idx === orderedPets.length - 1 || saving}
+                    className="w-6 h-6 rounded bg-white/5 disabled:opacity-30 text-white text-[10px]"
+                    aria-label="뒤 슬롯으로"
+                  >
+                    ▼
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onToggle(p.grading_id)}
+                    disabled={saving}
+                    className="w-6 h-6 rounded bg-rose-500/30 hover:bg-rose-500/50 disabled:opacity-30 text-white text-[10px]"
+                    aria-label="제거"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      {/* 매칭 펫 풀 */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
+        <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-1.5">
+          {gym.type} 속성 펫 (PCL10 · 펫 등록 슬랩만)
+        </p>
+        {loading ? (
+          <p className="text-[11px] text-zinc-500 py-3 text-center">로딩 중...</p>
+        ) : insufficient ? (
+          <p className="text-[11px] text-rose-300 py-3 text-center leading-snug">
+            등록 가능한 {gym.type} 속성 PCL10 펫이 부족해요 ({matchingPets.length}/3).<br/>
+            지금 닫아도 됩니다 — 점령은 유지되지 않을 수 있고,<br/>
+            펫을 더 등록한 뒤 체육관에 다시 들러서 방어 덱을 셋업할 수 있어요.
+          </p>
+        ) : (
+          <ul className="grid grid-cols-2 gap-1.5">
+            {matchingPets.map((p) => {
+              const idx = order.indexOf(p.grading_id);
+              const selected = idx >= 0;
+              return (
+                <li key={p.grading_id}>
+                  <button
+                    type="button"
+                    onClick={() => onToggle(p.grading_id)}
+                    disabled={saving}
+                    style={{ touchAction: "manipulation" }}
+                    className={clsx(
+                      "relative w-full rounded-lg border p-1.5 text-left flex items-center gap-1.5 transition active:scale-[0.98]",
+                      selected
+                        ? "border-fuchsia-400/60 bg-fuchsia-500/10"
+                        : "border-white/10 bg-zinc-900/60 hover:bg-white/5",
+                      saving && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    {selected && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-fuchsia-400 text-zinc-950 text-[10px] font-black flex items-center justify-center">
+                        {idx + 1}
+                      </span>
+                    )}
+                    <div
+                      className={clsx(
+                        "w-8 h-11 rounded overflow-hidden ring-1 bg-zinc-900 shrink-0",
+                        RARITY_STYLE[p.rarity].frame
+                      )}
+                    >
+                      {p.imageUrl && (
+                        <img
+                          src={p.imageUrl}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                          className="w-full h-full object-contain"
+                          draggable={false}
+                        />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-bold text-white truncate">
+                        {p.card_name}
+                      </p>
+                      <p className="text-[9px] text-zinc-400 leading-tight">
+                        HP {p.baseHp} · ATK {p.baseAtk}
+                      </p>
+                      {p.type && (
+                        <span
+                          className={clsx(
+                            "inline-block mt-0.5 px-1 py-[1px] rounded text-[8px] font-black",
+                            TYPE_STYLE[p.type].badge
+                          )}
+                        >
+                          {p.type}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      {error && (
+        <p className="text-[11px] text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">
+          {error}
+        </p>
+      )}
+
       <button
         type="button"
-        onClick={onClose}
-        className="w-full h-11 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-zinc-950 font-bold text-sm"
+        onClick={onSave}
+        disabled={order.length !== 3 || saving || insufficient}
+        style={{ touchAction: "manipulation" }}
+        className={clsx(
+          "w-full h-12 rounded-xl font-black text-base transition",
+          order.length === 3 && !saving && !insufficient
+            ? "bg-gradient-to-r from-fuchsia-500 to-violet-500 text-white active:scale-[0.98]"
+            : "bg-white/5 text-zinc-500 cursor-not-allowed"
+        )}
       >
-        닫기
+        {saving ? "등록 중..." : "🛡️ 방어 덱 등록 완료"}
       </button>
     </div>
   );
