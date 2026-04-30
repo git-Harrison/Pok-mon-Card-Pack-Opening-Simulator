@@ -25,10 +25,12 @@ import { compareRarity } from "@/lib/rarity";
 import PageBackdrop from "./PageBackdrop";
 import Portal from "./Portal";
 
-// 일괄 감별 한 번에 보낼 수 있는 최대 카드 수.
-// 서버 bulk_submit_pcl_grading 의 statement_timeout 180s 안에서 안전한
-// 상한. SQL 함수와 동일 값으로 동기화 필수.
-const BULK_GRADING_MAX = 5000;
+// 일괄 감별 청크 당 최대 카드 수.
+// 서버 process_grading_job_chunk 의 statement_timeout 180s 안에서 안전한
+// 상한. 이전 5000 → 2000 으로 축소 — 청크 더 자주, 더 빠르게 (각 chunk
+// ~50ms). 네트워크 jitter 시 재시도 비용도 작아짐. 사용자가 5000장 감별
+// 요청해도 클라가 자동 분할 호출 → UX 동일.
+const BULK_GRADING_MAX = 2000;
 
 const OAK_SPRITE =
   "https://play.pokemonshowdown.com/sprites/trainers/oak-gen3.png";
@@ -76,6 +78,19 @@ export default function GradingView() {
     if (!user) return;
     try {
       const job = await getActiveGradingJob(user.id);
+      // shape 검증 — cursor/total/status 누락된 객체로 ActiveJobBanner 렌더
+      // 시 toLocaleString throw 되는 걸 차단. 이전엔 banner 측에 무방어
+      // 호출이 있어서 페이지 단 에러가 발화되는 주범이었음.
+      if (
+        job &&
+        (typeof job.cursor !== "number" ||
+          typeof job.total !== "number" ||
+          typeof job.status !== "string")
+      ) {
+        console.warn("[grading] getActiveGradingJob shape invalid:", job);
+        setActiveJob(null);
+        return;
+      }
       setActiveJob(job);
     } catch (e) {
       console.warn("[grading] getActiveGradingJob threw:", e);
@@ -414,7 +429,11 @@ function LabActionLever({
 }
 
 /** 활성 잡 banner — 페이지 외부에서도 백그라운드 감별 진행 표시 + 모달
- *  복귀. 잡 status === completed 면 표시 안 함 (모달 결과 화면이 처리). */
+ *  복귀. 잡 status === completed 면 표시 안 함 (모달 결과 화면이 처리).
+ *
+ *  안정성: 서버 응답에 cursor/total/success_count 가 누락된 경우 (스키마
+ *  캐시 mismatch / postgrest 일시 이슈) 0 으로 폴백 — 이전엔 무방어 호출이
+ *  routes-error 로 빠지는 주범이었음. */
 function ActiveJobBanner({
   job,
   onResume,
@@ -422,11 +441,13 @@ function ActiveJobBanner({
   job: GradingJob;
   onResume: () => void;
 }) {
-  const pct =
-    job.total > 0
-      ? Math.min(100, Math.round((job.cursor / job.total) * 100))
-      : 0;
-  const isProcessing = job.status === "processing" || job.status === "pending";
+  const cursor = Number.isFinite(job?.cursor) ? Math.max(0, job.cursor) : 0;
+  const total = Number.isFinite(job?.total) ? Math.max(0, job.total) : 0;
+  const successCount = Number.isFinite(job?.success_count)
+    ? Math.max(0, job.success_count)
+    : 0;
+  const pct = total > 0 ? Math.min(100, Math.round((cursor / total) * 100)) : 0;
+  const isProcessing = job?.status === "processing" || job?.status === "pending";
   return (
     <button
       type="button"
@@ -438,13 +459,13 @@ function ActiveJobBanner({
         <span aria-hidden className="text-2xl">🔬</span>
         <div className="flex-1 min-w-0">
           <p className="text-[11px] uppercase tracking-[0.18em] text-fuchsia-200/85 font-bold">
-            {isProcessing ? "감별 진행 중" : `감별 ${job.status}`}
+            {isProcessing ? "감별 진행 중" : `감별 ${job?.status ?? "?"}`}
           </p>
           <p className="mt-0.5 text-[13px] font-bold text-white">
-            {job.cursor.toLocaleString("ko-KR")} /{" "}
-            {job.total.toLocaleString("ko-KR")}장 ({pct}%)
+            {cursor.toLocaleString("ko-KR")} /{" "}
+            {total.toLocaleString("ko-KR")}장 ({pct}%)
             <span className="ml-1.5 text-[11px] text-fuchsia-200/70 font-normal">
-              · 성공 {job.success_count.toLocaleString("ko-KR")}장
+              · 성공 {successCount.toLocaleString("ko-KR")}장
             </span>
           </p>
         </div>
@@ -1030,6 +1051,29 @@ function BulkGradingModal({
   // 폴링 재개.
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const cancelledRef = useRef(false);
+  // submit 중복 방지 — phase 가 picking → submitting 으로 즉시 바뀌지만
+  // setState 비동기 특성상 같은 tick 에 두 번 호출되는 race 방어.
+  const submittingRef = useRef(false);
+  // 폴링 재시도 진행 표시 — 사용자가 "잠시 끊김 → 자동 재시도 중" 걸 봄.
+  // 정상 응답 받으면 null 로 리셋.
+  const [retryState, setRetryState] = useState<{
+    attempt: number;
+    max: number;
+  } | null>(null);
+  // 탭 visibility — 백그라운드 탭에선 폴링 간격을 늘려 모바일 배터리
+  // 보호 + 탭 복귀 시 batched fail cascade 방지.
+  const tabHiddenRef = useRef(false);
+  useEffect(() => {
+    function onVis() {
+      tabHiddenRef.current =
+        typeof document !== "undefined" && document.hidden;
+    }
+    if (typeof document !== "undefined") {
+      tabHiddenRef.current = document.hidden;
+      document.addEventListener("visibilitychange", onVis);
+      return () => document.removeEventListener("visibilitychange", onVis);
+    }
+  }, []);
 
   // GradingJob 응답이 최소 필드를 가졌는지 검증 — 서버 SQL 함수 변경/
   // 스키마 캐시 mismatch 로 일부 필드가 빠진 객체가 흘러올 때 렌더 단계에서
@@ -1065,13 +1109,12 @@ function BulkGradingModal({
         setResult(aggregated);
         setActiveJobId(null);
         setPhase("done");
-      } else if (job.status === "failed" || job.status === "cancelled") {
-        setError(
-          job.error_message ??
-            (job.status === "cancelled"
-              ? "감별이 취소됐어요."
-              : "감별 중 오류가 발생했어요.")
-        );
+      } else if (job.status === "cancelled") {
+        // 사용자 명시적 취소 — 에러 표기 X, 자연스럽게 picking 으로 복귀.
+        setActiveJobId(null);
+        setPhase("picking");
+      } else if (job.status === "failed") {
+        setError(job.error_message ?? "감별 중 오류가 발생했어요.");
         setActiveJobId(null);
         setPhase("picking");
       }
@@ -1080,94 +1123,109 @@ function BulkGradingModal({
   );
 
   // 청크 폴링 루프 — 잡 완료/실패까지. 강화된 안정성:
-  //  · processGradingJobChunk 가 throw 해도 (네트워크 끊김 / Supabase
-  //    timeout / fetch abort) try/catch 로 catch 하고 짧은 backoff 후 재시도
-  //  · 연속 실패 횟수 cap (5회) — 그 이상은 in-page 에러로 끝내고 사용자에게
-  //    안내. 페이지 전체 풀스크린 에러로 빠지지 않음
-  //  · 응답 shape 검증 — cursor/total/status 누락된 객체로 setState 안 함
-  //  · 언마운트 / 명시적 취소 시 cancelledRef 로 즉시 종료
+  //  · processGradingJobChunk throw → 지수 backoff 로 최대 12회 재시도
+  //    (1s/2s/4s/8s/16s/30s/30s/30s/30s/30s/30s/30s, 누적 ~3.5분).
+  //  · 매 재시도 retryState 갱신 → BulkSubmittingScreen 에 "재시도 중 (N/M)"
+  //    인라인 표시. 사용자가 "끊김" 을 인지하지만 페이지는 살아있음.
+  //  · 정상 응답 받으면 retryState 리셋 + transient 카운터 리셋.
+  //  · 응답 shape 검증 — cursor/total/status 누락된 객체로 setState 안 함.
+  //  · 언마운트 / 명시적 취소 시 cancelledRef 로 즉시 종료.
+  //  · 백그라운드 탭에선 inter-chunk 5s (foreground 200ms) — 모바일 배터리 +
+  //    탭 복귀 시 batched fail cascade 방지.
   const pollJob = useCallback(
     async (jobId: string) => {
-      const MAX_TRANSIENT_ERRORS = 5;
-      const TRANSIENT_BACKOFF_MS = 1500;
+      const MAX_TRANSIENT_ERRORS = 12;
+      const BASE_BACKOFF_MS = 1000;
+      const MAX_BACKOFF_MS = 30000;
+      const FG_INTER_CHUNK_MS = 200;
+      const BG_INTER_CHUNK_MS = 5000;
       let transientErrors = 0;
+
+      const backoffMs = (attempt: number) =>
+        Math.min(BASE_BACKOFF_MS * Math.pow(2, attempt - 1), MAX_BACKOFF_MS);
 
       while (!cancelledRef.current) {
         let res:
           | { ok: false; error: string }
           | (GradingJob & { ok: true })
           | undefined;
+        let threw = false;
+        let throwReason: unknown = null;
         try {
           res = await processGradingJobChunk(jobId, BULK_GRADING_MAX);
         } catch (e) {
-          // 네트워크 / fetch reject 등 throw — 이전엔 unhandled rejection
-          // 으로 떠서 노이즈 생겼음. 이제 transient 로 보고 재시도.
+          threw = true;
+          throwReason = e;
+        }
+
+        // throw 또는 명시적 ok=false 또는 shape mismatch → transient 분류.
+        const isTransient =
+          threw ||
+          !res ||
+          !("ok" in res) ||
+          !res.ok ||
+          !isJobShape(res);
+
+        if (isTransient) {
           transientErrors += 1;
-          console.warn(
-            `[grading] chunk fetch threw (try ${transientErrors}/${MAX_TRANSIENT_ERRORS}):`,
-            e
-          );
+          if (threw) {
+            console.warn(
+              `[grading] chunk fetch threw (${transientErrors}/${MAX_TRANSIENT_ERRORS}):`,
+              throwReason
+            );
+          } else if (res && "error" in res && res.error) {
+            console.warn(
+              `[grading] chunk error (${transientErrors}/${MAX_TRANSIENT_ERRORS}):`,
+              res.error
+            );
+          } else {
+            console.warn(
+              `[grading] chunk shape invalid (${transientErrors}/${MAX_TRANSIENT_ERRORS}):`,
+              res
+            );
+          }
+          if (!cancelledRef.current) {
+            setRetryState({
+              attempt: transientErrors,
+              max: MAX_TRANSIENT_ERRORS,
+            });
+          }
           if (transientErrors >= MAX_TRANSIENT_ERRORS) {
             if (!cancelledRef.current) {
               setError(
                 "네트워크가 불안정해서 감별 진행을 잠시 멈췄어요. 잠시 후 다시 시도해주세요. (이미 처리된 카드는 보존)"
               );
+              setRetryState(null);
               setPhase("picking");
               setActiveJobId(null);
             }
             return;
           }
-          await new Promise((r) => setTimeout(r, TRANSIENT_BACKOFF_MS));
-          continue;
-        }
-
-        // 명시적 server-side 실패 응답.
-        if (!res || !("ok" in res) || !res.ok) {
-          if (!cancelledRef.current) {
-            setError(
-              (res && "error" in res && res.error) || "잡 처리 실패."
-            );
-            setPhase("picking");
-            setActiveJobId(null);
-          }
-          return;
-        }
-
-        // 응답 shape 검증 — server SQL 시그니처 변경 / postgrest 캐시 등으로
-        // 비정상 객체 받았을 때 UI 가 박살나지 않게.
-        if (!isJobShape(res)) {
-          transientErrors += 1;
-          console.warn(
-            `[grading] chunk response shape invalid (try ${transientErrors}/${MAX_TRANSIENT_ERRORS}):`,
-            res
+          await new Promise((r) =>
+            setTimeout(r, backoffMs(transientErrors))
           );
-          if (transientErrors >= MAX_TRANSIENT_ERRORS) {
-            if (!cancelledRef.current) {
-              setError(
-                "감별 응답 형식이 비정상이에요. 페이지를 한번 닫았다 다시 열어주세요. (이미 처리된 카드는 보존)"
-              );
-              setPhase("picking");
-              setActiveJobId(null);
-            }
-            return;
-          }
-          await new Promise((r) => setTimeout(r, TRANSIENT_BACKOFF_MS));
           continue;
         }
 
-        // 정상 응답 받았으면 카운터 리셋.
-        transientErrors = 0;
+        // 정상 응답 — 카운터/재시도 표시 리셋.
+        if (transientErrors > 0) {
+          transientErrors = 0;
+          setRetryState(null);
+        }
 
         if (cancelledRef.current) return;
-        applyJobState(res);
+        // 위 isTransient 분기에서 success 응답만 통과 — 타입 narrowing.
+        const job = res as GradingJob & { ok: true };
+        applyJobState(job);
 
-        if (res.status !== "processing" && res.status !== "pending") {
+        if (job.status !== "processing" && job.status !== "pending") {
           return;
         }
-        // 다음 청크 사이 짧은 휴식 — chunk 자체가 set-based 로 빨라져
-        // (20260667) 250ms → 50ms 로 단축. 진행 막대 갱신은 setBatchProgress
-        // 가 chunk 마다 호출돼 자연스레 부드러움.
-        await new Promise((r) => setTimeout(r, 50));
+        // 다음 청크 사이 휴식 — fg/bg 차등.
+        const interMs = tabHiddenRef.current
+          ? BG_INTER_CHUNK_MS
+          : FG_INTER_CHUNK_MS;
+        await new Promise((r) => setTimeout(r, interMs));
       }
     },
     [applyJobState]
@@ -1208,41 +1266,55 @@ function BulkGradingModal({
 
   const submit = useCallback(async () => {
     if (totalEligibleCount === 0 || phase !== "picking") return;
+    if (submittingRef.current) return; // 중복 클릭 방어.
+    submittingRef.current = true;
     setError(null);
+    setRetryState(null);
     setPhase("submitting");
 
-    // 평탄 배열 빌드.
-    const allCardIds: string[] = [];
-    const allRarities: string[] = [];
-    for (const it of eligible) {
-      for (let i = 0; i < it.count; i++) {
-        allCardIds.push(it.card.id);
-        allRarities.push(it.card.rarity);
-      }
-    }
-    const total = allCardIds.length;
-    setBatchProgress({ done: 0, total });
-
-    // enqueue 단계도 throw 가능 (네트워크 끊김) — try/catch 로 감싸서
-    // 페이지 풀스크린 에러로 번지지 않게.
-    let enq: Awaited<ReturnType<typeof enqueueGradingJob>>;
     try {
-      enq = await enqueueGradingJob(userId, allCardIds, allRarities, autoSellBelow);
-    } catch (e) {
-      console.warn("[grading] enqueue threw:", e);
-      setError("감별 시작 요청이 실패했어요. 잠시 후 다시 시도해주세요.");
-      setPhase("picking");
-      return;
+      // 평탄 배열 빌드.
+      const allCardIds: string[] = [];
+      const allRarities: string[] = [];
+      for (const it of eligible) {
+        for (let i = 0; i < it.count; i++) {
+          allCardIds.push(it.card.id);
+          allRarities.push(it.card.rarity);
+        }
+      }
+      const total = allCardIds.length;
+      setBatchProgress({ done: 0, total });
+
+      // enqueue 단계도 throw 가능 (네트워크 끊김) — try/catch 로 감싸서
+      // 페이지 풀스크린 에러로 번지지 않게.
+      let enq: Awaited<ReturnType<typeof enqueueGradingJob>>;
+      try {
+        enq = await enqueueGradingJob(
+          userId,
+          allCardIds,
+          allRarities,
+          autoSellBelow
+        );
+      } catch (e) {
+        console.warn("[grading] enqueue threw:", e);
+        setError(
+          "감별 시작 요청이 실패했어요. 잠시 후 다시 시도해주세요."
+        );
+        setPhase("picking");
+        return;
+      }
+      if (!enq.ok || !enq.job_id) {
+        setError(enq.error ?? "잡 등록 실패.");
+        setPhase("picking");
+        return;
+      }
+      setActiveJobId(enq.job_id);
+      cancelledRef.current = false;
+      void pollJob(enq.job_id);
+      void onPointsChange; // 잡 완료 시 부모가 wallet refresh 로 갱신.
+    } finally {
+      submittingRef.current = false;
     }
-    if (!enq.ok || !enq.job_id) {
-      setError(enq.error ?? "잡 등록 실패.");
-      setPhase("picking");
-      return;
-    }
-    setActiveJobId(enq.job_id);
-    cancelledRef.current = false;
-    void pollJob(enq.job_id);
-    void onPointsChange; // 잡 완료 시 부모가 wallet refresh 로 갱신.
   }, [
     totalEligibleCount,
     phase,
@@ -1310,6 +1382,7 @@ function BulkGradingModal({
             <BulkSubmittingScreen
               count={submitCount}
               progress={batchProgress}
+              retryState={retryState}
               onCancel={handleCancel}
             />
           ) : phase === "greet" ? (
@@ -1715,10 +1788,12 @@ const SCAN_LINES: string[] = [
 function BulkSubmittingScreen({
   count,
   progress,
+  retryState,
   onCancel,
 }: {
   count: number;
   progress: { done: number; total: number };
+  retryState: { attempt: number; max: number } | null;
   onCancel: () => void;
 }) {
   // 진행 표시 — 잡 cursor / total 기반.
@@ -1818,6 +1893,14 @@ function BulkSubmittingScreen({
           <p className="mt-1 text-[11px] text-amber-200/85 font-bold tabular-nums">
             진행 {progress.done.toLocaleString("ko-KR")} /{" "}
             {progress.total.toLocaleString("ko-KR")} ({pct}%)
+          </p>
+        )}
+        {retryState && (
+          // 일시 끊김 — 페이지 자체는 살아있음. 정상 응답 받으면 자동 사라짐.
+          <p className="mt-1 text-[11px] text-amber-300/90 font-bold inline-flex items-center gap-1.5">
+            <span aria-hidden className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+            네트워크 잠시 끊김 — 자동 재시도 중 ({retryState.attempt}/
+            {retryState.max})
           </p>
         )}
       </div>
