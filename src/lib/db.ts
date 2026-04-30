@@ -886,6 +886,24 @@ export async function cancelGradingJob(jobId: string, userId: string) {
   return data as { ok: boolean; error?: string };
 }
 
+/** PCL 등급별 일괄 삭제 — 카드지갑 정리. 사용 중 슬랩 (전시/펫/
+ *  방어덱/대기선물) 은 보호. 서버: 20260685. */
+export async function bulkDeletePclByGrade(userId: string, grade: number) {
+  const { data, error } = await supabase.rpc("bulk_delete_pcl_by_grade", {
+    p_user_id: userId,
+    p_grade: grade,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    error?: string;
+    grade?: number;
+    total?: number;
+    locked?: number;
+    deleted?: number;
+  };
+}
+
 export async function removeShowcase(userId: string, showcaseId: string) {
   const { data, error } = await supabase.rpc("remove_showcase", {
     p_user_id: userId,

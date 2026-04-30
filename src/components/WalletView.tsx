@@ -14,6 +14,7 @@ import type { Card, GiftQuota, Rarity } from "@/lib/types";
 import { SETS, getCard } from "@/lib/sets";
 import { useAuth } from "@/lib/auth";
 import {
+  bulkDeletePclByGrade,
   createGift,
   fetchAllGradingsWithDisplay,
   fetchGiftQuota,
@@ -1102,5 +1103,216 @@ function EmptyState() {
         팩 열러 가기
       </Link>
     </div>
+  );
+}
+
+/* ─────────────── PCL 일괄 삭제 모달 ─────────────── */
+
+interface PclItemForDelete {
+  grading: PclGradingWithDisplay;
+  card: Card;
+  isPet: boolean;
+  isDisplayed: boolean;
+  isDefense: boolean;
+}
+
+const DELETE_GRADES = [6, 7, 8, 9, 10] as const;
+
+function BulkDeletePclModal({
+  items,
+  userId,
+  onClose,
+  onAfterDelete,
+}: {
+  items: PclItemForDelete[];
+  userId: string;
+  onClose: () => void;
+  onAfterDelete: () => void | Promise<void>;
+}) {
+  const [busy, setBusy] = useState<number | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  // 등급별 보유/사용가능 수량 — 사용가능 = 전시/펫/방어덱 아닌 슬랩.
+  // 대기 선물 정보는 클라에 없어 server 재검증으로만 반영 (오차 가능,
+  // 정상). 토스트로 server 응답 그대로 노출.
+  const counts = useMemo(() => {
+    const m: Record<number, { total: number; deletable: number }> = {};
+    for (const g of DELETE_GRADES) m[g] = { total: 0, deletable: 0 };
+    for (const it of items) {
+      const g = it.grading.grade;
+      if (!m[g]) continue;
+      m[g].total += 1;
+      if (!it.isPet && !it.isDisplayed && !it.isDefense) {
+        m[g].deletable += 1;
+      }
+    }
+    return m;
+  }, [items]);
+
+  // ESC 닫기 + body 스크롤 잠금.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && busy === null) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose, busy]);
+
+  const runDelete = useCallback(
+    async (grade: number) => {
+      const c = counts[grade];
+      if (!c) return;
+      const isPcl10 = grade === 10;
+      const warnPrefix = isPcl10
+        ? "⚠️ 위험: PCL 10 슬랩은 최상위 등급입니다.\n\n"
+        : "";
+      const confirmMsg =
+        warnPrefix +
+        `정말 PCL ${grade} 등급 카드를 전부 삭제하시겠습니까?\n\n` +
+        `· 보유 ${c.total}장 중 사용 가능 ${c.deletable}장 삭제 예정\n` +
+        `· 전시/펫/방어덱/대기 선물 등 사용 중인 카드는 자동 보호\n` +
+        `· 삭제된 슬랩은 복구할 수 없습니다.`;
+      if (!window.confirm(confirmMsg)) return;
+      setBusy(grade);
+      const res = await bulkDeletePclByGrade(userId, grade);
+      setBusy(null);
+      if (!res.ok) {
+        setToast(res.error ?? "삭제 실패");
+        return;
+      }
+      const deleted = res.deleted ?? 0;
+      const locked = res.locked ?? 0;
+      setToast(
+        `PCL ${grade}: ${deleted}장 삭제됨` +
+          (locked > 0 ? ` · ${locked}장은 사용중이라 보호됨` : "")
+      );
+      await onAfterDelete();
+    },
+    [counts, userId, onAfterDelete]
+  );
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2800);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  return (
+    <Portal>
+      <motion.div
+        className="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md flex items-center justify-center px-3"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={busy === null ? onClose : undefined}
+      >
+        <motion.div
+          className="relative w-full max-w-md bg-zinc-950 border border-rose-500/40 rounded-2xl overflow-hidden shadow-2xl"
+          initial={{ scale: 0.94, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.94, opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10 bg-rose-500/10">
+            <div>
+              <h3 className="text-sm font-bold text-white">
+                🗑️ PCL 일괄 삭제
+              </h3>
+              <p className="text-[10px] text-rose-200/80 mt-0.5">
+                등급을 선택해 카드지갑에서 한 번에 삭제
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={busy !== null}
+              aria-label="닫기"
+              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center disabled:opacity-50"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="p-4 space-y-2">
+            <p className="text-[12px] text-zinc-300 leading-snug">
+              사용 중 (전시 / 펫 / 방어덱 / 대기 선물) 슬랩은 자동 보호됩니다.
+              삭제된 슬랩은 <b className="text-rose-300">복구할 수 없어요.</b>
+            </p>
+            <ul className="space-y-1.5">
+              {DELETE_GRADES.map((g) => {
+                const c = counts[g];
+                const total = c?.total ?? 0;
+                const deletable = c?.deletable ?? 0;
+                const disabled = total === 0 || busy !== null;
+                const isPcl10 = g === 10;
+                return (
+                  <li key={g}>
+                    <button
+                      type="button"
+                      onClick={() => runDelete(g)}
+                      disabled={disabled}
+                      style={{ touchAction: "manipulation" }}
+                      className={clsx(
+                        "w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border transition",
+                        disabled
+                          ? "bg-white/[0.02] border-white/5 text-zinc-600 cursor-not-allowed"
+                          : isPcl10
+                          ? "bg-rose-500/10 border-rose-500/50 text-rose-100 hover:bg-rose-500/20"
+                          : "bg-white/5 border-white/15 text-white hover:bg-white/10"
+                      )}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span
+                          className={clsx(
+                            "shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-[12px] font-black",
+                            isPcl10
+                              ? "bg-amber-400 text-zinc-950"
+                              : "bg-zinc-800 text-zinc-100 border border-white/10"
+                          )}
+                        >
+                          PCL{g}
+                        </span>
+                        {isPcl10 && (
+                          <span className="text-[10px] font-bold text-amber-300">
+                            ⚠️ 최상위 등급
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-right">
+                        <span className="block text-[11px] text-zinc-400 tabular-nums">
+                          보유 {total}장
+                        </span>
+                        <span className="block text-[12px] font-black tabular-nums">
+                          {busy === g ? (
+                            <span className="text-zinc-400">삭제 중…</span>
+                          ) : total === 0 ? (
+                            <span className="text-zinc-600">없음</span>
+                          ) : (
+                            <span className="text-rose-200">
+                              삭제 가능 {deletable}장
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            {toast && (
+              <div className="mt-2 text-[12px] text-emerald-200 bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-3 py-2">
+                {toast}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
+    </Portal>
   );
 }
