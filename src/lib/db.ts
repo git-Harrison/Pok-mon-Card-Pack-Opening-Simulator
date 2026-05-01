@@ -1114,6 +1114,13 @@ export async function pickMyStarter(
   return data as PickStarterResult;
 }
 
+/** 모든 유저가 이미 선택한 종(species) 목록 — 선택 화면 필터링용. */
+export async function fetchTakenStarterSpecies(): Promise<string[]> {
+  const { data, error } = await supabase.rpc("get_taken_starter_species");
+  if (error || !data) return [];
+  return data as string[];
+}
+
 /** 도감 헤더 — 동일 속성 PCL10 보유 카드 카운트 (사용 중 제외). */
 export interface StarterCompanionCounts {
   mur: number;

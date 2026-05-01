@@ -11,6 +11,7 @@ import {
   fetchMyStarter,
   fetchStarterCompanionCounts,
   fetchStarterMaterials,
+  fetchTakenStarterSpecies,
   pickMyStarter,
   type EnhanceResult,
   type MyStarter,
@@ -26,45 +27,45 @@ import { HelpIcon, PokeballNavIcon } from "./icons/NavIcons";
    src/lib/wild/name-to-dex.ts 의 dex 번호와 1:1 — 야생/체육관 sprite
    매핑 시스템 (wildSpriteUrl) 그대로 재사용 → 실제 포켓몬 GIF.
 
-   확률: 뮤츠 5%, 뮤 10%, 기본 8마리 균등(약 10.625% 씩).
+   선택 가능 10종 (기본형). 모든 유저 통틀어 같은 종은 1명만 가질 수 있음
+   (server-side unique constraint — 20260696 마이그레이션).
 */
 type StarterSpecies =
   | "pikachu"
   | "charmander"
-  | "squirtle"
   | "bulbasaur"
-  | "gastly"
-  | "dratini"
   | "pidgey"
-  | "piplup"
-  | "mew"
-  | "mewtwo";
+  | "poliwag"
+  | "gastly"
+  | "chikorita"
+  | "chimchar"
+  | "geodude"
+  | "caterpie";
 
 interface SpeciesMeta {
   species: StarterSpecies;
   name: string; // 한글 이름 (name-to-dex 와 동일)
   dex: number; // PokeAPI dex 번호
-  rarity: "common" | "rare" | "super";
   greet: string; // 등장 직후 말풍선
   accent: string; // 후광/엣지 컬러
-  type: PokemonType; // 속성 (전기/불꽃/물/풀/고스트/드래곤/비행/에스퍼)
+  type: PokemonType; // 속성
   basePower: number; // 전투력 base — 종 + level 보정
 }
 
 type PokemonType =
-  | "전기" | "불꽃" | "물" | "풀" | "고스트" | "드래곤" | "비행" | "에스퍼";
+  | "전기" | "불꽃" | "물" | "풀" | "고스트" | "비행" | "바위" | "벌레";
 
 const STARTER_META: Record<StarterSpecies, SpeciesMeta> = {
-  pikachu:    { species: "pikachu",    name: "피카츄",   dex: 25,  rarity: "common", greet: "피카!",       accent: "#facc15", type: "전기",   basePower: 1100 },
-  charmander: { species: "charmander", name: "파이리",   dex: 4,   rarity: "common", greet: "파이리!",     accent: "#fb923c", type: "불꽃",   basePower: 1100 },
-  squirtle:   { species: "squirtle",   name: "꼬부기",   dex: 7,   rarity: "common", greet: "꼬북꼬북",    accent: "#38bdf8", type: "물",     basePower: 1050 },
-  bulbasaur:  { species: "bulbasaur",  name: "이상해씨", dex: 1,   rarity: "common", greet: "이상해씨~",   accent: "#22c55e", type: "풀",     basePower: 1050 },
-  gastly:     { species: "gastly",     name: "고오스",   dex: 92,  rarity: "common", greet: "고오~~",      accent: "#7c3aed", type: "고스트", basePower: 1000 },
-  dratini:    { species: "dratini",    name: "미뇽",     dex: 147, rarity: "common", greet: "미뇽!",       accent: "#60a5fa", type: "드래곤", basePower: 1200 },
-  pidgey:     { species: "pidgey",     name: "구구",     dex: 16,  rarity: "common", greet: "구구구",      accent: "#a16207", type: "비행",   basePower: 950  },
-  piplup:     { species: "piplup",     name: "팽도리",   dex: 393, rarity: "common", greet: "팽팽!",       accent: "#0ea5e9", type: "물",     basePower: 1100 },
-  mew:        { species: "mew",        name: "뮤",       dex: 151, rarity: "rare",   greet: "뮤……?",       accent: "#f472b6", type: "에스퍼", basePower: 5500 },
-  mewtwo:     { species: "mewtwo",     name: "뮤츠",     dex: 150, rarity: "super",  greet: "……그래.",     accent: "#a78bfa", type: "에스퍼", basePower: 8800 },
+  pikachu:    { species: "pikachu",    name: "피카츄",   dex: 25,  greet: "피카!",     accent: "#facc15", type: "전기",   basePower: 1100 },
+  charmander: { species: "charmander", name: "파이리",   dex: 4,   greet: "파이리!",   accent: "#fb923c", type: "불꽃",   basePower: 1100 },
+  bulbasaur:  { species: "bulbasaur",  name: "이상해씨", dex: 1,   greet: "이상해씨~", accent: "#22c55e", type: "풀",     basePower: 1050 },
+  pidgey:     { species: "pidgey",     name: "구구",     dex: 16,  greet: "구구구",    accent: "#a16207", type: "비행",   basePower: 950  },
+  poliwag:    { species: "poliwag",    name: "발챙이",   dex: 60,  greet: "발챙!",     accent: "#38bdf8", type: "물",     basePower: 1050 },
+  gastly:     { species: "gastly",     name: "고오스",   dex: 92,  greet: "고오~~",    accent: "#7c3aed", type: "고스트", basePower: 1000 },
+  chikorita:  { species: "chikorita",  name: "치코리타", dex: 152, greet: "치코~",     accent: "#84cc16", type: "풀",     basePower: 1050 },
+  chimchar:   { species: "chimchar",   name: "불꽃숭이", dex: 390, greet: "치임!",     accent: "#ef4444", type: "불꽃",   basePower: 1050 },
+  geodude:    { species: "geodude",    name: "꼬마돌",   dex: 74,  greet: "고로!",     accent: "#92400e", type: "바위",   basePower: 1050 },
+  caterpie:   { species: "caterpie",   name: "캐터피",   dex: 10,  greet: "캐터…",     accent: "#65a30d", type: "벌레",   basePower: 950  },
 };
 
 /** 속성별 색 — 도감 / 인포 카드 / 배경 그라데이션에 사용. */
@@ -74,9 +75,9 @@ const TYPE_COLOR: Record<PokemonType, { bg: string; text: string; soft: string }
   물:     { bg: "#3b82f6", text: "#ffffff", soft: "#60a5fa" },
   풀:     { bg: "#22c55e", text: "#ffffff", soft: "#4ade80" },
   고스트: { bg: "#7c3aed", text: "#ffffff", soft: "#a78bfa" },
-  드래곤: { bg: "#6366f1", text: "#ffffff", soft: "#818cf8" },
   비행:   { bg: "#94a3b8", text: "#0f172a", soft: "#cbd5e1" },
-  에스퍼: { bg: "#ec4899", text: "#ffffff", soft: "#f472b6" },
+  바위:   { bg: "#a16207", text: "#ffffff", soft: "#d6d3d1" },
+  벌레:   { bg: "#65a30d", text: "#ffffff", soft: "#a3e635" },
 };
 
 /** 전투력 — basePower + level × 100. 향후 정식 시스템 도입 시 서버 산식으로 교체. */
@@ -90,18 +91,19 @@ interface EvolutionStageInfo {
   name: string;
 }
 
-/** 종 → stage[0..max] (인덱스 = evolution_stage). mew/mewtwo 는 진화 없음. */
+/** 종 → stage[0..max] (인덱스 = evolution_stage).
+ *  pikachu 는 2단 (라이츄 까지 — 카논상 추가 진화 없음). 그 외 9종은 3단. */
 const EVOLUTION_LINES: Record<StarterSpecies, EvolutionStageInfo[]> = {
   pikachu:    [{ dex: 25,  name: "피카츄"   }, { dex: 26,  name: "라이츄"   }],
   charmander: [{ dex: 4,   name: "파이리"   }, { dex: 5,   name: "리자드"   }, { dex: 6,   name: "리자몽"   }],
-  squirtle:   [{ dex: 7,   name: "꼬부기"   }, { dex: 8,   name: "어니부기" }, { dex: 9,   name: "거북왕"   }],
   bulbasaur:  [{ dex: 1,   name: "이상해씨" }, { dex: 2,   name: "이상해풀" }, { dex: 3,   name: "이상해꽃" }],
-  gastly:     [{ dex: 92,  name: "고오스"   }, { dex: 93,  name: "고우스트" }, { dex: 94,  name: "팬텀"     }],
-  dratini:    [{ dex: 147, name: "미뇽"     }, { dex: 148, name: "신뇽"     }, { dex: 149, name: "망나뇽"   }],
   pidgey:     [{ dex: 16,  name: "구구"     }, { dex: 17,  name: "피죤"     }, { dex: 18,  name: "피죤투"   }],
-  piplup:     [{ dex: 393, name: "팽도리"   }, { dex: 394, name: "팽태자"   }, { dex: 395, name: "엠페르트" }],
-  mew:        [{ dex: 151, name: "뮤"       }],
-  mewtwo:     [{ dex: 150, name: "뮤츠"     }],
+  poliwag:    [{ dex: 60,  name: "발챙이"   }, { dex: 61,  name: "슈륙챙이" }, { dex: 62,  name: "강챙이"   }],
+  gastly:     [{ dex: 92,  name: "고오스"   }, { dex: 93,  name: "고우스트" }, { dex: 94,  name: "팬텀"     }],
+  chikorita:  [{ dex: 152, name: "치코리타" }, { dex: 153, name: "베이리프" }, { dex: 154, name: "메가니움" }],
+  chimchar:   [{ dex: 390, name: "불꽃숭이" }, { dex: 391, name: "파이숭이" }, { dex: 392, name: "초염몽"   }],
+  geodude:    [{ dex: 74,  name: "꼬마돌"   }, { dex: 75,  name: "데구리"   }, { dex: 76,  name: "딱구리"   }],
+  caterpie:   [{ dex: 10,  name: "캐터피"   }, { dex: 11,  name: "단데기"   }, { dex: 12,  name: "버터플"   }],
 };
 
 /** 현재 stage 에 보여줄 dex/이름 — 진화 후 캐릭터 변경에 사용. */
@@ -111,7 +113,7 @@ function effectiveStage(species: StarterSpecies, stage: number): EvolutionStageI
   return line[idx]!;
 }
 
-/** 진화 가능한 다음 stage 정보 — 없으면 null. mew/mewtwo / 라이츄 (1차 끝) / 2차 진화 끝 모두 null. */
+/** 진화 가능한 다음 stage 정보 — 없으면 null. 라이츄 (피카츄 1차 끝) / 2차 진화 끝 모두 null. */
 function nextEvolveStage(
   species: StarterSpecies,
   stage: number,
@@ -151,39 +153,19 @@ function previewMaterialExp(
   return Math.floor(base * (sameType ? 1.03 : 1.0));
 }
 
+/** 선택 가능 10종 — server `pick_my_starter` 의 v_allowed 와 동일. */
 const STARTER_LIST: StarterSpecies[] = [
-  "pikachu", "charmander", "squirtle", "bulbasaur",
-  "gastly", "dratini", "pidgey", "piplup",
+  "pikachu", "charmander", "bulbasaur", "pidgey", "poliwag",
+  "gastly", "chikorita", "chimchar", "geodude", "caterpie",
 ];
-
-const SUPER_RATE = 5; // mewtwo
-const RARE_RATE = 10; // mew
-
-function rollOnce(): StarterSpecies {
-  const r = Math.random() * 100;
-  if (r < SUPER_RATE) return "mewtwo";
-  if (r < SUPER_RATE + RARE_RATE) return "mew";
-  return STARTER_LIST[Math.floor(Math.random() * STARTER_LIST.length)]!;
-}
-
-const MAX_ROLLS = 5;
-
-interface RollResult {
-  index: number; // 1..5
-  species: StarterSpecies;
-}
 
 type Phase =
   | "loading"
   | "owned"
-  | "intro"
-  | "throwing"
-  | "wobble"
-  | "reveal"
-  | "between"
-  | "naming"
-  | "saving"
-  | "done";
+  | "intro"   // 선택 그리드
+  | "naming"  // 별명 입력
+  | "saving"  // 서버 저장 중
+  | "done";   // 등록 완료 연출
 
 /* ─────────── 진입점 ─────────── */
 export default function MyPokemonView() {
@@ -191,77 +173,52 @@ export default function MyPokemonView() {
   const reduce = useReducedMotion();
   const [phase, setPhase] = useState<Phase>("loading");
   const [starter, setStarter] = useState<MyStarter | null>(null);
-  const [rolls, setRolls] = useState<RollResult[]>([]);
-  const [currentSpecies, setCurrentSpecies] = useState<StarterSpecies | null>(null);
-  const [pickedIdx, setPickedIdx] = useState<number | null>(null);
+  const [taken, setTaken] = useState<string[]>([]);
+  const [pickedSpecies, setPickedSpecies] = useState<StarterSpecies | null>(null);
   const [nickname, setNickname] = useState("");
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // 서버에서 starter 조회
+  // 서버에서 starter + 다른 유저가 가져간 종 목록 동시 조회.
   useEffect(() => {
     if (!user) return;
     let alive = true;
-    fetchMyStarter(user.id).then((s) => {
-      if (!alive) return;
-      if (s) {
-        setStarter(s);
-        setPhase("owned");
-      } else {
-        setPhase("intro");
+    Promise.all([fetchMyStarter(user.id), fetchTakenStarterSpecies()]).then(
+      ([s, t]) => {
+        if (!alive) return;
+        setTaken(t);
+        if (s) {
+          setStarter(s);
+          setPhase("owned");
+        } else {
+          setPhase("intro");
+        }
       }
-    });
+    );
     return () => {
       alive = false;
     };
   }, [user]);
 
-  // 던지기 시퀀스
-  const throwTimers = useRef<number[]>([]);
-  const clearTimers = useCallback(() => {
-    throwTimers.current.forEach((id) => clearTimeout(id));
-    throwTimers.current = [];
+  const refreshTaken = useCallback(async () => {
+    const t = await fetchTakenStarterSpecies();
+    setTaken(t);
   }, []);
-  useEffect(() => clearTimers, [clearTimers]);
 
-  const startThrow = useCallback(() => {
-    if (rolls.length >= MAX_ROLLS) return;
-    if (phase !== "intro" && phase !== "between") return;
-    clearTimers();
-    const result = rollOnce();
-    setCurrentSpecies(result);
-    setPhase("throwing");
-
-    // 타이밍 (reduce off):
-    //   0     throwing  (1.0s 호 — 이전 속도)
-    //   1000  wobble    (3.0s 1차→정지→2차→정지→3차 — 이전 속도)
-    //   4000  reveal    (빛 폭발 — 짧게)
-    //   4500  between   (캐릭터 빠르게 등장)
-    const t1 = window.setTimeout(() => setPhase("wobble"), reduce ? 200 : 1000);
-    const t2 = window.setTimeout(() => setPhase("reveal"), reduce ? 600 : 4000);
-    const t3 = window.setTimeout(() => {
-      setRolls((prev) => [...prev, { index: prev.length + 1, species: result }]);
-      setPhase("between");
-    }, reduce ? 1100 : 4500);
-    throwTimers.current = [t1, t2, t3];
-  }, [phase, rolls.length, reduce, clearTimers]);
-
-  const startNaming = useCallback((idx: number) => {
-    setPickedIdx(idx);
+  const startNaming = useCallback((species: StarterSpecies) => {
+    setPickedSpecies(species);
     setNickname("");
     setSaveError(null);
     setPhase("naming");
   }, []);
 
   const cancelNaming = useCallback(() => {
-    setPickedIdx(null);
+    setPickedSpecies(null);
     setSaveError(null);
-    setPhase("between");
+    setPhase("intro");
   }, []);
 
   const confirmName = useCallback(async () => {
-    if (!user || pickedIdx == null) return;
-    const r = rolls[pickedIdx];
-    if (!r) return;
+    if (!user || !pickedSpecies) return;
     const trimmed = nickname.trim();
     if (!trimmed) {
       setSaveError("이름을 입력해주세요.");
@@ -273,13 +230,16 @@ export default function MyPokemonView() {
     }
     setSaveError(null);
     setPhase("saving");
-    const res = await pickMyStarter(user.id, r.species, trimmed);
+    const res = await pickMyStarter(user.id, pickedSpecies, trimmed);
     if (!res.ok) {
+      // 이미 본인이 등록한 경우 — 서버가 starter 를 돌려줌.
       if (res.starter) {
         setStarter(res.starter);
         setPhase("owned");
         return;
       }
+      // 다른 유저가 방금 데려간 경우 — 목록 새로고침 후 안내.
+      await refreshTaken();
       setSaveError(res.error ?? "저장에 실패했어요.");
       setPhase("naming");
       return;
@@ -287,7 +247,7 @@ export default function MyPokemonView() {
     setStarter(res.starter ?? null);
     setPhase("done");
     window.setTimeout(() => setPhase("owned"), reduce ? 400 : 2200);
-  }, [user, pickedIdx, rolls, nickname, reduce]);
+  }, [user, pickedSpecies, nickname, reduce, refreshTaken]);
 
   if (phase === "loading") {
     return (
@@ -305,15 +265,13 @@ export default function MyPokemonView() {
   return (
     <FullscreenScene
       phase={phase}
-      currentSpecies={currentSpecies}
-      rolls={rolls}
-      onThrow={startThrow}
-      onPick={startNaming}
+      taken={taken}
+      onSelect={startNaming}
       reduce={reduce ?? false}
       naming={
-        phase === "naming" && pickedIdx != null && rolls[pickedIdx]
+        phase === "naming" && pickedSpecies
           ? {
-              species: rolls[pickedIdx]!.species,
+              species: pickedSpecies,
               nickname,
               error: saveError,
               onChange: setNickname,
@@ -323,11 +281,8 @@ export default function MyPokemonView() {
           : null
       }
       saving={
-        phase === "saving" && pickedIdx != null && rolls[pickedIdx]
-          ? {
-              species: rolls[pickedIdx]!.species,
-              nickname,
-            }
+        phase === "saving" && pickedSpecies
+          ? { species: pickedSpecies, nickname }
           : null
       }
       done={phase === "done" && starter ? starter : null}
@@ -342,20 +297,16 @@ export default function MyPokemonView() {
 */
 function FullscreenScene({
   phase,
-  currentSpecies,
-  rolls,
-  onThrow,
-  onPick,
+  taken,
+  onSelect,
   reduce,
   naming,
   saving,
   done,
 }: {
   phase: Phase;
-  currentSpecies: StarterSpecies | null;
-  rolls: RollResult[];
-  onThrow: () => void;
-  onPick: (idx: number) => void;
+  taken: string[];
+  onSelect: (species: StarterSpecies) => void;
   reduce: boolean;
   naming: {
     species: StarterSpecies;
@@ -379,31 +330,25 @@ function FullscreenScene({
     };
   }, []);
 
-  const lastIdx = rolls.length - 1;
-  const lastRoll = lastIdx >= 0 ? rolls[lastIdx] : null;
-  const speciesForDisplay =
-    phase === "reveal" || phase === "throwing" || phase === "wobble"
-      ? currentSpecies
-      : lastRoll?.species ?? currentSpecies;
-  const reachedCap = rolls.length >= MAX_ROLLS;
-
-  // ball 은 throwing 시작 시 마운트 → reveal 에서 빛 폭발 후 unmount.
-  // intro 에는 mount 안 함 (의미 없는 invisible 인스턴스 방지) — 이전엔
-  // intro 에 mount 된 ball 이 throwing 페이즈 시 새 인스턴스로 교체되면서
-  // "두 번째 호" 가 그려져 사용자가 두 번 던지는 것처럼 보였음.
-  const showBall =
-    phase === "throwing" || phase === "wobble" || phase === "reveal";
-  const showCharacter = phase === "reveal" || phase === "between";
+  // 다른 유저가 가져간 종은 화면에서 제외. 본인은 아직 미선택 상태에서만
+  // 이 scene 에 도달하므로 taken 안의 종 = "선택 불가".
+  const takenSet = useMemo(() => new Set(taken), [taken]);
+  const available = useMemo(
+    () => STARTER_LIST.filter((s) => !takenSet.has(s)),
+    [takenSet]
+  );
+  const remaining = available.length;
+  const total = STARTER_LIST.length;
 
   return (
     <Portal>
-      <div className="fixed inset-0 z-[200] overflow-hidden">
+      <div className="fixed inset-0 z-[200] overflow-y-auto">
         {/* 배경 — 하늘 → 잔디 그라데이션 */}
         <SceneBackdrop reduce={reduce} />
 
-        {/* 상단 바 — 닫기 + 회차 */}
+        {/* 상단 바 — 닫기 + 남은 포켓몬 카운트 */}
         <div
-          className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-3"
+          className="sticky top-0 left-0 right-0 z-30 flex items-center justify-between px-3"
           style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 12px)" }}
         >
           <button
@@ -415,78 +360,48 @@ function FullscreenScene({
           >
             ✕
           </button>
-          <div className="flex items-center gap-1.5">
-            {Array.from({ length: MAX_ROLLS }).map((_, i) => {
-              const filled = i < rolls.length;
-              const meta = filled ? STARTER_META[rolls[i]!.species] : null;
-              return (
-                <span
-                  key={i}
-                  className={clsx(
-                    "w-2.5 h-2.5 rounded-full",
-                    filled
-                      ? meta!.rarity !== "common"
-                        ? "ring-2 ring-amber-300/80"
-                        : ""
-                      : "bg-white/20"
-                  )}
-                  style={filled ? { background: meta!.accent } : undefined}
-                />
-              );
-            })}
+          <div className="rounded-full bg-black/55 backdrop-blur px-3 py-1.5 text-[11px] font-black text-white tracking-wider">
+            남은 포켓몬{" "}
+            <span className="text-amber-300 tabular-nums">
+              {remaining}
+            </span>
+            <span className="text-white/55"> / {total}</span>
           </div>
         </div>
 
-        {/* 확률 안내 — 좌측 상단 슬림 */}
+        {/* 본문 — 타이틀 + 그리드 / 빈 상태 */}
         <div
-          className="absolute top-14 left-3 z-30 rounded-full bg-black/45 backdrop-blur px-3 py-1 text-[11px] font-bold text-white"
-          style={{ paddingTop: "calc(0.25rem + env(safe-area-inset-top, 0px))", paddingBottom: "0.25rem" }}
+          className="relative z-10 mx-auto max-w-md px-3"
+          style={{
+            paddingTop: 8,
+            paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)",
+          }}
         >
-          <span className="text-pink-300">뮤 10%</span>
-          <span className="text-white/40 mx-1.5">·</span>
-          <span className="text-violet-300">뮤츠 5%</span>
-        </div>
-
-        {/* 제목 — 잔잔히 */}
-        <div className="absolute top-14 right-3 z-30 text-right text-white">
-          <p className="text-[10px] uppercase tracking-wider text-amber-300 font-bold">
-            내 첫 포켓몬
-          </p>
-          <p className="text-xs font-black">함께할 친구를 찾자</p>
-        </div>
-
-        {/* 무대 — 캐릭터 + 볼 (화면 중상단) */}
-        <Stage
-          phase={phase}
-          showBall={showBall}
-          showCharacter={showCharacter}
-          species={speciesForDisplay}
-          reduce={reduce}
-        />
-
-        {/* 하단 — 나레이션 박스 + CTA (포켓몬 게임 스타일) */}
-        <div
-          className="absolute bottom-0 inset-x-0 z-30 px-3"
-          style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)" }}
-        >
-          <div className="mx-auto max-w-md space-y-2">
-            <NarrationBox
-              phase={phase}
-              species={speciesForDisplay}
-              rollsCount={rolls.length}
-              reachedCap={reachedCap}
-            />
-            <CtaArea
-              phase={phase}
-              rollsCount={rolls.length}
-              reachedCap={reachedCap}
-              onThrow={onThrow}
-              onPickLast={() => lastIdx >= 0 && onPick(lastIdx)}
-              onShowList={() => lastIdx >= 0 && onPick(lastIdx)}
-              rolls={rolls}
-              onPickIdx={onPick}
-            />
+          <div className="text-center mt-1 mb-3">
+            <p className="text-[10px] uppercase tracking-[0.32em] text-amber-300 font-black">
+              내 첫 포켓몬
+            </p>
+            <h1
+              className="mt-1 text-xl font-black text-white"
+              style={{ textShadow: "0 2px 6px rgba(0,0,0,0.7)" }}
+            >
+              함께할 친구를 골라보자
+            </h1>
+            <p className="mt-1 text-[11px] font-bold text-zinc-300">
+              한 종은 한 트레이너만 가질 수 있어요.
+            </p>
           </div>
+
+          {available.length === 0 ? (
+            <EmptyAvailable />
+          ) : (
+            <SpeciesGrid
+              species={available}
+              onSelect={onSelect}
+              reduce={reduce}
+              disabled={phase !== "intro"}
+            />
+          )}
         </div>
 
         {/* 이름짓기 / 저장 / 완료 오버레이 */}
@@ -497,6 +412,89 @@ function FullscreenScene({
         </AnimatePresence>
       </div>
     </Portal>
+  );
+}
+
+/* ─────────── 선택 그리드 ───────────
+   남은(아직 아무 트레이너도 선택하지 않은) 포켓몬을 카드 형태로 표시.
+   탭 → onSelect(species) 로 별명 입력 단계 진입.
+*/
+function SpeciesGrid({
+  species,
+  onSelect,
+  reduce,
+  disabled,
+}: {
+  species: StarterSpecies[];
+  onSelect: (species: StarterSpecies) => void;
+  reduce: boolean;
+  disabled: boolean;
+}) {
+  return (
+    <ul className="grid grid-cols-2 gap-2.5">
+      {species.map((s, i) => {
+        const meta = STARTER_META[s];
+        return (
+          <li key={s}>
+            <motion.button
+              type="button"
+              onClick={() => !disabled && onSelect(s)}
+              disabled={disabled}
+              style={{ touchAction: "manipulation" }}
+              initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22, delay: reduce ? 0 : i * 0.04 }}
+              whileTap={reduce ? undefined : { scale: 0.97 }}
+              className={clsx(
+                "relative w-full rounded-2xl overflow-hidden border-[3px] border-zinc-900",
+                "bg-gradient-to-b from-white/12 to-white/5 backdrop-blur",
+                "text-left active:translate-y-[1px] transition-transform",
+                "shadow-[0_6px_0_0_rgba(15,23,42,0.85)]",
+                disabled && "opacity-60 cursor-not-allowed"
+              )}
+            >
+              {/* 후광 — 종 액센트 컬러 */}
+              <span
+                aria-hidden
+                className="absolute -top-6 -right-6 w-24 h-24 rounded-full pointer-events-none"
+                style={{
+                  background: `radial-gradient(circle, ${meta.accent}55 0%, transparent 70%)`,
+                }}
+              />
+              <div className="relative px-3 pt-2.5 pb-3 flex flex-col items-center gap-1.5">
+                <span
+                  className="inline-flex items-center justify-center w-20 h-20 rounded-2xl"
+                  style={{ background: `${meta.accent}26` }}
+                >
+                  <PokemonImg dex={meta.dex} name={meta.name} size={72} />
+                </span>
+                <p
+                  className="text-sm font-black text-white tracking-tight"
+                  style={{ textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}
+                >
+                  {meta.name}
+                </p>
+                <TypeBadge type={meta.type} />
+              </div>
+            </motion.button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** 모든 포켓몬이 다른 트레이너에게 선택된 상태. */
+function EmptyAvailable() {
+  return (
+    <div className="rounded-2xl border-[3px] border-zinc-900 bg-[#fafaf5] text-zinc-900 px-4 py-6 text-center shadow-[0_4px_0_0_rgba(15,23,42,0.85)]">
+      <p className="text-base font-black">남은 포켓몬이 없어요.</p>
+      <p className="mt-1.5 text-[12.5px] font-bold text-zinc-700 leading-relaxed">
+        모든 포켓몬이 다른 트레이너의 친구가 됐어요.
+        <br />
+        새 포켓몬이 풀리면 다시 안내드릴게요.
+      </p>
+    </div>
   );
 }
 
@@ -564,115 +562,6 @@ function SceneBackdrop({ reduce }: { reduce: boolean }) {
   );
 }
 
-/* ─────────── 무대 (스프라이트 + 볼) ─────────── */
-function Stage({
-  phase,
-  showBall,
-  showCharacter,
-  species,
-  reduce,
-}: {
-  phase: Phase;
-  showBall: boolean;
-  showCharacter: boolean;
-  species: StarterSpecies | null;
-  reduce: boolean;
-}) {
-  // 캐릭터/볼은 화면 중상단 (top 18% ~ bottom 38%) — 하단 나레이션/CTA 와
-  // 절대 겹치지 않게 분리. 무대 중심점이 viewport 의 약 35% 지점.
-  return (
-    <div
-      className="absolute inset-x-0 z-10 flex items-center justify-center"
-      style={{ top: "16%", bottom: "40%" }}
-    >
-      {/* 바닥 그림자 — 무대 하단에 둥글게 */}
-      <div
-        aria-hidden
-        className="absolute left-1/2 -translate-x-1/2 bottom-0 w-44 h-3 rounded-[50%] bg-black/60 blur-md"
-      />
-
-      {/* 등장 캐릭터 (실제 포켓몬 GIF) */}
-      <AnimatePresence mode="wait">
-        {showCharacter && species && (
-          <CharacterEntrance
-            key={`char-${species}`}
-            species={species}
-            reduce={reduce}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* 포켓몬 볼 — throwing/wobble/reveal 동안 단일 인스턴스 유지.
-          phase 별 key 분리는 transition 중복(=두 번 던지기) 의 원인이라 단일. */}
-      <AnimatePresence>
-        {showBall && <PokeBall key="ball" phase={phase} reduce={reduce} />}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-/* ─────────── 포켓몬 캐릭터 (실제 포켓몬 GIF) ─────────── */
-function CharacterEntrance({
-  species,
-  reduce,
-}: {
-  species: StarterSpecies;
-  reduce: boolean;
-}) {
-  const meta = STARTER_META[species];
-  const isRare = meta.rarity !== "common";
-  const isSuper = meta.rarity === "super";
-
-  return (
-    <motion.div
-      className="relative z-10"
-      initial={reduce ? { opacity: 0 } : { y: 24, opacity: 0, scale: 0.5 }}
-      animate={
-        reduce
-          ? { opacity: 1 }
-          : {
-              y: [24, -14, 0],
-              opacity: 1,
-              scale: [0.5, 1.2, 1],
-            }
-      }
-      exit={reduce ? { opacity: 0 } : { y: -10, opacity: 0, scale: 0.9 }}
-      transition={{ duration: reduce ? 0.2 : 0.4, ease: [0.2, 1.4, 0.4, 1] }}
-    >
-      {/* 후광 — 희귀일 때 */}
-      {isRare && !reduce && <RareAura color={meta.accent} starburst={isSuper} />}
-
-      {/* 포켓몬 GIF — wildSpriteUrl 재사용. idle bob. */}
-      <motion.div
-        animate={
-          reduce ? undefined : { y: [0, -5, 0], rotate: [-1.2, 1.2, -1.2] }
-        }
-        transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-        style={{ filter: "drop-shadow(0 8px 14px rgba(0,0,0,0.6))" }}
-      >
-        <PokemonImg dex={meta.dex} name={meta.name} size={180} />
-      </motion.div>
-
-      {/* 희귀 표식 — 좌상단 작은 뱃지 (캐릭터 가리지 않게) */}
-      {isRare && (
-        <motion.span
-          initial={{ opacity: 0, scale: 0.6 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
-          className={clsx(
-            "absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide",
-            isSuper
-              ? "bg-violet-500 text-white shadow-[0_0_12px_rgba(167,139,250,0.8)]"
-              : "bg-pink-500 text-white shadow-[0_0_12px_rgba(244,114,182,0.8)]"
-          )}
-        >
-          {isSuper ? "★ 특수" : "✦ 레어"}
-        </motion.span>
-      )}
-    </motion.div>
-  );
-}
-
 /* PokeAPI 가 아주 가끔 안 뜰 때 정적 PNG 로 전환. PokeAPI Gen-5 BW 애니
    GIF 가 1차, 같은 dex 의 정적 PNG 가 2차. */
 function PokemonImg({
@@ -712,268 +601,6 @@ function PokemonImg({
   );
 }
 
-function RareAura({
-  color,
-  starburst,
-}: {
-  color: string;
-  starburst: boolean;
-}) {
-  return (
-    <>
-      <motion.span
-        aria-hidden
-        className="absolute rounded-full"
-        style={{
-          width: 260,
-          height: 260,
-          background: `radial-gradient(circle, ${color}66 0%, transparent 65%)`,
-          left: "50%",
-          top: "50%",
-          marginLeft: -130,
-          marginTop: -130,
-          zIndex: -1,
-        }}
-        animate={{ scale: [0.85, 1.15, 0.85], opacity: [0.55, 1, 0.55] }}
-        transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-      />
-      {starburst &&
-        Array.from({ length: 16 }).map((_, i) => (
-          <motion.span
-            key={i}
-            aria-hidden
-            className="absolute rounded-full"
-            style={{
-              width: 5,
-              height: 5,
-              left: "50%",
-              top: "50%",
-              marginLeft: -2.5,
-              marginTop: -2.5,
-              background: color,
-              boxShadow: `0 0 10px ${color}`,
-              zIndex: -1,
-            }}
-            animate={{
-              x: [0, Math.cos((i / 16) * 2 * Math.PI) * 130],
-              y: [0, Math.sin((i / 16) * 2 * Math.PI) * 130],
-              opacity: [0, 1, 0],
-            }}
-            transition={{
-              duration: 1.8,
-              repeat: Infinity,
-              delay: i * 0.07,
-              ease: "easeOut",
-            }}
-          />
-        ))}
-    </>
-  );
-}
-
-/* ─────────── 포켓몬 볼 ───────────
-   throwing — 화면 하단(+260)에서 위쪽 호를 그리며(-150 정점) 무대 중심(0)
-              까지 1.0s. 1.4 회전.
-   wobble   — 1차 → 정지 → 2차 → 정지 → 3차 (3.0s 시퀀스). 글로우 펄스.
-              중간중간 ball 자체에 깜빡이는 빛 연출.
-   reveal   — 무대 중앙에서 하얀 빛 폭발 + ball 페이드아웃.
-*/
-function PokeBall({ phase, reduce }: { phase: Phase; reduce: boolean }) {
-  // 시작점 (mount 직후): 화면 아래쪽 (Stage 영역 밖) — 시각적으로 invisible
-  // 효과를 위치로 만든다. opacity 키프레임 fade-in 은 사용자 보고된
-  // "초반 깜빡임" 의 한 원인이라 제거. 위치만으로 화면 밖 → 호 → 무대 중심.
-  const initial = { y: 260, x: -40, rotate: -60, scale: 0.85 };
-
-  // 던지기 — 위쪽 정점 거쳐 무대 중심 도달 (1.0s). 마지막 바운스 제거.
-  const throwingTarget = reduce
-    ? { y: 0, x: 0, rotate: 360, scale: 1 }
-    : {
-        y: [260, -150, 0],
-        x: [-40, -10, 0],
-        rotate: [-60, 240, 360],
-        scale: [0.85, 1, 1],
-      };
-  // 흔들림 동안 위치는 무대 중심 그대로 (inner motion.div 가 흔듦).
-  const wobbleHold = { y: 0, x: 0, rotate: 0, scale: 1 };
-  // reveal — 자리에서 살짝 커지며 페이드 아웃. 빛 폭발이 동시에 그 위로.
-  const opening = { y: 0, x: 0, rotate: 0, scale: 1.5, opacity: 0 };
-
-  const target =
-    phase === "throwing"
-      ? throwingTarget
-      : phase === "wobble"
-      ? wobbleHold
-      : phase === "reveal"
-      ? opening
-      : initial;
-
-  // 흔들림 시퀀스 (motion 2) — 1차/정지/2차/정지/3차 + 마지막 작은 점프.
-  // 키 쌍 순서: 시작 0 → 흔듦 → 멈춤 → 흔듦 → 멈춤 → 흔듦 → 멈춤
-  const wobbleAnim = reduce
-    ? undefined
-    : {
-        rotate: [
-          0,
-          -22, 18, -16, 0,            // 1차 (0~0.6s)
-          0,                          // 정지 (~0.7s)
-          -28, 24, -22, 0,            // 2차 (~1.4s)
-          0,                          // 정지 (~1.7s)
-          -34, 30, -28, 28, 0,        // 3차 — 더 격하게
-        ],
-        x: [
-          0,
-          -3, 3, -2, 0,
-          0,
-          -4, 4, -3, 0,
-          0,
-          -5, 5, -4, 4, 0,
-        ],
-        y: [
-          0,
-          -2, -1, 0, 0,
-          0,
-          -3, -1, 0, 0,
-          0,
-          -4, -2, 0, 0, 0,
-        ],
-      };
-
-  // 글로우 펄스 — wobbleAnim 키프레임(16개)과 같은 길이로 동기.
-  // 1차 흔들림: 깜빡임 없음 (긴장감 빌드업 — 차분히 시작).
-  // 2차 흔들림: 약한 깜빡 (0.3) — "어? 잡힌건가?".
-  // 3차 흔들림: 강한 깜빡 (0.7→0.95) — "잡혔다!".
-  const glowAnim = reduce
-    ? undefined
-    : {
-        opacity: [
-          0,
-          0, 0, 0, 0,             // 1차 — 무
-          0,                      // 정지
-          0.3, 0, 0.3, 0,         // 2차 — 약한 깜빡
-          0,                      // 정지
-          0.7, 0, 0.95, 0.7, 0.95,// 3차 — 강한 깜빡
-        ],
-      };
-
-  return (
-    <motion.div
-      className="absolute z-20"
-      initial={initial}
-      animate={target}
-      exit={{ opacity: 0, scale: 1.3, transition: { duration: 0.2 } }}
-      transition={
-        phase === "throwing"
-          ? {
-              duration: reduce ? 0.2 : 1.0,
-              ease: "easeOut",
-              times: reduce ? undefined : [0, 0.55, 1],
-            }
-          : phase === "reveal"
-          ? { duration: 0.3, ease: "easeOut" }
-          : { duration: 0.2 }
-      }
-      style={{ left: "50%", top: "50%", marginLeft: -36, marginTop: -36 }}
-    >
-      <motion.div
-        className="relative"
-        animate={phase === "wobble" ? wobbleAnim : undefined}
-        transition={{ duration: 3.0, ease: "easeInOut" }}
-      >
-        <BallSvg size={72} />
-
-        {/* 중앙 흰 버튼 위에 깜빡이는 빛 — wobble 동안 "잡혔나?" 신호 */}
-        {phase === "wobble" && (
-          <motion.span
-            aria-hidden
-            className="absolute rounded-full"
-            style={{
-              left: "50%",
-              top: "50%",
-              width: 14,
-              height: 14,
-              marginLeft: -7,
-              marginTop: -7,
-              background:
-                "radial-gradient(circle, rgba(254,243,160,1) 0%, rgba(251,191,36,0.9) 40%, rgba(251,191,36,0) 80%)",
-              boxShadow: "0 0 22px rgba(251,191,36,0.95)",
-            }}
-            animate={glowAnim}
-            transition={{ duration: 3.0, ease: "easeInOut" }}
-          />
-        )}
-
-        {/* 외곽 광채 펄스 — 2차 부터 등장 (1차 동안엔 무) */}
-        {phase === "wobble" && !reduce && (
-          <motion.span
-            aria-hidden
-            className="absolute rounded-full"
-            style={{
-              width: 130,
-              height: 130,
-              left: "50%",
-              top: "50%",
-              marginLeft: -65,
-              marginTop: -65,
-              background:
-                "radial-gradient(circle, rgba(251,191,36,0.55) 0%, rgba(251,191,36,0) 65%)",
-              zIndex: -1,
-            }}
-            // glowAnim 과 동일 길이/타이밍 — 1차 0, 2차 약, 3차 강.
-            animate={{
-              opacity: [
-                0,
-                0, 0, 0, 0,
-                0,
-                0.25, 0, 0.25, 0,
-                0,
-                0.55, 0, 0.8, 0.55, 0.85,
-              ],
-            }}
-            transition={{ duration: 3.0, ease: "easeInOut" }}
-          />
-        )}
-      </motion.div>
-
-      {/* reveal — 무대 중앙에서 하얀 빛 폭발 */}
-      {phase === "reveal" && (
-        <>
-          <motion.span
-            aria-hidden
-            className="absolute rounded-full bg-white"
-            style={{
-              left: "50%",
-              top: "50%",
-              width: 72,
-              height: 72,
-              marginLeft: -36,
-              marginTop: -36,
-            }}
-            initial={{ scale: 0.5, opacity: 1 }}
-            animate={{ scale: 12, opacity: 0 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-          />
-          <motion.span
-            aria-hidden
-            className="absolute rounded-full"
-            style={{
-              left: "50%",
-              top: "50%",
-              width: 72,
-              height: 72,
-              marginLeft: -36,
-              marginTop: -36,
-              boxShadow: "0 0 60px 20px rgba(255,255,255,0.9)",
-            }}
-            initial={{ scale: 0.4, opacity: 0.95 }}
-            animate={{ scale: 4, opacity: 0 }}
-            transition={{ duration: 0.45, ease: "easeOut" }}
-          />
-        </>
-      )}
-    </motion.div>
-  );
-}
-
 function BallSvg({ size = 64 }: { size?: number }) {
   return (
     <svg
@@ -1003,280 +630,6 @@ function BallSvg({ size = 64 }: { size?: number }) {
       <circle cx="32" cy="32" r="6" fill="#fff" stroke="#0f172a" strokeWidth="2" />
       <ellipse cx="22" cy="20" rx="6" ry="3" fill="#fff" opacity="0.5" />
     </svg>
-  );
-}
-
-/* ─────────── 나레이션 프레임 (껍데기 + typewriter) ───────────
-   하단 고정. 흰 배경 + 두꺼운 검정 보더 + 우하단 깜빡이는 ▼ indicator.
-   외부에서 line 만 넘기면 됨 — 풀스크린 scene / owned view 모두 사용.
-*/
-function NarrationFrame({ line }: { line: string }) {
-  const [shown, setShown] = useState(0);
-  const done = shown >= line.length;
-  useEffect(() => {
-    setShown(0);
-    if (!line) return;
-    let i = 0;
-    const id = window.setInterval(() => {
-      i += 1;
-      setShown(i);
-      if (i >= line.length) clearInterval(id);
-    }, 28);
-    return () => clearInterval(id);
-  }, [line]);
-
-  if (!line) return <div className="h-[88px]" aria-hidden />;
-
-  return (
-    <motion.div
-      key={line}
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.18 }}
-      className="relative w-full rounded-md bg-[#fafaf5] text-zinc-900 px-4 py-3 leading-snug border-[3px] border-zinc-900 shadow-[0_4px_0_0_rgba(15,23,42,0.85)]"
-      style={{ minHeight: 88 }}
-      onClick={() => {
-        if (!done) setShown(line.length);
-      }}
-    >
-      <p className="text-[14px] font-bold whitespace-pre-line">
-        {line.slice(0, shown)}
-        {!done && (
-          <span className="inline-block ml-0.5 w-[2px] h-[14px] bg-zinc-700 align-middle animate-pulse" />
-        )}
-      </p>
-      {done && (
-        <motion.span
-          aria-hidden
-          className="absolute right-2.5 bottom-1.5 text-zinc-900 text-[11px] font-black"
-          animate={{ y: [0, 2, 0], opacity: [0.6, 1, 0.6] }}
-          transition={{ duration: 1.0, repeat: Infinity, ease: "easeInOut" }}
-        >
-          ▼
-        </motion.span>
-      )}
-    </motion.div>
-  );
-}
-
-/* phase 별 라인 계산은 NarrationBox 가 담당 — NarrationFrame 한 번 사용. */
-function NarrationBox({
-  phase,
-  species,
-  rollsCount,
-  reachedCap,
-}: {
-  phase: Phase;
-  species: StarterSpecies | null;
-  rollsCount: number;
-  reachedCap: boolean;
-}) {
-  const line = useMemo(() => {
-    if (phase === "intro") {
-      return rollsCount === 0
-        ? "안녕!\n함께할 첫 포켓몬을 만나러 가보자."
-        : "좋아!\n다음 친구도 만나러 가볼까?";
-    }
-    if (phase === "throwing") return "몬스터볼을 던졌다!";
-    if (phase === "wobble") return "몬스터볼이 흔들리고 있다…";
-    if (phase === "reveal" && species) {
-      const m = STARTER_META[species];
-      if (m.rarity === "super") return "……!\n뮤츠가 모습을 드러냈다!!";
-      if (m.rarity === "rare") return "오!\n뮤가 슬쩍 다가왔다!";
-      return `${m.name}(이)가 모습을 드러냈다!`;
-    }
-    if (phase === "between") {
-      if (reachedCap) return "5번 모두 만나봤다.\n마음에 든 친구를 골라보자!";
-      return "이 친구로 정할까?\n다시 한 번 만나봐도 좋아.";
-    }
-    return "";
-  }, [phase, species, rollsCount, reachedCap]);
-
-  return <NarrationFrame line={line} />;
-}
-
-/* ─────────── CTA 영역 ─────────── */
-function CtaArea({
-  phase,
-  rollsCount,
-  reachedCap,
-  rolls,
-  onThrow,
-  onPickLast,
-  onShowList,
-  onPickIdx,
-}: {
-  phase: Phase;
-  rollsCount: number;
-  reachedCap: boolean;
-  rolls: RollResult[];
-  onThrow: () => void;
-  onPickLast: () => void;
-  onShowList: () => void;
-  onPickIdx: (idx: number) => void;
-}) {
-  const [listOpen, setListOpen] = useState(false);
-
-  // 페이즈 바뀌면 list 자동 닫기
-  useEffect(() => {
-    if (phase !== "between") setListOpen(false);
-  }, [phase]);
-
-  const showCta =
-    phase === "intro" || phase === "between";
-
-  return (
-    <div className="mx-auto max-w-md">
-      {/* 결과 리스트 (between 단계, 토글) */}
-      <AnimatePresence>
-        {phase === "between" && rolls.length > 0 && listOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 12 }}
-            transition={{ duration: 0.22 }}
-            className="mb-2 rounded-2xl bg-black/65 backdrop-blur border border-white/15 overflow-hidden"
-          >
-            <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
-              <span className="text-[11px] uppercase tracking-wider text-zinc-300 font-bold">
-                만난 친구들 ({rolls.length}/{MAX_ROLLS})
-              </span>
-              <button
-                type="button"
-                onClick={() => setListOpen(false)}
-                className="text-zinc-300 text-xs"
-                style={{ touchAction: "manipulation" }}
-              >
-                닫기
-              </button>
-            </div>
-            <ul className="max-h-[40vh] overflow-y-auto divide-y divide-white/5">
-              {rolls.map((r) => {
-                const m = STARTER_META[r.species];
-                const ribbon =
-                  m.rarity === "super"
-                    ? "특수"
-                    : m.rarity === "rare"
-                    ? "레어"
-                    : null;
-                return (
-                  <li key={r.index}>
-                    <button
-                      type="button"
-                      onClick={() => onPickIdx(r.index - 1)}
-                      style={{ touchAction: "manipulation" }}
-                      className="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/5 active:scale-[0.99] transition"
-                    >
-                      <span
-                        className="shrink-0 inline-flex items-center justify-center w-12 h-12 rounded-lg"
-                        style={{ background: `${m.accent}26` }}
-                      >
-                        <PokemonImg dex={m.dex} name={m.name} size={44} />
-                      </span>
-                      <span className="flex-1 text-left min-w-0">
-                        <span className="block text-[10px] text-zinc-400 font-bold">
-                          {r.index}회차
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <span className="text-sm font-black text-white truncate">
-                            {m.name}
-                          </span>
-                          {ribbon && (
-                            <span
-                              className={clsx(
-                                "text-[9px] font-black px-1.5 py-0.5 rounded-full",
-                                m.rarity === "super"
-                                  ? "bg-violet-500/30 text-violet-100"
-                                  : "bg-pink-500/30 text-pink-100"
-                              )}
-                            >
-                              {ribbon}
-                            </span>
-                          )}
-                        </span>
-                      </span>
-                      <span className="text-amber-300 text-xs font-bold shrink-0">
-                        선택 →
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* CTA 버튼 */}
-      <div className="grid gap-2">
-        {phase === "intro" && (
-          <ThrowCta label="몬스터볼 던지기" onClick={onThrow} />
-        )}
-        {phase === "between" && !reachedCap && (
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={onPickLast}
-              style={{ touchAction: "manipulation" }}
-              className="h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-zinc-950 text-sm font-black active:scale-[0.98] shadow-[0_8px_24px_-8px_rgba(16,185,129,0.6)]"
-            >
-              이 친구로 정할래!
-            </button>
-            <ThrowCta
-              label={`다시 뽑기 (${MAX_ROLLS - rollsCount})`}
-              onClick={onThrow}
-            />
-          </div>
-        )}
-        {phase === "between" && reachedCap && (
-          <button
-            type="button"
-            onClick={onShowList}
-            style={{ touchAction: "manipulation" }}
-            className="h-12 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-zinc-950 text-sm font-black active:scale-[0.98]"
-          >
-            결과 중에서 골라보자
-          </button>
-        )}
-        {phase === "between" && rolls.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setListOpen((v) => !v)}
-            style={{ touchAction: "manipulation" }}
-            className="h-9 rounded-xl bg-white/5 border border-white/10 text-white/85 text-xs font-bold active:scale-[0.99]"
-          >
-            {listOpen
-              ? "결과 리스트 닫기"
-              : `만난 친구들 보기 (${rolls.length}/${MAX_ROLLS})`}
-          </button>
-        )}
-        {!showCta &&
-          phase !== "naming" &&
-          phase !== "saving" &&
-          phase !== "done" && (
-            <div className="h-12" /> /* 레이아웃 점프 방지 */
-          )}
-      </div>
-    </div>
-  );
-}
-
-function ThrowCta({
-  label,
-  onClick,
-}: {
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{ touchAction: "manipulation" }}
-      className="w-full h-12 rounded-xl text-sm font-black active:scale-[0.98] transition bg-gradient-to-r from-rose-500 via-red-500 to-amber-400 text-zinc-950 shadow-[0_8px_24px_-8px_rgba(220,38,38,0.7)]"
-    >
-      {label}
-    </button>
   );
 }
 
@@ -2167,7 +1520,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
             <HelpRow label="진화">
               Lv.10 / Lv.20 도달 시 진화 가능 상태가 돼요. 진화는{" "}
               <strong className="font-black">100% 성공</strong>이며, 진화하면
-              새로운 모습으로 바뀌어요. (특수 포켓몬 뮤·뮤츠는 진화 없음.)
+              새로운 모습으로 바뀌어요. (피카츄는 라이츄까지 1단 진화.)
             </HelpRow>
 
             <HelpRow label="HOME / HELP">
