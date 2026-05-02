@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import Portal from "./Portal";
+import { lockBodyScroll } from "@/lib/useBodyScrollLock";
 
 /**
  * Page-level "도움말" affordance.
@@ -47,11 +48,8 @@ export default function HelpButton({
   // mobile.
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    const releaseLock = lockBodyScroll();
+    return releaseLock;
   }, [open]);
 
   // ESC to close.

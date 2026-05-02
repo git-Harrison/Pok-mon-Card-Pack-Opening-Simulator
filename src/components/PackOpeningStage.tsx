@@ -7,6 +7,7 @@ import clsx from "clsx";
 import type { Card } from "@/lib/types";
 import { RARITY_STYLE, cardFxClass } from "@/lib/rarity";
 import RarityBadge from "./RarityBadge";
+import { lockBodyScroll } from "@/lib/useBodyScrollLock";
 
 type Stage = "tearing" | "single" | "grid";
 
@@ -54,11 +55,8 @@ export default function PackOpeningStage({
 
   // Lock page scroll while overlay is up
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    const releaseLock = lockBodyScroll();
+    return releaseLock;
   }, []);
 
   const currentRevealed = revealed[index];

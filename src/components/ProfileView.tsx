@@ -46,6 +46,7 @@ import type { UserGymMedal } from "@/lib/gym/types";
 import { resolveCardType } from "@/lib/wild/name-to-type";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 import { groupGradings } from "@/lib/cards/group-gradings";
+import { lockBodyScroll } from "@/lib/useBodyScrollLock";
 
 export default function ProfileView() {
   const { user, refreshMe, logout } = useAuth();
@@ -1054,11 +1055,8 @@ function SlabPicker({
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    const releaseLock = lockBodyScroll();
+    return releaseLock;
   }, []);
 
   // 타입별 카운트 — 칩 옆 표기 + 필터 가용성.
@@ -1429,11 +1427,8 @@ function NicknameModal({
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    const releaseLock = lockBodyScroll();
+    return releaseLock;
   }, []);
 
   const trimmed = value.trim();
@@ -1595,11 +1590,8 @@ function TauntHistoryModal({
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    const releaseLock = lockBodyScroll();
+    return releaseLock;
   }, []);
 
   useEffect(() => {

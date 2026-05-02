@@ -35,6 +35,7 @@ import PageBackdrop from "./PageBackdrop";
 import Portal from "./Portal";
 import UserSelect from "./UserSelect";
 import { groupGradings } from "@/lib/cards/group-gradings";
+import { lockBodyScroll } from "@/lib/useBodyScrollLock";
 
 type Mode = "cards" | "pcl";
 type RarityFilter = "ALL" | Rarity;
@@ -730,11 +731,10 @@ function SlabPreview({
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseLock = lockBodyScroll();
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      releaseLock();
     };
   }, [target, onClose]);
 
@@ -844,11 +844,10 @@ function SlabGiftComposer({
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseLock = lockBodyScroll();
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      releaseLock();
     };
   }, [target, onClose]);
 
@@ -1193,11 +1192,10 @@ function BulkDeletePclModal({
       if (e.key === "Escape" && busy === null) onClose();
     };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseLock = lockBodyScroll();
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      releaseLock();
     };
   }, [onClose, busy]);
 

@@ -28,14 +28,37 @@ body {
   background-color: #06060a;
   background-image: radial-gradient(1200px 700px at 30% -10%, #1a1a2e 0%, #06060a 55%, #020206 100%);
   color: #f5f5f7;
-  min-height: 100%;
   font-family: var(--font-sans);
   font-feature-settings: "tnum", "ss06", "case";
   font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  /* overscroll bounce 가 페이지 밖 배경(브라우저 기본)을 노출 못 하도록 */
+}
+
+html {
+  /* 갤럭시/안드로이드 Chrome 에서 어떤 페이지든 항상 세로 스크롤이 가능한
+     컨테이너가 되도록 명시. min-height: 100% 만 있던 기존 설정 + overflow-x:
+     clip 이 일부 Samsung Internet 빌드에서 overflow-y 를 auto/clip 으로
+     함께 컴퓨팅하면서 본문이 짧을 때 스크롤이 아예 막히던 사례 fix. */
+  min-height: 100%;
+  height: 100%;
+}
+
+body {
+  /* dvh (dynamic viewport height) — 안드로이드 Chrome 의 주소창 자동
+     숨김/노출에 따라 viewport 가 변할 때 body 가 항상 가시영역을 채워
+     스크롤이 죽는 빈 페이지처럼 보이지 않도록. dvh 미지원 브라우저는
+     min-height: 100% 가 fallback. */
+  min-height: 100%;
+  min-height: 100dvh;
+  /* 터치 입력에서 세로 스크롤(pan-y) + 핀치줌은 항상 허용하고, 더블탭
+     줌만 비활성화 — 안드로이드 일부 빌드에서 fixed overlay 잔존 시
+     touch-action 이 none 으로 잡혀 스크롤이 죽던 케이스 차단. */
+  touch-action: pan-y pinch-zoom;
+  /* overscroll bounce 가 페이지 밖 배경(브라우저 기본)을 노출 못 하도록.
+     html 에는 적용하지 않음 — 일부 안드로이드 빌드에서 html 에 contain 이
+     걸리면 routing 후 스크롤이 잠긴 채 유지되는 케이스 보고. */
   overscroll-behavior-y: contain;
 }
 

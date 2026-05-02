@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/auth";
 import { fetchAllUsers, type UserListEntry } from "@/lib/db";
 import { getCharacter } from "@/lib/profile";
 import Portal from "./Portal";
+import { lockBodyScroll } from "@/lib/useBodyScrollLock";
 import { CharacterAvatar } from "./ProfileView";
 
 export interface UserSelectValue {
@@ -78,13 +79,12 @@ export default function UserSelect({
       if (e.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseLock = lockBodyScroll();
     setQuery("");
     const t = setTimeout(() => inputRef.current?.focus(), 60);
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      releaseLock();
       clearTimeout(t);
     };
   }, [open]);

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
+import { lockBodyScroll } from "@/lib/useBodyScrollLock";
 import {
   claimGymDaily,
   computeUserCenterPower,
@@ -1254,11 +1255,10 @@ function GymDetailModal({
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseLock = lockBodyScroll();
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      releaseLock();
     };
   }, [onClose]);
 
@@ -2032,11 +2032,10 @@ function GymHelpModal({ onClose }: { onClose: () => void }) {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseLock = lockBodyScroll();
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      releaseLock();
     };
   }, [onClose]);
 

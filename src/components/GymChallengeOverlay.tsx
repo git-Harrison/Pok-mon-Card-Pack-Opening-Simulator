@@ -29,6 +29,7 @@ import { RARITY_STYLE } from "@/lib/rarity";
 import { slabStats } from "@/lib/wild/stats";
 import Portal from "./Portal";
 import NpcDialogModal from "./NpcDialogModal";
+import { lockBodyScroll } from "@/lib/useBodyScrollLock";
 
 const VICTORY_LINES: string[] = [
   "분하다... 네 실력을 인정한다.",
@@ -181,11 +182,10 @@ export default function GymChallengeOverlay({
       if (e.key === "Escape" && phase !== "fighting" && !savingDefense) doClose();
     };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseLock = lockBodyScroll();
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      releaseLock();
     };
   }, [phase, doClose, savingDefense]);
 

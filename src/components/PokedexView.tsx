@@ -23,6 +23,7 @@ import PageHeader from "./PageHeader";
 import Portal from "./Portal";
 import PokeCard from "./PokeCard";
 import RarityBadge from "./RarityBadge";
+import { lockBodyScroll } from "@/lib/useBodyScrollLock";
 import { CenteredPokeLoader } from "./PokeLoader";
 
 // spec 0-2: 카드 리스트는 무한 스크롤. 페이지 버튼/이전 다음 버튼 금지.
@@ -534,11 +535,10 @@ function CardPreview({
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseLock = lockBodyScroll();
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      releaseLock();
     };
   }, [onClose]);
 

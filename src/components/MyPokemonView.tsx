@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 import {
   enhanceMyStarter,
   evolveMyStarter,
@@ -141,20 +142,17 @@ const LEVEL_EXP_TABLE: Record<number, number> = {
   25: 155000, 26: 178000, 27: 203000, 28: 230000, 29: 260000,
 };
 
-/** 재료 base EXP — 동일 속성 ×1.03 / 등급 일반×1.0·대성공×1.2·초대성공×1.5. */
+/** 재료 base EXP — 등급 일반×1.0 / 대성공×1.2 / 초대성공×1.5.
+ *  같은 속성 카드만 재료로 쓸 수 있게 바뀐 후 +3% 보너스 개념은 제거. */
 const MATERIAL_EXP: Record<"MUR" | "UR" | "SAR", number> = {
   MUR: 10000,
   UR: 200,
   SAR: 20,
 };
 
-/** 재료 1장의 일반 성공(보너스 없음) 예상 EXP — 미리보기 표시용. */
-function previewMaterialExp(
-  rarity: "MUR" | "UR" | "SAR",
-  sameType: boolean
-): number {
-  const base = MATERIAL_EXP[rarity];
-  return Math.floor(base * (sameType ? 1.03 : 1.0));
+/** 재료 1장의 일반 성공 예상 EXP — 미리보기 표시용. */
+function previewMaterialExp(rarity: "MUR" | "UR" | "SAR"): number {
+  return MATERIAL_EXP[rarity];
 }
 
 /** 선택 가능 11종 — server `pick_my_starter` 의 v_allowed 와 동일. */
@@ -398,14 +396,8 @@ function FullscreenScene({
 }) {
   const router = useRouter();
 
-  // body scroll lock — 풀스크린 모드 동안.
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
+  // body scroll lock — 풀스크린 모드 동안. 중첩 안전 ref-count 락 사용.
+  useBodyScrollLock(true);
 
   const lastIdx = rolls.length - 1;
   const lastRoll = lastIdx >= 0 ? rolls[lastIdx] : null;
@@ -1470,6 +1462,8 @@ function OwnedView({ starter: initialStarter }: { starter: MyStarter }) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [feedOpen, setFeedOpen] = useState(false);
   const [evolveOpen, setEvolveOpen] = useState(false);
+  const [feedReaction, setFeedReaction] = useState<FeedReaction | null>(null);
+  const feedReactionTimerRef = useRef<number | null>(null);
   const evoToastShownRef = useRef<Set<number>>(new Set());
 
   // 동일 속성 PCL10 카운트 (사용 중 제외) — 캐릭터 속성 기준.
@@ -1489,14 +1483,8 @@ function OwnedView({ starter: initialStarter }: { starter: MyStarter }) {
     };
   }, [user, meta.type]);
 
-  // body scroll lock — 풀스크린 모드 동안.
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
+  // body scroll lock — 풀스크린 모드 동안. 중첩 안전 ref-count 락 사용.
+  useBodyScrollLock(true);
 
   // 진화 가능 토스트 — stage 별 1회. 새로 도달했거나 진입 시 이미 가능 상태.
   useEffect(() => {
@@ -1554,6 +1542,32 @@ function OwnedView({ starter: initialStarter }: { starter: MyStarter }) {
   const showToast = useCallback((msg: string, ms = 2400) => {
     setToast(msg);
     window.setTimeout(() => setToast(null), ms);
+  }, []);
+
+  const triggerFeedReaction = useCallback((tier: FeedReactionTier) => {
+    if (feedReactionTimerRef.current != null) {
+      clearTimeout(feedReactionTimerRef.current);
+      feedReactionTimerRef.current = null;
+    }
+    setFeedReaction({
+      key: Date.now(),
+      tier,
+      message: pickFeedReactionLine(tier),
+    });
+    // 톤별로 노출 시간 살짝 차등 — crit 가 가장 길게.
+    const ms = tier === "crit" ? 3200 : tier === "great" ? 2800 : 2400;
+    feedReactionTimerRef.current = window.setTimeout(() => {
+      setFeedReaction(null);
+      feedReactionTimerRef.current = null;
+    }, ms);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (feedReactionTimerRef.current != null) {
+        clearTimeout(feedReactionTimerRef.current);
+      }
+    };
   }, []);
 
   return (
@@ -1614,6 +1628,7 @@ function OwnedView({ starter: initialStarter }: { starter: MyStarter }) {
             onHome={() => router.push("/")}
             onHelp={() => setHelpOpen(true)}
             counts={counts}
+            feedReaction={feedReaction}
           />
         </div>
 
@@ -1660,6 +1675,8 @@ function OwnedView({ starter: initialStarter }: { starter: MyStarter }) {
                     }`,
                     3000
                   );
+                  // 캐릭터 본인이 반응하는 말풍선 + 이펙트.
+                  triggerFeedReaction(best.tier);
                 }
               }}
             />
@@ -1705,6 +1722,7 @@ function PokedexDevice({
   onHome,
   onHelp,
   counts,
+  feedReaction,
 }: {
   meta: SpeciesMeta;
   starter: MyStarter;
@@ -1719,6 +1737,7 @@ function PokedexDevice({
   onHome: () => void;
   onHelp: () => void;
   counts: StarterCompanionCounts | null;
+  feedReaction: FeedReaction | null;
 }) {
   const typeColor = TYPE_COLOR[meta.type];
   const xpPct = isMax
@@ -1878,14 +1897,52 @@ function PokedexDevice({
                   "repeating-linear-gradient(0deg, transparent 0, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 3px)",
               }}
             />
-            {/* 캐릭터 — LCD 안 (현재 stage dex 사용) */}
+            {/* 캐릭터 — LCD 안 (현재 stage dex 사용).
+                 feedReaction 있을 때만 통통 점프 + 글로우, 평소엔 idle bob. */}
             <motion.div
-              animate={reduce ? undefined : { y: [0, -3, 0] }}
-              transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+              key={feedReaction?.key ?? "idle"}
+              animate={
+                reduce
+                  ? undefined
+                  : feedReaction
+                  ? feedReaction.tier === "crit"
+                    ? { y: [0, -18, 0, -10, 0], scale: [1, 1.08, 1, 1.04, 1] }
+                    : feedReaction.tier === "great"
+                    ? { y: [0, -14, 0, -6, 0], scale: [1, 1.06, 1, 1.02, 1] }
+                    : { y: [0, -10, 0], scale: [1, 1.04, 1] }
+                  : { y: [0, -3, 0] }
+              }
+              transition={
+                feedReaction
+                  ? { duration: feedReaction.tier === "crit" ? 1.2 : 0.9, ease: "easeInOut" }
+                  : { duration: 2.4, repeat: Infinity, ease: "easeInOut" }
+              }
               style={{ filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.4))" }}
             >
               <PokemonImg dex={stageInfo.dex} name={stageInfo.name} size={110} />
             </motion.div>
+
+            {/* 먹이 반응 이펙트 — 빛 폭발 + 반짝이/하트/별 */}
+            <AnimatePresence>
+              {feedReaction && !reduce && (
+                <FeedReactionEffect
+                  key={feedReaction.key}
+                  tier={feedReaction.tier}
+                  accent={meta.accent}
+                />
+              )}
+            </AnimatePresence>
+
+            {/* 말풍선 — 캐릭터 위쪽에 떠 있다가 페이드 아웃 (LCD 안쪽 상단) */}
+            <AnimatePresence>
+              {feedReaction && (
+                <FeedSpeechBubble
+                  key={feedReaction.key}
+                  tier={feedReaction.tier}
+                  message={feedReaction.message}
+                />
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -2104,13 +2161,17 @@ function HelpModal({ onClose }: { onClose: () => void }) {
                 펫 / 전시 / 체육관 방어덱에 사용되지 않은
               </strong>
               {" "}카드 개수예요. 같은 카드 종류는 1번만 셉니다.
+              실제 먹이로 사용할 수 있는 후보 수와 같아요.
             </HelpRow>
 
             <HelpRow label="먹이 주기">
-              PCL10 카드(MUR / UR / SAR)를 재료로 줘서 EXP 를 얻고 레벨업해요.
-              <strong className="font-black"> SAR 20 / UR 200 / MUR 10,000 EXP</strong>
-              가 기본이고, 동속성 재료는 <strong className="font-black">+3%</strong>{" "}
-              보너스. 7% 확률로 대성공(×1.2), 1% 확률로 초대성공(×1.5).
+              <strong className="font-black">
+                현재 포켓몬과 같은 속성의 PCL10 카드(MUR / UR / SAR)
+              </strong>{" "}
+              만 먹이로 사용할 수 있어요. 다른 속성 카드는 재료 후보에 나오지
+              않습니다. 기본 EXP 는{" "}
+              <strong className="font-black">SAR 20 / UR 200 / MUR 10,000</strong>{" "}
+              이고, 7% 확률로 대성공(×1.2), 1% 확률로 초대성공(×1.5).
             </HelpRow>
 
             <HelpRow label="진화">
@@ -2248,10 +2309,194 @@ function pickEvolveToast(): string {
 
 function pickBestGrade(
   log: Array<{ grade: "normal" | "great" | "crit" }>
-): { tag: string } {
-  if (log.some((l) => l.grade === "crit")) return { tag: "초대성공!!" };
-  if (log.some((l) => l.grade === "great")) return { tag: "대성공!" };
-  return { tag: "냠냠!" };
+): { tag: string; tier: FeedReactionTier } {
+  if (log.some((l) => l.grade === "crit"))
+    return { tag: "초대성공!!", tier: "crit" };
+  if (log.some((l) => l.grade === "great"))
+    return { tag: "대성공!", tier: "great" };
+  return { tag: "냠냠!", tier: "normal" };
+}
+
+/* ─────────── 먹이 반응 (캐릭터 말풍선 + 이펙트) ───────────
+   결과 등급에 맞는 톤의 랜덤 문구를 캐릭터 근처에 띄움.
+   같은 메시지가 연속해 나오지 않도록 단순 랜덤 + 결과 등급별 톤 분기. */
+type FeedReactionTier = "normal" | "great" | "crit";
+
+const FEED_REACTION_LINES: Record<FeedReactionTier, string[]> = {
+  normal: [
+    "오! 이거 꽤 맛있는데요?",
+    "냠냠… 힘이 나는 것 같아요!",
+    "방금 그거 또 없나요?",
+    "좋아요! 조금 더 강해진 느낌이에요!",
+    "먹었더니 몸이 반짝거리는 기분이에요!",
+    "이 맛은… 성장의 맛!",
+    "우와, 지금 좀 세진 것 같은데요?",
+    "한 입 먹었는데 갑자기 자신감이 생겼어요!",
+  ],
+  great: [
+    "오오! 이건 제대로 먹혔어요!",
+    "방금 건 효과가 엄청났어요!",
+    "힘이 확 올라오는 느낌이에요!",
+  ],
+  crit: [
+    "대박! 지금 몸에서 빛이 납니다!",
+    "이건 그냥 먹이가 아니라 전설의 한 입이었어요!",
+    "잠깐만요… 저 지금 엄청 강해진 것 같은데요?!",
+  ],
+};
+
+function pickFeedReactionLine(tier: FeedReactionTier): string {
+  const lines = FEED_REACTION_LINES[tier];
+  return lines[Math.floor(Math.random() * lines.length)]!;
+}
+
+interface FeedReaction {
+  /** 매번 새 키로 갱신 → AnimatePresence 가 같은 등급도 재생할 수 있음. */
+  key: number;
+  tier: FeedReactionTier;
+  message: string;
+}
+
+/* ─────────── 캐릭터 위 떠다니는 말풍선 (게임 톤) ─────────── */
+function FeedSpeechBubble({
+  tier,
+  message,
+}: {
+  tier: FeedReactionTier;
+  message: string;
+}) {
+  // 톤별 컬러 — crit 가 가장 화려, normal 은 차분.
+  const palette =
+    tier === "crit"
+      ? { bg: "#fef3c7", border: "#b45309", text: "#7c2d12" }
+      : tier === "great"
+      ? { bg: "#fde68a", border: "#a16207", text: "#7c2d12" }
+      : { bg: "#fafaf5", border: "#0f172a", text: "#0f172a" };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8, scale: 0.85 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -6, scale: 0.92 }}
+      transition={{ type: "spring", stiffness: 320, damping: 18 }}
+      className="absolute left-1/2 top-1.5 -translate-x-1/2 z-10 pointer-events-none"
+      style={{ maxWidth: "92%" }}
+    >
+      <div
+        className="relative rounded-xl px-2.5 py-1 text-[11px] font-black leading-snug whitespace-pre-line text-center"
+        style={{
+          background: palette.bg,
+          color: palette.text,
+          border: `2px solid ${palette.border}`,
+          boxShadow: "0 3px 0 0 rgba(15,23,42,0.55)",
+          letterSpacing: "0.005em",
+        }}
+      >
+        {message}
+        {/* 꼬리 — 캐릭터 쪽으로 향하는 작은 삼각형 */}
+        <span
+          aria-hidden
+          className="absolute left-1/2 -bottom-[7px] -translate-x-1/2"
+          style={{
+            width: 0,
+            height: 0,
+            borderLeft: "6px solid transparent",
+            borderRight: "6px solid transparent",
+            borderTop: `7px solid ${palette.border}`,
+          }}
+        />
+        <span
+          aria-hidden
+          className="absolute left-1/2 -bottom-[4.5px] -translate-x-1/2"
+          style={{
+            width: 0,
+            height: 0,
+            borderLeft: "5px solid transparent",
+            borderRight: "5px solid transparent",
+            borderTop: `5px solid ${palette.bg}`,
+          }}
+        />
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─────────── 먹이 반응 이펙트 — 빛 폭발 / 반짝이 / 하트 / 별 ─────────── */
+function FeedReactionEffect({
+  tier,
+  accent,
+}: {
+  tier: FeedReactionTier;
+  accent: string;
+}) {
+  // 등급에 따라 입자 수와 종류 차등.
+  const particleCount = tier === "crit" ? 12 : tier === "great" ? 8 : 6;
+  const glyphs =
+    tier === "crit"
+      ? ["★", "✦", "♥", "✧"]
+      : tier === "great"
+      ? ["★", "✦", "♥"]
+      : ["♥", "✦"];
+  const flashOpacity = tier === "crit" ? 0.85 : tier === "great" ? 0.6 : 0.4;
+
+  return (
+    <motion.div
+      className="absolute inset-0 pointer-events-none z-[5]"
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      {/* 빛 폭발 — 캐릭터 중심에서 뻗는 라디얼 */}
+      <motion.div
+        className="absolute inset-0"
+        initial={{ opacity: 0, scale: 0.4 }}
+        animate={{ opacity: [0, flashOpacity, 0], scale: [0.4, 1.6, 2.2] }}
+        transition={{ duration: 0.9, ease: "easeOut" }}
+        style={{
+          background: `radial-gradient(40% 40% at 50% 60%, ${accent}cc 0%, ${accent}55 35%, transparent 70%)`,
+          mixBlendMode: "screen",
+        }}
+      />
+
+      {/* 입자 — 별/하트가 위쪽으로 흩날리며 페이드 */}
+      {Array.from({ length: particleCount }).map((_, i) => {
+        const glyph = glyphs[i % glyphs.length]!;
+        const angle = (i / particleCount) * Math.PI * 2;
+        const radius = 36 + (i % 3) * 8;
+        const dx = Math.cos(angle) * radius;
+        const dy = Math.sin(angle) * radius - 14;
+        const delay = (i % 4) * 0.05;
+        const size = 10 + (i % 3) * 3;
+        const isStar = glyph === "★" || glyph === "✦" || glyph === "✧";
+        return (
+          <motion.span
+            key={i}
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-black"
+            style={{
+              fontSize: size,
+              color: isStar ? "#fde047" : "#f472b6",
+              textShadow: "0 1px 2px rgba(0,0,0,0.6)",
+            }}
+            initial={{ x: 0, y: 0, opacity: 0, scale: 0.4 }}
+            animate={{
+              x: dx,
+              y: dy,
+              opacity: [0, 1, 1, 0],
+              scale: [0.4, 1.1, 1, 0.9],
+              rotate: isStar ? [0, 25, -15, 0] : 0,
+            }}
+            transition={{
+              duration: tier === "crit" ? 1.3 : 1.05,
+              delay,
+              ease: "easeOut",
+            }}
+          >
+            {glyph}
+          </motion.span>
+        );
+      })}
+    </motion.div>
+  );
 }
 
 /* ─────────── 먹이 주기 모달 ─────────── */
@@ -2318,10 +2563,10 @@ function FeedModal({
     for (const id of selected) {
       const m = materials.find((x) => x.id === id);
       if (!m) continue;
-      sum += previewMaterialExp(m.rarity, m.wild_type === meta.type);
+      sum += previewMaterialExp(m.rarity);
     }
     return sum;
-  }, [selected, materials, meta.type]);
+  }, [selected, materials]);
 
   const submit = useCallback(async () => {
     if (selected.size === 0 || submitting) return;
@@ -2399,68 +2644,71 @@ function FeedModal({
                 재료 불러오는 중…
               </p>
             ) : materials.length === 0 ? (
-              <p className="text-[12px] font-bold text-zinc-700 text-center py-6">
-                사용할 수 있는 PCL10 재료가 없어요.
+              <p className="text-[12px] font-bold text-zinc-700 text-center py-6 leading-relaxed">
+                사용할 수 있는 같은 속성 PCL10 재료가 없어요.
+                <br />
+                <span className="text-[10px] text-zinc-500 font-semibold">
+                  다른 속성 카드는 이 포켓몬의 먹이로 사용할 수 없어요.
+                </span>
               </p>
             ) : (
-              (["MUR", "UR", "SAR"] as const).map(
-                (r) =>
-                  groups[r].length > 0 && (
-                    <div key={r} className="mb-3 last:mb-0">
-                      <p className="text-[10px] font-black tracking-[0.18em] text-zinc-600 mb-1.5">
-                        {r} ({groups[r].length})
-                      </p>
-                      <ul className="grid grid-cols-2 gap-1.5">
-                        {groups[r].map((m) => {
-                          const sameType = m.wild_type === meta.type;
-                          const exp = previewMaterialExp(m.rarity, sameType);
-                          const isSelected = selected.has(m.id);
-                          return (
-                            <li key={m.id}>
-                              <button
-                                type="button"
-                                onClick={() => toggle(m.id)}
-                                style={{ touchAction: "manipulation" }}
-                                className={clsx(
-                                  "w-full rounded-md border-2 px-2 py-1.5 text-left transition active:scale-[0.98]",
-                                  isSelected
-                                    ? "bg-amber-300 border-zinc-900 shadow-[0_2px_0_0_rgba(15,23,42,0.7)]"
-                                    : "bg-white border-zinc-300"
-                                )}
-                              >
-                                <div className="flex items-center gap-1.5">
-                                  <span
-                                    className={clsx(
-                                      "text-[9px] font-black px-1 py-0.5 rounded",
-                                      m.rarity === "MUR"
-                                        ? "bg-amber-500 text-white"
-                                        : m.rarity === "UR"
-                                        ? "bg-fuchsia-500 text-white"
-                                        : "bg-sky-500 text-white"
-                                    )}
-                                  >
-                                    {m.rarity}
-                                  </span>
-                                  {sameType && (
-                                    <span className="text-[8px] font-black text-emerald-700 tracking-wider">
-                                      ●동속성
-                                    </span>
+              <>
+                <p className="text-[10px] font-black tracking-[0.18em] text-emerald-700 mb-2">
+                  ●같은 속성({meta.type}) PCL10 만 사용 가능
+                </p>
+                {(["MUR", "UR", "SAR"] as const).map(
+                  (r) =>
+                    groups[r].length > 0 && (
+                      <div key={r} className="mb-3 last:mb-0">
+                        <p className="text-[10px] font-black tracking-[0.18em] text-zinc-600 mb-1.5">
+                          {r} ({groups[r].length})
+                        </p>
+                        <ul className="grid grid-cols-2 gap-1.5">
+                          {groups[r].map((m) => {
+                            const exp = previewMaterialExp(m.rarity);
+                            const isSelected = selected.has(m.id);
+                            return (
+                              <li key={m.id}>
+                                <button
+                                  type="button"
+                                  onClick={() => toggle(m.id)}
+                                  style={{ touchAction: "manipulation" }}
+                                  className={clsx(
+                                    "w-full rounded-md border-2 px-2 py-1.5 text-left transition active:scale-[0.98]",
+                                    isSelected
+                                      ? "bg-amber-300 border-zinc-900 shadow-[0_2px_0_0_rgba(15,23,42,0.7)]"
+                                      : "bg-white border-zinc-300"
                                   )}
-                                </div>
-                                <p className="mt-0.5 text-[10px] font-bold text-zinc-800 truncate">
-                                  {m.card_id}
-                                </p>
-                                <p className="text-[10px] font-black text-amber-700 tabular-nums">
-                                  +{exp.toLocaleString("ko-KR")} EXP
-                                </p>
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  )
-              )
+                                >
+                                  <div className="flex items-center gap-1.5">
+                                    <span
+                                      className={clsx(
+                                        "text-[9px] font-black px-1 py-0.5 rounded",
+                                        m.rarity === "MUR"
+                                          ? "bg-amber-500 text-white"
+                                          : m.rarity === "UR"
+                                          ? "bg-fuchsia-500 text-white"
+                                          : "bg-sky-500 text-white"
+                                      )}
+                                    >
+                                      {m.rarity}
+                                    </span>
+                                  </div>
+                                  <p className="mt-0.5 text-[10px] font-bold text-zinc-800 truncate">
+                                    {m.card_id}
+                                  </p>
+                                  <p className="text-[10px] font-black text-amber-700 tabular-nums">
+                                    +{exp.toLocaleString("ko-KR")} EXP
+                                  </p>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )
+                )}
+              </>
             )}
           </div>
 

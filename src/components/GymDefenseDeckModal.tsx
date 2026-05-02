@@ -18,6 +18,7 @@ import { getCard } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
 import { slabStats } from "@/lib/wild/stats";
 import Portal from "./Portal";
+import { lockBodyScroll } from "@/lib/useBodyScrollLock";
 
 interface MyPet {
   grading_id: string;
@@ -161,11 +162,10 @@ export default function GymDefenseDeckModal({
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseLock = lockBodyScroll();
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      releaseLock();
     };
   }, [onClose]);
 

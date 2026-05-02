@@ -6,6 +6,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import type { WildType } from "@/lib/wild/types";
 import { TYPE_STYLE } from "@/lib/wild/types";
 import Portal from "./Portal";
+import { lockBodyScroll } from "@/lib/useBodyScrollLock";
 
 export type NpcTone =
   | "greeting"   // 그냥 인사 — 가벼운 분위기
@@ -138,11 +139,10 @@ export default function NpcDialogModal({
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseLock = lockBodyScroll();
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      releaseLock();
     };
   }, [onClose]);
 
