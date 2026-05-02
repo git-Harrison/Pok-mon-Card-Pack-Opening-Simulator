@@ -1,12 +1,13 @@
-# 체육관 대결 시스템 — 전투 스펙 (v3)
+# 체육관 대결 시스템 — 전투 스펙 (v4)
 
-> 최종 수정: 2026-04-28 (v3 — PCL10 전용 + sqrt 정규화 + MUR 최상위 효율)
+> 최종 수정: 2026-05-03 (v4 — 공격자 친화 밸런스 + 유저 전투력 스탯 보정 제거)
 > 대상 브랜치: `main`
-> 핵심 마이그레이션: `20260637_gym_battle_redesign_v3.sql`
+> 핵심 마이그레이션: `20260687_gym_battle_attacker_friendly.sql` (v4),
+>                  `20260637_gym_battle_redesign_v3.sql` (v3 baseline)
 
 ## 0. 한 줄 요약
 
-체육관 시스템은 **PCL 10 슬랩 전용**. PCL 9 이하는 등록/도전/전투 어디에도 들어올 수 없다. 산식은 `희귀도 base + center_power(sqrt 정규화) 가산 + 방어자 HP 1.10 + MUR 공격 1.05 + 체육관 속성 일치 1.10` 의 합성. PCL 등급별 배율(grade_mult)은 폐기. `def`/`spd` 컬럼은 시뮬레이션 미사용 (Phase 5 예정).
+체육관 시스템은 **PCL 10 슬랩 전용**. PCL 9 이하는 등록/도전/전투 어디에도 들어올 수 없다. 산식은 `희귀도 base + 공격자 ATK 1.10 + MUR 공격 1.05 + 체육관 속성 일치 1.10` 의 합성. v4 에서 **유저 전투력(center_power) 의 hp/atk 가산 제거** 및 **방어자 HP 1.10 보정 제거** — 진입장벽 완화 + 공격자 우위 확보. PCL 등급별 배율(grade_mult)은 폐기. `def`/`spd` 컬럼은 시뮬레이션 미사용 (Phase 5 예정).
 
 ---
 
@@ -33,27 +34,22 @@
 | 등록 함수 | `set_gym_defense_deck()` — `supabase/migrations/20260620_gym_resolve_pet_by_type_no_npc_fallback.sql:379-514` |
 | 등록 검증 | (1) 본인 소유 (2) PCL 10 슬랩 (3) 펫 등록 상태(main_card_ids 또는 main_cards_by_type) (4) 체육관 속성 일치 — 4가지 모두 |
 
-### 능력치 산식 — `gym_pet_battle_stats(is_defender=true)` (v3)
+### 능력치 산식 — `gym_pet_battle_stats(is_defender=true)` (v4)
 
-`supabase/migrations/20260637_gym_battle_redesign_v3.sql`
+`supabase/migrations/20260687_gym_battle_attacker_friendly.sql`
 
 ```
 # (1) PCL 10 hard gate
 if grade != 10: return  (호출 측에서 abort)
 
 # (2) 희귀도 base — gym_rarity_base_stats(rarity)
-base_hp  = rarity_base_hp[rarity]
-base_atk = rarity_base_atk[rarity]
+hp  = rarity_base_hp[rarity]
+atk = rarity_base_atk[rarity]
 
-# (3) center_power 정규화 보너스 — gym_power_bonus_rate(cp, rarity)
-rate = (rarity == 'MUR')
-       ? min(0.45, sqrt(cp) / 2800)
-       : min(0.35, sqrt(cp) / 3000)
-hp  = base_hp  × (1 + rate)
-atk = base_atk × (1 + rate)
+# (3) center_power 보정 — v4 에서 제거됨 (유저 전투력은 스탯에 영향 X)
 
-# (4) 방어자 HP 가산
-hp = hp × gym_defender_hp_multiplier()    # 1.10
+# (4) 방어자 HP 보정 — v4 에서 1.00 (no-op, helper 호출만 유지)
+hp = hp × gym_defender_hp_multiplier()    # 1.00
 
 # (5) 속성 일치 가산
 if pet_type == gym_type:
@@ -77,20 +73,14 @@ final_atk = round(atk)
 | **R**   | 60  | 12 |
 | **U/C** | 50  | 10 |
 
-### center_power 보정 예시
+### center_power 보정 (v4 폐기)
 
-| center_power | 일반 rate | MUR rate |
-|--:|--:|--:|
-| 100,000 | 10.5% | 11.3% |
-| 400,000 | 21.1% | 22.6% |
-| 1,000,000 | 33.3% | 35.7% |
-| 1,160,000 + | **35% (cap)** | 38.6% |
-| 1,580,000 + | 35% (cap) | **45% (cap)** |
+v4 부터 center_power 는 **전투 스탯에 영향 없음**. 표시 / 매칭(min_power 도전 게이트) / 랭킹용 으로만 사용. `gym_power_bonus_rate(cp, rarity)` 는 항상 0 반환 (kept-for-safety).
 
 | 항목 | 내용 |
 |------|------|
-| 반영 보너스 | 희귀도 base, center_power(sqrt 정규화), 방어자 HP × 1.10, 속성 일치 ATK × 1.10 |
-| 반영 안 됨 | PCL 등급 배율(폐기), 도감/메달 별도 가산 (center_power 에 부분 포함) |
+| 반영 보너스 | 희귀도 base, 속성 일치 ATK × 1.10 |
+| 반영 안 됨 | center_power, PCL 등급 배율(폐기), 도감/메달 별도 가산, 방어자 HP 보너스(v4 에서 1.00 으로 제거) |
 | 슬롯 fallback | 없음. 3마리 미달이면 점령 자체가 막힘 |
 | 카드 깨짐 처리 | `psa_gradings` 삭제 cascade로 자동 정리 |
 | 실제 사용 | ✅ 점령 체육관일 때 항상 |
@@ -105,14 +95,17 @@ final_atk = round(atk)
 | 검증 | `users.main_card_ids ∪ flatten_pet_ids_by_type(main_cards_by_type)` (`20260620_…:106-118`) |
 | 속성 제약 | 체육관 속성과 동일한 `pet_type` 만 사용 가능. 다른 속성 1장이라도 섞이면 `wrong_type` 으로 도전 자체 abort |
 
-### 능력치 산식 — `gym_pet_battle_stats(is_defender=false)` (v3)
+### 능력치 산식 — `gym_pet_battle_stats(is_defender=false)` (v4)
 
 ```
 # (1) PCL 10 hard gate — 방어자와 동일
 # (2) 희귀도 base
-# (3) center_power sqrt 정규화 (방어자와 동일)
+# (3) center_power 보정은 v4 에서 제거됨
 
 # 방어자 HP 가산은 적용 안 함 (공격자 = 도전자)
+
+# (4) 공격자 ATK 가산 — v4 신규 (모든 희귀도)
+atk = atk × gym_attacker_atk_multiplier()    # 1.10
 
 # (5) MUR 공격자 ATK 가산
 if rarity == 'MUR':
@@ -123,8 +116,8 @@ if rarity == 'MUR':
 
 | 항목 | 내용 |
 |------|------|
-| 반영 보너스 | 희귀도 base, center_power(sqrt 정규화), MUR 공격 × 1.05, 속성 일치 × 1.10 |
-| 반영 안 됨 | PCL 배율, 도감/펫/메달 별도 가산 |
+| 반영 보너스 | 희귀도 base, 공격자 ATK × 1.10 (v4), MUR 공격 × 1.05, 속성 일치 × 1.10 |
+| 반영 안 됨 | center_power(v4 제거), PCL 배율, 도감/펫/메달 별도 가산 |
 | 프로필 vs 대결 | 프로필이 `gym_compute_user_center_power` 결과를 표시한다면 동일 |
 | 실제 사용 | ✅ 항상 |
 
@@ -295,15 +288,30 @@ winner = 'won' if pet_alive > 0 and enemy_alive == 0 else 'lost'
 | 속성 일치 | atk × 1.05 | **atk × 1.10** |
 | 밸런스 수치 관리 | gym_pet_battle_stats 본문 하드코딩 | **공통 helper 함수 7개로 분리** |
 
-### 공통 설정 함수 (v3)
+### 공통 설정 함수 (v4)
 
-| 함수 | 반환 |
-|------|------|
-| `gym_required_grade()` | `10` |
-| `gym_rarity_base_stats(rarity)` | `(hp, atk)` |
-| `gym_power_bonus_rate(cp, rarity)` | `numeric` (sqrt 정규화) |
-| `gym_defender_hp_multiplier()` | `1.10` |
-| `gym_mur_attack_multiplier()` | `1.05` |
-| `gym_type_match_multiplier()` | `1.10` |
+| 함수 | 반환 | 비고 |
+|------|------|------|
+| `gym_required_grade()` | `10` | |
+| `gym_rarity_base_stats(rarity)` | `(hp, atk)` | |
+| `gym_power_bonus_rate(cp, rarity)` | `0` | v4 에서 무력화 (kept-for-safety) |
+| `gym_defender_hp_multiplier()` | `1.00` | v4 에서 1.10 → 1.00 |
+| `gym_attacker_atk_multiplier()` | `1.10` | v4 신규 — 공격자 ATK 일괄 |
+| `gym_mur_attack_multiplier()` | `1.05` | |
+| `gym_type_match_multiplier()` | `1.10` | |
 
 향후 밸런스 패치는 위 함수 한 곳만 수정하면 모든 산식에 자동 반영.
+
+### v3 → v4 (2026-05-03)
+
+| 항목 | v3 | v4 |
+|------|------|------|
+| 유저 전투력 → 스탯 보정 | sqrt(cp) 정규화, 일반 35% / MUR 45% 까지 가산 | **제거** (`gym_power_bonus_rate` → 항상 0) |
+| 방어자 HP 보너스 | × 1.10 | **× 1.00** (제거) |
+| 공격자 ATK 보너스 | 없음 (MUR 만 ×1.05) | **× 1.10** (모든 희귀도) — v4 신규 |
+| MUR 공격자 ATK | ×1.05 | ×1.05 (유지) |
+| 속성 일치 ATK | ×1.10 | ×1.10 (유지) |
+| 도전자 선공 | ✅ | ✅ (유지) |
+| center_power 사용처 | 스탯 가산 + min_power 게이트 + 표시 | **min_power 게이트 + 표시 / 랭킹** 만 |
+
+목적: 신규/일반 유저 진입장벽 완화 + 동일 카드 기준 공격자 ~10% 우위. 방어덱이 더 강한 카드면 base 차이로 여전히 방어자 우세 가능 → 방어덱 의미 보존.
