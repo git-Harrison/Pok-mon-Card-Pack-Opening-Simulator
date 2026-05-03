@@ -1610,8 +1610,8 @@ function OwnedView({ starter: initialStarter }: { starter: MyStarter }) {
         <div
           className="min-h-full flex items-start justify-center px-3"
           style={{
-            paddingTop: "calc(max(env(safe-area-inset-top, 0px), 0px) + 12px)",
-            paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)",
+            paddingTop: "calc(max(env(safe-area-inset-top, 0px), 0px) + 18px)",
+            paddingBottom: "max(env(safe-area-inset-bottom, 0px), 14px)",
           }}
         >
           <PokedexDevice
@@ -1751,7 +1751,7 @@ function PokedexDevice({
       initial={{ scale: 0.9, opacity: 0, y: 12 }}
       animate={{ scale: 1, opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.2, 1.4, 0.4, 1] }}
-      className="relative w-full max-w-sm"
+      className="relative w-full max-w-[340px]"
       style={{
         filter:
           "drop-shadow(0 24px 36px rgba(180,20,30,0.35)) drop-shadow(0 12px 0 rgba(0,0,0,0.5))",
@@ -1808,12 +1808,13 @@ function PokedexDevice({
           className="absolute right-3 top-3 bottom-3 w-px bg-white/15"
         />
 
-        {/* 헤더 — LED 라인 */}
-        <div className="relative px-4 pt-3 pb-2 flex items-center gap-2.5">
+        {/* 헤더 — LED 라인. 좁힌 max-w 에 맞춰 padding/gap/LED 사이즈 모두 살짝 축소.
+            PCL10 표시는 가독성 유지 — 카운트 텍스트 크기는 그대로. */}
+        <div className="relative px-3.5 pt-2.5 pb-1.5 flex items-center gap-2">
           {/* 큰 파란 LED — 전원, 펄스 */}
           <motion.span
             aria-hidden
-            className="relative w-11 h-11 rounded-full ring-2 ring-zinc-900 shrink-0"
+            className="relative w-9 h-9 rounded-full ring-2 ring-zinc-900 shrink-0"
             style={{
               background:
                 "radial-gradient(circle at 30% 28%, #bae6fd 0%, #38bdf8 38%, #0c4a6e 90%)",
@@ -1831,12 +1832,12 @@ function PokedexDevice({
             }
             transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
           >
-            <span className="absolute top-1 left-1.5 w-3.5 h-3.5 rounded-full bg-white/75" />
-            <span className="absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full bg-white/30" />
+            <span className="absolute top-0.5 left-1 w-3 h-3 rounded-full bg-white/75" />
+            <span className="absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full bg-white/30" />
           </motion.span>
 
           {/* 작은 LED 3개 — R Y G, 사이클로 깜빡 */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             {[
               { c: "#fb7185", d: 0 },
               { c: "#fde047", d: 0.33 },
@@ -1845,7 +1846,7 @@ function PokedexDevice({
               <motion.span
                 key={i}
                 aria-hidden
-                className="w-2.5 h-2.5 rounded-full ring-1 ring-zinc-900"
+                className="w-2 h-2 rounded-full ring-1 ring-zinc-900"
                 style={{ background: led.c }}
                 animate={reduce ? undefined : { opacity: [0.35, 1, 0.35] }}
                 transition={{
@@ -1866,7 +1867,7 @@ function PokedexDevice({
           </div>
 
           {/* 스피커 그릴 — 우측 끝 */}
-          <div className="flex flex-col gap-0.5 mr-1 shrink-0">
+          <div className="flex flex-col gap-0.5 ml-0.5 shrink-0">
             {[0, 1, 2].map((row) => (
               <div key={row} className="flex gap-0.5">
                 {Array.from({ length: 6 }).map((_, c) => (
@@ -1880,10 +1881,11 @@ function PokedexDevice({
           </div>
         </div>
 
-        {/* LCD 스크린 — 검정 베젤 + 베이지 안쪽 + 캐릭터 (모바일 스크롤 줄이려 비율 16/10 + 캐릭터 110px) */}
-        <div className="mx-4 mb-3 rounded-xl bg-zinc-900 p-2 ring-2 ring-black/60 shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)]">
+        {/* LCD 스크린 — 검정 베젤 + 베이지 안쪽 + 캐릭터.
+            모바일 스크롤 더 줄이려 비율 16/9 + 캐릭터 96px 로 축소 (이전 16/10·110px). */}
+        <div className="mx-3.5 mb-2.5 rounded-xl bg-zinc-900 p-1.5 ring-2 ring-black/60 shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)]">
           <div
-            className="relative rounded-lg aspect-[16/10] flex items-center justify-center overflow-hidden"
+            className="relative rounded-lg aspect-[16/9] flex items-center justify-center overflow-hidden"
             style={{
               background: `linear-gradient(180deg, ${typeColor.soft}40 0%, #d8d6a5 30%, #b8b687 100%)`,
             }}
@@ -1919,7 +1921,7 @@ function PokedexDevice({
               }
               style={{ filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.4))" }}
             >
-              <PokemonImg dex={stageInfo.dex} name={stageInfo.name} size={110} />
+              <PokemonImg dex={stageInfo.dex} name={stageInfo.name} size={96} />
             </motion.div>
 
             {/* 먹이 반응 이펙트 — 빛 폭발 + 반짝이/하트/별 */}
@@ -1948,7 +1950,7 @@ function PokedexDevice({
 
         {/* 액션 버튼 — 캐릭터(LCD)와 정보 패널 사이.
             상태별 분기: MAX / 진화 가능 / 일반 (먹이 주기). */}
-        <div className="px-4 mb-3">
+        <div className="px-3.5 mb-2.5">
           <ActionButton
             isMax={isMax}
             canEvolve={canEvolve}
@@ -1958,23 +1960,23 @@ function PokedexDevice({
           />
         </div>
 
-        {/* 정보 패널 — 베이지 종이 */}
-        <div className="mx-4 mb-3 rounded-md bg-[#fafaf5] border-[3px] border-zinc-900 px-3.5 py-3 shadow-[0_2px_0_0_rgba(15,23,42,0.85)]">
+        {/* 정보 패널 — 베이지 종이. padding/text 살짝 조여 정보 패널 높이 ~24px 절감. */}
+        <div className="mx-3.5 mb-2.5 rounded-md bg-[#fafaf5] border-[3px] border-zinc-900 px-3 py-2.5 shadow-[0_2px_0_0_rgba(15,23,42,0.85)]">
           {/* 이름 + LV */}
-          <div className="flex items-center justify-between gap-3 mb-2 pb-2 border-b-[1.5px] border-dashed border-zinc-300">
-            <p className="text-[18px] font-black text-zinc-900 truncate">
+          <div className="flex items-center justify-between gap-3 mb-1.5 pb-1.5 border-b-[1.5px] border-dashed border-zinc-300">
+            <p className="text-[16px] font-black text-zinc-900 truncate">
               {starter.nickname}
             </p>
-            <span className="shrink-0 inline-flex items-baseline gap-0.5 px-2 py-0.5 rounded-md bg-zinc-900 text-amber-300">
+            <span className="shrink-0 inline-flex items-baseline gap-0.5 px-1.5 py-0.5 rounded-md bg-zinc-900 text-amber-300">
               <span className="text-[9px] font-bold tracking-wider">LV</span>
-              <span className="text-base font-black tabular-nums">
+              <span className="text-sm font-black tabular-nums">
                 {starter.level}
               </span>
             </span>
           </div>
 
           {/* EXP 바 */}
-          <div className="space-y-1 mb-2.5">
+          <div className="space-y-1 mb-2">
             <div className="flex items-center justify-between text-[10px] font-black text-zinc-500 tracking-wider">
               <span>EXP</span>
               <span className="tabular-nums">
@@ -1983,7 +1985,7 @@ function PokedexDevice({
                   : `${xp.cur.toLocaleString("ko-KR")} / ${xp.max.toLocaleString("ko-KR")}`}
               </span>
             </div>
-            <div className="relative h-2.5 rounded-full bg-zinc-200 overflow-hidden border border-zinc-400">
+            <div className="relative h-2 rounded-full bg-zinc-200 overflow-hidden border border-zinc-400">
               <motion.div
                 className={clsx(
                   "h-full",
@@ -1999,7 +2001,7 @@ function PokedexDevice({
           </div>
 
           {/* 정보 row */}
-          <dl className="space-y-1.5 text-[12.5px]">
+          <dl className="space-y-1 text-[12px]">
             <Row label="포켓몬">
               <span className="font-black text-zinc-900">{stageInfo.name}</span>
             </Row>
@@ -2021,7 +2023,7 @@ function PokedexDevice({
 
         {/* 하단 — D-pad + A·B 버튼.
             B 는 장식 그대로, A 는 실제 동작하는 홈 버튼으로 사용. */}
-        <div className="px-4 pb-4 flex items-center justify-between">
+        <div className="px-3.5 pb-3 flex items-center justify-between">
           <DPad />
           <div className="flex items-center gap-1.5">
             <button
@@ -2029,7 +2031,7 @@ function PokedexDevice({
               onClick={onHelp}
               aria-label="도움말"
               style={{ touchAction: "manipulation" }}
-              className="w-9 h-9 rounded-full bg-gradient-to-b from-zinc-100 to-zinc-300 ring-2 ring-zinc-900 inline-flex items-center justify-center text-zinc-800 active:translate-y-[1px] active:shadow-inner shadow-[0_2px_0_0_rgba(0,0,0,0.55)] transition-transform"
+              className="w-8 h-8 rounded-full bg-gradient-to-b from-zinc-100 to-zinc-300 ring-2 ring-zinc-900 inline-flex items-center justify-center text-zinc-800 active:translate-y-[1px] active:shadow-inner shadow-[0_2px_0_0_rgba(0,0,0,0.55)] transition-transform"
             >
               <HelpIcon className="w-4 h-4" />
             </button>
@@ -2038,9 +2040,9 @@ function PokedexDevice({
               onClick={onHome}
               aria-label="메인으로"
               style={{ touchAction: "manipulation" }}
-              className="w-9 h-9 rounded-full bg-gradient-to-b from-zinc-100 to-zinc-300 ring-2 ring-zinc-900 inline-flex items-center justify-center text-zinc-800 active:translate-y-[1px] active:shadow-inner shadow-[0_2px_0_0_rgba(0,0,0,0.55)] transition-transform"
+              className="w-8 h-8 rounded-full bg-gradient-to-b from-zinc-100 to-zinc-300 ring-2 ring-zinc-900 inline-flex items-center justify-center text-zinc-800 active:translate-y-[1px] active:shadow-inner shadow-[0_2px_0_0_rgba(0,0,0,0.55)] transition-transform"
             >
-              <PokeballNavIcon className="w-5 h-5" />
+              <PokeballNavIcon className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -2227,7 +2229,7 @@ function ActionButton({
       <button
         type="button"
         disabled
-        className="w-full h-12 rounded-xl border-[3px] border-zinc-900 bg-gradient-to-b from-zinc-200 to-zinc-400 text-zinc-700 text-sm font-black tracking-[0.32em] shadow-[0_4px_0_0_rgba(15,23,42,0.65)] cursor-not-allowed"
+        className="w-full h-11 rounded-xl border-[3px] border-zinc-900 bg-gradient-to-b from-zinc-200 to-zinc-400 text-zinc-700 text-sm font-black tracking-[0.32em] shadow-[0_4px_0_0_rgba(15,23,42,0.65)] cursor-not-allowed"
       >
         ★ MAX
       </button>
@@ -2251,7 +2253,7 @@ function ActionButton({
               }
         }
         transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-        className="w-full h-12 rounded-xl border-[3px] border-zinc-900 bg-gradient-to-b from-violet-400 via-fuchsia-400 to-rose-400 text-white text-sm font-black tracking-[0.22em] active:translate-y-[2px] transition-transform shadow-[0_4px_0_0_rgba(15,23,42,0.85)] active:shadow-[0_1px_0_0_rgba(15,23,42,0.85)]"
+        className="w-full h-11 rounded-xl border-[3px] border-zinc-900 bg-gradient-to-b from-violet-400 via-fuchsia-400 to-rose-400 text-white text-sm font-black tracking-[0.22em] active:translate-y-[2px] transition-transform shadow-[0_4px_0_0_rgba(15,23,42,0.85)] active:shadow-[0_1px_0_0_rgba(15,23,42,0.85)]"
       >
         <span
           className="inline-flex items-center justify-center gap-1.5"
@@ -2269,7 +2271,7 @@ function ActionButton({
       type="button"
       onClick={onFeed}
       style={{ touchAction: "manipulation" }}
-      className="w-full h-12 rounded-xl border-[3px] border-zinc-900 bg-gradient-to-b from-amber-300 to-amber-500 text-zinc-900 text-sm font-black tracking-[0.22em] active:translate-y-[2px] transition-all shadow-[0_4px_0_0_rgba(15,23,42,0.85)] active:shadow-[0_1px_0_0_rgba(15,23,42,0.85)]"
+      className="w-full h-11 rounded-xl border-[3px] border-zinc-900 bg-gradient-to-b from-amber-300 to-amber-500 text-zinc-900 text-sm font-black tracking-[0.22em] active:translate-y-[2px] transition-all shadow-[0_4px_0_0_rgba(15,23,42,0.85)] active:shadow-[0_1px_0_0_rgba(15,23,42,0.85)]"
     >
       <span className="inline-flex items-center justify-center gap-1.5">
         <BoltGlyph />
@@ -2944,7 +2946,7 @@ function DPad() {
   return (
     <div
       aria-hidden
-      className="relative w-12 h-12 rounded-md"
+      className="relative w-11 h-11 rounded-md"
       style={{
         background: "linear-gradient(180deg, #1f1f1f 0%, #0a0a0a 100%)",
         border: "2px solid #000",
