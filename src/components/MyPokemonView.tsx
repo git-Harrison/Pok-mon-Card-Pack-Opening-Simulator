@@ -1610,7 +1610,9 @@ function OwnedView({ starter: initialStarter }: { starter: MyStarter }) {
         <div
           className="min-h-full flex items-start justify-center px-3"
           style={{
-            paddingTop: "calc(max(env(safe-area-inset-top, 0px), 0px) + 18px)",
+            // 안테나(-top-7 = 28px) + LED 펄스 여유. 모바일에서 디바이스 상단이
+            // 잘려 보이지 않도록 충분한 여백.
+            paddingTop: "calc(max(env(safe-area-inset-top, 0px), 0px) + 40px)",
             paddingBottom: "max(env(safe-area-inset-bottom, 0px), 14px)",
           }}
         >
