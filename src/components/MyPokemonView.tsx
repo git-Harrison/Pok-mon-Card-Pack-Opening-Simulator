@@ -2308,16 +2308,20 @@ function HelpModal({ onClose }: { onClose: () => void }) {
       }}
     >
       <motion.div
-        className="w-full max-w-sm"
+        className="w-full max-w-sm flex flex-col"
         onClick={(e) => e.stopPropagation()}
         initial={{ scale: 0.92, opacity: 0, y: 12 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 6 }}
         transition={{ duration: 0.28, ease: [0.2, 1.4, 0.4, 1] }}
+        // 모달 자체 높이 제한 — 모바일 dvh 기반 + safari 폴백.
+        // 외부 wrapper 가 이미 safe-area 패딩을 잡았으므로 32px 만 추가
+        // 여백으로 빼면 됨.
+        style={{ maxHeight: "calc(100dvh - 32px)" }}
       >
         {/* 외관 — 도감과 같은 톤 (빨간 본체 + 검정 보더 + 베이지 본문) */}
         <div
-          className="relative rounded-2xl overflow-hidden border-[3px] border-zinc-900 shadow-[0_18px_36px_-10px_rgba(0,0,0,0.85)]"
+          className="relative rounded-2xl overflow-hidden border-[3px] border-zinc-900 shadow-[0_18px_36px_-10px_rgba(0,0,0,0.85)] flex flex-col min-h-0"
           style={{
             background:
               "linear-gradient(180deg, #d6202e 0%, #b71625 55%, #8a0d1c 100%)",
@@ -2333,8 +2337,8 @@ function HelpModal({ onClose }: { onClose: () => void }) {
             }}
           />
 
-          {/* 헤더 */}
-          <div className="relative px-4 pt-4 pb-3 flex items-center gap-2">
+          {/* 헤더 — 항상 보이도록 shrink-0 */}
+          <div className="relative px-4 pt-4 pb-3 flex items-center gap-2 shrink-0">
             {/* 도감 시그니처 — 작은 파란 LED */}
             <span
               aria-hidden
@@ -2361,57 +2365,50 @@ function HelpModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
 
-          {/* 본문 — 베이지 종이 패널 */}
-          <div className="mx-4 mb-4 rounded-md bg-[#fafaf5] border-[3px] border-zinc-900 px-4 py-4 shadow-[0_2px_0_0_rgba(15,23,42,0.85)] space-y-3 text-[13px] leading-relaxed text-zinc-900">
-            <div>
-              <h2 className="text-[15px] font-black mb-1">내 포켓몬 도감</h2>
-              <p className="text-[12px] text-zinc-700">
-                함께할 첫 포켓몬과의 전용 화면이에요.
-                기능별 안내는 아래를 참고하세요.
-              </p>
+          {/* 스크롤 영역 — 내용이 화면 높이 초과 시 모달 내부에서만 스크롤. */}
+          <div
+            className="flex-1 min-h-0 overflow-y-auto px-4 pb-4"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
+            <div className="rounded-md bg-[#fafaf5] border-[3px] border-zinc-900 px-4 py-3.5 shadow-[0_2px_0_0_rgba(15,23,42,0.85)] space-y-2.5 text-zinc-900">
+              <div>
+                <h2 className="text-[14px] font-black mb-0.5">내 포켓몬 안내</h2>
+                <p className="text-[11px] text-zinc-700 leading-snug">
+                  핵심 규칙만 짧게 정리했어요.
+                </p>
+              </div>
+
+              <HelpRow label="1. 포켓몬 선택">
+                처음에 포켓몬 1마리를 선택해요.<br />
+                다른 유저가 고른 포켓몬은 선택할 수 없어요.
+              </HelpRow>
+
+              <HelpRow label="2. 먹이 주기">
+                같은 속성의 PCL10 카드(<strong className="font-black">MUR / UR / SAR</strong>) 만 먹이로 사용 가능.<br />
+                체육관·전시·펫 등록 중인 카드는 제외돼요.
+              </HelpRow>
+
+              <HelpRow label="3. 성장">
+                먹이를 주면 EXP 가 차고 레벨이 올라요.<br />
+                <strong className="font-black">Lv.1 시작 → Lv.30 MAX.</strong>
+              </HelpRow>
+
+              <HelpRow label="4. 진화">
+                <strong className="font-black">Lv.10</strong> — 1차 진화 가능.<br />
+                <strong className="font-black">Lv.20</strong> — 2차 진화 가능.<br />
+                진화 가능 시 &ldquo;강화하기&rdquo; 버튼이 &ldquo;진화하기&rdquo;로 바뀌어요.
+              </HelpRow>
+
+              <HelpRow label="5. 전투력">
+                레벨이 오르면 유저 전투력이 증가해요.<br />
+                표시·랭킹용이며 체육관 전투 스탯에는 영향 없음.
+              </HelpRow>
+
+              <HelpRow label="6. 배경">
+                접속할 때마다 배경이 랜덤 표시돼요.<br />
+                일정 시간이 지나면 다른 배경으로 바뀔 수 있어요.
+              </HelpRow>
             </div>
-
-            <HelpRow label="LV / EXP">
-              포켓몬의 성장 단계예요. 향후 전투/특훈을 통해 EXP 가 차고
-              레벨업합니다.
-            </HelpRow>
-
-            <HelpRow label="전투력">
-              내 포켓몬 LV 에 따라 유저 전투력에 더해지는 보너스예요. Lv.10 /
-              Lv.20 / Lv.30 에서 큰 폭으로 오르고, 프로필 · 랭킹 · 이 화면에
-              모두 반영돼요. (체육관 실제 전투 스탯에는 영향이 없어요.)
-            </HelpRow>
-
-            <HelpRow label="동속성 PCL10">
-              현재 캐릭터와 같은 속성의 PCL10 슬랩 중,
-              <strong className="font-black">
-                {" "}
-                펫 / 전시 / 체육관 방어덱에 사용되지 않은
-              </strong>
-              {" "}카드 개수예요. 같은 카드 종류는 1번만 셉니다.
-              실제 먹이로 사용할 수 있는 후보 수와 같아요.
-            </HelpRow>
-
-            <HelpRow label="먹이 주기">
-              <strong className="font-black">
-                현재 포켓몬과 같은 속성의 PCL10 카드(MUR / UR / SAR)
-              </strong>{" "}
-              만 먹이로 사용할 수 있어요. 다른 속성 카드는 재료 후보에 나오지
-              않습니다. 기본 EXP 는{" "}
-              <strong className="font-black">SAR 20 / UR 200 / MUR 10,000</strong>{" "}
-              이고, 7% 확률로 대성공(×1.2), 1% 확률로 초대성공(×1.5).
-            </HelpRow>
-
-            <HelpRow label="진화">
-              Lv.10 / Lv.20 도달 시 진화 가능 상태가 돼요. 진화는{" "}
-              <strong className="font-black">100% 성공</strong>이며, 진화하면
-              새로운 모습으로 바뀌어요. (피카츄는 라이츄까지 1단 진화.)
-            </HelpRow>
-
-            <HelpRow label="HOME / HELP">
-              하단 라운드 버튼이에요. HOME 은 메인으로 이동, HELP 는 이 안내를
-              다시 봅니다.
-            </HelpRow>
           </div>
         </div>
       </motion.div>
@@ -2428,10 +2425,8 @@ function HelpRow({
 }) {
   return (
     <div className="flex flex-col gap-0.5 pb-2 border-b border-dashed border-zinc-300 last:border-b-0 last:pb-0">
-      <p className="text-[10px] font-black tracking-[0.18em] text-zinc-500">
-        {label}
-      </p>
-      <p className="text-[12.5px] text-zinc-800 leading-relaxed">{children}</p>
+      <p className="text-[11px] font-black text-zinc-900">{label}</p>
+      <p className="text-[12px] text-zinc-700 leading-snug">{children}</p>
     </div>
   );
 }
