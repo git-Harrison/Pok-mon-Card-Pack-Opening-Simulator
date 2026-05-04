@@ -869,11 +869,14 @@ function Card({
   missing: boolean;
   tapping: boolean;
 }) {
+  // 카드 내 심볼 크기 — 영유아 가독성 우선. clamp(min, vw 기반 가변,
+  // max) 로 모바일~아이패드 가로/세로 모두 자연스럽게 채움. 상한값은
+  // iPad 큰 화면에서도 카드 안을 시원하게 채울 정도.
   const fontSize =
-    size <= 3 ? "clamp(36px, 12vw, 80px)"
-    : size <= 4 ? "clamp(28px, 8vw, 64px)"
-    : size <= 6 ? "clamp(20px, 6vw, 48px)"
-    : "clamp(16px, 4.5vw, 36px)";
+    size <= 3 ? "clamp(56px, 18vw, 140px)"
+    : size <= 4 ? "clamp(40px, 12vw, 110px)"
+    : size <= 6 ? "clamp(28px, 8.5vw, 80px)"
+    : "clamp(20px, 6.5vw, 60px)";
   const radius = size <= 4 ? 16 : size <= 6 ? 12 : 8;
 
   // 외곽 wrapper 에 매치/미스 애니메이션 적용 (flip 과 독립).
@@ -918,7 +921,12 @@ function Card({
             background:
               "linear-gradient(135deg, #FF8FB1 0%, #FFB18F 50%, #FFD18F 100%)",
             border: "2px solid #ffffffaa",
-            fontSize: size <= 4 ? 28 : size <= 6 ? 20 : 14,
+            // 뒷면 ? 도 같이 확대 — 카드 비율 대비 시원하게.
+            fontSize:
+              size <= 3 ? "clamp(48px, 16vw, 120px)"
+              : size <= 4 ? "clamp(32px, 10vw, 88px)"
+              : size <= 6 ? "clamp(22px, 7vw, 64px)"
+              : "clamp(16px, 5vw, 44px)",
           }}
         >
           ?
