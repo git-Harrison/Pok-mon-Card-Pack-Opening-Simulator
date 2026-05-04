@@ -29,10 +29,15 @@ export const metadata: Metadata = {
   },
 };
 
-// Next.js 16 typed-routes 호환 — globally 제공되는 LayoutProps 사용
-// (next typegen / next dev / next build 시 자동 생성, import 불요).
-export default function MatchLayout(props: LayoutProps<"/match">) {
+// Next.js 16 layout. typed-routes 의 글로벌 LayoutProps<"/match"> 는
+// next typegen 산출물에 의존해 CI 의 단독 tsc 단계에서 미존재 (TS2304).
+// /match 는 동적 segment 가 없어 children 만 필요 — inline 타입으로 정의.
+export default function MatchLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   // Fredoka CSS variable 를 /match 서브트리에만 노출. 페이지 자체가
   // fixed inset-0 풀스크린이라 시각적으론 메인 시뮬과 분리됨.
-  return <div className={fredoka.variable}>{props.children}</div>;
+  return <div className={fredoka.variable}>{children}</div>;
 }
