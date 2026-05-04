@@ -64,27 +64,6 @@ const PASTELS: string[] = [
   "#FFE0CC","#CFEEFF","#FFD4D4","#E8FFD4","#FFE7F0",
 ];
 
-/** 이라온 전용 깜짝 표정 GIF — public/match/iraon-surprised.gif. 다른
- *  사용자(민서진)는 기본 🧒 이모지 그대로. 메뉴/미스 토스트/결과
- *  헤더 3곳에서 사용. */
-function IraonGif({ size, alt = "이라온" }: { size: number; alt?: string }) {
-  return (
-    <img
-      src="/match/iraon-surprised.gif"
-      alt={alt}
-      width={size}
-      height={size}
-      style={{
-        width: size,
-        height: size,
-        objectFit: "contain",
-        display: "block",
-      }}
-      draggable={false}
-    />
-  );
-}
-
 function poolFor(category: Category): string[] {
   switch (category) {
     case "vehicle": return VEHICLE_EMOJI;
@@ -745,11 +724,7 @@ function MenuScreen({
         <div className="grid grid-cols-2 gap-3 md:gap-4 w-full max-w-md">
           {PLAYERS.map((p) => (
             <SelectButton key={p} active={player === p} onClick={() => onPlayer(p)} color="rose">
-              {p === "이라온" ? (
-                <IraonGif size={56} />
-              ) : (
-                <span className="text-3xl md:text-4xl">🧚</span>
-              )}
+              <span className="text-3xl md:text-4xl">🧚</span>
               <span className="block mt-1 text-base md:text-lg font-black">{p}</span>
             </SelectButton>
           ))}
@@ -895,7 +870,7 @@ function PlayScreen({
         </button>
         <div className="min-w-0 flex-1 text-center">
           <p className="text-[11px] md:text-sm font-black text-zinc-700 truncate">
-            {player === "이라온" ? "🌟" : "🧚"} {player} · {CATEGORY_LABEL[category]} · {grid}×{grid}
+            🧚 {player} · {CATEGORY_LABEL[category]} · {grid}×{grid}
           </p>
           <p className="text-[10px] md:text-xs text-zinc-500 tabular-nums">
             맞춘 짝 <b className="text-emerald-600">{matchedPairs}</b> / {totalPairs}
@@ -940,25 +915,6 @@ function PlayScreen({
       </div>
 
       {allDone && <ConfettiBurst key={`confetti-${moves}`} />}
-
-      {/* 미스 시 이라온 한정 "깜짝!" 토스트 — 우상단에 짧게 노출.
-          missAnim 길이 > 0 동안만 보이고 자동 사라짐. */}
-      {missAnim.length > 0 && player === "이라온" && (
-        <div
-          className="pointer-events-none fixed z-[1100]"
-          style={{
-            top: "calc(env(safe-area-inset-top) + 70px)",
-            right: "calc(env(safe-area-inset-right) + 12px)",
-          }}
-        >
-          <div className="rounded-2xl bg-white/95 shadow-xl px-2 py-1.5 flex items-center gap-2 border-2 border-amber-300">
-            <IraonGif size={56} />
-            <span className="text-sm md:text-base font-black text-rose-500 pr-1">
-              깜짝!
-            </span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -1156,13 +1112,7 @@ function WonScreen({
   return (
     <div className="absolute inset-0 overflow-y-auto px-4 py-6 md:px-8 md:py-10 flex flex-col items-center gap-4">
       <div className="flex flex-col items-center gap-2 mt-2">
-        {record.player === "이라온" ? (
-          <div className="animate-bounce">
-            <IraonGif size={140} />
-          </div>
-        ) : (
-          <div className="text-6xl md:text-7xl animate-bounce">🥳</div>
-        )}
+        <div className="text-6xl md:text-7xl animate-bounce">🥳</div>
         <h1 className="text-2xl md:text-4xl font-black text-rose-500 text-center">
           {record.player} 잘했어요!
         </h1>
