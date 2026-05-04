@@ -778,7 +778,7 @@ function MenuScreen({
         onClick={onStart}
         disabled={!ready}
         style={{ touchAction: "manipulation" }}
-        className={`mt-2 w-full max-w-md h-16 md:h-20 rounded-3xl text-xl md:text-2xl font-black transition active:scale-[0.98] ${
+        className={`mt-6 w-full max-w-md py-5 md:py-6 rounded-3xl text-xl md:text-2xl font-black transition active:scale-[0.98] flex items-center justify-center leading-none ${
           ready
             ? "bg-gradient-to-r from-rose-400 to-orange-400 text-white shadow-lg shadow-rose-200"
             : "bg-zinc-200 text-zinc-400 cursor-not-allowed"
