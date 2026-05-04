@@ -24,9 +24,7 @@ import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 import { wildSpriteUrl } from "@/lib/wild/pool";
 import { lookupDex } from "@/lib/wild/name-to-dex";
 import { cardSpriteUrl } from "@/lib/wild/card-sprite";
-import { slabStats } from "@/lib/wild/stats";
 import { getCard } from "@/lib/sets";
-import type { Rarity } from "@/lib/types";
 import type { DefenderPokemonInfo } from "@/lib/gym/types";
 import { CenteredPokeLoader } from "./PokeLoader";
 import PageHeader from "./PageHeader";
@@ -1860,11 +1858,14 @@ function DefenderStatCard({
   const cardName = card?.name ?? defender.card_id ?? "?";
   const dex = !isStale ? lookupDex(cardName) : null;
   const megaSprite = !isStale ? cardSpriteUrl(cardName) : null;
-  const baseStats = !isStale
-    ? slabStats(
-        (card?.rarity ?? defender.rarity ?? "C") as Rarity,
-        defender.grade ?? 10
-      )
+  // 표시 stat — 서버 gym_defender_display_stats() 결과 그대로 사용.
+  // 방어자 멀티플라이어 / MUR 보너스 / 속성 일치까지 반영된 실제 전투
+  // 스탯과 동일. 클라 slabStats 는 base 표가 서버와 달라 폐기.
+  const displayStats = !isStale
+    ? {
+        hp: defender.display_hp ?? 0,
+        atk: defender.display_atk ?? 0,
+      }
     : { hp: 0, atk: 0 };
   const [broken, setBroken] = useState(false);
   const [megaBroken, setMegaBroken] = useState(false);
@@ -1936,8 +1937,8 @@ function DefenderStatCard({
         )}
       </div>
       <ul className="text-[9px] text-zinc-300 grid grid-cols-2 gap-x-1 gap-y-0 w-full leading-tight tabular-nums">
-        <li>HP {baseStats.hp}</li>
-        <li>ATK {baseStats.atk}</li>
+        <li>HP {displayStats.hp}</li>
+        <li>ATK {displayStats.atk}</li>
         <li className="col-span-2 text-fuchsia-300/85 font-bold text-[8px]">
           PCL {defender.grade} · {defender.rarity}
         </li>

@@ -34,6 +34,12 @@ export interface DefenderPokemonInfo {
   type: WildType;
   rarity: string | null;
   grade: number | null;
+  /** 표시용 HP/ATK — 서버 gym_defender_display_stats() 가 계산. 방어자
+   *  멀티플라이어 + MUR 보너스 + 속성 일치까지 모두 반영된 실제 전투
+   *  stat 과 동일. stale 슬롯 (g2 미존재) 은 null. 클라가 직접 산식을
+   *  복제하지 않도록 서버 단일 소스로 통일 (20260700). */
+  display_hp: number | null;
+  display_atk: number | null;
 }
 
 export interface GymOwnership {
