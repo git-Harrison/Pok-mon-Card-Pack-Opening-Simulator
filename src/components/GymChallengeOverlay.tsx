@@ -21,6 +21,7 @@ import type {
 import { effectiveness } from "@/lib/wild/typechart";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 import { resolveCardType as resolvePetType } from "@/lib/wild/name-to-type";
+import { getCardSecondaryType } from "@/lib/wild/mur-secondary";
 import { lookupDex } from "@/lib/wild/name-to-dex";
 import { cardSpriteUrl } from "@/lib/wild/card-sprite";
 import { wildSpriteUrl } from "@/lib/wild/pool";
@@ -61,6 +62,8 @@ interface MyPet {
   rarity: keyof typeof RARITY_STYLE;
   grade: number;
   type: WildType | null;
+  /** MUR 보조 속성 (없으면 null). 두 속성 매칭/표시용. */
+  type2: WildType | null;
   imageUrl?: string;
   baseHp: number;
   baseAtk: number;
@@ -80,6 +83,7 @@ function mergePet(g: RawPetGrading): MyPet | null {
     rarity,
     grade: g.grade,
     type: card ? resolvePetType(card.name) : null,
+    type2: rarity === "MUR" ? getCardSecondaryType(g.card_id) : null,
     imageUrl: card?.imageUrl,
     baseHp: stats.hp,
     baseAtk: stats.atk,
@@ -234,7 +238,10 @@ export default function GymChallengeOverlay({
     }
 
     const gradingIds = selectedPets.map((p) => p.grading_id);
-    const petTypes = selectedPets.map((p) => p.type ?? "노말");
+    // gym.type 으로 정규화 — MUR 가 wild_type_2 로 매칭된 경우 p.type
+    // (primary) 이 gym.type 과 다를 수 있어 서버가 거부. 서버도 어차피
+    // gym.type 으로 정규화하므로 양쪽 일관되게.
+    const petTypes = selectedPets.map(() => gym.type);
     const res = await resolveGymBattle(userId, gym.id, challengeId, gradingIds, petTypes);
 
     if (!res.ok) {
@@ -500,7 +507,7 @@ function PickerPhase({
 }) {
   // 체육관 속성 매칭 강제 — 같은 속성 펫만 노출.
   const matchingPets = useMemo(
-    () => pets.filter((p) => p.type === gym.type),
+    () => pets.filter((p) => p.type === gym.type || p.type2 === gym.type),
     [pets, gym.type]
   );
   const insufficient = !loading && matchingPets.length < 3;
@@ -739,7 +746,7 @@ function PickerPhase({
                       <p className="text-[9px] text-zinc-400 leading-tight">
                         HP {p.baseHp} · ATK {p.baseAtk}
                       </p>
-                      <div className="flex items-center gap-0.5 mt-0.5">
+                      <div className="flex items-center gap-0.5 mt-0.5 flex-wrap">
                         {p.type ? (
                           <span
                             className={clsx(
@@ -751,6 +758,17 @@ function PickerPhase({
                           </span>
                         ) : (
                           <span className="text-[8px] text-zinc-500">無속성</span>
+                        )}
+                        {/* MUR 보조 속성 — 두 번째 배지 */}
+                        {p.type2 && (
+                          <span
+                            className={clsx(
+                              "px-1 py-[1px] rounded text-[8px] font-black",
+                              TYPE_STYLE[p.type2].badge
+                            )}
+                          >
+                            {p.type2}
+                          </span>
                         )}
                         {p.type && eff !== 1 && (
                           <span
@@ -1384,7 +1402,7 @@ function DefenseSetupPhase({
   error: string | null;
 }) {
   const matchingPets = useMemo(
-    () => pets.filter((p) => p.type === gym.type),
+    () => pets.filter((p) => p.type === gym.type || p.type2 === gym.type),
     [pets, gym.type]
   );
   const insufficient = !loading && matchingPets.length < 3;
@@ -1539,16 +1557,29 @@ function DefenseSetupPhase({
                       <p className="text-[9px] text-zinc-400 leading-tight">
                         HP {p.baseHp} · ATK {p.baseAtk}
                       </p>
-                      {p.type && (
-                        <span
-                          className={clsx(
-                            "inline-block mt-0.5 px-1 py-[1px] rounded text-[8px] font-black",
-                            TYPE_STYLE[p.type].badge
-                          )}
-                        >
-                          {p.type}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-0.5 mt-0.5 flex-wrap">
+                        {p.type && (
+                          <span
+                            className={clsx(
+                              "px-1 py-[1px] rounded text-[8px] font-black",
+                              TYPE_STYLE[p.type].badge
+                            )}
+                          >
+                            {p.type}
+                          </span>
+                        )}
+                        {/* MUR 보조 속성 — 두 번째 배지 */}
+                        {p.type2 && (
+                          <span
+                            className={clsx(
+                              "px-1 py-[1px] rounded text-[8px] font-black",
+                              TYPE_STYLE[p.type2].badge
+                            )}
+                          >
+                            {p.type2}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </button>
                 </li>

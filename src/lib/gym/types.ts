@@ -32,6 +32,8 @@ export interface DefenderPokemonInfo {
    *  유지하되 default NPC 로 떨어지지 않게). */
   card_id: string | null;
   type: WildType;
+  /** MUR 보조 속성 (없으면 null). UI 두 배지 렌더링용 (20260703). */
+  wild_type_2: WildType | null;
   rarity: string | null;
   grade: number | null;
   /** 표시용 HP/ATK — 서버 gym_defender_display_stats() 가 계산. 방어자

@@ -1849,7 +1849,9 @@ function DefenderStatCard({
 }) {
   const t = defender.type as keyof typeof TYPE_STYLE;
   const style = TYPE_STYLE[t];
-  const sameAsGym = defender.type === gymType;
+  // MUR 두 속성 중 하나라도 체육관 속성과 일치 → ★
+  const sameAsGym =
+    defender.type === gymType || defender.wild_type_2 === gymType;
   // stale 슬롯 — psa_gradings row 가 사라진 경우 server 가 card_id/
   // rarity/grade null 로 반환. "데이터 손상" placeholder 표시해
   // 점령은 그대로 인지하되 default NPC 로 떨어지지 않게.
@@ -1928,10 +1930,21 @@ function DefenderStatCard({
       <p className="text-[10px] font-bold text-white truncate max-w-full">
         {cardName}
       </p>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-wrap justify-center">
         <span className={clsx("px-1 py-0.5 rounded text-[8px] font-black", style.badge)}>
           {defender.type}
         </span>
+        {/* MUR 보조 속성 — 두 번째 배지 (UR/SAR 는 항상 null) */}
+        {defender.wild_type_2 && (
+          <span
+            className={clsx(
+              "px-1 py-0.5 rounded text-[8px] font-black",
+              (TYPE_STYLE[defender.wild_type_2 as keyof typeof TYPE_STYLE] ?? style).badge
+            )}
+          >
+            {defender.wild_type_2}
+          </span>
+        )}
         {sameAsGym && (
           <span className="text-[8px] text-amber-300 font-bold">★</span>
         )}

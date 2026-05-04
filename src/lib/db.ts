@@ -1149,6 +1149,8 @@ export interface StarterMaterial {
   card_id: string;
   rarity: "MUR" | "UR" | "SAR";
   wild_type: string | null;
+  /** MUR 보조 속성 (없으면 null). UR/SAR 는 항상 null. */
+  wild_type_2: string | null;
   graded_at: string;
 }
 

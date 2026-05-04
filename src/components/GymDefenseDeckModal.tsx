@@ -14,6 +14,7 @@ import type { DefenderPokemonInfo, Gym } from "@/lib/gym/types";
 import { effectiveness } from "@/lib/wild/typechart";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 import { resolveCardType as resolvePetType } from "@/lib/wild/name-to-type";
+import { getCardSecondaryType } from "@/lib/wild/mur-secondary";
 import { getCard } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
 import { slabStats } from "@/lib/wild/stats";
@@ -27,6 +28,8 @@ interface MyPet {
   rarity: keyof typeof RARITY_STYLE;
   grade: number;
   type: WildType | null;
+  /** MUR 보조 속성 (없으면 null). 매칭/배지 모두 두 속성 고려. */
+  type2: WildType | null;
   imageUrl?: string;
   baseHp: number;
   baseAtk: number;
@@ -59,6 +62,7 @@ function mergePet(g: RawPetGrading): MyPet | null {
     rarity,
     grade,
     type: card ? resolvePetType(card.name) : null,
+    type2: rarity === "MUR" ? getCardSecondaryType(g.card_id) : null,
     imageUrl: card?.imageUrl,
     baseHp: stats.hp,
     baseAtk: stats.atk,
@@ -85,6 +89,11 @@ function mergeFromDefender(d: DefenderPokemonInfo): MyPet | null {
     grade,
     // 서버 저장된 type 우선, 없으면 카드명 기준 lookup.
     type: d.type ?? (card ? resolvePetType(card.name) : null),
+    // 서버가 wild_type_2 를 함께 내려줌 (없으면 null). 클라 매핑으로
+    // fallback — 카탈로그/마이그레이션 동기화 일시적 어긋남 대비.
+    type2:
+      (d.wild_type_2 as WildType | null) ??
+      (rarity === "MUR" ? getCardSecondaryType(d.card_id) : null),
     imageUrl: card?.imageUrl,
     baseHp: stats.hp,
     baseAtk: stats.atk,
@@ -191,9 +200,11 @@ export default function GymDefenseDeckModal({
     });
   }, []);
 
-  // 체육관 속성 매칭 강제 — 같은 속성 펫만 노출.
+  // 체육관 속성 매칭 강제 — 두 속성 중 하나라도 일치하면 노출 (MUR 만
+  // type2 보유, UR/SAR 는 null 이므로 단일 속성 동작 그대로).
   const matchingPets = useMemo(
-    () => pets.filter((p) => p.type === gym.type),
+    () =>
+      pets.filter((p) => p.type === gym.type || p.type2 === gym.type),
     [pets, gym.type]
   );
   const insufficient = !loading && matchingPets.length < 3;
@@ -235,7 +246,9 @@ export default function GymDefenseDeckModal({
     }
 
     const gradingIds = selected.map((p) => p.grading_id);
-    const petTypes = selected.map((p) => p.type ?? "노말");
+    // 서버가 어차피 gym.type 으로 정규화하지만, 클라가 보내는 값도 일관되게.
+    // (MUR 가 wild_type_2 로 매칭된 경우 p.type !== gym.type 이라도 OK.)
+    const petTypes = selected.map(() => gym.type);
     const res = await setGymDefenseDeck(userId, gym.id, gradingIds, petTypes);
     setSaving(false);
     if (!res.ok) {
@@ -333,6 +346,12 @@ export default function GymDefenseDeckModal({
                             <>
                               {" · "}
                               <span className="text-zinc-200">{p.type}</span>
+                              {p.type2 && (
+                                <span className="text-amber-200">
+                                  {" / "}
+                                  {p.type2}
+                                </span>
+                              )}
                             </>
                           )}
                         </p>
@@ -435,7 +454,7 @@ export default function GymDefenseDeckModal({
                             <p className="text-[9px] text-zinc-400 leading-tight">
                               HP {p.baseHp} · ATK {p.baseAtk}
                             </p>
-                            <div className="flex items-center gap-0.5 mt-0.5">
+                            <div className="flex items-center gap-0.5 mt-0.5 flex-wrap">
                               {p.type ? (
                                 <span
                                   className={clsx(
@@ -447,6 +466,17 @@ export default function GymDefenseDeckModal({
                                 </span>
                               ) : (
                                 <span className="text-[8px] text-zinc-500">無속성</span>
+                              )}
+                              {/* MUR 보조 속성 — 두 번째 배지 */}
+                              {p.type2 && (
+                                <span
+                                  className={clsx(
+                                    "px-1 py-[1px] rounded text-[8px] font-black",
+                                    TYPE_STYLE[p.type2].badge
+                                  )}
+                                >
+                                  {p.type2}
+                                </span>
                               )}
                               {p.type && eff !== 1 && (
                                 <span

@@ -2906,7 +2906,7 @@ function FeedModal({
                                       : "bg-white border-zinc-300"
                                   )}
                                 >
-                                  <div className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-1 flex-wrap">
                                     <span
                                       className={clsx(
                                         "text-[9px] font-black px-1 py-0.5 rounded",
@@ -2922,6 +2922,12 @@ function FeedModal({
                                     {m.wild_type && (
                                       <span className="text-[9px] font-black px-1 py-0.5 rounded bg-zinc-200 text-zinc-700">
                                         {m.wild_type}
+                                      </span>
+                                    )}
+                                    {/* MUR 보조 속성 — 두 번째 배지 (UR/SAR 는 항상 null) */}
+                                    {m.wild_type_2 && (
+                                      <span className="text-[9px] font-black px-1 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300/60">
+                                        {m.wild_type_2}
                                       </span>
                                     )}
                                   </div>
