@@ -20,7 +20,7 @@ type Grid = 3 | 4 | 6 | 8;
 const PLAYERS: Player[] = ["이라온", "민서진"];
 
 const CATEGORY_LABEL: Record<Category, string> = {
-  vehicle: "탈것",
+  vehicle: "자동차",
   insect: "곤충",
   alphabet: "알파벳",
   korean: "한글",
@@ -33,13 +33,18 @@ const GRID_LABEL: Record<Grid, string> = {
   8: "전문가",
 };
 
+// 탈것 카테고리 — 자동차 위주. 이륜/기차/비행기/배/표지판 제외해
+// 영유아가 "차" 라는 한 카테고리로 명확히 인지하도록.
+//   · 일반 자동차류: 🚗 🚙 🚕
+//   · 특수 차량: 🚓 🚒 🚑 🚜
+//   · 짐/유틸리티: 🚐 🛻 🚚 🚛
+//   · 스포츠: 🏎️
+//   · 대중교통/버스: 🚌 🚎
+//   · 삼륜: 🛺
+// 총 15종 — 8x8(32쌍) 도 PASTELS 변형 1순환만으로 충분 cover.
 const VEHICLE_EMOJI: string[] = [
   "🚗","🚙","🚕","🚓","🚒","🚑","🚐","🛻","🚚","🚛","🚜",
-  "🏎️","🏍️","🛵","🚲","🛴","🛹","🛼",
-  "🚂","🚆","🚄","🚅","🚈","🚇","🚊","🚝","🚞","🚋","🚌","🚎",
-  "✈️","🛩️","🛫","🛬","🚁","🚀","🛸",
-  "🚢","⛵","🛥️","🚤","⛴️","🛶",
-  "🎈","🚏","🛺","🚧",
+  "🏎️","🚌","🚎","🛺",
 ];
 
 const INSECT_EMOJI: string[] = [
@@ -754,8 +759,8 @@ function MenuScreen({
       <Section title="무엇을 맞출까요?" emoji="🎨">
         <div className="grid grid-cols-2 gap-3 md:gap-4 w-full max-w-md">
           <SelectButton active={category === "vehicle"} onClick={() => onCategory("vehicle")} color="sky">
-            <span className="text-3xl md:text-4xl">🚀</span>
-            <span className="block mt-1 text-base md:text-lg font-black">탈것</span>
+            <span className="text-3xl md:text-4xl">🚗</span>
+            <span className="block mt-1 text-base md:text-lg font-black">자동차</span>
           </SelectButton>
           <SelectButton active={category === "insect"} onClick={() => onCategory("insect")} color="emerald">
             <span className="text-3xl md:text-4xl">🦋</span>
