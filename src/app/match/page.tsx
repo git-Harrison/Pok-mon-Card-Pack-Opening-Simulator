@@ -96,6 +96,7 @@ interface CardData {
   bg: string;
   matched: boolean;
   isText?: boolean;      // 알파벳·한글 = true. 폰트/색상 분기.
+  textKind?: "alphabet" | "korean"; // 영문/한글 폰트 분리용.
   isWild?: boolean;      // 3x3 가운데 와일드.
 }
 
@@ -127,10 +128,14 @@ function buildDeck(category: Category, grid: Grid): CardData[] {
   const pairsNeeded = (total - wildCount) / 2;
   const pairs = buildPairs(category, pairsNeeded);
   const isText = category === "alphabet" || category === "korean";
+  const textKind: "alphabet" | "korean" | undefined =
+    category === "alphabet" ? "alphabet"
+    : category === "korean" ? "korean"
+    : undefined;
   const cards: CardData[] = [];
   pairs.forEach((p) => {
-    cards.push({ id: 0, pairKey: p.key, symbol: p.sym, bg: p.bg, matched: false, isText });
-    cards.push({ id: 0, pairKey: p.key, symbol: p.sym, bg: p.bg, matched: false, isText });
+    cards.push({ id: 0, pairKey: p.key, symbol: p.sym, bg: p.bg, matched: false, isText, textKind });
+    cards.push({ id: 0, pairKey: p.key, symbol: p.sym, bg: p.bg, matched: false, isText, textKind });
   });
   if (wildCount > 0) {
     cards.push({
@@ -298,18 +303,63 @@ const ANIMATION_CSS = `
 .match-root, .match-root * {
   -webkit-tap-highlight-color: transparent;
 }
+.match-root {
+  /* 영유아 가독성 best practice — sub-pixel anti-aliasing, optimizeLegibility,
+     특수 letter-spacing/line-height 는 카드 외 텍스트(메뉴/결과)에 적용. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
 .match-root button {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
 }
+
+/* ── 카드 내 심볼 폰트 ──
+   심볼 = 단일 문자(알파벳/한글) 또는 이모지. 영유아 가독성 핵심:
+     · 균일한 stroke 두께 (산세리프, 굵은 weight)
+     · 둥근 corner (humanist sans-serif)
+     · single-story 'a', single-loop 'g' (Fredoka 가 충족)
+     · 한글은 자모가 또렷한 Pretendard Black weight + 약간 좁은 자간.
+*/
 .symbol-emoji {
   font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
                "Noto Color Emoji", "Twemoji Mozilla", system-ui, sans-serif;
 }
-.symbol-text {
+.symbol-alphabet {
+  /* Fredoka — 둥글친근 humanist sans, 영유아 학습 친화. next/font 변수
+     fallback Pretendard 영문 → system-ui 순. */
+  font-family: var(--match-font-fredoka), "Pretendard Variable",
+               "SF Pro Rounded", system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.symbol-korean {
+  /* Pretendard Black — 한글 자모가 또렷, 학습용 가독성 우수. weight 900
+     으로 굵게. */
   font-family: "Pretendard Variable", "Apple SD Gothic Neo",
                "Noto Sans KR", system-ui, sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+/* ── 메뉴/결과 본문 텍스트 ──
+   영유아 최적: sans-serif + medium-bold + 살짝 넉넉한 자간/줄간격. */
+.match-root h1, .match-root h2, .match-root p, .match-root button, .match-root span {
+  font-family: "Pretendard Variable", "Apple SD Gothic Neo",
+               "Noto Sans KR", system-ui, sans-serif;
+}
+.match-root h1, .match-root h2 {
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+.match-root p {
+  letter-spacing: -0.005em;
+  line-height: 1.45;
+}
+.match-root .tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
 @keyframes match-pop {
@@ -712,11 +762,11 @@ function MenuScreen({
             <span className="block mt-1 text-base md:text-lg font-black">곤충</span>
           </SelectButton>
           <SelectButton active={category === "alphabet"} onClick={() => onCategory("alphabet")} color="violet">
-            <span className="text-2xl md:text-3xl font-black">A B C</span>
+            <span className="symbol-alphabet text-2xl md:text-3xl">A B C</span>
             <span className="block mt-1 text-base md:text-lg font-black">알파벳</span>
           </SelectButton>
           <SelectButton active={category === "korean"} onClick={() => onCategory("korean")} color="pink">
-            <span className="text-2xl md:text-3xl font-black">ㄱ ㄴ ㄷ</span>
+            <span className="symbol-korean text-2xl md:text-3xl">ㄱ ㄴ ㄷ</span>
             <span className="block mt-1 text-base md:text-lg font-black">한글</span>
           </SelectButton>
         </div>
@@ -1010,14 +1060,19 @@ function Card({
           }}
         >
           <span
-            className={card.isText ? "symbol-text" : "symbol-emoji"}
+            className={
+              !card.isText
+                ? "symbol-emoji"
+                : card.textKind === "alphabet"
+                ? "symbol-alphabet"
+                : "symbol-korean"
+            }
             style={{
               // 글리프 박스를 정확히 정중앙으로 — line-height:1 로 행
               // 높이 자투리 제거, display:block 으로 baseline 영향 제거.
               display: "block",
               lineHeight: 1,
               textAlign: "center",
-              fontWeight: card.isText ? 900 : "normal",
               color: card.isText ? "#1e293b" : undefined,
               filter: card.isText
                 ? "drop-shadow(0 1px 0 rgba(255,255,255,0.6))"

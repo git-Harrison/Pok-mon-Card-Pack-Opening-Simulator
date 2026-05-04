@@ -1,4 +1,15 @@
 import type { Metadata } from "next";
+import { Fredoka } from "next/font/google";
+
+// Fredoka — 둥글둥글 humanist sans-serif. 영유아 학습 친화 (단순한
+// a/g 형태, 균일 stroke, 둥근 corner) + 트렌디. next/font 로 빌드 시
+// self-host → 외부 도메인 의존성 / CSP 영향 없음.
+const fredoka = Fredoka({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--match-font-fredoka",
+  display: "swap",
+});
 
 // /match 만의 metadata — 루트 layout 의 "포켓몬 카드깡 시뮬레이터"
 // title/description 을 override. 카카오톡 / 슬랙 / 메시지 등 OG
@@ -21,7 +32,7 @@ export const metadata: Metadata = {
 // Next.js 16 typed-routes 호환 — globally 제공되는 LayoutProps 사용
 // (next typegen / next dev / next build 시 자동 생성, import 불요).
 export default function MatchLayout(props: LayoutProps<"/match">) {
-  // 단순 pass-through — root layout 의 AuthProvider/Navbar 는 그대로
-  // 상속되지만 페이지 자체가 fixed inset-0 풀스크린이라 위에 덮음.
-  return <>{props.children}</>;
+  // Fredoka CSS variable 를 /match 서브트리에만 노출. 페이지 자체가
+  // fixed inset-0 풀스크린이라 시각적으론 메인 시뮬과 분리됨.
+  return <div className={fredoka.variable}>{props.children}</div>;
 }
