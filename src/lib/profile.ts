@@ -145,6 +145,8 @@ export interface ProfileSnapshot {
   center_power: number;
   pokedex_count: number;
   pokedex_bonus: number;
+  /** 내 포켓몬 LV 보너스 (표시용 분해). 포켓몬 미선택은 0. */
+  starter_power_bonus: number;
 }
 
 /** 한 속성당 펫 슬롯 상한. */
@@ -170,6 +172,7 @@ export async function fetchProfile(userId: string): Promise<ProfileSnapshot> {
       center_power: 0,
       pokedex_count: 0,
       pokedex_bonus: 0,
+      starter_power_bonus: 0,
     };
   }
   const d = data as {
@@ -184,6 +187,7 @@ export async function fetchProfile(userId: string): Promise<ProfileSnapshot> {
     center_power?: number | null;
     pokedex_count?: number | null;
     pokedex_bonus?: number | null;
+    starter_power_bonus?: number | null;
   };
   return {
     ok: d.ok,
@@ -197,6 +201,7 @@ export async function fetchProfile(userId: string): Promise<ProfileSnapshot> {
     center_power: d.center_power ?? 0,
     pokedex_count: d.pokedex_count ?? 0,
     pokedex_bonus: d.pokedex_bonus ?? 0,
+    starter_power_bonus: d.starter_power_bonus ?? 0,
   };
 }
 

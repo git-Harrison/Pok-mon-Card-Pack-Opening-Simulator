@@ -20,6 +20,8 @@ import {
   type StarterMaterial,
 } from "@/lib/db";
 import { wildSpriteUrl } from "@/lib/wild/pool";
+import { starterLevelPower } from "@/lib/starter-power";
+import { getCard } from "@/lib/sets";
 import PokeLoader from "./PokeLoader";
 import Portal from "./Portal";
 import { HelpIcon, PokeballNavIcon } from "./icons/NavIcons";
@@ -84,9 +86,12 @@ const TYPE_COLOR: Record<PokemonType, { bg: string; text: string; soft: string }
   벌레:   { bg: "#65a30d", text: "#ffffff", soft: "#a3e635" },
 };
 
-/** 전투력 — basePower + level × 100. 향후 정식 시스템 도입 시 서버 산식으로 교체. */
-function computePower(meta: SpeciesMeta, level: number): number {
-  return meta.basePower + Math.max(0, level) * 100;
+/** 내 포켓몬 LV 기반 유저 전투력 보너스 — 정액 표 (`@/lib/starter-power`).
+ *  표시/랭킹용. 체육관 실제 전투 스탯 계산 (gym_pet_battle_stats) 에는
+ *  들어가지 않음. 같은 표가 서버 starter_level_power_bonus(int) 함수에도
+ *  존재하며 get_profile / get_user_rankings 의 center_power 합산에 반영됨. */
+function computePower(_meta: SpeciesMeta, level: number): number {
+  return starterLevelPower(level);
 }
 
 /* ─────────── 진화 라인 ─────────── */
@@ -579,6 +584,219 @@ function SceneBackdrop({ reduce }: { reduce: boolean }) {
         }}
       />
     </>
+  );
+}
+
+/* ─────────── 도감 LCD 안 16:9 필드 배경 ───────────
+   원본 게임 에셋을 쓰지 않는 CSS-only 레트로 게임풍 필드 배경 10종.
+   - 접속 시 + 매 시간마다 결정적으로 갱신 (시간 버킷 + 종 + stage 시드).
+   - 같은 시간대 안에서는 동일 배경 유지 → 새로고침해도 같은 배경.
+   - 1시간이 지나면 다른 배경으로 자연 전환 (AnimatePresence 크로스페이드).
+   - 캐릭터 속성에 맞는 배경을 우선 (가중치 ≈ 70% 선호).
+*/
+type SceneKey =
+  | "grass" | "forest" | "cave" | "beach" | "night"
+  | "ghost" | "fire"  | "ice"  | "gym"   | "sunset";
+
+interface SceneStyle {
+  key: SceneKey;
+  /** LCD 안쪽 베이스 그라데이션 (위→아래). */
+  bg: string;
+  /** 추가 디테일 레이어 (구름·풀·달·별 등). 모두 CSS 만 사용. */
+  overlay?: string;
+  /** 캐릭터 발판(원형 그림자) 톤. */
+  groundTint: string;
+  /** 캐릭터에 살짝 더해줄 색감 — 너무 화려하지 않게 alpha 낮게. */
+  vignette?: string;
+}
+
+const SCENE_STYLES: Record<SceneKey, SceneStyle> = {
+  grass: {
+    key: "grass",
+    bg: "linear-gradient(180deg, #a7f0c5 0%, #74d99c 38%, #2f9e57 70%, #1f6b3d 100%)",
+    overlay:
+      "repeating-linear-gradient(115deg, rgba(20,80,40,0.18) 0 2px, transparent 2px 7px), radial-gradient(70% 32% at 50% 8%, rgba(255,255,255,0.55), transparent 70%)",
+    groundTint: "rgba(0,40,15,0.55)",
+  },
+  forest: {
+    key: "forest",
+    bg: "linear-gradient(180deg, #2b4a36 0%, #1f3a2b 50%, #122418 100%)",
+    overlay:
+      "radial-gradient(28% 50% at 18% 60%, rgba(20,120,60,0.6), transparent 70%), radial-gradient(28% 50% at 82% 60%, rgba(20,120,60,0.6), transparent 70%), radial-gradient(38% 60% at 50% 78%, rgba(0,80,30,0.55), transparent 70%)",
+    groundTint: "rgba(0,15,5,0.7)",
+  },
+  cave: {
+    key: "cave",
+    bg: "linear-gradient(180deg, #2a2935 0%, #1c1b26 55%, #0e0d16 100%)",
+    overlay:
+      "radial-gradient(60% 38% at 50% 50%, rgba(255,235,180,0.18), transparent 75%), repeating-linear-gradient(180deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 4px)",
+    groundTint: "rgba(0,0,0,0.75)",
+  },
+  beach: {
+    key: "beach",
+    bg: "linear-gradient(180deg, #aee2ff 0%, #6dc6f0 35%, #f4e2b6 65%, #e0c98a 100%)",
+    overlay:
+      "repeating-linear-gradient(180deg, rgba(255,255,255,0.18) 0 1px, transparent 1px 8px), radial-gradient(50% 22% at 50% 38%, rgba(255,255,255,0.45), transparent 70%)",
+    groundTint: "rgba(80,55,15,0.5)",
+  },
+  night: {
+    key: "night",
+    bg: "linear-gradient(180deg, #0d1448 0%, #11185a 45%, #1b1740 80%, #0a0a18 100%)",
+    overlay:
+      "radial-gradient(8% 8% at 22% 22%, rgba(255,255,255,0.95), transparent 70%), radial-gradient(5% 5% at 70% 32%, rgba(255,255,255,0.75), transparent 70%), radial-gradient(6% 6% at 45% 14%, rgba(255,255,255,0.7), transparent 70%), radial-gradient(20% 20% at 82% 18%, rgba(255,255,200,0.65), transparent 70%)",
+    groundTint: "rgba(5,5,30,0.7)",
+  },
+  ghost: {
+    key: "ghost",
+    bg: "linear-gradient(180deg, #2a1748 0%, #1f1138 50%, #0d0820 100%)",
+    overlay:
+      "radial-gradient(45% 30% at 30% 60%, rgba(180,120,255,0.28), transparent 75%), radial-gradient(40% 28% at 70% 70%, rgba(120,80,200,0.25), transparent 75%), radial-gradient(60% 30% at 50% 18%, rgba(160,100,220,0.2), transparent 70%)",
+    groundTint: "rgba(40,10,60,0.7)",
+  },
+  fire: {
+    key: "fire",
+    bg: "linear-gradient(180deg, #3a1208 0%, #6e1d0c 40%, #c2410c 75%, #f97316 100%)",
+    overlay:
+      "radial-gradient(40% 28% at 28% 78%, rgba(253,224,71,0.4), transparent 70%), radial-gradient(36% 26% at 72% 82%, rgba(253,186,116,0.45), transparent 70%), radial-gradient(60% 30% at 50% 12%, rgba(0,0,0,0.35), transparent 80%)",
+    groundTint: "rgba(60,10,0,0.7)",
+  },
+  ice: {
+    key: "ice",
+    bg: "linear-gradient(180deg, #d6f1ff 0%, #a8d8f0 38%, #7eb6d8 70%, #4d8db0 100%)",
+    overlay:
+      "repeating-linear-gradient(180deg, rgba(255,255,255,0.25) 0 1px, transparent 1px 6px), radial-gradient(45% 22% at 50% 30%, rgba(255,255,255,0.45), transparent 70%)",
+    groundTint: "rgba(20,40,80,0.45)",
+  },
+  gym: {
+    key: "gym",
+    bg: "linear-gradient(180deg, #d1d5db 0%, #9ca3af 45%, #4b5563 100%)",
+    overlay:
+      "repeating-linear-gradient(90deg, rgba(0,0,0,0.16) 0 2px, transparent 2px 28px), repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0 2px, transparent 2px 28px), radial-gradient(70% 32% at 50% 8%, rgba(255,255,255,0.5), transparent 70%)",
+    groundTint: "rgba(0,0,0,0.65)",
+  },
+  sunset: {
+    key: "sunset",
+    bg: "linear-gradient(180deg, #ff9a76 0%, #ff7e8b 35%, #c266a4 70%, #4f3973 100%)",
+    overlay:
+      "radial-gradient(28% 18% at 50% 38%, rgba(255,236,160,0.85), transparent 70%), radial-gradient(60% 22% at 50% 80%, rgba(60,30,80,0.55), transparent 70%)",
+    groundTint: "rgba(50,15,55,0.6)",
+  },
+};
+
+const ALL_SCENES: SceneKey[] = [
+  "grass","forest","cave","beach","night","ghost","fire","ice","gym","sunset",
+];
+
+/** 캐릭터 속성별 선호 배경 — 후보군 (없으면 전체에서 픽). */
+const SCENES_BY_TYPE: Record<PokemonType, SceneKey[]> = {
+  전기:   ["night",  "gym",   "sunset"],
+  불꽃:   ["fire",   "sunset","cave"],
+  물:     ["beach",  "ice",   "night"],
+  풀:     ["grass",  "forest","sunset"],
+  고스트: ["ghost",  "night", "cave"],
+  비행:   ["sunset", "grass", "night"],
+  바위:   ["cave",   "gym",   "forest"],
+  벌레:   ["forest", "grass", "night"],
+};
+
+/** 현재 시간 버킷 (1시간 단위). */
+function currentHourBucket(): number {
+  return Math.floor(Date.now() / (60 * 60 * 1000));
+}
+
+/** 결정적 PRNG — bucket·species·stage 시드 기반. */
+function seededRand(seed: number): number {
+  // mulberry32
+  let t = seed >>> 0;
+  t = (t + 0x6d2b79f5) >>> 0;
+  let r = Math.imul(t ^ (t >>> 15), 1 | t);
+  r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+  return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+}
+
+/** species + stage + bucket → SceneKey. 70% 선호 / 30% 전체. */
+function pickSceneKey(
+  type: PokemonType,
+  species: StarterSpecies,
+  stage: number,
+  bucket: number
+): SceneKey {
+  const seed =
+    bucket * 1009 +
+    species.charCodeAt(0) * 131 +
+    species.charCodeAt(species.length - 1) * 17 +
+    stage * 53;
+  const r1 = seededRand(seed);
+  const preferred = SCENES_BY_TYPE[type] ?? ALL_SCENES;
+  const pool = r1 < 0.7 ? preferred : ALL_SCENES;
+  const r2 = seededRand(seed + 1);
+  return pool[Math.floor(r2 * pool.length)] ?? "grass";
+}
+
+/** LCD (16:9) 안에 들어가는 레트로 필드 배경 — 캐릭터 뒤 레이어.
+ *  자체 그림자 발판도 포함. CRT 스캔라인은 부모(LCD wrapper) 측에서 그림. */
+function LcdScene({
+  type,
+  species,
+  stage,
+  reduce,
+}: {
+  type: PokemonType;
+  species: StarterSpecies;
+  stage: number;
+  reduce: boolean;
+}) {
+  const [bucket, setBucket] = useState<number>(() => currentHourBucket());
+  // 매 1분마다 시간 버킷 변경 감지. 변경 시 새 키로 크로스페이드.
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const next = currentHourBucket();
+      setBucket((cur) => (cur !== next ? next : cur));
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const sceneKey = useMemo(
+    () => pickSceneKey(type, species, stage, bucket),
+    [type, species, stage, bucket]
+  );
+  const scene = SCENE_STYLES[sceneKey];
+
+  return (
+    <AnimatePresence mode="sync">
+      <motion.div
+        key={sceneKey}
+        aria-hidden
+        className="absolute inset-0"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: reduce ? 0.01 : 0.7, ease: "easeOut" }}
+        style={{ background: scene.bg }}
+      >
+        {scene.overlay && (
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: scene.overlay }}
+          />
+        )}
+        {/* 가장자리 비네팅 — 캐릭터가 묻히지 않게 가운데 살짝 밝게 */}
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(70% 60% at 50% 55%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.18) 70%, rgba(0,0,0,0.32) 100%)",
+          }}
+        />
+        {/* 발판 — 캐릭터 아래 작은 타원 그림자 (게임 필드 위에 서 있는 느낌) */}
+        <div
+          aria-hidden
+          className="absolute left-1/2 -translate-x-1/2 bottom-[10%] w-[55%] h-[7%] rounded-[50%]"
+          style={{ background: scene.groundTint, filter: "blur(6px)" }}
+        />
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
@@ -1741,7 +1959,6 @@ function PokedexDevice({
   counts: StarterCompanionCounts | null;
   feedReaction: FeedReaction | null;
 }) {
-  const typeColor = TYPE_COLOR[meta.type];
   const xpPct = isMax
     ? 100
     : xp.max > 0
@@ -1883,15 +2100,21 @@ function PokedexDevice({
           </div>
         </div>
 
-        {/* LCD 스크린 — 검정 베젤 + 베이지 안쪽 + 캐릭터.
-            모바일 스크롤 더 줄이려 비율 16/9 + 캐릭터 96px 로 축소 (이전 16/10·110px). */}
+        {/* LCD 스크린 — 검정 베젤 + 레트로 필드 배경 + 캐릭터.
+            모바일 스크롤 더 줄이려 비율 16/9 + 캐릭터 96px 로 축소 (이전 16/10·110px).
+            배경은 LcdScene 이 캐릭터 속성 + 시간 버킷 기반으로 결정 (저작권
+            없는 CSS-only 필드, 1시간마다 자연 전환). */}
         <div className="mx-3.5 mb-2.5 rounded-xl bg-zinc-900 p-1.5 ring-2 ring-black/60 shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)]">
           <div
-            className="relative rounded-lg aspect-[16/9] flex items-center justify-center overflow-hidden"
-            style={{
-              background: `linear-gradient(180deg, ${typeColor.soft}40 0%, #d8d6a5 30%, #b8b687 100%)`,
-            }}
+            className="relative rounded-lg aspect-[16/9] flex items-center justify-center overflow-hidden bg-zinc-800"
           >
+            {/* 레트로 게임풍 필드 — 캐릭터 뒤 레이어 */}
+            <LcdScene
+              type={meta.type}
+              species={meta.species}
+              stage={starter.evolution_stage ?? 0}
+              reduce={reduce}
+            />
             {/* CRT 스캔라인 */}
             <div
               aria-hidden
@@ -2017,7 +2240,7 @@ function PokedexDevice({
             </Row>
             <Row label="전투력">
               <span className="font-black tabular-nums text-amber-700">
-                {power.toLocaleString("ko-KR")}
+                +{power.toLocaleString("ko-KR")}
               </span>
             </Row>
           </dl>
@@ -2154,8 +2377,9 @@ function HelpModal({ onClose }: { onClose: () => void }) {
             </HelpRow>
 
             <HelpRow label="전투력">
-              종족 + 레벨에 따라 결정되는 종합 능력치예요. 추후 강화 시스템과
-              연결됩니다.
+              내 포켓몬 LV 에 따라 유저 전투력에 더해지는 보너스예요. Lv.10 /
+              Lv.20 / Lv.30 에서 큰 폭으로 오르고, 프로필 · 랭킹 · 이 화면에
+              모두 반영돼요. (체육관 실제 전투 스탯에는 영향이 없어요.)
             </HelpRow>
 
             <HelpRow label="동속성 PCL10">
@@ -2671,6 +2895,9 @@ function FeedModal({
                           {groups[r].map((m) => {
                             const exp = previewMaterialExp(m.rarity);
                             const isSelected = selected.has(m.id);
+                            // 카탈로그 룩업 — 카드 이름 우선, 없으면 코드.
+                            const card = getCard(m.card_id);
+                            const displayName = card?.name ?? m.card_id;
                             return (
                               <li key={m.id}>
                                 <button
@@ -2697,10 +2924,20 @@ function FeedModal({
                                     >
                                       {m.rarity}
                                     </span>
+                                    {m.wild_type && (
+                                      <span className="text-[9px] font-black px-1 py-0.5 rounded bg-zinc-200 text-zinc-700">
+                                        {m.wild_type}
+                                      </span>
+                                    )}
                                   </div>
-                                  <p className="mt-0.5 text-[10px] font-bold text-zinc-800 truncate">
-                                    {m.card_id}
+                                  <p className="mt-0.5 text-[11px] font-black text-zinc-900 truncate">
+                                    {displayName}
                                   </p>
+                                  {card && (
+                                    <p className="text-[9px] font-semibold text-zinc-500 truncate tabular-nums">
+                                      {m.card_id}
+                                    </p>
+                                  )}
                                   <p className="text-[10px] font-black text-amber-700 tabular-nums">
                                     +{exp.toLocaleString("ko-KR")} EXP
                                   </p>

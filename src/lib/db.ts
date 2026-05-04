@@ -442,6 +442,9 @@ export interface RankingRow {
   seconds_since_seen?: number;
   /** Gym medals earned (sorted newest first). */
   gym_medals?: RankingGymMedal[];
+  /** 내 포켓몬 LV 보너스 (표시/랭킹 합산). 포켓몬 미선택 유저는 0.
+   *  center_power 에 이미 포함; 분해 표기용. 체육관 전투 stats 는 영향 없음. */
+  starter_power_bonus?: number;
 }
 
 export async function fetchUserRankings(): Promise<RankingRow[]> {
