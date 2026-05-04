@@ -772,7 +772,7 @@ function SelectButton({
       type="button"
       onClick={onClick}
       style={{ touchAction: "manipulation" }}
-      className={`min-h-[80px] md:min-h-[96px] rounded-2xl border-2 p-3 transition active:scale-[0.97] shadow-md ${active ? c.active : c.idle}`}
+      className={`min-h-[80px] md:min-h-[96px] rounded-2xl border-2 p-3 transition active:scale-[0.97] shadow-md flex flex-col items-center justify-center text-center ${active ? c.active : c.idle}`}
     >
       {children}
     </button>
@@ -821,6 +821,14 @@ function PlayScreen({
             맞춘 짝 <b className="text-emerald-600">{matchedPairs}</b> / {totalPairs}
             {"  ·  "}시도 {moves}
           </p>
+        </div>
+        {/* 좌측 메뉴 버튼과 동일 크기 invisible spacer — 중앙 텍스트가
+            진짜 가운데 정렬되도록 폭 보정. 클릭 차단 + aria-hidden. */}
+        <div
+          aria-hidden="true"
+          className="shrink-0 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-black invisible"
+        >
+          ← 메뉴
         </div>
       </header>
 
@@ -927,9 +935,10 @@ function Card({
               : size <= 4 ? "clamp(32px, 10vw, 88px)"
               : size <= 6 ? "clamp(22px, 7vw, 64px)"
               : "clamp(16px, 5vw, 44px)",
+            lineHeight: 1,
           }}
         >
-          ?
+          <span style={{ display: "block", lineHeight: 1 }}>?</span>
         </div>
         {/* 앞면 */}
         <div
@@ -959,6 +968,11 @@ function Card({
           <span
             className={card.isText ? "symbol-text" : "symbol-emoji"}
             style={{
+              // 글리프 박스를 정확히 정중앙으로 — line-height:1 로 행
+              // 높이 자투리 제거, display:block 으로 baseline 영향 제거.
+              display: "block",
+              lineHeight: 1,
+              textAlign: "center",
               fontWeight: card.isText ? 900 : "normal",
               color: card.isText ? "#1e293b" : undefined,
               filter: card.isText
