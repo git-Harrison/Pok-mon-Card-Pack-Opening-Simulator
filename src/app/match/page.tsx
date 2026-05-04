@@ -223,30 +223,30 @@ interface AnalysisTag {
 function analyzeRecord(rec: PlayRecord): AnalysisTag[] {
   const tags: AnalysisTag[] = [];
   const dec = rec.avgDecisionMs;
-  if (dec < 1500) tags.push({ icon: "⚡", label: "매우 빠른 결정", desc: "직관적·적극적 성향. 카드를 보자마자 결정해요.", tone: "neutral" });
-  else if (dec < 3000) tags.push({ icon: "🏃", label: "빠른 반응", desc: "재빠른 판단력. 또래 평균보다 빠른 편.", tone: "good" });
-  else if (dec < 5000) tags.push({ icon: "🧘", label: "차분한 페이스", desc: "신중하게 관찰한 뒤 결정합니다.", tone: "good" });
-  else tags.push({ icon: "🐢", label: "매우 신중함", desc: "충분히 생각하고 누르는 성향.", tone: "neutral" });
+  if (dec < 1500) tags.push({ icon: "🚀", label: "매우 빠른 결정", desc: "직관적·적극적 성향. 카드를 보자마자 결정해요.", tone: "neutral" });
+  else if (dec < 3000) tags.push({ icon: "⚡", label: "빠른 반응", desc: "재빠른 판단력. 또래 평균보다 빠른 편.", tone: "good" });
+  else if (dec < 5000) tags.push({ icon: "🌿", label: "차분한 페이스", desc: "신중하게 관찰한 뒤 결정합니다.", tone: "good" });
+  else tags.push({ icon: "🦥", label: "매우 신중함", desc: "충분히 생각하고 누르는 성향.", tone: "neutral" });
 
   const bet = rec.avgBetweenMs;
-  if (bet < 700) tags.push({ icon: "🔥", label: "성격이 급한 편", desc: "결과 확인 즉시 다음 시도. 충동성이 약간 있어요.", tone: "warn" });
-  else if (bet < 1800) tags.push({ icon: "😊", label: "활발한 진행", desc: "적당한 호흡으로 게임을 즐깁니다.", tone: "good" });
-  else tags.push({ icon: "🤔", label: "여유로운 진행", desc: "한 번씩 생각을 정리하며 진행합니다.", tone: "good" });
+  if (bet < 700) tags.push({ icon: "🌶️", label: "성격이 급한 편", desc: "결과 확인 즉시 다음 시도. 충동성이 약간 있어요.", tone: "warn" });
+  else if (bet < 1800) tags.push({ icon: "😄", label: "활발한 진행", desc: "적당한 호흡으로 게임을 즐깁니다.", tone: "good" });
+  else tags.push({ icon: "💭", label: "여유로운 진행", desc: "한 번씩 생각을 정리하며 진행합니다.", tone: "good" });
 
   const acc = rec.successRate;
-  if (acc >= 70) tags.push({ icon: "🧠", label: "기억력 우수", desc: "본 카드 위치를 잘 유지하는 작업기억(working memory) 이 좋아요.", tone: "good" });
-  else if (acc >= 50) tags.push({ icon: "👍", label: "기억력 양호", desc: "또래 평균 수준의 작업기억.", tone: "good" });
-  else if (acc >= 35) tags.push({ icon: "🌱", label: "기억력 발달 중", desc: "꾸준한 반복으로 향상이 기대됩니다.", tone: "neutral" });
-  else tags.push({ icon: "🎲", label: "추측 위주 시도", desc: "기억보다 시도가 앞섭니다. 작은 그리드부터 권장.", tone: "warn" });
+  if (acc >= 70) tags.push({ icon: "🦉", label: "기억력 우수", desc: "본 카드 위치를 잘 유지하는 작업기억(working memory) 이 좋아요.", tone: "good" });
+  else if (acc >= 50) tags.push({ icon: "🌟", label: "기억력 양호", desc: "또래 평균 수준의 작업기억.", tone: "good" });
+  else if (acc >= 35) tags.push({ icon: "🌷", label: "기억력 발달 중", desc: "꾸준한 반복으로 향상이 기대됩니다.", tone: "neutral" });
+  else tags.push({ icon: "🎰", label: "추측 위주 시도", desc: "기억보다 시도가 앞섭니다. 작은 그리드부터 권장.", tone: "warn" });
 
   const delta = rec.secondHalfAccuracy - rec.firstHalfAccuracy;
-  if (delta >= 0.15) tags.push({ icon: "📈", label: "빠른 적응력", desc: "게임이 진행될수록 정확도가 또렷이 향상.", tone: "good" });
-  else if (delta <= -0.15) tags.push({ icon: "⚠️", label: "후반 집중력 저하", desc: "후반에 정확도가 떨어집니다. 짧은 휴식 권장.", tone: "warn" });
-  else tags.push({ icon: "⚖️", label: "꾸준한 집중", desc: "전·후반 정확도가 일정합니다.", tone: "good" });
+  if (delta >= 0.15) tags.push({ icon: "🌈", label: "빠른 적응력", desc: "게임이 진행될수록 정확도가 또렷이 향상.", tone: "good" });
+  else if (delta <= -0.15) tags.push({ icon: "💤", label: "후반 집중력 저하", desc: "후반에 정확도가 떨어집니다. 짧은 휴식 권장.", tone: "warn" });
+  else tags.push({ icon: "🎵", label: "꾸준한 집중", desc: "전·후반 정확도가 일정합니다.", tone: "good" });
 
   const cv = dec > 0 ? rec.decisionStdev / dec : 0;
-  if (cv > 0.7) tags.push({ icon: "🌊", label: "페이스 변동 큼", desc: "쉬운 카드는 빠르게, 어려운 카드는 느리게 — 인지 부하에 민감.", tone: "neutral" });
-  else if (cv < 0.3 && rec.moves >= 6) tags.push({ icon: "🎯", label: "안정적 페이스", desc: "결정 속도가 매우 일정. 정서 안정성·집중력 우수.", tone: "good" });
+  if (cv > 0.7) tags.push({ icon: "🎢", label: "페이스 변동 큼", desc: "쉬운 카드는 빠르게, 어려운 카드는 느리게 — 인지 부하에 민감.", tone: "neutral" });
+  else if (cv < 0.3 && rec.moves >= 6) tags.push({ icon: "💎", label: "안정적 페이스", desc: "결정 속도가 매우 일정. 정서 안정성·집중력 우수.", tone: "good" });
 
   return tags;
 }
@@ -680,20 +680,20 @@ function MenuScreen({
   return (
     <div className="absolute inset-0 overflow-y-auto px-4 py-6 md:px-8 md:py-10 flex flex-col items-center gap-5 md:gap-8">
       <h1 className="text-3xl md:text-5xl font-black text-rose-500 text-center mt-2">
-        🃏 카드 짝 맞추기
+        🌈 카드 짝 맞추기
       </h1>
       <p className="text-sm md:text-base text-zinc-600 text-center">
         같은 그림 두 장을 찾아보세요!
       </p>
 
-      <Section title="누가 할까요?" emoji="👶">
+      <Section title="누가 할까요?" emoji="🧸">
         <div className="grid grid-cols-2 gap-3 md:gap-4 w-full max-w-md">
           {PLAYERS.map((p) => (
             <SelectButton key={p} active={player === p} onClick={() => onPlayer(p)} color="rose">
               {p === "이라온" ? (
                 <IraonGif size={56} />
               ) : (
-                <span className="text-3xl md:text-4xl">🧒</span>
+                <span className="text-3xl md:text-4xl">🧚</span>
               )}
               <span className="block mt-1 text-base md:text-lg font-black">{p}</span>
             </SelectButton>
@@ -701,14 +701,14 @@ function MenuScreen({
         </div>
       </Section>
 
-      <Section title="무엇을 맞출까요?" emoji="🎯">
+      <Section title="무엇을 맞출까요?" emoji="🎨">
         <div className="grid grid-cols-2 gap-3 md:gap-4 w-full max-w-md">
           <SelectButton active={category === "vehicle"} onClick={() => onCategory("vehicle")} color="sky">
-            <span className="text-3xl md:text-4xl">🚗</span>
+            <span className="text-3xl md:text-4xl">🚀</span>
             <span className="block mt-1 text-base md:text-lg font-black">탈것</span>
           </SelectButton>
           <SelectButton active={category === "insect"} onClick={() => onCategory("insect")} color="emerald">
-            <span className="text-3xl md:text-4xl">🐛</span>
+            <span className="text-3xl md:text-4xl">🦋</span>
             <span className="block mt-1 text-base md:text-lg font-black">곤충</span>
           </SelectButton>
           <SelectButton active={category === "alphabet"} onClick={() => onCategory("alphabet")} color="violet">
@@ -722,7 +722,7 @@ function MenuScreen({
         </div>
       </Section>
 
-      <Section title="얼마나 많이?" emoji="🔢">
+      <Section title="얼마나 많이?" emoji="🎲">
         <div className="grid grid-cols-4 gap-2 md:gap-3 w-full max-w-md">
           {([3, 4, 6, 8] as Grid[]).map((g) => {
             const total = g * g;
@@ -754,7 +754,7 @@ function MenuScreen({
             : "bg-zinc-200 text-zinc-400 cursor-not-allowed"
         }`}
       >
-        ▶ 시작!
+        🚀 시작!
       </button>
 
       <p className="text-[10px] md:text-xs text-zinc-400 text-center mt-2 mb-6">
@@ -840,7 +840,7 @@ function PlayScreen({
         </button>
         <div className="min-w-0 flex-1 text-center">
           <p className="text-[11px] md:text-sm font-black text-zinc-700 truncate">
-            🧒 {player} · {CATEGORY_LABEL[category]} · {grid}×{grid}
+            {player === "이라온" ? "🌟" : "🧚"} {player} · {CATEGORY_LABEL[category]} · {grid}×{grid}
           </p>
           <p className="text-[10px] md:text-xs text-zinc-500 tabular-nums">
             맞춘 짝 <b className="text-emerald-600">{matchedPairs}</b> / {totalPairs}
@@ -1032,13 +1032,13 @@ function Card({
       {/* 탭 ripple — 1탭 시 짧은 흰 파장. */}
       {tapping && <span className="tap-ripple" />}
 
-      {/* 매치 스파클 폭발 */}
+      {/* 매치 스파클 폭발 — 컬러풀 5종 (영유아 친화) */}
       {matching && (
         <>
-          <span className="spark s1">✨</span>
+          <span className="spark s1">🌈</span>
           <span className="spark s2">⭐</span>
           <span className="spark s3">💖</span>
-          <span className="spark s4">🌟</span>
+          <span className="spark s4">🎀</span>
           <span className="spark s5">✨</span>
         </>
       )}
@@ -1101,7 +1101,7 @@ function WonScreen({
             <IraonGif size={140} />
           </div>
         ) : (
-          <div className="text-6xl md:text-7xl animate-bounce">🎉</div>
+          <div className="text-6xl md:text-7xl animate-bounce">🥳</div>
         )}
         <h1 className="text-2xl md:text-4xl font-black text-rose-500 text-center">
           {record.player} 잘했어요!
@@ -1112,7 +1112,7 @@ function WonScreen({
       </div>
 
       <section className="w-full max-w-md rounded-2xl bg-white/85 border border-rose-100 shadow-md p-4">
-        <h2 className="text-sm font-black text-zinc-700 mb-3">📊 이번 기록</h2>
+        <h2 className="text-sm font-black text-zinc-700 mb-3">🌟 이번 기록</h2>
         <div className="grid grid-cols-2 gap-3">
           <Stat label="시도 횟수" value={`${record.moves}번`} />
           <Stat label="맞춘 짝" value={`${record.totalPairs}쌍`} />
@@ -1124,7 +1124,7 @@ function WonScreen({
       </section>
 
       <section className="w-full max-w-md rounded-2xl bg-white/85 border border-violet-100 shadow-md p-4">
-        <h2 className="text-sm font-black text-zinc-700 mb-3">🧩 행동 분석</h2>
+        <h2 className="text-sm font-black text-zinc-700 mb-3">🪄 행동 분석</h2>
         <ul className="flex flex-col gap-2">
           {tags.map((t, i) => (
             <li key={i} className={`rounded-xl px-3 py-2 border-l-4 ${toneClass(t.tone)}`}>
@@ -1143,7 +1143,7 @@ function WonScreen({
 
       {diffs && summary && previous && (
         <section className="w-full max-w-md rounded-2xl bg-white/85 border border-emerald-100 shadow-md p-4">
-          <h2 className="text-sm font-black text-zinc-700 mb-1">📈 지난 기록과 비교</h2>
+          <h2 className="text-sm font-black text-zinc-700 mb-1">🌈 지난 기록과 비교</h2>
           <p className="text-[11px] text-zinc-500 mb-3">
             직전 기록: {new Date(previous.ts).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
           </p>
@@ -1183,7 +1183,7 @@ function WonScreen({
           style={{ touchAction: "manipulation" }}
           className="w-full h-14 md:h-16 rounded-2xl bg-gradient-to-r from-rose-400 to-orange-400 text-white font-black text-lg md:text-xl shadow-lg shadow-rose-200 active:scale-[0.98]"
         >
-          🔁 다시 하기
+          🎯 다시 하기
         </button>
         <button
           type="button"
@@ -1191,7 +1191,7 @@ function WonScreen({
           style={{ touchAction: "manipulation" }}
           className="w-full h-12 md:h-14 rounded-2xl bg-white border-2 border-rose-200 text-rose-600 font-black text-sm md:text-base active:scale-[0.98]"
         >
-          🏠 처음 화면
+          🏡 처음 화면
         </button>
       </div>
     </div>
