@@ -835,12 +835,33 @@ function BattlePlayback({
     initialEnemies.map((p) => ({ ...p, hp: p.hp_max }))
   );
   const [shake, setShake] = useState<"pet" | "enemy" | null>(null);
-  const [floater, setFloater] = useState<{
+
+  // 데미지 floater — 배열로 동시/연속 발생 모두 보존. 각 floater 는 자신의
+  // (offsetX, offsetY) 를 가져 같은 진영에 연달아 들어와도 위치가 분산됨.
+  // 진영(side) 별로 화면 좌표계의 안전존에 anchor 됨 (FloaterText 참조).
+  interface DamageFloater {
+    id: number;
     side: "pet" | "enemy";
     value: number;
     crit: boolean;
     immune: boolean;
-  } | null>(null);
+    offsetX: number; // px
+    offsetY: number; // px
+  }
+  const [floaters, setFloaters] = useState<DamageFloater[]>([]);
+  const floaterIdRef = useRef(0);
+
+  // 같은 진영에 연속해서 들어오는 floater 를 위치 분산.
+  // 5 step 사이클로 +-x, +-y 작은 jitter — 패턴이지만 충분히 분산됨.
+  const FLOATER_OFFSETS: Array<{ x: number; y: number }> = [
+    { x: 0,   y: 0   },
+    { x: 18,  y: -8  },
+    { x: -18, y: -16 },
+    { x: 26,  y: 6   },
+    { x: -26, y: -2  },
+  ];
+  // floater 가 화면에 머무는 총 시간 (ms). 최소 1초 이상 + 페이드.
+  const FLOATER_LIFETIME = 1300;
 
   // 활성 슬롯 추적
   const [petIdx, setPetIdx] = useState(0);
@@ -862,12 +883,30 @@ function BattlePlayback({
       const isPetAttack = turn.side === "pet";
       const targetSide: "pet" | "enemy" = isPetAttack ? "enemy" : "pet";
       setShake(targetSide);
-      setFloater({
-        side: targetSide,
-        value: turn.damage,
-        crit: turn.crit,
-        immune: turn.eff === 0,
+      const id = ++floaterIdRef.current;
+      // 같은 진영에 아직 살아있는 floater 수만큼 offset 사이클을 진행시켜
+      // 새 데미지가 기존 데미지 위에 정확히 겹치지 않게 분산.
+      setFloaters((prev) => {
+        const sameSideAlive = prev.filter((f) => f.side === targetSide).length;
+        const off = FLOATER_OFFSETS[sameSideAlive % FLOATER_OFFSETS.length]!;
+        return [
+          ...prev,
+          {
+            id,
+            side: targetSide,
+            value: turn.damage,
+            crit: turn.crit,
+            immune: turn.eff === 0,
+            offsetX: off.x,
+            offsetY: off.y,
+          },
+        ];
       });
+      // 각 floater 는 자기 lifetime 후 개별 제거 — 동시에 떠 있는 것들은
+      // 그대로 보존되며, 새 턴이 와도 기존 것을 덮어쓰지 않음.
+      window.setTimeout(() => {
+        setFloaters((prev) => prev.filter((f) => f.id !== id));
+      }, FLOATER_LIFETIME);
       if (isPetAttack) {
         setEnemiesState((prev) => {
           const next = [...prev];
@@ -888,7 +927,8 @@ function BattlePlayback({
       setEnemyIdx(turn.side === "enemy" ? turn.attacker_slot - 1 : turn.defender_slot - 1);
 
       setTimeout(() => setShake(null), 250);
-      setTimeout(() => setFloater(null), Math.max(speed - 100, 200));
+      // floater 는 위에서 자기 lifetime 으로 자동 cleanup. 단일 setFloater(null)
+      // 식의 일괄 클리어는 동시 floater 가 사라지게 만들어 의도와 반대.
       setTurnIdx((i) => i + 1);
     }, speed);
     return () => clearTimeout(t);
@@ -923,11 +963,8 @@ function BattlePlayback({
             transition={{ duration: 0.25 }}
           >
             {activeEnemy && <EnemySprite enemy={activeEnemy} />}
-            <AnimatePresence>
-              {floater?.side === "enemy" && (
-                <FloaterText key={`f-e-${turnIdx}`} f={floater} />
-              )}
-            </AnimatePresence>
+            {/* floater 는 아레나 루트의 별도 레이어에 그림 — 작은 80px 박스
+                안에 두면 위로 떠오르는 글자가 바로 위 HP 바와 충돌. */}
           </motion.div>
         </div>
 
@@ -948,13 +985,17 @@ function BattlePlayback({
             transition={{ duration: 0.25 }}
           >
             <PetCardArt pet={activePet} />
-            <AnimatePresence>
-              {floater?.side === "pet" && (
-                <FloaterText key={`f-p-${turnIdx}`} f={floater} />
-              )}
-            </AnimatePresence>
+            {/* floater 는 아레나 루트의 별도 레이어 (DamageFloaterLayer) 에서
+                일괄 렌더 — 진영별 안전존에 anchor 되어 HP 바·이미지·다른
+                floater 와 겹치지 않게 분산. */}
           </motion.div>
         </div>
+
+        {/* 데미지 floater 레이어 — 아레나 좌표계에 absolute. 진영별로
+            안전존(아레나 중앙 쪽 비어있는 공간)에 anchor → HP 바, 포켓몬
+            이미지, 좌우 가장자리 모두 회피. 동시 발생도 각 floater 가
+            자기 offset 으로 분산. */}
+        <DamageFloaterLayer floaters={floaters} />
       </div>
 
       {/* 턴 카운터 */}
@@ -1003,22 +1044,128 @@ function HpBar({
   );
 }
 
+/* 데미지 floater 레이어 — 아레나(`relative aspect-[4/3]`) 의 자식으로
+   배치. 각 floater 는 진영별 anchor 위치(% 기반 → 화면 크기에 따라 자동
+   리스케일) 에 + 자신의 offset 으로 분산. 모바일에서도 잘리지 않도록
+   안전 마진(좌·우 12% / 상하 18%) 을 두고, anchor 는 아레나의 비어있는
+   "센터 가까운 안쪽" 으로 잡음:
+     - 적 (top-right) → 적 이미지의 왼쪽 위·아래 영역 (top: 32%, right: 30%)
+     - 펫 (bottom-left) → 펫 이미지의 오른쪽 위 영역 (top: 56%, left: 30%)
+   이렇게 두면 양쪽 floater 가 화면 정중앙을 향해 떠오르되 서로 다른 사분
+   면이라 절대 겹치지 않음. */
+function DamageFloaterLayer({
+  floaters,
+}: {
+  floaters: Array<{
+    id: number;
+    side: "pet" | "enemy";
+    value: number;
+    crit: boolean;
+    immune: boolean;
+    offsetX: number;
+    offsetY: number;
+  }>;
+}) {
+  return (
+    <div
+      aria-hidden
+      className="absolute inset-0 pointer-events-none z-20 overflow-hidden"
+    >
+      <AnimatePresence>
+        {floaters.map((f) => (
+          <FloaterText key={f.id} f={f} />
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function FloaterText({
   f,
 }: {
-  f: { value: number; crit: boolean; immune: boolean };
+  f: {
+    side: "pet" | "enemy";
+    value: number;
+    crit: boolean;
+    immune: boolean;
+    offsetX: number;
+    offsetY: number;
+  };
 }) {
   const txt = f.immune ? "무효" : `-${f.value}`;
+
+  // 진영별 anchor (아레나 좌표계, % 기반).
+  //   적: 우상단 박스 옆 안쪽 — top 32%, right 30%
+  //   펫: 좌하단 박스 옆 안쪽 — top 56%, left 30%
+  const anchor =
+    f.side === "enemy"
+      ? { top: "32%", right: "30%", left: "auto" as const }
+      : { top: "56%", left: "30%", right: "auto" as const };
+
+  // 텍스트 크기 — crit 가 가장 큼. 모바일도 또렷하게 읽히게 충분히 큼
+  // (text-2xl ≈ 24px / 3xl ≈ 30px / 4xl ≈ 36px).
+  const sizeCls = f.immune
+    ? "text-xl md:text-2xl"
+    : f.crit
+    ? "text-3xl md:text-4xl"
+    : "text-2xl md:text-3xl";
+
+  // 색상 — 배경(짙은 남색 그라데이션) 대비. crit 노랑·일반 주홍·무효 회백.
+  const colorCls = f.immune
+    ? "text-zinc-100"
+    : f.crit
+    ? "text-amber-300"
+    : "text-rose-300";
+
+  // 외곽선 + 글로우 — 어떤 배경에서도 또렷이.
+  const stroke =
+    "0 0 2px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.85), 0 2px 8px rgba(0,0,0,0.8)";
+  const glow = f.crit
+    ? ", 0 0 14px rgba(252,211,77,0.85)"
+    : f.immune
+    ? ""
+    : ", 0 0 10px rgba(251,113,133,0.55)";
+
   return (
     <motion.span
       className={clsx(
-        "absolute left-1/2 top-1/3 -translate-x-1/2 font-black text-base md:text-lg select-none pointer-events-none",
-        f.immune ? "text-zinc-300" : f.crit ? "text-amber-300" : "text-rose-200"
+        "absolute font-black select-none pointer-events-none tabular-nums whitespace-nowrap",
+        sizeCls,
+        colorCls
       )}
-      style={{ textShadow: "0 2px 6px rgba(0,0,0,0.85)" }}
-      initial={{ y: 0, opacity: 1, scale: 0.6 }}
-      animate={{ y: -36, opacity: 0, scale: 1.15 }}
-      transition={{ duration: 0.7, ease: "easeOut" }}
+      style={{
+        ...anchor,
+        // 진영별 자연스러운 등장점: 적은 위에서 살짝 우측, 펫은 아래에서
+        // 살짝 좌측에서 떠오름. translate 로 텍스트의 anchor point 를
+        // 중심으로 잡고 거기에 floater 자체의 분산 offset 을 합침.
+        translate: "-50% -50%",
+        textShadow: `${stroke}${glow}`,
+        // 강한 윤곽 — Webkit / Gecko 모두 지원. 가독성 결정타.
+        WebkitTextStroke: f.crit
+          ? "1.5px rgba(0,0,0,0.95)"
+          : "1px rgba(0,0,0,0.9)",
+      }}
+      // 등장: 살짝 작게 + 진영 방향에서 들어오기. 표시: 살짝 떠오르며
+      // 1.0s 동안 잘 보이게 머무름. 퇴장: 마지막 0.3s 에서만 fadeout.
+      initial={{
+        x: f.offsetX + (f.side === "enemy" ? 6 : -6),
+        y: f.offsetY + 12,
+        opacity: 0,
+        scale: 0.7,
+      }}
+      animate={{
+        x: f.offsetX,
+        y: f.offsetY - 22,
+        opacity: [0, 1, 1, 0],
+        scale: f.crit ? [0.7, 1.2, 1.05, 1.0] : [0.7, 1.1, 1.0, 1.0],
+      }}
+      exit={{ opacity: 0 }}
+      transition={{
+        // 총 1.2s — 요구사항 "최소 1초 이상" 충족. 페이드는 끝부분만.
+        duration: 1.2,
+        times: [0, 0.18, 0.78, 1],
+        ease: "easeOut",
+      }}
     >
       {txt}
     </motion.span>
