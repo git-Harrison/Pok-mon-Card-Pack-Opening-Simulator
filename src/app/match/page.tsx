@@ -64,6 +64,82 @@ const PASTELS: string[] = [
   "#FFE0CC","#CFEEFF","#FFD4D4","#E8FFD4","#FFE7F0",
 ];
 
+/* ─────────────── 사운드 효과 (Web Audio API) ───────────────
+ * 외부 mp3 자산 없이 OscillatorNode 톤 합성으로 모든 SFX. 영유아
+ * 친화적인 짧고 밝은 음. iOS 는 user gesture 후에만 AudioContext
+ * 생성/재개 가능하므로 첫 카드 탭 시 lazy 활성화.
+ */
+class SoundFx {
+  private ctx: AudioContext | null = null;
+  private enabled = true;
+
+  setEnabled(on: boolean) { this.enabled = on; }
+
+  private ensureCtx(): AudioContext | null {
+    if (typeof window === "undefined") return null;
+    try {
+      if (!this.ctx) {
+        const W = window as Window & { webkitAudioContext?: typeof AudioContext };
+        const AC = window.AudioContext || W.webkitAudioContext;
+        if (!AC) return null;
+        this.ctx = new AC();
+      }
+      if (this.ctx.state === "suspended") void this.ctx.resume();
+      return this.ctx;
+    } catch { return null; }
+  }
+
+  private beep(freq: number, dur: number, vol = 0.16, type: OscillatorType = "sine", delay = 0) {
+    if (!this.enabled) return;
+    const ctx = this.ensureCtx();
+    if (!ctx) return;
+    const t0 = ctx.currentTime + delay;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.05);
+  }
+
+  tap()  { this.beep(880, 0.05, 0.06, "sine"); }
+  match() {
+    // 즐거운 상승 3음 — 도-미-솔
+    this.beep(523.25, 0.12, 0.16, "sine", 0.00);
+    this.beep(659.25, 0.16, 0.16, "sine", 0.10);
+    this.beep(783.99, 0.22, 0.18, "sine", 0.20);
+  }
+  miss() {
+    // 부드러운 하강 — 가벼운 실수 느낌
+    this.beep(330, 0.18, 0.10, "triangle", 0.00);
+    this.beep(220, 0.22, 0.10, "triangle", 0.10);
+  }
+  win() {
+    // 승리 멜로디 — 도-미-솔-도'
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) =>
+      this.beep(f, 0.18, 0.18, "sine", i * 0.12)
+    );
+  }
+  combo(n: number) {
+    // 콤보 — 횟수에 따라 음 높아짐
+    this.beep(440 + Math.min(n, 8) * 90, 0.12, 0.16, "square");
+  }
+}
+
+/* ─────────────── 칭찬 메시지 ─────────────── */
+const PRAISES: string[] = [
+  "우와!", "최고!", "잘했어!", "멋져!", "완벽!",
+  "대단해!", "굿!", "예뻐!", "또 해!", "짱!",
+];
+function pickPraise(): string {
+  return PRAISES[Math.floor(Math.random() * PRAISES.length)];
+}
+
 function poolFor(category: Category): string[] {
   switch (category) {
     case "vehicle": return VEHICLE_EMOJI;
@@ -177,6 +253,39 @@ function saveRecord(rec: PlayRecord) {
   } catch {
     /* ignore */
   }
+}
+
+/* ── 별 평가 ── */
+function starRating(rec: PlayRecord): 1 | 2 | 3 {
+  if (rec.successRate >= 70) return 3;
+  if (rec.successRate >= 50) return 2;
+  return 1;
+}
+
+/* ── 누적 별 (사용자별) ── */
+const STAR_TOTAL_KEY = "match:stars:v1";
+type StarTotals = Record<Player, number>;
+
+function loadTotalStars(): StarTotals {
+  if (typeof window === "undefined") return { 이라온: 0, 민서진: 0 };
+  try {
+    const raw = localStorage.getItem(STAR_TOTAL_KEY);
+    if (!raw) return { 이라온: 0, 민서진: 0 };
+    const parsed = JSON.parse(raw) as Partial<StarTotals> | null;
+    return {
+      이라온: Number(parsed?.이라온) || 0,
+      민서진: Number(parsed?.민서진) || 0,
+    };
+  } catch { return { 이라온: 0, 민서진: 0 }; }
+}
+
+function addStars(player: Player, stars: number) {
+  if (typeof window === "undefined") return;
+  try {
+    const curr = loadTotalStars();
+    curr[player] = (curr[player] || 0) + stars;
+    localStorage.setItem(STAR_TOTAL_KEY, JSON.stringify(curr));
+  } catch { /* ignore */ }
 }
 
 function findPrevious(
@@ -460,6 +569,32 @@ const ANIMATION_CSS = `
   pointer-events: none;
   animation: confetti-rain linear forwards;
 }
+
+/* 칭찬 메시지 — 매치 시 화면 중앙에 큼지막하게 팝. */
+@keyframes praise-pop-anim {
+  0%   { transform: scale(0.3) rotate(-8deg); opacity: 0; }
+  20%  { transform: scale(1.25) rotate(4deg); opacity: 1; }
+  60%  { transform: scale(1.05) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1.4) rotate(0deg);  opacity: 0; }
+}
+.praise-pop { animation: praise-pop-anim 0.85s ease-out forwards; }
+
+/* 콤보 표시 — 연속 매치 시 상단에 표시. */
+@keyframes combo-pop-anim {
+  0%   { transform: scale(0.5); opacity: 0; }
+  20%  { transform: scale(1.3); opacity: 1; }
+  60%  { transform: scale(1.0); opacity: 1; }
+  100% { transform: scale(1.2); opacity: 0; }
+}
+.combo-pop { animation: combo-pop-anim 0.9s ease-out forwards; }
+
+/* 별 평가 — 결과 화면 ⭐⭐⭐. 순차 등장. */
+@keyframes star-pop-anim {
+  0%   { transform: scale(0) rotate(-180deg); opacity: 0; }
+  60%  { transform: scale(1.4) rotate(20deg); opacity: 1; }
+  100% { transform: scale(1.0) rotate(0deg);  opacity: 1; }
+}
+.star-pop { animation: star-pop-anim 0.6s cubic-bezier(.34,1.56,.64,1) forwards; }
 `;
 
 /* ─────────────── 컴포넌트 ─────────────── */
@@ -491,6 +626,36 @@ export default function MatchPage() {
 
   const [finalRecord, setFinalRecord] = useState<PlayRecord | null>(null);
   const [previousRecord, setPreviousRecord] = useState<PlayRecord | null>(null);
+  const [finalStars, setFinalStars] = useState<number>(0);
+
+  // ── 사운드 ──
+  const fxRef = useRef<SoundFx | null>(null);
+  if (fxRef.current === null) fxRef.current = new SoundFx();
+  const [soundOn, setSoundOn] = useState(true);
+  // 마운트 시 localStorage 에서 사운드 on/off 복구.
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("match:sound:enabled");
+      if (saved === "0") setSoundOn(false);
+    }
+  }, []);
+  useEffect(() => {
+    fxRef.current?.setEnabled(soundOn);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("match:sound:enabled", soundOn ? "1" : "0");
+    }
+  }, [soundOn]);
+
+  // ── 칭찬 / 콤보 / 누적 별 ──
+  const streakRef = useRef(0);
+  const [praiseMsg, setPraiseMsg] = useState<string | null>(null);
+  const [praiseKey, setPraiseKey] = useState(0);
+  const [comboMsg, setComboMsg] = useState<string | null>(null);
+  const [comboKey, setComboKey] = useState(0);
+  const [totalStars, setTotalStars] = useState<StarTotals>({ 이라온: 0, 민서진: 0 });
+  useEffect(() => {
+    setTotalStars(loadTotalStars());
+  }, []);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -511,8 +676,12 @@ export default function MatchPage() {
     setTapAnim(null);
     tapTimesRef.current = [];
     matchOutcomesRef.current = [];
+    streakRef.current = 0;
+    setPraiseMsg(null);
+    setComboMsg(null);
     setFinalRecord(null);
     setPreviousRecord(null);
+    setFinalStars(0);
     setActiveGrid(grid);
     setScreen("playing");
   }, [player, category, grid]);
@@ -528,8 +697,12 @@ export default function MatchPage() {
     setTapAnim(null);
     tapTimesRef.current = [];
     matchOutcomesRef.current = [];
+    streakRef.current = 0;
+    setPraiseMsg(null);
+    setComboMsg(null);
     setFinalRecord(null);
     setPreviousRecord(null);
+    setFinalStars(0);
     setScreen("playing");
   }, [category, activeGrid]);
 
@@ -552,7 +725,8 @@ export default function MatchPage() {
       const now = Date.now();
       tapTimesRef.current.push(now);
 
-      // 탭 ripple 표시 — 짧게.
+      // 탭 사운드 + ripple — 짧게.
+      fxRef.current?.tap();
       setTapAnim(idx);
       window.setTimeout(() => {
         setTapAnim((curr) => (curr === idx ? null : curr));
@@ -572,7 +746,18 @@ export default function MatchPage() {
       matchOutcomesRef.current.push(isMatch);
 
       if (isMatch) {
-        // 매치 — 두 카드 보여주고 matched + 스파클 폭발.
+        // 매치 — 사운드 + 칭찬 메시지 + 콤보(2회 이상) + 스파클.
+        fxRef.current?.match();
+        streakRef.current += 1;
+        setPraiseMsg(pickPraise());
+        setPraiseKey((k) => k + 1);
+        window.setTimeout(() => setPraiseMsg(null), 850);
+        if (streakRef.current >= 2) {
+          fxRef.current?.combo(streakRef.current);
+          setComboMsg(`${streakRef.current}콤보!`);
+          setComboKey((k) => k + 1);
+          window.setTimeout(() => setComboMsg(null), 900);
+        }
         window.setTimeout(() => {
           setCards((prev) =>
             prev.map((c, i) =>
@@ -583,10 +768,11 @@ export default function MatchPage() {
           setSelected([]);
           setBusy(false);
         }, 400);
-        // 애니메이션 클래스는 짧게 유지 후 정리 (재트리거 위해).
         window.setTimeout(() => setMatchAnim([]), 1300);
       } else {
-        // 미스 — 잠시 보여주고 흔들리고 다시 뒤집힘.
+        // 미스 — 사운드 + 흔들리고 다시 뒤집힘. 콤보 끊김.
+        fxRef.current?.miss();
+        streakRef.current = 0;
         setMissAnim([firstIdx, idx]);
         window.setTimeout(() => {
           setSelected([]);
@@ -640,6 +826,15 @@ export default function MatchPage() {
     saveRecord(rec);
     setFinalRecord(rec);
 
+    // 별 평가 + 누적 적립.
+    const stars = starRating(rec);
+    setFinalStars(stars);
+    addStars(player, stars);
+    setTotalStars(loadTotalStars());
+
+    // 승리 사운드.
+    fxRef.current?.win();
+
     const t = window.setTimeout(() => setScreen("won"), 900);
     return () => window.clearTimeout(t);
   }, [cards, screen, player, category, activeGrid]);
@@ -664,6 +859,7 @@ export default function MatchPage() {
           player={player}
           category={category}
           grid={grid}
+          totalStars={totalStars}
           onPlayer={setPlayer}
           onCategory={setCategory}
           onGrid={setGrid}
@@ -681,6 +877,12 @@ export default function MatchPage() {
           matchAnim={matchAnim}
           missAnim={missAnim}
           tapAnim={tapAnim}
+          praiseMsg={praiseMsg}
+          praiseKey={praiseKey}
+          comboMsg={comboMsg}
+          comboKey={comboKey}
+          soundOn={soundOn}
+          onSoundToggle={() => setSoundOn((s) => !s)}
           onTap={onTapCard}
           onMenu={goMenu}
         />
@@ -689,6 +891,8 @@ export default function MatchPage() {
         <WonScreen
           record={finalRecord}
           previous={previousRecord}
+          stars={finalStars}
+          totalStars={totalStars[finalRecord.player]}
           onRestart={restart}
           onMenu={goMenu}
         />
@@ -700,11 +904,12 @@ export default function MatchPage() {
 /* ─────────────── Menu ─────────────── */
 
 function MenuScreen({
-  player, category, grid, onPlayer, onCategory, onGrid, onStart,
+  player, category, grid, totalStars, onPlayer, onCategory, onGrid, onStart,
 }: {
   player: Player | null;
   category: Category | null;
   grid: Grid | null;
+  totalStars: StarTotals;
   onPlayer: (p: Player) => void;
   onCategory: (c: Category) => void;
   onGrid: (g: Grid) => void;
@@ -726,6 +931,9 @@ function MenuScreen({
             <SelectButton key={p} active={player === p} onClick={() => onPlayer(p)} color="rose">
               <span className="text-3xl md:text-4xl">🧚</span>
               <span className="block mt-1 text-base md:text-lg font-black">{p}</span>
+              <span className="block text-[11px] md:text-xs text-amber-500 font-black mt-0.5">
+                ⭐ {totalStars[p]}개
+              </span>
             </SelectButton>
           ))}
         </div>
@@ -838,7 +1046,10 @@ function SelectButton({
 
 function PlayScreen({
   player, category, grid, cards, selected, moves,
-  matchAnim, missAnim, tapAnim, onTap, onMenu,
+  matchAnim, missAnim, tapAnim,
+  praiseMsg, praiseKey, comboMsg, comboKey,
+  soundOn, onSoundToggle,
+  onTap, onMenu,
 }: {
   player: Player;
   category: Category;
@@ -849,6 +1060,12 @@ function PlayScreen({
   matchAnim: number[];
   missAnim: number[];
   tapAnim: number | null;
+  praiseMsg: string | null;
+  praiseKey: number;
+  comboMsg: string | null;
+  comboKey: number;
+  soundOn: boolean;
+  onSoundToggle: () => void;
   onTap: (idx: number) => void;
   onMenu: () => void;
 }) {
@@ -877,14 +1094,17 @@ function PlayScreen({
             {"  ·  "}시도 {moves}
           </p>
         </div>
-        {/* 좌측 메뉴 버튼과 동일 크기 invisible spacer — 중앙 텍스트가
-            진짜 가운데 정렬되도록 폭 보정. 클릭 차단 + aria-hidden. */}
-        <div
-          aria-hidden="true"
-          className="shrink-0 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-black invisible"
+        {/* 우측 사운드 토글 — 좌측 메뉴 버튼과 동일 폭으로 헤더 균형 유지. */}
+        <button
+          type="button"
+          onClick={onSoundToggle}
+          style={{ touchAction: "manipulation" }}
+          className="shrink-0 px-3 py-1.5 md:px-4 md:py-2 rounded-xl bg-rose-100 text-rose-600 font-black text-xs md:text-sm active:scale-95"
+          aria-label={soundOn ? "소리 끄기" : "소리 켜기"}
+          aria-pressed={!soundOn}
         >
-          ← 메뉴
-        </div>
+          {soundOn ? "🔊" : "🔇"}
+        </button>
       </header>
 
       <div className="flex-1 min-h-0 overflow-auto p-2 md:p-4">
@@ -915,6 +1135,47 @@ function PlayScreen({
       </div>
 
       {allDone && <ConfettiBurst key={`confetti-${moves}`} />}
+
+      {/* 칭찬 메시지 — 매치 시 화면 중앙에 큼지막하게 팝. */}
+      {praiseMsg && (
+        <div
+          key={`praise-${praiseKey}`}
+          className="pointer-events-none fixed inset-0 z-[1100] flex items-center justify-center"
+        >
+          <span
+            className="praise-pop font-black text-rose-500"
+            style={{
+              fontSize: "clamp(48px, 14vw, 120px)",
+              textShadow:
+                "0 4px 0 #fff, 0 -2px 0 #fff, 2px 0 0 #fff, -2px 0 0 #fff, 0 0 24px rgba(244,63,94,0.55)",
+              lineHeight: 1,
+            }}
+          >
+            {praiseMsg}
+          </span>
+        </div>
+      )}
+
+      {/* 콤보 표시 — 2회 이상 연속 매치 시 상단에 표시. */}
+      {comboMsg && (
+        <div
+          key={`combo-${comboKey}`}
+          className="pointer-events-none fixed inset-x-0 z-[1101] flex items-start justify-center"
+          style={{ top: "calc(env(safe-area-inset-top) + 80px)" }}
+        >
+          <span
+            className="combo-pop font-black text-amber-500"
+            style={{
+              fontSize: "clamp(36px, 10vw, 80px)",
+              textShadow:
+                "0 3px 0 #fff, 0 -2px 0 #fff, 2px 0 0 #fff, -2px 0 0 #fff, 0 0 18px rgba(251,191,36,0.65)",
+              lineHeight: 1,
+            }}
+          >
+            🔥 {comboMsg}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -1098,10 +1359,12 @@ function ConfettiBurst() {
 /* ─────────────── Won ─────────────── */
 
 function WonScreen({
-  record, previous, onRestart, onMenu,
+  record, previous, stars, totalStars, onRestart, onMenu,
 }: {
   record: PlayRecord;
   previous: PlayRecord | null;
+  stars: number;          // 1~3
+  totalStars: number;     // 누적 별 (해당 사용자 전체)
   onRestart: () => void;
   onMenu: () => void;
 }) {
@@ -1118,6 +1381,32 @@ function WonScreen({
         </h1>
         <p className="text-sm md:text-base text-zinc-700 font-bold">
           {CATEGORY_LABEL[record.category]} · {record.grid}×{record.grid} · {formatDuration(record.totalDurationMs)}
+        </p>
+
+        {/* 별 평가 — 1~3 ⭐ 순차 등장. 채워지지 않은 별은 흐리게. */}
+        <div className="flex gap-2 md:gap-3 mt-1">
+          {[1, 2, 3].map((i) => {
+            const earned = i <= stars;
+            return (
+              <span
+                key={i}
+                className="star-pop"
+                style={{
+                  fontSize: "clamp(40px, 9vw, 64px)",
+                  animationDelay: `${0.15 * i}s`,
+                  opacity: earned ? 1 : 0.25,
+                  filter: earned ? "drop-shadow(0 4px 6px rgba(251,191,36,0.5))" : "grayscale(60%)",
+                  display: "block",
+                  lineHeight: 1,
+                }}
+              >
+                {earned ? "⭐" : "☆"}
+              </span>
+            );
+          })}
+        </div>
+        <p className="text-[12px] md:text-sm text-amber-600 font-black">
+          별 {stars}개 획득! · 누적 ⭐ {totalStars}개
         </p>
       </div>
 
