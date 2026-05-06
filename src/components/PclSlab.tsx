@@ -7,6 +7,10 @@ import { GRADE_BRAND, pclTone } from "@/lib/pcl";
 import RarityBadge from "./RarityBadge";
 import { resolveCardType } from "@/lib/wild/name-to-type";
 import { TYPE_STYLE } from "@/lib/wild/types";
+import {
+  getCardSecondaryType,
+  getCardPrimaryOverride,
+} from "@/lib/wild/card-secondary";
 
 /**
  * PCL grading slab — 전역 공통 컴포넌트.
@@ -47,8 +51,12 @@ export default function PclSlab({
   const safeGrade =
     typeof grade === "number" && Number.isFinite(grade) ? grade : "?";
 
-  // 카드 속성 — fallback: 매핑 없으면 뱃지 hide.
-  const cardType = card?.name ? resolveCardType(card.name) : null;
+  // 카드 속성 — 1차/2차 (MUR 8장은 1차도 override).
+  // 매핑 없으면 뱃지 hide. UR/MUR 보조 속성 있으면 함께 표시.
+  const cardType =
+    (card?.id ? getCardPrimaryOverride(card.id) : null) ??
+    (card?.name ? resolveCardType(card.name) : null);
+  const cardType2 = card?.id ? getCardSecondaryType(card.id) : null;
 
   // 컨테이너 폭 — 사이즈 cap 으로 grid 셀 안에서 안전.
   const width =
@@ -176,17 +184,30 @@ export default function PclSlab({
                 <RarityBadge rarity={card.rarity} size="xs" />
               </div>
             )}
-            {/* 우하단 — 속성 뱃지 (있을 때만) */}
-            {cardType && TYPE_STYLE[cardType] && (
-              <div className="absolute right-1.5 bottom-1.5 pointer-events-none">
-                <span
-                  className={clsx(
-                    "inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black ring-1 ring-white/20",
-                    TYPE_STYLE[cardType].badge
-                  )}
-                >
-                  {cardType}
-                </span>
+            {/* 우하단 — 속성 뱃지 (1차 + 옵션 2차).
+                UR/MUR 의 보조 속성이 있으면 1차 뱃지 위에 세로 스택. */}
+            {(cardType || cardType2) && (
+              <div className="absolute right-1.5 bottom-1.5 pointer-events-none flex flex-col items-end gap-0.5">
+                {cardType2 && TYPE_STYLE[cardType2] && (
+                  <span
+                    className={clsx(
+                      "inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black ring-1 ring-white/20",
+                      TYPE_STYLE[cardType2].badge
+                    )}
+                  >
+                    {cardType2}
+                  </span>
+                )}
+                {cardType && TYPE_STYLE[cardType] && (
+                  <span
+                    className={clsx(
+                      "inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black ring-1 ring-white/20",
+                      TYPE_STYLE[cardType].badge
+                    )}
+                  >
+                    {cardType}
+                  </span>
+                )}
               </div>
             )}
           </div>
