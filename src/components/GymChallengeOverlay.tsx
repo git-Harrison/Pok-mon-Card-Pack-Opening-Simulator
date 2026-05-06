@@ -1212,19 +1212,21 @@ function CardOrDexSprite({
   cardId,
   fallbackDex,
   name,
+  type,
   pixel = true,
 }: {
   cardId?: string;
   fallbackDex?: number;
   name: string;
+  /** 매칭 실패 시 폴백 silhouette 의 타입색 — 캐릭터 느낌 강화. */
+  type?: WildType | null;
   pixel?: boolean;
 }) {
   const card = cardId ? getCard(cardId) : null;
   // 1) 메가/특수 폼 sprite 우선 (Pokemon Showdown ani — 메가 X/Y 등 구분).
-  // 2) dex 기반 PokeAPI gen5 BW animated sprite.
-  // 3) 둘 다 실패 시 작은 몬스터 실루엣 placeholder — 카드 art 직노출 X.
-  //    체육관 전투 화면은 캐릭터 대결 UX 가 우선이라 카드 UI 가 그대로
-  //    뜨는 fallback 은 의도적으로 제거 (사용자 정책).
+  // 2) dex 기반 PokeAPI gen5 BW animated sprite (lookupDex 가 폼 prefix /
+  //    suffix 다양하게 strip 후 base 종 매칭 → 대부분의 카드가 여기에서 캐릭터화).
+  // 3) 매칭 실패 시 type 색 silhouette — 카드 art 직노출 X, 텍스트-only X.
   const cardName = card?.name ?? name;
   const megaSprite = cardName ? cardSpriteUrl(cardName) : null;
   const dexFromName = cardName ? lookupDex(cardName) : null;
@@ -1260,16 +1262,25 @@ function CardOrDexSprite({
       />
     );
   }
-  // 캐릭터 매칭 실패 — 작은 도트 실루엣 placeholder. 카드 art 미사용.
+  // 캐릭터 매칭 실패 — type 색감 silhouette placeholder.
+  // 단순 텍스트가 아니라 "타입 컬러로 칠해진 몬스터 형태" 로 보이게.
+  const typeStyle = type && TYPE_STYLE[type] ? TYPE_STYLE[type] : null;
   return (
     <div
-      className="w-full h-full flex flex-col items-center justify-center bg-zinc-900/70 rounded-md ring-1 ring-white/10 px-1"
+      className={clsx(
+        "w-full h-full flex flex-col items-center justify-center rounded-md ring-1 ring-white/10 px-1",
+        typeStyle ? typeStyle.badge : "bg-zinc-800/80 text-white/85"
+      )}
       title={cardName}
     >
-      <span aria-hidden className="text-2xl leading-none select-none">
+      <span
+        aria-hidden
+        className="text-3xl leading-none select-none drop-shadow-md"
+        style={{ filter: "saturate(0.8) brightness(1.1)" }}
+      >
         👾
       </span>
-      <span className="mt-0.5 text-[8px] text-white/75 text-center line-clamp-1 max-w-full">
+      <span className="mt-0.5 text-[8px] font-bold text-center line-clamp-1 max-w-full opacity-95">
         {cardName}
       </span>
     </div>
@@ -1283,13 +1294,20 @@ function EnemySprite({ enemy }: { enemy: BattleUnit }) {
       cardId={enemy.card_id}
       fallbackDex={enemy.dex}
       name={unitDisplayName(enemy)}
+      type={(enemy.type as WildType) ?? null}
     />
   );
 }
 
 function PetCardArt({ pet }: { pet: BattleUnit | undefined }) {
   if (!pet) return null;
-  return <CardOrDexSprite cardId={pet.card_id} name={unitDisplayName(pet)} />;
+  return (
+    <CardOrDexSprite
+      cardId={pet.card_id}
+      name={unitDisplayName(pet)}
+      type={(pet.type as WildType) ?? null}
+    />
+  );
 }
 
 /* ─────────────── Result ─────────────── */

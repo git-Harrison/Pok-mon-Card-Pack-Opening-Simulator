@@ -1068,15 +1068,43 @@ export function lookupDex(name: string): number | null {
     }
   }
 
-  // 3) 지역폼 prefix strip — Gen5 BW sprite 에 지역폼 없으므로 base
-  //    dex 로 fallback (가라르 나옹 → 나옹 = Meowth dex 52).
+  // 3) 지역폼 + 특수폼 prefix strip — Gen5 BW sprite 에 지역폼/특수폼이
+  //    없으므로 base 종 dex 로 fallback. 체육관 전투 화면에서 텍스트-only
+  //    fallback 을 줄이기 위해 메이저 폼 prefix 광범위 등록.
+  //    예) "가라르 나옹" → "나옹" (Meowth dex 52)
+  //        "백마 버드렉스 VMAX" → suffix 제거 후 "백마 버드렉스" → "버드렉스"
+  //        "초록가면 오거폰 ex" → "오거폰"
+  //        "블러드문 우르스루가 ex" → "우르스루가"
+  //        "일격의 우라오스 VMAX" → "우라오스"
   for (const p of [
+    // 지역폼
     "가라르 ", "알로라 ", "히스이 ", "팔데아 ", "파라데아 ",
     "가라르", "알로라", "히스이", "팔데아", "파라데아",
+    // Calyrex riders (8세대)
+    "백마 ", "흑마 ", "백마", "흑마",
+    // Urshifu strike forms (8세대)
+    "일격의 ", "연격의 ", "일격의", "연격의",
+    // Ogerpon masks (9세대)
+    "초록가면 ", "우물가면 ", "노란가면 ", "가마솥가면 ",
+    "초록가면", "우물가면", "노란가면", "가마솥가면",
+    // Bloodmoon Ursaluna (9세대 paradox-like)
+    "블러드문 ", "블러드문",
+    // Other notable special forms
+    "각성한 ", "각성한",  // Awakened / 솔가레오·루나아라 등
+    "달의 ",   "달의",    // 루나아라 등 일부 표기
+    "태양의 ", "태양의",  // 솔가레오 등 일부 표기
+    "원시 ",   "원시",    // Primal Groudon/Kyogre
+    "메가",                // 잔여 메가 prefix (위 메가 strip 에서 미캐치 변형)
   ]) {
     if (base.startsWith(p)) {
       const stripped = base.slice(p.length).trim();
       if (tryName(stripped) !== undefined) return tryName(stripped);
+      // 폼 prefix 제거 후에도 suffix 가 남아 있을 수 있음 — 한 번 더 strip.
+      const innerStripped = stripped
+        .replace(/\s*\([^)]*\)\s*$/, "")
+        .replace(/\s+(ex|V|VMAX|VSTAR|VUNION|GX|BREAK)\s*$/i, "")
+        .trim();
+      if (tryName(innerStripped) !== undefined) return tryName(innerStripped);
     }
   }
 
