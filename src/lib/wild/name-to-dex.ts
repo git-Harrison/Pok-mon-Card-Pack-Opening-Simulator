@@ -1039,6 +1039,208 @@ export const CARD_NAME_TO_DEX: Record<string, number> = {
   "다루마짱": 554,        // alt of 달막화 (Darumaka)
   "달마기": 555,          // alt of 불비달마 (Darmanitan)
   "우르스루가": 901,      // alt of 다투곰 (Ursaluna)
+
+  // ── 카탈로그 미매칭 보강 (s4a/s7r/s8b/s9a/sv8a/m2a/m4 등) ──
+  // 영문명/세트명 기반으로 식별. dex 번호는 sindresorhus/pokemon 기준.
+  // 8세대 Galar (s4a/s8b/s9a) 다수 + 9세대 Paldea (m/sv) 일부.
+  "깨비아":      551,    // Sandile
+  "악비루":      552,    // Krokorok
+  "꼬마사과":    840,    // Applin (alt 1)
+  "사과립":      840,    // Applin (alt 2)
+  "얼래리":      840,    // Applin (alt 3)
+  "꼬모비충":    823,    // Blipbug
+  "톡파리":      823,    // Blipbug (alt)
+  "꼬모비룽이":  824,    // Dottler
+  "파라몬":      824,    // Dottler (alt)
+  "파라꿀":      826,    // Orbeetle (alt of 이올브)
+  "날따라꼼":    826,    // Orbeetle (alt)
+  "꼬쟁아":      580,    // Ducklett
+  "나꼬리":      827,    // Nickit
+  "스라크닉스":  828,    // Thievul
+  "검은눈마호":  302,    // Sableye
+  "단검칼날":    679,    // Honedge (only if mapped — but trainer-listed)
+  "눈송모스":    872,    // Snom
+  "눈아이":      872,    // Snom (alt)
+  "눈쪽몬":      872,    // Snom (alt)
+  "아이스크나이드":873,  // Frosmoth
+  "다꼬리어":    851,    // Centiscorch
+  "달마카":      554,    // Darumaka (alt)
+  "불쟁이":      554,    // Darumaka (N's, alt)
+  "대왕끼리만":  983,    // Kingambit
+  "절각지":      625,    // Bisharp
+  "대왕끼리코뿌리":879,  // Copperajah
+  "대해마":      834,    // Drednaw
+  "이박취":      834,    // Drednaw (alt)
+  "더스트":      568,    // Trubbish (alt of 또가스류 — 쓰레꾸리 alt)
+  "쓰레꾸리":    568,    // Trubbish (alt)
+  "더스트댓":    569,    // Garbodor (alt)
+  "쓰레오기":    569,    // Garbodor (alt)
+  "데그오스":    356,    // Dusclops
+  "울트라스":    355,    // Duskull
+  "도치보고":    651,    // Quilladin
+  "동전구리":    999,    // Gimmighoul
+  "두더공":      659,    // Bunnelby
+  "두코지":      188,    // Skiploom
+  "두코코":      187,    // Hoppip
+  "디안결":      858,    // Hatterene
+  "딘루":        1003,   // Ting Lu
+  "땃주르":      944,    // Shroodle
+  "라부르나이트": 1021,   // Raging Bolt
+  "루키루키":    821,    // Rookidee
+  "청새짹짹":    822,    // Corvisquire
+  "마빌리":      868,    // Milcery
+  "슈가펫":      869,    // Alcremie
+  "모꼬":        546,    // Cottonee
+  "찌리구":      938,    // Tadbulb (Iono's)
+  "빵디":        938,    // Tadbulb (alt)
+  "벨리볼트":    939,    // Bellibolt
+  "펄스왕":      939,    // Bellibolt (Iono's)
+  "파리퍼":      940,    // Wattrel (Iono's)
+  "초파리퍼":    941,    // Kilowattrel (Iono's)
+  "모래뱀숭이":  843,    // Silicobra
+  "몰랑이":      856,    // Hatenna
+  "몰래퐁":      857,    // Hattrem
+  "베베놈인형":  860,    // Morgrem
+  "무쇠화염":    935,    // 차오르꾸/Charcadet alt (Iron Charcadet — paradox name)
+  "차오르꾸":    935,    // Charcadet
+  "오라이지":    937,    // Ceruledge
+  "지는달삼무사":937,    // Ceruledge alt
+  "무한다이맥스":890,    // Eternatus alt of 무한다이노
+  "문어집게":    852,    // Clobbopus
+  "탱탱문어":    852,    // Clobbopus (alt)
+  "미끄나":      704,    // Goomy
+  "방울욕따":    816,    // Sobble
+  "배릿쥐털":    831,    // Dubwool
+  "백차도르":    855,    // Polteageist
+  "폿차마니":    854,    // Sinistea
+  "번청차":      1013,   // Sinistcha
+  "비바라바":    666,    // Vivillon
+  "빈챙이":      349,    // Feebas
+  "빙슬러":      712,    // Bergmite
+  "빠구독":      1014,   // Okidogi
+  "사탕슈":      684,    // Swirlix
+  "샤로자드":    497,    // Serperior
+  "석탄카":      837,    // Rolycoly
+  "탄차로":      838,    // Carkol
+  "소봉이":      829,    // Gossifleur
+  "쇠돌맹이":    597,    // Ferroseed
+  "슈펫":        353,    // Shuppet
+  "스컹뿌":      434,    // Stunky
+  "스크림테일":  985,    // Scream Tail
+  "씨카브":      364,    // Sealeo
+  "아라크넨":    875,    // Arctovish
+  "아르셀루돈":  1018,   // Archaludon
+  "아르크로다":  1018,   // Archaludon (alt)
+  "어래곤기":    847,    // Barraskewda
+  "어래곤찌르":  847,    // Barraskewda (alt)
+  "엔쥬":        670,    // Floette base (엔쥬 플라엣테)
+  "오드리드리":  741,    // Oricorio
+  "왈로":        835,    // Yamper
+  "펄스너":      836,    // Boltund
+  "야느와르몰":  522,    // Blitzle
+  "전기트론":    604,    // Eelektross
+  "저리드래":    604,    // Eelektross (alt of mega 저리드래)
+  "차임벨":      358,    // Chimecho
+  "창꼬치":      846,    // Arrokuda
+  "철가시":      995,    // Iron Thorns
+  "코딱군":      299,    // Nosepass
+  "키리키린키":  981,    // Farigiraf
+  "파모":        921,    // Pawmi
+  "파모트":      922,    // Pawmo
+  "파오징":      1002,   // Chien Pao
+  "펌프킨인":    711,    // Gourgeist
+  "폼포트":      897,    // Spectrier
+  "푸스라":      708,    // Phantump
+  "데로스마슈":  709,    // Trevenant (Hop's, alt)
+  "플랫코드":    841,    // Flapple
+  "피존":        17,     // Pidgeotto (alt of 피죤)
+  "한방":        427,    // Buneary
+  "핵스독":      89,     // Muk (alt)
+  "흙먼지뿡":    749,    // Mudbray
+  "줄을서네":    870,    // Falinks
+  "지그재구리":  263,    // Zigzagoon
+  "일렉이":      848,    // Toxel
+  "딥상":        443,    // Gible (Cynthia's)
+  "나옹마술":    863,    // Perrserker (Galarian)
+  "으라랑우탄":  862,    // Obstagoon (alt)
+  "다투지马":    862,    // Obstagoon (alt — Chinese 马 typo)
+  "타구푸지":    862,    // Obstagoon (alt parenth)
+  "다투곰 블러드문": 901, // Bloodmoon Ursaluna 韓 표기 (sv8a-134)
+  "뮤링":        778,    // Mimikyu alt (로켓단의 뮤링)
+  "파밀리쥐 대가족": 925, // Maushold (sv8-092 표기)
+
+  // ── 영문명 카탈로그 (sv8/sv8a/m2/m2a/s4a 등 일부 영문) ──
+  // 카드 데이터의 name 이 영문인 케이스. 한글 변환 안 된 카드 또는 정발
+  // 대기 중 카드가 영문 그대로 들어 있음 — 직접 매칭으로 캐릭터화 보장.
+  "Annihilape":      979,
+  "Archaludon":      1018,
+  "Armarouge":       936,
+  "Beldum":          374,
+  "Blitzle":         522,
+  "Bouffalant":      626,
+  "Bronzong":        437,
+  "Charcadet":       935,
+  "Cofagrigus":      563,
+  "Crocalor":        910,
+  "Donphan":         232,
+  "Drakloak":        886,
+  "Drilbur":         529,
+  "Dudunsparce":     982,
+  "Dunsparce":       206,
+  "Dusclops":        356,
+  "Dusknoir":        477,
+  "Duskull":         355,
+  "Espurr":          677,
+  "Eternatus":       890,
+  "Fan Rotom":       479,
+  "Fezandipiti":     1016,
+  "Galarian Farfetchd": 83,    // 'Farfetch'd dex 83 (Galar 형은 Sirfetch'd)
+  "Galarian Mr Mime":  122,    // Mr. Mime
+  "Galarian Mr Rime":  866,    // Mr. Rime
+  "Galarian Sirfetchd": 865,
+  "Garbodor":        569,
+  "Gastrodon":       423,
+  "Glimmet":         969,
+  "Glimmora":        970,
+  "Grafaiai":        945,
+  "Heliolisk":       695,
+  "Helioptile":      694,
+  "Indeedee":        876,
+  "Kecleon":         352,
+  "Kilowattrel":     941,
+  "Larvesta":        636,
+  "Lokix":           920,
+  "Marnies Grimmsnarl": 861,
+  "Grimmsnarl":      861,
+  "Spidops":         918,
+  "Tarountula":      917,
+  "Meowstic":        678,
+  "Metang":          375,
+  "Munkidori":       1015,
+  "Noctowl":         164,
+  "Nymble":          919,
+  "Okidogi":         1014,
+  "Oranguru":        765,
+  "Pecharunt":       1025,
+  "Phanpy":          231,
+  "Primeape":        57,
+  "Relicanth":       369,
+  "Revavroom":       966,
+  "Sandygast":       769,
+  "Shellos":         422,
+  "Shroodle":        944,
+  "Spheal":          363,
+  "Tapu Koko":       785,
+  "Team Rockets Spidops":     918,
+  "Team Rockets Tarountula":  917,
+  "Trubbish":        568,
+  "Varoom":          965,
+  "Walrein":         365,
+  "Wattrel":         940,
+  "Yamask":          562,
+  "Zangoose":        335,
+  "Zebstrika":       523,
+  "Bloodmoon Ursaluna": 901,
 };
 
 /** 이름으로 dex 조회. 카드 변형(ex/V/VMAX/VSTAR/GX/BREAK/메가) /
@@ -1052,9 +1254,12 @@ export function lookupDex(name: string): number | null {
   if (tryName(name) !== undefined) return tryName(name);
 
   // 1) 후미 카드 표시 (괄호 suffix + 카드 변형 키워드) 제거.
+  //    ex/V/VMAX/... 가 공백 없이 붙은 경우도 strip (예: "로켓단의 뮤츠ex"
+  //    → "로켓단의 뮤츠"). 안전성 위해 첫 strip 후 한 번 더 단계적 strip.
   let base = name
     .replace(/\s*\([^)]*\)\s*$/, "")
-    .replace(/\s+(ex|V|VMAX|VSTAR|VUNION|GX|BREAK)\s*$/i, "")
+    .replace(/\s*(V[-\s]?UNION|VMAX|VSTAR|GX|EX|BREAK|ex|V)\s*$/i, "")
+    .replace(/\s+([XY])\s*$/i, "")  // 메가 진화 X/Y 폼 식별자 strip
     .trim();
   if (tryName(base) !== undefined) return tryName(base);
 
@@ -1095,6 +1300,21 @@ export function lookupDex(name: string): number | null {
     "태양의 ", "태양의",  // 솔가레오 등 일부 표기
     "원시 ",   "원시",    // Primal Groudon/Kyogre
     "메가",                // 잔여 메가 prefix (위 메가 strip 에서 미캐치 변형)
+    // Pikachu form prefixes (s8ap)
+    "공중날기 ", "공중날기",  // Flying Pikachu
+    "파도타기 ", "파도타기",  // Surfing Pikachu
+    "고스트 ",  "고스트",    // Ghost Pikachu 등 (있을 시)
+    // Trainer-pet prefixes that aren't 의-pattern
+    "엔쥬 ",   "엔쥬",      // Ange (XY trainer) / Floette form
+    // Rotom forms
+    "워시",                  // 워시로토무 → 로토무
+    "히트",                  // 히트로토무 → 로토무
+    "커트",                  // 커트로토무 → 로토무
+    "드론",                  // 드론로토무 → 로토무
+    "프로스트",              // 프로스트로토무
+    "스핀",                  // 스핀로토무
+    // 영문 지역폼 prefix
+    "Galarian ", "Alolan ", "Hisuian ", "Paldean ", "Paradox ",
   ]) {
     if (base.startsWith(p)) {
       const stripped = base.slice(p.length).trim();
@@ -1108,15 +1328,30 @@ export function lookupDex(name: string): number | null {
     }
   }
 
+  // 4-eng) 영문 "X's Y" trainer-pokemon 패턴 — Y 가 base 포켓몬.
+  //    예: "Marnie's Grimmsnarl ex" → "Grimmsnarl" (861)
+  const trainerEn = base.match(/^([A-Za-z][A-Za-z\s]*?)'s\s+(.+)$/);
+  if (trainerEn) {
+    const inner = trainerEn[2].trim();
+    if (tryName(inner) !== undefined) return tryName(inner);
+    const innerStripped = inner
+      .replace(/\s*\([^)]*\)\s*$/, "")
+      .replace(/\s*(V[-\s]?UNION|VMAX|VSTAR|GX|EX|BREAK|ex|V)\s*$/i, "")
+      .trim();
+    if (tryName(innerStripped) !== undefined) return tryName(innerStripped);
+  }
+
   // 4) "X의 Y" trainer-pokemon 패턴 — Y 가 base 포켓몬.
+  //    예: "로켓단의 뮤츠ex" → "뮤츠ex" → "뮤츠" (dex 150).
   const trainer = base.match(/^(.+?)의\s+(.+)$/);
   if (trainer) {
     const inner = trainer[2].trim();
     if (tryName(inner) !== undefined) return tryName(inner);
-    // inner 에도 변형 suffix 가 있을 수 있음.
+    // inner 에도 변형 suffix 가 있을 수 있음 — 공백 없는 ex 도 strip.
     const innerStripped = inner
       .replace(/\s*\([^)]*\)\s*$/, "")
-      .replace(/\s+(ex|V|VMAX|VSTAR|VUNION|GX|BREAK)\s*$/i, "")
+      .replace(/\s*(V[-\s]?UNION|VMAX|VSTAR|GX|EX|BREAK|ex|V)\s*$/i, "")
+      .replace(/\s+([XY])\s*$/i, "")
       .trim();
     if (tryName(innerStripped) !== undefined) return tryName(innerStripped);
     // inner 가 메가/지역폼일 수도.
@@ -1129,6 +1364,9 @@ export function lookupDex(name: string): number | null {
   }
 
   // 5) 최종 fallback — 가운데 끼어있는 변형 키워드 제거.
-  base = base.replace(/\s+(ex|V|VMAX|GX|BREAK)\s*$/i, "").trim();
+  base = base
+    .replace(/\s*(V[-\s]?UNION|VMAX|VSTAR|GX|EX|BREAK|ex|V)\s*$/i, "")
+    .replace(/\s+([XY])\s*$/i, "")
+    .trim();
   return tryName(base) ?? null;
 }
