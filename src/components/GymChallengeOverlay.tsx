@@ -965,17 +965,21 @@ function BattlePlayback({
 
   return (
     <div className="p-3 md:p-4 space-y-3">
-      {/* 무대 */}
+      {/* 무대 — aspect 5/4 로 높이 확장 (4/3 대비 ~10% 더 시원). 양쪽
+          캐릭터가 모서리에 박히지 않고 중앙 쪽에서 마주보도록 inset 보강. */}
       <div className={clsx(
-        "relative rounded-2xl border p-3 aspect-[4/3] overflow-hidden",
+        "relative rounded-2xl border p-3 md:p-4 aspect-[5/4] overflow-hidden",
         "border-white/10",
         gymTypeStyle.glow,
       )}
       style={{
         background: "linear-gradient(180deg,#1a0a3a 0%,#1d2a55 45%,#0f1f3a 100%)",
       }}>
-        {/* 적 — 우상단 */}
-        <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
+        {/* 적 — 우측 + 약간 아래로 (모서리 회피, 중앙 쪽). */}
+        <div
+          className="absolute flex flex-col items-end gap-1.5"
+          style={{ top: "10%", right: "6%" }}
+        >
           <HpBar
             label={unitDisplayName(activeEnemy)}
             hp={activeEnemy?.hp ?? 0}
@@ -983,20 +987,23 @@ function BattlePlayback({
             type={(activeEnemy?.type as WildType) ?? gym.type}
           />
           <motion.div
-            className="relative w-20 h-20 md:w-24 md:h-24"
+            className="relative w-24 h-24 md:w-28 md:h-28"
             animate={shake === "enemy" ? { x: [0, -6, 6, -3, 3, 0], filter: ["brightness(1.3)", "brightness(1)"] } : { x: 0 }}
             transition={{ duration: 0.25 }}
           >
             {activeEnemy && <EnemySprite enemy={activeEnemy} />}
-            {/* floater 는 아레나 루트의 별도 레이어에 그림 — 작은 80px 박스
+            {/* floater 는 아레나 루트의 별도 레이어에 그림 — 작은 박스
                 안에 두면 위로 떠오르는 글자가 바로 위 HP 바와 충돌. */}
           </motion.div>
         </div>
 
-        {/* 펫 — 좌하단. HpBar 가 카드 위에 오도록 순서 조정 (이전엔
-            카드 아래에 있어 카드 사이즈가 크면 화면 밖으로 잘리거나
-            카드와 겹쳐 안 보이는 이슈). */}
-        <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
+        {/* 펫 — 좌측 + 약간 위로 (좌하단 모서리 쏠림 해소, 중앙 쪽 배치).
+            HpBar 를 카드 위에 두는 순서는 유지 — 카드 사이즈와 무관하게
+            HP 정보를 우선 보장. 양쪽 캐릭터 사이즈는 적과 동일. */}
+        <div
+          className="absolute flex flex-col items-start gap-1.5"
+          style={{ bottom: "10%", left: "6%" }}
+        >
           <HpBar
             label={unitDisplayName(activePet)}
             hp={activePet?.hp ?? 0}
@@ -1005,7 +1012,7 @@ function BattlePlayback({
             align="left"
           />
           <motion.div
-            className="relative w-16 h-20 md:w-20 md:h-24"
+            className="relative w-24 h-24 md:w-28 md:h-28"
             animate={shake === "pet" ? { x: [0, -4, 4, -2, 2, 0], filter: ["brightness(1.3)", "brightness(1)"] } : { x: 0 }}
             transition={{ duration: 0.25 }}
           >
