@@ -439,9 +439,6 @@ export default function ProfileView() {
               new Set(allRegisteredPets.map((c) => c.id))
             }
             defenseIds={defenseIds}
-            lockedCardIds={
-              new Set(allRegisteredPets.map((c) => c.card_id))
-            }
             displayedIds={displayedIds}
             slotIndex={picker.slot}
             forcedType={picker.type}
@@ -1051,7 +1048,6 @@ function PetSlot({
 function SlabPicker({
   slabs,
   disabledIds,
-  lockedCardIds,
   displayedIds,
   defenseIds,
   slotIndex,
@@ -1062,7 +1058,6 @@ function SlabPicker({
 }: {
   slabs: PclGradingWithDisplay[];
   disabledIds: Set<string>;
-  lockedCardIds: Set<string>;
   displayedIds: Set<string>;
   defenseIds: Set<string>;
   slotIndex: number;
@@ -1304,79 +1299,40 @@ function SlabPicker({
               <>
                 <ul className="grid grid-cols-3 gap-2">
                   {visibleGroups.map((group) => {
-                    // 그룹 내 사용가능 인스턴스 수량 계산 — 1+ 면 등록 가능.
-                    // displayed/defense/이미 펫 인스턴스 제외한 나머지가
-                    // "사용 가능 수량".
+                    // 사용 가능 슬랩만 — 전시/방어덱/이미 펫 등록된 인스턴스
+                    // 제외. 0 이면 카드 자체를 리스트에서 숨김.
                     const usableInGroup = group.all.filter(
                       (s) =>
                         !disabledIds.has(s.id) &&
                         !displayedIds.has(s.id) &&
                         !defenseIds.has(s.id)
                     );
-                    const totalCount = group.count;
                     const usableCount = usableInGroup.length;
-                    // 클릭 시 보낼 슬랩 — 사용가능 첫 슬랩. 없으면 rep
-                    // (어차피 disabled 라 onPick 안 불림).
-                    const usable = usableInGroup[0] ?? group.rep;
-                    const g = usable;
+                    if (usableCount === 0) return null;
+                    const g = usableInGroup[0]!;
                     const card = getCard(g.card_id);
                     if (!card) return null;
-                    // 같은 card_id 가 다른 슬롯에 이미 펫으로 등록돼 있으면
-                    // 중복 등록 spec 으로 차단 (서버 set_pet_for_type 도 동일).
-                    const sameCardTaken = lockedCardIds.has(g.card_id);
-                    // 그룹 단위 차단 — 사용가능 0 또는 같은 카드 중복.
-                    const blocked = usableCount === 0 || sameCardTaken;
-                    // 라벨 우선순위 — 중복 > 모두 잠김(전시/방어덱/펫) > 일반.
-                    const allOnShowcase =
-                      usableCount === 0 &&
-                      group.all.every((s) => displayedIds.has(s.id));
-                    const allOnDefense =
-                      usableCount === 0 &&
-                      group.all.every((s) => defenseIds.has(s.id));
-                    const allTaken =
-                      usableCount === 0 &&
-                      group.all.every((s) => disabledIds.has(s.id));
                     return (
                       <li key={`${g.card_id}@${g.grade}`}>
                         <button
                           type="button"
-                          disabled={blocked}
                           onClick={() => onPick(g.id)}
                           style={{ touchAction: "manipulation" }}
-                          className={clsx(
-                            "relative block w-full text-left rounded-xl p-1 transition",
-                            blocked
-                              ? "opacity-40 cursor-not-allowed"
-                              : "hover:bg-white/5 active:scale-[0.98]"
-                          )}
+                          className="relative block w-full text-left rounded-xl p-1 transition hover:bg-white/5 active:scale-[0.98]"
                           title={
-                            sameCardTaken
-                              ? "이미 같은 카드가 펫으로 등록돼 있어요."
-                              : allTaken
-                              ? "모든 인스턴스가 이미 펫으로 등록됨."
-                              : allOnShowcase
-                              ? "보유 인스턴스 모두 센터에 전시 중. 전시 해제 후 등록 가능."
-                              : allOnDefense
-                              ? "보유 인스턴스 모두 방어 덱에 등록됨. 방어덱 해제 후 등록 가능."
-                              : usableCount < totalCount
-                              ? `${totalCount}장 보유 / 사용 가능 ${usableCount}장`
-                              : totalCount > 1
-                              ? `${totalCount}장 보유`
+                            usableCount > 1
+                              ? `사용 가능 ${usableCount}장`
                               : undefined
                           }
                         >
+                          {/* 수량 표시는 "사용 가능" 기준 — 전시/방어덱/펫
+                              사용분 제외. 1장 이하면 PclSlab 가 자동 숨김. */}
                           <PclSlab
                             card={card}
                             grade={g.grade}
                             size="sm"
-                            quantity={totalCount}
+                            quantity={usableCount}
                           />
-                          {/* 사용가능 < 보유 일 때 작은 사용량 라벨 노출. */}
-                          {usableCount > 0 && usableCount < totalCount && (
-                            <span className="absolute bottom-7 right-1 text-[9px] font-bold px-1 py-0.5 rounded bg-emerald-500/85 text-zinc-950 ring-1 ring-emerald-300/60">
-                              사용 {usableCount}
-                            </span>
-                          )}
                           <p className="mt-1 px-1 text-[10px] font-bold text-white truncate">
                             {card.name}
                           </p>
@@ -1415,26 +1371,6 @@ function SlabPicker({
                               </div>
                             );
                           })()}
-                          {allTaken && (
-                            <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-300 ring-1 ring-white/10">
-                              등록됨
-                            </span>
-                          )}
-                          {!allTaken && allOnShowcase && (
-                            <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/90 text-zinc-950 ring-1 ring-amber-300/60">
-                              전시 중
-                            </span>
-                          )}
-                          {!allTaken && !allOnShowcase && allOnDefense && (
-                            <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-fuchsia-500/90 text-white ring-1 ring-fuchsia-300/60">
-                              방어 덱
-                            </span>
-                          )}
-                          {sameCardTaken && usableCount > 0 && (
-                            <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-fuchsia-500/90 text-white ring-1 ring-fuchsia-300/60">
-                              중복
-                            </span>
-                          )}
                         </button>
                       </li>
                     );

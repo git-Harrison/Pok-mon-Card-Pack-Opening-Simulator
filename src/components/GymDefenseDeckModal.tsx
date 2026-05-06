@@ -218,6 +218,30 @@ export default function GymDefenseDeckModal({
       pets.filter((p) => p.type === gym.type || p.type2 === gym.type),
     [pets, gym.type]
   );
+
+  // 이미 다른 슬롯에 선택된 card_id 들 — 같은 카드 종류 중복 등록 차단.
+  // 방어덱 한 세트 안에서는 동일 card_id 가 1번만 등장해야 함 (서버 검증
+  // set_gym_defense_deck 와 일관). 슬랩 자체 (grading_id) 가 다르더라도
+  // 같은 카드 종류면 풀에서 제외.
+  const selectedCardIds = useMemo(() => {
+    const map = new Map(pets.map((p) => [p.grading_id, p]));
+    const set = new Set<string>();
+    for (const id of order) {
+      const p = map.get(id);
+      if (p) set.add(p.card_id);
+    }
+    return set;
+  }, [order, pets]);
+
+  // 풀 — 매칭 + 미선택 + 이미 선택된 card_id 와 다른 카드.
+  const poolPets = useMemo(
+    () =>
+      matchingPets.filter(
+        (p) => !order.includes(p.grading_id) && !selectedCardIds.has(p.card_id)
+      ),
+    [matchingPets, order, selectedCardIds]
+  );
+
   const insufficient = !loading && matchingPets.length < 3;
 
   const orderedPets = useMemo(() => {
@@ -413,11 +437,14 @@ export default function GymDefenseDeckModal({
                   등록된 {gym.type} 속성 PCL10 펫이 부족해요 ({matchingPets.length}/3).<br/>
                   프로필에서 {gym.type} 속성 펫을 더 등록한 뒤 다시 시도하세요.
                 </p>
+              ) : poolPets.length === 0 ? (
+                <p className="text-[11px] text-zinc-400 py-3 text-center leading-snug">
+                  추가 가능한 카드가 더 없어요. 슬롯에서 카드를 빼면 다시
+                  나타납니다.
+                </p>
               ) : (
                 <ul className="grid grid-cols-2 gap-1.5">
-                  {matchingPets.map((p) => {
-                    const idx = order.indexOf(p.grading_id);
-                    const selected = idx >= 0;
+                  {poolPets.map((p) => {
                     const eff = p.type ? effectiveness(p.type, gym.type) : 1;
                     return (
                       <li key={p.grading_id}>
@@ -425,18 +452,8 @@ export default function GymDefenseDeckModal({
                           type="button"
                           onClick={() => togglePet(p.grading_id)}
                           style={{ touchAction: "manipulation" }}
-                          className={clsx(
-                            "relative w-full rounded-lg border p-1.5 text-left flex items-center gap-1.5 transition active:scale-[0.98]",
-                            selected
-                              ? "border-fuchsia-400/60 bg-fuchsia-400/10"
-                              : "border-white/10 bg-zinc-900/60 hover:bg-white/5"
-                          )}
+                          className="relative w-full rounded-lg border p-1.5 text-left flex items-center gap-1.5 transition active:scale-[0.98] border-white/10 bg-zinc-900/60 hover:bg-white/5"
                         >
-                          {selected && (
-                            <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-fuchsia-500 text-white text-[10px] font-black flex items-center justify-center">
-                              {idx + 1}
-                            </span>
-                          )}
                           <div
                             className={clsx(
                               "w-8 h-11 rounded overflow-hidden ring-1 bg-zinc-900 shrink-0",
