@@ -1220,15 +1220,17 @@ function CardOrDexSprite({
   pixel?: boolean;
 }) {
   const card = cardId ? getCard(cardId) : null;
-  // 1) 메가/특수 폼 sprite 우선 (Pokemon Showdown ani — 메가 X/Y 등
-  //    구분). 매칭 없으면 dex 기반 PokeAPI gen5 BW 로 fallback.
+  // 1) 메가/특수 폼 sprite 우선 (Pokemon Showdown ani — 메가 X/Y 등 구분).
+  // 2) dex 기반 PokeAPI gen5 BW animated sprite.
+  // 3) 둘 다 실패 시 작은 몬스터 실루엣 placeholder — 카드 art 직노출 X.
+  //    체육관 전투 화면은 캐릭터 대결 UX 가 우선이라 카드 UI 가 그대로
+  //    뜨는 fallback 은 의도적으로 제거 (사용자 정책).
   const cardName = card?.name ?? name;
   const megaSprite = cardName ? cardSpriteUrl(cardName) : null;
   const dexFromName = cardName ? lookupDex(cardName) : null;
   const dex = dexFromName ?? fallbackDex ?? null;
   const [megaBroken, setMegaBroken] = useState(false);
   const [spriteBroken, setSpriteBroken] = useState(false);
-  const [cardBroken, setCardBroken] = useState(false);
 
   if (megaSprite && !megaBroken) {
     return (
@@ -1258,25 +1260,18 @@ function CardOrDexSprite({
       />
     );
   }
-  // 2) dex 매칭 실패 → 카드 이미지 fallback.
-  if (card?.imageUrl && !cardBroken) {
-    return (
-      <img
-        src={card.imageUrl}
-        alt={cardName}
-        draggable={false}
-        loading="lazy"
-        decoding="async"
-        referrerPolicy="no-referrer"
-        onError={() => setCardBroken(true)}
-        className="w-full h-full object-contain rounded-md"
-      />
-    );
-  }
-  // 3) 둘 다 실패 → 이름 텍스트.
+  // 캐릭터 매칭 실패 — 작은 도트 실루엣 placeholder. 카드 art 미사용.
   return (
-    <div className="w-full h-full flex items-center justify-center text-[10px] text-white text-center bg-zinc-900 rounded-md p-1">
-      {cardName}
+    <div
+      className="w-full h-full flex flex-col items-center justify-center bg-zinc-900/70 rounded-md ring-1 ring-white/10 px-1"
+      title={cardName}
+    >
+      <span aria-hidden className="text-2xl leading-none select-none">
+        👾
+      </span>
+      <span className="mt-0.5 text-[8px] text-white/75 text-center line-clamp-1 max-w-full">
+        {cardName}
+      </span>
     </div>
   );
 }
