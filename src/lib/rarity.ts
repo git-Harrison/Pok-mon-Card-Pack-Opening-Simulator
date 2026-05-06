@@ -110,18 +110,18 @@ export function cardFxClass(r: Rarity): "fx-mur" | "fx-sar" | null {
 }
 
 // Cost in points to open one sealed booster box.
-// 모든 세트 동일 30,000p — 균일 가격제. 서버측 buy_box /
-// refund_box_purchase 도 동일 가격으로 동기화 필수.
+// 모든 세트 동일 3,000p — 1/10 경제 정책 (20260714). 서버측
+// buy_boxes_bulk / refund_boxes_bulk 와 동일 가격으로 동기화 필수.
 export const BOX_COST: Record<string, number> = {
-  m2a: 30_000,
-  m2: 30_000,
-  sv8: 30_000,
-  sv2a: 30_000,
-  sv8a: 30_000,
-  sv5a: 30_000,
-  sv10: 30_000,
-  m1l: 30_000,
-  m1s: 30_000,
-  m3: 30_000,
-  m4: 30_000,
+  m2a: 3_000,
+  m2: 3_000,
+  sv8: 3_000,
+  sv2a: 3_000,
+  sv8a: 3_000,
+  sv5a: 3_000,
+  sv10: 3_000,
+  m1l: 3_000,
+  m1s: 3_000,
+  m3: 3_000,
+  m4: 3_000,
 };

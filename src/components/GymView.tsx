@@ -300,7 +300,7 @@ export default function GymView() {
             onExtend={async () => {
               if (!userId) return;
               const ok = window.confirm(
-                "10,000,000P를 사용해 보호를 1시간 연장할까요?"
+                "1,000,000P를 사용해 보호를 1시간 연장할까요?"
               );
               if (!ok) return;
               const res = await extendGymProtection(userId, selectedGym.id);
@@ -308,7 +308,7 @@ export default function GymView() {
                 alert(res.error ?? "보호 연장 실패");
               } else {
                 alert(
-                  "10,000,000P를 사용해 체육관 보호시간을 1시간 연장했습니다."
+                  "1,000,000P를 사용해 체육관 보호시간을 1시간 연장했습니다."
                 );
               }
               refresh();
@@ -1500,7 +1500,7 @@ function GymDetailModal({
                 style={{ touchAction: "manipulation" }}
                 className="w-full h-11 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-zinc-950 font-black text-sm active:scale-[0.98]"
               >
-                🛡️ 1시간 보호 연장 (10,000,000P)
+                🛡️ 1시간 보호 연장 (1,000,000P)
               </button>
             )}
             <div className="grid grid-cols-2 gap-2">

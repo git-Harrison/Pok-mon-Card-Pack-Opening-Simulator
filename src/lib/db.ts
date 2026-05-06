@@ -1205,6 +1205,10 @@ export interface EvolveResult {
   error?: string;
   evolution_stage?: number;
   level?: number;
+  /** 진화 시 차감된 포인트 비용 (20260714 — 100M P 고정). */
+  cost?: number;
+  /** 차감 후 남은 보유 포인트. */
+  points?: number;
 }
 
 export async function evolveMyStarter(userId: string): Promise<EvolveResult> {

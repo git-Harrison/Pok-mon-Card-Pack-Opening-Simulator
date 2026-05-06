@@ -2477,12 +2477,18 @@ function ActionButton({
         className="w-full h-11 rounded-xl border-[3px] border-zinc-900 bg-gradient-to-b from-violet-400 via-fuchsia-400 to-rose-400 text-white text-sm font-black tracking-[0.22em] active:translate-y-[2px] transition-transform shadow-[0_4px_0_0_rgba(15,23,42,0.85)] active:shadow-[0_1px_0_0_rgba(15,23,42,0.85)]"
       >
         <span
-          className="inline-flex items-center justify-center gap-1.5"
+          className="inline-flex flex-col items-center justify-center gap-0.5 leading-tight"
           style={{ textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}
         >
-          <StarGlyph />
-          진화하기
-          <StarGlyph />
+          <span className="inline-flex items-center gap-1.5">
+            <StarGlyph />
+            진화하기
+            <StarGlyph />
+          </span>
+          {/* 진화 비용 안내 — 1/10 미적용 고정 비용 */}
+          <span className="text-[9px] font-bold tracking-wider opacity-90">
+            100,000,000 P
+          </span>
         </span>
       </motion.button>
     );
@@ -2991,6 +2997,9 @@ function FeedModal({
 }
 
 /* ─────────── 진화 모달 ─────────── */
+/** 내 포켓몬 진화 고정 비용 — 1/10 경제 정책 미적용. */
+const EVOLUTION_COST = 100_000_000;
+
 function EvolveModal({
   userId,
   fromInfo,
@@ -3006,10 +3015,15 @@ function EvolveModal({
   onClose: () => void;
   onSuccess: (newStage: number) => void;
 }) {
+  const { user, setPoints } = useAuth();
+  const currentPoints = user?.points ?? 0;
+  const insufficient = currentPoints < EVOLUTION_COST;
+
   const [phase, setPhase] = useState<"confirm" | "animating" | "done">(
     "confirm"
   );
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -3021,10 +3035,21 @@ function EvolveModal({
 
   const submit = useCallback(async () => {
     if (submitting) return;
+    if (insufficient) {
+      setErrorMsg(
+        `포인트가 부족해요. 진화 비용 ${EVOLUTION_COST.toLocaleString("ko-KR")}P 필요.`
+      );
+      return;
+    }
     setSubmitting(true);
+    setErrorMsg(null);
     const r = await evolveMyStarter(userId);
     setSubmitting(false);
     if (r.ok && r.evolution_stage != null) {
+      // 차감된 잔액을 auth 컨텍스트에도 즉시 반영 — UI 의 보유 포인트
+      // 표시가 새 잔액으로 갱신되도록.
+      const next = (r as { points?: number }).points;
+      if (typeof next === "number") setPoints(next);
       setPhase("animating");
       window.setTimeout(() => {
         setPhase("done");
@@ -3032,9 +3057,9 @@ function EvolveModal({
       }, 1700);
       window.setTimeout(onClose, 2900);
     } else {
-      onClose();
+      setErrorMsg(r.error ?? "진화에 실패했어요.");
     }
-  }, [submitting, userId, onSuccess, onClose]);
+  }, [submitting, insufficient, userId, onSuccess, onClose, setPoints]);
 
   return (
     <motion.div
@@ -3082,9 +3107,39 @@ function EvolveModal({
                 <PokemonImg dex={toInfo.dex} name={toInfo.name} size={70} />
               </div>
             </div>
-            <p className="px-5 pb-3 text-[12px] font-bold text-white/90 text-center leading-relaxed">
+            <p className="px-5 pb-2 text-[12px] font-bold text-white/90 text-center leading-relaxed">
               진화하면 되돌릴 수 없어요. 함께할 준비됐나요?
             </p>
+            {/* 진화 비용 + 잔액 안내 */}
+            <div className="mx-4 mb-3 rounded-md bg-black/35 border border-white/15 px-3 py-2 text-[12px] text-white">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-bold opacity-90">진화 비용</span>
+                <span className="font-black tabular-nums text-amber-200">
+                  {EVOLUTION_COST.toLocaleString("ko-KR")} P
+                </span>
+              </div>
+              <div className="mt-0.5 flex items-center justify-between gap-2 text-[11px]">
+                <span className="opacity-80">현재 보유</span>
+                <span
+                  className={clsx(
+                    "font-black tabular-nums",
+                    insufficient ? "text-rose-300" : "text-white"
+                  )}
+                >
+                  {currentPoints.toLocaleString("ko-KR")} P
+                </span>
+              </div>
+              {insufficient && (
+                <p className="mt-1 text-[11px] font-bold text-rose-200">
+                  포인트가 부족합니다.
+                </p>
+              )}
+            </div>
+            {errorMsg && (
+              <p className="mx-4 mb-2 text-[11px] font-bold text-amber-200">
+                {errorMsg}
+              </p>
+            )}
             <div className="px-4 pb-4 grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -3097,11 +3152,20 @@ function EvolveModal({
               <button
                 type="button"
                 onClick={submit}
-                disabled={submitting}
+                disabled={submitting || insufficient}
                 style={{ touchAction: "manipulation" }}
-                className="h-12 rounded-xl border-[3px] border-zinc-900 bg-gradient-to-b from-amber-300 to-amber-500 text-zinc-900 text-sm font-black active:translate-y-[2px] shadow-[0_4px_0_0_rgba(15,23,42,0.85)] active:shadow-[0_1px_0_0_rgba(15,23,42,0.85)]"
+                className={clsx(
+                  "h-12 rounded-xl border-[3px] border-zinc-900 text-sm font-black transition-all shadow-[0_4px_0_0_rgba(15,23,42,0.85)] active:shadow-[0_1px_0_0_rgba(15,23,42,0.85)]",
+                  insufficient || submitting
+                    ? "bg-zinc-300 text-zinc-500 cursor-not-allowed"
+                    : "bg-gradient-to-b from-amber-300 to-amber-500 text-zinc-900 active:translate-y-[2px]"
+                )}
               >
-                {submitting ? "진화 중…" : "진화하기"}
+                {submitting
+                  ? "진화 중…"
+                  : insufficient
+                  ? "포인트 부족"
+                  : "진화하기"}
               </button>
             </div>
           </div>
