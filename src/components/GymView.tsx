@@ -1888,6 +1888,10 @@ function DefenderStatCard({
   return (
     <div className="relative rounded-lg border bg-zinc-900/60 p-2 flex flex-col items-center gap-1 border-fuchsia-400/30">
       <div className="relative w-14 h-14 shrink-0 overflow-hidden flex items-center justify-center">
+        {/* 캐릭터화 chain — GymChallengeOverlay 와 동일 정책:
+            (1) Pokemon Showdown ani (메가/특수폼)
+            (2) PokeAPI gen5 BW animated (lookupDex base 매칭)
+            (3) type-색 silhouette 👾 — 카드 art 직노출 / 텍스트-only 모두 회피. */}
         {!megaBroken && megaSprite ? (
           <img
             src={megaSprite}
@@ -1910,21 +1914,18 @@ function DefenderStatCard({
             className="max-w-full max-h-full object-contain"
             style={{ imageRendering: "pixelated" }}
           />
-        ) : !broken && card?.imageUrl ? (
-          <img
-            src={card.imageUrl}
-            alt={cardName}
-            draggable={false}
-            loading="lazy"
-            decoding="async"
-            referrerPolicy="no-referrer"
-            onError={() => setBroken(true)}
-            className="max-w-full max-h-full object-contain"
-          />
         ) : (
-          <span className="text-[10px] text-zinc-400 text-center px-1">
-            {cardName}
-          </span>
+          <div
+            className={clsx(
+              "w-full h-full flex items-center justify-center rounded ring-1 ring-white/10",
+              style.badge
+            )}
+            title={cardName}
+          >
+            <span aria-hidden className="text-2xl leading-none select-none">
+              👾
+            </span>
+          </div>
         )}
       </div>
       <p className="text-[10px] font-bold text-white truncate max-w-full">
