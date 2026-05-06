@@ -23,7 +23,9 @@
 
 -- 1) users 누적 컬럼 INT → BIGINT (이미 BIGINT 면 no-op).
 do $$
-declare v_t text;
+declare
+  v_t text;
+  v_col record;
 begin
   for v_col in select unnest(array['points','gym_daily_rank_pts','pet_score']) as c
   loop
