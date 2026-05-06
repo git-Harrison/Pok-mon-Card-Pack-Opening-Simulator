@@ -14,7 +14,10 @@ import type { DefenderPokemonInfo, Gym } from "@/lib/gym/types";
 import { effectiveness } from "@/lib/wild/typechart";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 import { resolveCardType as resolvePetType } from "@/lib/wild/name-to-type";
-import { getCardSecondaryType } from "@/lib/wild/mur-secondary";
+import {
+  getCardSecondaryType,
+  getCardPrimaryOverride,
+} from "@/lib/wild/card-secondary";
 import { getCard } from "@/lib/sets";
 import { RARITY_STYLE } from "@/lib/rarity";
 import { slabStats } from "@/lib/wild/stats";
@@ -55,14 +58,18 @@ function mergePet(g: RawPetGrading): MyPet | null {
   const name = card?.name ?? g.card_id;
   const grade = g.grade ?? 10;
   const stats = slabStats(rarity, grade);
+  // 1차 속성: 8 MUR 재지정분은 override, 그 외는 카드명 기반.
+  const primaryOverride = getCardPrimaryOverride(g.card_id);
+  const primary = primaryOverride ?? (card ? resolvePetType(card.name) : null);
   return {
     grading_id: g.grading_id,
     card_id: g.card_id,
     card_name: name,
     rarity,
     grade,
-    type: card ? resolvePetType(card.name) : null,
-    type2: rarity === "MUR" ? getCardSecondaryType(g.card_id) : null,
+    type: primary,
+    // 보조 속성: MUR/UR 매핑 모두 lookup. 없으면 null (SAR 등 단일).
+    type2: getCardSecondaryType(g.card_id),
     imageUrl: card?.imageUrl,
     baseHp: stats.hp,
     baseAtk: stats.atk,
@@ -88,12 +95,16 @@ function mergeFromDefender(d: DefenderPokemonInfo): MyPet | null {
     rarity,
     grade,
     // 서버 저장된 type 우선, 없으면 카드명 기준 lookup.
-    type: d.type ?? (card ? resolvePetType(card.name) : null),
-    // 서버가 wild_type_2 를 함께 내려줌 (없으면 null). 클라 매핑으로
-    // fallback — 카탈로그/마이그레이션 동기화 일시적 어긋남 대비.
+    // 서버 저장된 type 우선, 없으면 override → 카드명 lookup.
+    type:
+      d.type ??
+      getCardPrimaryOverride(d.card_id) ??
+      (card ? resolvePetType(card.name) : null),
+    // 서버가 wild_type_2 를 함께 내려줌. 없으면 클라 매핑 fallback.
+    // MUR/UR 모두 매핑에서 lookup, SAR 이하는 매핑 미존재 → null.
     type2:
       (d.wild_type_2 as WildType | null) ??
-      (rarity === "MUR" ? getCardSecondaryType(d.card_id) : null),
+      getCardSecondaryType(d.card_id),
     imageUrl: card?.imageUrl,
     baseHp: stats.hp,
     baseAtk: stats.atk,

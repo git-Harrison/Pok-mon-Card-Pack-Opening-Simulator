@@ -44,6 +44,10 @@ import GymMedalIcon from "./GymMedalIcon";
 import { fetchUserGymMedals } from "@/lib/gym/db";
 import type { UserGymMedal } from "@/lib/gym/types";
 import { resolveCardType } from "@/lib/wild/name-to-type";
+import {
+  getCardSecondaryType,
+  getCardPrimaryOverride,
+} from "@/lib/wild/card-secondary";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 import { groupGradings } from "@/lib/cards/group-gradings";
 import { lockBodyScroll } from "@/lib/useBodyScrollLock";
@@ -993,17 +997,34 @@ function PetSlot({
           {cardDef.rarity}
         </span>
         {(() => {
-          const ptype = resolveCardType(cardDef.name);
-          if (!ptype) return null;
+          // 1차: MUR 8 재지정 override 우선, 그 외 카드명 lookup.
+          const ptype = getCardPrimaryOverride(cardDef.id) ?? resolveCardType(cardDef.name);
+          // 2차: MUR/UR 매핑에서 (SAR 이하는 매핑 미존재 → null).
+          const ptype2 = getCardSecondaryType(cardDef.id);
+          if (!ptype && !ptype2) return null;
           return (
-            <span
-              className={clsx(
-                "absolute bottom-1 right-1 text-[10px] md:text-[11px] font-black px-1.5 py-0.5 rounded leading-none shadow",
-                TYPE_STYLE[ptype].badge
+            <div className="absolute bottom-1 right-1 flex flex-col items-end gap-0.5">
+              {ptype && (
+                <span
+                  className={clsx(
+                    "text-[10px] md:text-[11px] font-black px-1.5 py-0.5 rounded leading-none shadow",
+                    TYPE_STYLE[ptype].badge
+                  )}
+                >
+                  {ptype}
+                </span>
               )}
-            >
-              {ptype}
-            </span>
+              {ptype2 && (
+                <span
+                  className={clsx(
+                    "text-[9px] md:text-[10px] font-black px-1.5 py-0.5 rounded leading-none shadow",
+                    TYPE_STYLE[ptype2].badge
+                  )}
+                >
+                  {ptype2}
+                </span>
+              )}
+            </div>
           );
         })()}
       </motion.button>
@@ -1345,6 +1366,38 @@ function SlabPicker({
                           <p className="px-1 text-[9px] text-zinc-500 truncate">
                             {SETS[card.setCode]?.name ?? card.setCode} · #{card.number}
                           </p>
+                          {/* 1차 + 2차 속성 배지 (MUR/UR 만 2차 노출) */}
+                          {(() => {
+                            const t1 =
+                              getCardPrimaryOverride(card.id) ??
+                              resolveCardType(card.name);
+                            const t2 = getCardSecondaryType(card.id);
+                            if (!t1 && !t2) return null;
+                            return (
+                              <div className="mt-0.5 px-1 flex items-center gap-0.5 flex-wrap">
+                                {t1 && (
+                                  <span
+                                    className={clsx(
+                                      "text-[8px] font-black px-1 py-[1px] rounded leading-none",
+                                      TYPE_STYLE[t1].badge
+                                    )}
+                                  >
+                                    {t1}
+                                  </span>
+                                )}
+                                {t2 && (
+                                  <span
+                                    className={clsx(
+                                      "text-[8px] font-black px-1 py-[1px] rounded leading-none",
+                                      TYPE_STYLE[t2].badge
+                                    )}
+                                  >
+                                    {t2}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
                           {allTaken && (
                             <span className="absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-300 ring-1 ring-white/10">
                               등록됨

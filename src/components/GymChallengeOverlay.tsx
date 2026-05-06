@@ -21,7 +21,10 @@ import type {
 import { effectiveness } from "@/lib/wild/typechart";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 import { resolveCardType as resolvePetType } from "@/lib/wild/name-to-type";
-import { getCardSecondaryType } from "@/lib/wild/mur-secondary";
+import {
+  getCardSecondaryType,
+  getCardPrimaryOverride,
+} from "@/lib/wild/card-secondary";
 import { lookupDex } from "@/lib/wild/name-to-dex";
 import { cardSpriteUrl } from "@/lib/wild/card-sprite";
 import { wildSpriteUrl } from "@/lib/wild/pool";
@@ -76,14 +79,18 @@ function mergePet(g: RawPetGrading): MyPet | null {
   const rarity = (card?.rarity ?? g.rarity) as keyof typeof RARITY_STYLE;
   const name = card?.name ?? g.card_id;
   const stats = slabStats(rarity, g.grade);
+  // 1차: 8 MUR 재지정 override 우선, 그 외는 카드명 기반.
+  const primaryOverride = getCardPrimaryOverride(g.card_id);
+  const primary = primaryOverride ?? (card ? resolvePetType(card.name) : null);
   return {
     grading_id: g.grading_id,
     card_id: g.card_id,
     card_name: name,
     rarity,
     grade: g.grade,
-    type: card ? resolvePetType(card.name) : null,
-    type2: rarity === "MUR" ? getCardSecondaryType(g.card_id) : null,
+    type: primary,
+    // 보조: MUR/UR 매핑 모두 lookup (SAR 이하는 매핑 미존재 → null).
+    type2: getCardSecondaryType(g.card_id),
     imageUrl: card?.imageUrl,
     baseHp: stats.hp,
     baseAtk: stats.atk,

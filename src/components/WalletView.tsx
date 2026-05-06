@@ -36,6 +36,12 @@ import Portal from "./Portal";
 import UserSelect from "./UserSelect";
 import { groupGradings } from "@/lib/cards/group-gradings";
 import { lockBodyScroll } from "@/lib/useBodyScrollLock";
+import { resolveCardType } from "@/lib/wild/name-to-type";
+import { TYPE_STYLE } from "@/lib/wild/types";
+import {
+  getCardSecondaryType,
+  getCardPrimaryOverride,
+} from "@/lib/wild/card-secondary";
 
 type Mode = "cards" | "pcl";
 type RarityFilter = "ALL" | Rarity;
@@ -350,6 +356,38 @@ function CardsMode({
                   <p className="text-[10px] text-zinc-500">
                     {SETS[card.setCode].name} · #{card.number}
                   </p>
+                  {/* 1차 + 2차 속성 — MUR/UR 만 2차 노출 */}
+                  {(() => {
+                    const t1 =
+                      getCardPrimaryOverride(card.id) ??
+                      resolveCardType(card.name);
+                    const t2 = getCardSecondaryType(card.id);
+                    if (!t1 && !t2) return null;
+                    return (
+                      <div className="mt-0.5 flex items-center justify-center gap-0.5 flex-wrap">
+                        {t1 && (
+                          <span
+                            className={clsx(
+                              "text-[8px] font-black px-1 py-[1px] rounded leading-none",
+                              TYPE_STYLE[t1].badge
+                            )}
+                          >
+                            {t1}
+                          </span>
+                        )}
+                        {t2 && (
+                          <span
+                            className={clsx(
+                              "text-[8px] font-black px-1 py-[1px] rounded leading-none",
+                              TYPE_STYLE[t2].badge
+                            )}
+                          >
+                            {t2}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </Link>
             </motion.div>
