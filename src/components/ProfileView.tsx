@@ -720,14 +720,21 @@ function PetSlotsByTypeSection({
   ];
 
   // 보유 PCL10 의 type 별 카운트 — eligible 카드 중 type 로 분류 가능한 것.
+  // dual-type: MUR/UR 은 1차+2차 모두 카운트 (양쪽 type 슬롯에 모두 노출).
   const eligibleByType = useMemo(() => {
     const m = new Map<WildType, number>();
+    const bump = (t: WildType | null) => {
+      if (!t) return;
+      m.set(t, (m.get(t) ?? 0) + 1);
+    };
     for (const g of eligibleSlabs) {
       const card = getCard(g.card_id);
       if (!card) continue;
-      const t = resolveCardType(card.name);
-      if (!t) continue;
-      m.set(t, (m.get(t) ?? 0) + 1);
+      const t1 =
+        getCardPrimaryOverride(card.id) ?? resolveCardType(card.name);
+      const t2 = getCardSecondaryType(card.id);
+      bump(t1);
+      bump(t2);
     }
     return m;
   }, [eligibleSlabs]);
@@ -1081,14 +1088,21 @@ function SlabPicker({
   }, []);
 
   // 타입별 카운트 — 칩 옆 표기 + 필터 가용성.
+  // dual-type: MUR/UR 은 1차+2차 모두 카운트 (필터 칩에 양쪽 노출).
   const typeCounts = useMemo(() => {
     const m = new Map<WildType, number>();
+    const bump = (t: WildType | null) => {
+      if (!t) return;
+      m.set(t, (m.get(t) ?? 0) + 1);
+    };
     for (const g of slabs) {
       const card = getCard(g.card_id);
       if (!card) continue;
-      const t = resolveCardType(card.name);
-      if (!t) continue;
-      m.set(t, (m.get(t) ?? 0) + 1);
+      const t1 =
+        getCardPrimaryOverride(card.id) ?? resolveCardType(card.name);
+      const t2 = getCardSecondaryType(card.id);
+      bump(t1);
+      bump(t2);
     }
     return m;
   }, [slabs]);
@@ -1099,13 +1113,16 @@ function SlabPicker({
     [typeCounts]
   );
 
-  // 필터 적용된 풀.
+  // 필터 적용된 풀. dual-type either-type 매칭.
   const filteredSlabs = useMemo(() => {
     if (typeFilter === "ALL") return slabs;
     return slabs.filter((g) => {
       const card = getCard(g.card_id);
       if (!card) return false;
-      return resolveCardType(card.name) === typeFilter;
+      const t1 =
+        getCardPrimaryOverride(card.id) ?? resolveCardType(card.name);
+      const t2 = getCardSecondaryType(card.id);
+      return t1 === typeFilter || t2 === typeFilter;
     });
   }, [slabs, typeFilter]);
 
