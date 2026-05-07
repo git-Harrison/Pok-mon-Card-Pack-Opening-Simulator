@@ -190,21 +190,19 @@ export interface RawPetGrading {
  *   • 그 외 희귀도 PCL10 — main_card_ids ∪ main_cards_by_type 안에 있는
  *     슬랩만.
  *  서버 (resolve_gym_battle / set_gym_defense_deck) 의 검증과 일관.
- *  카드 이름/타입은 클라가 카탈로그 (getCard, resolveCardType) 로 머지. */
+ *  카드 이름/타입은 클라가 카탈로그 (getCard, resolveCardType) 로 머지.
+ *
+ *  쿼리는 두 개로 분리: (1) MUR/UR rarity 필터 (2) 펫 등록 id IN 필터.
+ *  단일 쿼리 + 클라 필터로 했더니 Supabase 의 PostgREST 기본 max_rows
+ *  (1000) 에 cap 되어, PCL10 슬랩이 1000장 넘는 계정에서 MUR/UR 가
+ *  뒤로 밀려 응답에서 잘려 나가는 사고가 있었음. 두 쿼리로 분리하면
+ *  각 결과셋이 충분히 작아 cap 안 걸림. */
 export async function fetchMyPets(userId: string): Promise<RawPetGrading[]> {
-  const [gradingsRes, userRes] = await Promise.all([
-    supabase
-      .from("psa_gradings")
-      .select("id, card_id, rarity, grade")
-      .eq("user_id", userId)
-      .eq("grade", 10),
-    supabase
-      .from("users")
-      .select("main_card_ids, main_cards_by_type")
-      .eq("id", userId)
-      .single(),
-  ]);
-  if (gradingsRes.error || !gradingsRes.data) return [];
+  const userRes = await supabase
+    .from("users")
+    .select("main_card_ids, main_cards_by_type")
+    .eq("id", userId)
+    .single();
 
   const userRow = userRes.data as
     | {
@@ -212,25 +210,38 @@ export async function fetchMyPets(userId: string): Promise<RawPetGrading[]> {
         main_cards_by_type?: Record<string, string[]> | null;
       }
     | null;
-  const registered = new Set<string>();
-  for (const id of userRow?.main_card_ids ?? []) registered.add(id);
+  const registeredIds: string[] = [];
+  for (const id of userRow?.main_card_ids ?? []) registeredIds.push(id);
   for (const arr of Object.values(userRow?.main_cards_by_type ?? {})) {
-    for (const id of arr) registered.add(id);
+    for (const id of arr) registeredIds.push(id);
   }
 
-  return (
-    gradingsRes.data as Array<{
-      id: string;
-      card_id: string;
-      rarity: string;
-      grade: number;
-    }>
-  )
-    .filter((g) => g.rarity === "MUR" || g.rarity === "UR" || registered.has(g.id))
-    .map((g) => ({
-      grading_id: g.id,
-      card_id: g.card_id,
-      rarity: g.rarity,
-      grade: g.grade,
-    }));
+  const [murUrRes, regRes] = await Promise.all([
+    supabase
+      .from("psa_gradings")
+      .select("id, card_id, rarity, grade")
+      .eq("user_id", userId)
+      .eq("grade", 10)
+      .in("rarity", ["MUR", "UR"]),
+    registeredIds.length > 0
+      ? supabase
+          .from("psa_gradings")
+          .select("id, card_id, rarity, grade")
+          .eq("user_id", userId)
+          .eq("grade", 10)
+          .in("id", registeredIds)
+      : Promise.resolve({ data: [] as Array<{ id: string; card_id: string; rarity: string; grade: number }>, error: null }),
+  ]);
+
+  type Row = { id: string; card_id: string; rarity: string; grade: number };
+  const merged = new Map<string, Row>();
+  for (const r of (murUrRes.data ?? []) as Row[]) merged.set(r.id, r);
+  for (const r of (regRes.data ?? []) as Row[]) merged.set(r.id, r);
+
+  return Array.from(merged.values()).map((g) => ({
+    grading_id: g.id,
+    card_id: g.card_id,
+    rarity: g.rarity,
+    grade: g.grade,
+  }));
 }
