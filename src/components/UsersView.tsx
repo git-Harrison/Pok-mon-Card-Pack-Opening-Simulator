@@ -649,15 +649,21 @@ function ScoreBreakdown({
     // 추정했으나 그 식은 stale 이라 제거.
     const medalCount = row.medal_count ?? row.gym_medals?.length ?? 0;
     const gymBuff = row.medal_buff ?? 0;
+    const starterBonus = row.starter_power_bonus ?? 0;
+    const gymWinCount = row.gym_win_count ?? 0;
+    const gymWinBonus = row.gym_win_power_bonus ?? 0;
     const showcase = Math.max(
       0,
-      (row.center_power ?? 0) - pokedex - completion - pet - gymBuff
+      (row.center_power ?? 0)
+        - pokedex - completion - pet - gymBuff - starterBonus - gymWinBonus
     );
-    if (showcase > 0)   items.push({ label: "전시", value: showcase, tone: "fuchsia" });
-    if (pokedex > 0)    items.push({ label: "도감", value: pokedex, tone: "emerald" });
-    if (completion > 0) items.push({ label: "도감 세트효과", value: completion, tone: "cyan" });
-    if (pet > 0)        items.push({ label: "펫", value: pet, tone: "amber" });
-    if (gymBuff > 0)    items.push({ label: `메달 ×${medalCount}`, value: gymBuff, tone: "violet" });
+    if (showcase > 0)     items.push({ label: "전시", value: showcase, tone: "fuchsia" });
+    if (pokedex > 0)      items.push({ label: "도감", value: pokedex, tone: "emerald" });
+    if (completion > 0)   items.push({ label: "도감 세트효과", value: completion, tone: "cyan" });
+    if (pet > 0)          items.push({ label: "펫", value: pet, tone: "amber" });
+    if (gymBuff > 0)      items.push({ label: `메달 ×${medalCount}`, value: gymBuff, tone: "violet" });
+    if (starterBonus > 0) items.push({ label: "내 포켓몬 LV", value: starterBonus, tone: "emerald" });
+    if (gymWinBonus > 0)  items.push({ label: `체육관 승리 ×${gymWinCount}`, value: gymWinBonus, tone: "rose" });
   } else {
     // 펫 — main_cards 의 등급별 정액 합. (pet_rarity_score 절대값)
     //   서버: supabase/migrations/20260636_pet_score_bump_v3.sql

@@ -445,6 +445,10 @@ export interface RankingRow {
   /** 내 포켓몬 LV 보너스 (표시/랭킹 합산). 포켓몬 미선택 유저는 0.
    *  center_power 에 이미 포함; 분해 표기용. 체육관 전투 stats 는 영향 없음. */
   starter_power_bonus?: number;
+  /** 체육관 도전 승리 누적 카운트. gym_battle_logs.result='won' 합. */
+  gym_win_count?: number;
+  /** gym_win_count × 2000. center_power 에 이미 포함; 분해 표기용. */
+  gym_win_power_bonus?: number;
 }
 
 export async function fetchUserRankings(): Promise<RankingRow[]> {
