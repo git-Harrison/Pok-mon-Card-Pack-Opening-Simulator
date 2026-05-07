@@ -58,9 +58,16 @@ function mergePet(g: RawPetGrading): MyPet | null {
   const name = card?.name ?? g.card_id;
   const grade = g.grade ?? 10;
   const stats = slabStats(rarity, grade);
-  // 1차 속성: 8 MUR 재지정분은 override, 그 외는 카드명 기반.
-  const primaryOverride = getCardPrimaryOverride(g.card_id);
-  const primary = primaryOverride ?? (card ? resolvePetType(card.name) : null);
+  // 속성은 서버 card_types 우선 (set_pet_for_type / card_eligible_for_type
+  // 와 동일 source). 없을 때만 클라 fallback (override → 이름 lookup).
+  // 클라 룩업이 누락된 카드 (예: 카탈로그 미동기 신규 set) 가 풀에서
+  // 잘못 제외되어 "PCL10 카드 부족" 으로 막히던 사고 방지.
+  const primary =
+    (g.wild_type as WildType | null) ??
+    getCardPrimaryOverride(g.card_id) ??
+    (card ? resolvePetType(card.name) : null);
+  const secondary =
+    (g.wild_type_2 as WildType | null) ?? getCardSecondaryType(g.card_id);
   return {
     grading_id: g.grading_id,
     card_id: g.card_id,
@@ -68,8 +75,7 @@ function mergePet(g: RawPetGrading): MyPet | null {
     rarity,
     grade,
     type: primary,
-    // 보조 속성: MUR/UR 매핑 모두 lookup. 없으면 null (SAR 등 단일).
-    type2: getCardSecondaryType(g.card_id),
+    type2: secondary,
     imageUrl: card?.imageUrl,
     baseHp: stats.hp,
     baseAtk: stats.atk,

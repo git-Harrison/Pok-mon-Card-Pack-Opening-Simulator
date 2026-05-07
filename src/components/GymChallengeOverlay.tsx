@@ -79,9 +79,14 @@ function mergePet(g: RawPetGrading): MyPet | null {
   const rarity = (card?.rarity ?? g.rarity) as keyof typeof RARITY_STYLE;
   const name = card?.name ?? g.card_id;
   const stats = slabStats(rarity, g.grade);
-  // 1차: 8 MUR 재지정 override 우선, 그 외는 카드명 기반.
-  const primaryOverride = getCardPrimaryOverride(g.card_id);
-  const primary = primaryOverride ?? (card ? resolvePetType(card.name) : null);
+  // 속성은 서버 card_types 우선 (체육관 검증과 동일 source). 클라 룩업이
+  // 누락된 카드도 풀에 정상 포함되도록 — GymDefenseDeckModal 와 일관.
+  const primary =
+    (g.wild_type as WildType | null) ??
+    getCardPrimaryOverride(g.card_id) ??
+    (card ? resolvePetType(card.name) : null);
+  const secondary =
+    (g.wild_type_2 as WildType | null) ?? getCardSecondaryType(g.card_id);
   return {
     grading_id: g.grading_id,
     card_id: g.card_id,
@@ -89,8 +94,7 @@ function mergePet(g: RawPetGrading): MyPet | null {
     rarity,
     grade: g.grade,
     type: primary,
-    // 보조: MUR/UR 매핑 모두 lookup (SAR 이하는 매핑 미존재 → null).
-    type2: getCardSecondaryType(g.card_id),
+    type2: secondary,
     imageUrl: card?.imageUrl,
     baseHp: stats.hp,
     baseAtk: stats.atk,

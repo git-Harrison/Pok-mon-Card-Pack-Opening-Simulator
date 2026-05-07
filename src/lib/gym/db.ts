@@ -183,6 +183,12 @@ export interface RawPetGrading {
   card_id: string;
   rarity: string;
   grade: number;
+  /** 서버 card_types.wild_type — 펫/체육관 검증의 진실의 소스. 클라
+   *  name-to-type 룩업이 누락된 카드도 여기서 채워줌. null 가능
+   *  (트레이너/에너지/굿즈). */
+  wild_type: string | null;
+  /** 서버 card_types.wild_type_2 — MUR/UR dual-type. SAR 이하 null. */
+  wild_type_2: string | null;
 }
 
 /** 체육관 풀용 — 정책 (20260733):
@@ -190,7 +196,9 @@ export interface RawPetGrading {
  *   • 그 외 희귀도 PCL10 — main_card_ids ∪ main_cards_by_type 안에 있는
  *     슬랩만.
  *  서버 (resolve_gym_battle / set_gym_defense_deck) 의 검증과 일관.
- *  카드 이름/타입은 클라가 카탈로그 (getCard, resolveCardType) 로 머지.
+ *  카드 이름/이미지는 클라 카탈로그 (getCard) 로 머지하고, 속성은 서버
+ *  card_types 를 먼저 read (클라 name-to-type 룩업이 누락 / 어긋난 경우
+ *  클라 필터가 보유 카드를 풀에서 잘못 제외하던 사고 방지).
  *
  *  쿼리는 두 개로 분리: (1) MUR/UR rarity 필터 (2) 펫 등록 id IN 필터.
  *  단일 쿼리 + 클라 필터로 했더니 Supabase 의 PostgREST 기본 max_rows
@@ -238,10 +246,41 @@ export async function fetchMyPets(userId: string): Promise<RawPetGrading[]> {
   for (const r of (murUrRes.data ?? []) as Row[]) merged.set(r.id, r);
   for (const r of (regRes.data ?? []) as Row[]) merged.set(r.id, r);
 
-  return Array.from(merged.values()).map((g) => ({
-    grading_id: g.id,
-    card_id: g.card_id,
-    rarity: g.rarity,
-    grade: g.grade,
-  }));
+  // 서버 card_types 에서 (wild_type, wild_type_2) 일괄 fetch — 풀 필터/
+  // 표시 모두 서버 진실 기준으로 동작시키기 위함.
+  const cardIds = Array.from(
+    new Set(Array.from(merged.values()).map((r) => r.card_id))
+  );
+  const typeMap = new Map<
+    string,
+    { wild_type: string | null; wild_type_2: string | null }
+  >();
+  if (cardIds.length > 0) {
+    const typeRes = await supabase
+      .from("card_types")
+      .select("card_id, wild_type, wild_type_2")
+      .in("card_id", cardIds);
+    for (const row of (typeRes.data ?? []) as Array<{
+      card_id: string;
+      wild_type: string | null;
+      wild_type_2: string | null;
+    }>) {
+      typeMap.set(row.card_id, {
+        wild_type: row.wild_type,
+        wild_type_2: row.wild_type_2,
+      });
+    }
+  }
+
+  return Array.from(merged.values()).map((g) => {
+    const t = typeMap.get(g.card_id);
+    return {
+      grading_id: g.id,
+      card_id: g.card_id,
+      rarity: g.rarity,
+      grade: g.grade,
+      wild_type: t?.wild_type ?? null,
+      wild_type_2: t?.wild_type_2 ?? null,
+    };
+  });
 }
