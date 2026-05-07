@@ -76,8 +76,10 @@ function mergePet(g: RawPetGrading): MyPet | null {
   };
 }
 
-/** 기존 방어덱 슬랩(defender_pokemon) 을 MyPet 으로 변환. main_card_ids
- *  에서 빠진 슬랩이라 fetchMyPets 결과엔 안 들어옴 — 풀 합치기 위해. */
+/** 기존 방어덱 슬랩(defender_pokemon) 을 MyPet 으로 변환. 정책 변경
+ *  (20260731) 후 fetchMyPets 가 보유 PCL10 슬랩 전부를 반환하므로
+ *  보통은 풀에 자연스럽게 포함되지만, 슬랩이 어떤 이유로든 누락되면
+ *  방어덱 편집이 막히므로 안전망으로 합쳐 둠. */
 function mergeFromDefender(d: DefenderPokemonInfo): MyPet | null {
   if (!d.grading_id) return null;
   // stale 슬롯 (server 가 card_id null 반환) 은 pet 풀에 머지해도

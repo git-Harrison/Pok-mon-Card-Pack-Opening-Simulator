@@ -517,7 +517,42 @@ function PickerPhase({
     () => pets.filter((p) => p.type === gym.type || p.type2 === gym.type),
     [pets, gym.type]
   );
-  const insufficient = !loading && matchingPets.length < 3;
+
+  // 한 덱 안에서 동일 card_id 는 1번만 등록 가능 — 같은 카드 슬랩 여러
+  // 장 보유여도 unique 종류 기준으로 카운트/풀 구성.
+  const matchingUniqueCount = useMemo(() => {
+    const ids = new Set<string>();
+    for (const p of matchingPets) ids.add(p.card_id);
+    return ids.size;
+  }, [matchingPets]);
+
+  // 이미 선택된 슬롯의 card_id — 풀에서 같은 카드 종류 추가 차단.
+  const selectedCardIds = useMemo(() => {
+    const map = new Map(pets.map((p) => [p.grading_id, p]));
+    const set = new Set<string>();
+    for (const id of order) {
+      const p = map.get(id);
+      if (p) set.add(p.card_id);
+    }
+    return set;
+  }, [order, pets]);
+
+  // 풀 — 매칭 + 미선택 + 이미 선택된 card_id 와 다른 카드 + card_id dedup.
+  // 같은 card_id 슬랩이 여러 장이어도 풀에는 1장만 보임 (혼동 방지).
+  const poolPets = useMemo(() => {
+    const seen = new Set<string>();
+    const out: MyPet[] = [];
+    for (const p of matchingPets) {
+      if (order.includes(p.grading_id)) continue;
+      if (selectedCardIds.has(p.card_id)) continue;
+      if (seen.has(p.card_id)) continue;
+      seen.add(p.card_id);
+      out.push(p);
+    }
+    return out;
+  }, [matchingPets, order, selectedCardIds]);
+
+  const insufficient = !loading && matchingUniqueCount < 3;
 
   return (
     <div className="p-3 md:p-4 space-y-3">
@@ -526,7 +561,7 @@ function PickerPhase({
         3마리 모두 <b>{gym.type}</b> 속성이어야 합니다.
         {!loading && (
           <span className="ml-1 text-amber-200/85">
-            (보유 {gym.type} 속성 펫 {matchingPets.length}/3+)
+            (보유 {gym.type} 속성 펫 {matchingUniqueCount}/3+ 종류)
           </span>
         )}
       </div>
@@ -696,14 +731,16 @@ function PickerPhase({
           <p className="text-[11px] text-zinc-500 py-3 text-center">로딩 중...</p>
         ) : insufficient ? (
           <p className="text-[11px] text-rose-300 py-3 text-center leading-snug">
-            등록된 {gym.type} 속성 PCL10 펫이 부족해요 ({matchingPets.length}/3).<br/>
-            프로필에서 {gym.type} 속성 펫을 더 등록한 뒤 도전하세요.
+            등록된 {gym.type} 속성 PCL10 펫이 부족해요 ({matchingUniqueCount}/3 종류).<br/>
+            같은 카드 종류는 1장만 카운트돼요. 프로필에서 다른 카드를 더 등록하세요.
+          </p>
+        ) : poolPets.length === 0 ? (
+          <p className="text-[11px] text-zinc-400 py-3 text-center leading-snug">
+            추가 가능한 카드가 더 없어요. 슬롯에서 카드를 빼면 다시 나타납니다.
           </p>
         ) : (
           <ul className="grid grid-cols-2 gap-1.5">
-            {matchingPets.map((p) => {
-              const idx = order.indexOf(p.grading_id);
-              const selected = idx >= 0;
+            {poolPets.map((p) => {
               const eff = p.type
                 ? effectiveness(p.type, gym.type)
                 : 1;
@@ -713,18 +750,8 @@ function PickerPhase({
                     type="button"
                     onClick={() => onToggle(p.grading_id)}
                     style={{ touchAction: "manipulation" }}
-                    className={clsx(
-                      "relative w-full rounded-lg border p-1.5 text-left flex items-center gap-1.5 transition active:scale-[0.98]",
-                      selected
-                        ? "border-amber-400/60 bg-amber-400/10"
-                        : "border-white/10 bg-zinc-900/60 hover:bg-white/5"
-                    )}
+                    className="relative w-full rounded-lg border p-1.5 text-left flex items-center gap-1.5 transition active:scale-[0.98] border-white/10 bg-zinc-900/60 hover:bg-white/5"
                   >
-                    {selected && (
-                      <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-400 text-zinc-950 text-[10px] font-black flex items-center justify-center">
-                        {idx + 1}
-                      </span>
-                    )}
                     <div
                       className={clsx(
                         "w-8 h-11 rounded overflow-hidden ring-1 bg-zinc-900 shrink-0",
@@ -1432,7 +1459,39 @@ function DefenseSetupPhase({
     () => pets.filter((p) => p.type === gym.type || p.type2 === gym.type),
     [pets, gym.type]
   );
-  const insufficient = !loading && matchingPets.length < 3;
+
+  // 한 덱 안에서 동일 card_id 는 1번만 등록 가능 (서버 set_gym_defense_deck
+  // distinct card_id 검증과 일관). 카운트/풀 모두 unique 종류 기준.
+  const matchingUniqueCount = useMemo(() => {
+    const ids = new Set<string>();
+    for (const p of matchingPets) ids.add(p.card_id);
+    return ids.size;
+  }, [matchingPets]);
+
+  const selectedCardIds = useMemo(() => {
+    const map = new Map(pets.map((p) => [p.grading_id, p]));
+    const set = new Set<string>();
+    for (const id of order) {
+      const p = map.get(id);
+      if (p) set.add(p.card_id);
+    }
+    return set;
+  }, [order, pets]);
+
+  const poolPets = useMemo(() => {
+    const seen = new Set<string>();
+    const out: MyPet[] = [];
+    for (const p of matchingPets) {
+      if (order.includes(p.grading_id)) continue;
+      if (selectedCardIds.has(p.card_id)) continue;
+      if (seen.has(p.card_id)) continue;
+      seen.add(p.card_id);
+      out.push(p);
+    }
+    return out;
+  }, [matchingPets, order, selectedCardIds]);
+
+  const insufficient = !loading && matchingUniqueCount < 3;
 
   return (
     <div className="p-3 md:p-4 space-y-3">
@@ -1527,15 +1586,17 @@ function DefenseSetupPhase({
           <p className="text-[11px] text-zinc-500 py-3 text-center">로딩 중...</p>
         ) : insufficient ? (
           <p className="text-[11px] text-rose-300 py-3 text-center leading-snug">
-            등록 가능한 {gym.type} 속성 PCL10 펫이 부족해요 ({matchingPets.length}/3).<br/>
-            지금 닫아도 됩니다 — 점령은 유지되지 않을 수 있고,<br/>
+            등록 가능한 {gym.type} 속성 PCL10 펫이 부족해요 ({matchingUniqueCount}/3 종류).<br/>
+            같은 카드 종류는 1장만 카운트돼요. 지금 닫아도 됩니다 —<br/>
             펫을 더 등록한 뒤 체육관에 다시 들러서 방어 덱을 셋업할 수 있어요.
+          </p>
+        ) : poolPets.length === 0 ? (
+          <p className="text-[11px] text-zinc-400 py-3 text-center leading-snug">
+            추가 가능한 카드가 더 없어요. 슬롯에서 카드를 빼면 다시 나타납니다.
           </p>
         ) : (
           <ul className="grid grid-cols-2 gap-1.5">
-            {matchingPets.map((p) => {
-              const idx = order.indexOf(p.grading_id);
-              const selected = idx >= 0;
+            {poolPets.map((p) => {
               return (
                 <li key={p.grading_id}>
                   <button
@@ -1545,17 +1606,10 @@ function DefenseSetupPhase({
                     style={{ touchAction: "manipulation" }}
                     className={clsx(
                       "relative w-full rounded-lg border p-1.5 text-left flex items-center gap-1.5 transition active:scale-[0.98]",
-                      selected
-                        ? "border-fuchsia-400/60 bg-fuchsia-500/10"
-                        : "border-white/10 bg-zinc-900/60 hover:bg-white/5",
+                      "border-white/10 bg-zinc-900/60 hover:bg-white/5",
                       saving && "opacity-50 cursor-not-allowed"
                     )}
                   >
-                    {selected && (
-                      <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-fuchsia-400 text-zinc-950 text-[10px] font-black flex items-center justify-center">
-                        {idx + 1}
-                      </span>
-                    )}
                     <div
                       className={clsx(
                         "w-8 h-11 rounded overflow-hidden ring-1 bg-zinc-900 shrink-0",

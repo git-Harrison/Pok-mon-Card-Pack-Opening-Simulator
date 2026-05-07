@@ -185,40 +185,24 @@ export interface RawPetGrading {
   grade: number;
 }
 
-/** 사용자의 등록된 PCL10 슬랩 raw 데이터. 펫 등록 구조 (spec 2-1) 가
- *  flat main_card_ids → 속성별 main_cards_by_type 으로 바뀌었으므로
- *  두 컬럼 모두 union 으로 읽음. (전환기 동안 legacy 데이터도 인식.)
- *  카드 이름 / 타입은 클라가 카탈로그(getCard, resolveCardType) 로 머지. */
+/** 체육관 풀용 — 사용자가 보유한 모든 PCL10 슬랩 raw 데이터.
+ *  과거에는 main_card_ids ∪ main_cards_by_type 로 펫 등록된 슬랩만
+ *  반환했지만, 정책 변경 (20260731): 등록 여부와 무관하게 보유 PCL10
+ *  슬랩 전부를 도전/방어덱 풀에 노출. 카드 이름/타입은 클라가 카탈로그
+ *  (getCard, resolveCardType) 로 머지. */
 export async function fetchMyPets(userId: string): Promise<RawPetGrading[]> {
-  const { data: u } = await supabase
-    .from("users")
-    .select("main_card_ids, main_cards_by_type")
-    .eq("id", userId)
-    .single();
-  const row = u as
-    | {
-        main_card_ids?: string[] | null;
-        main_cards_by_type?: Record<string, string[]> | null;
-      }
-    | null;
-  const idSet = new Set<string>();
-  for (const id of row?.main_card_ids ?? []) idSet.add(id);
-  for (const arr of Object.values(row?.main_cards_by_type ?? {})) {
-    for (const id of arr) idSet.add(id);
-  }
-  const ids = Array.from(idSet);
-  if (!ids.length) return [];
   const { data: gradings, error } = await supabase
     .from("psa_gradings")
     .select("id, card_id, rarity, grade")
-    .in("id", ids);
+    .eq("user_id", userId)
+    .eq("grade", 10);
   if (error || !gradings) return [];
-  return (gradings as Array<{ id: string; card_id: string; rarity: string; grade: number }>)
-    .filter((g) => g.grade === 10)
-    .map((g) => ({
+  return (gradings as Array<{ id: string; card_id: string; rarity: string; grade: number }>).map(
+    (g) => ({
       grading_id: g.id,
       card_id: g.card_id,
       rarity: g.rarity,
       grade: g.grade,
-    }));
+    })
+  );
 }
