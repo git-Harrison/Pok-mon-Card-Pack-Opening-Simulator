@@ -1014,7 +1014,7 @@ function BattlePlayback({
             type={(activeEnemy?.type as WildType) ?? gym.type}
           />
           <motion.div
-            className="relative w-24 h-24 md:w-28 md:h-28"
+            className="relative w-20 h-20 md:w-24 md:h-24"
             animate={shake === "enemy" ? { x: [0, -6, 6, -3, 3, 0], filter: ["brightness(1.3)", "brightness(1)"] } : { x: 0 }}
             transition={{ duration: 0.25 }}
           >
@@ -1039,7 +1039,7 @@ function BattlePlayback({
             align="left"
           />
           <motion.div
-            className="relative w-24 h-24 md:w-28 md:h-28"
+            className="relative w-20 h-20 md:w-24 md:h-24"
             animate={shake === "pet" ? { x: [0, -4, 4, -2, 2, 0], filter: ["brightness(1.3)", "brightness(1)"] } : { x: 0 }}
             transition={{ duration: 0.25 }}
           >
