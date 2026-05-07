@@ -70,7 +70,7 @@ begin
      returning pokedex_count into v_total;
 
     v_completion  := pokedex_completion_bonus(v_user_id);
-    v_power_bonus := pokedex_power_bonus(coalesce(v_total, 0));
+    v_power_bonus := pokedex_power_bonus(v_user_id);
 
     raise notice '[pokedex MUR/UR seed] user=% +% 등록 / 도감총 % / 세트효과=% / 도감전투력=%',
       v_user_login, v_inserted, v_total, v_completion, v_power_bonus;
