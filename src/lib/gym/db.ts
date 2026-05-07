@@ -185,24 +185,52 @@ export interface RawPetGrading {
   grade: number;
 }
 
-/** 체육관 풀용 — 사용자가 보유한 모든 PCL10 슬랩 raw 데이터.
- *  과거에는 main_card_ids ∪ main_cards_by_type 로 펫 등록된 슬랩만
- *  반환했지만, 정책 변경 (20260731): 등록 여부와 무관하게 보유 PCL10
- *  슬랩 전부를 도전/방어덱 풀에 노출. 카드 이름/타입은 클라가 카탈로그
- *  (getCard, resolveCardType) 로 머지. */
+/** 체육관 풀용 — 정책 (20260733):
+ *   • MUR / UR PCL10 슬랩 — 보유 전부 (펫 등록 여부 무관).
+ *   • 그 외 희귀도 PCL10 — main_card_ids ∪ main_cards_by_type 안에 있는
+ *     슬랩만.
+ *  서버 (resolve_gym_battle / set_gym_defense_deck) 의 검증과 일관.
+ *  카드 이름/타입은 클라가 카탈로그 (getCard, resolveCardType) 로 머지. */
 export async function fetchMyPets(userId: string): Promise<RawPetGrading[]> {
-  const { data: gradings, error } = await supabase
-    .from("psa_gradings")
-    .select("id, card_id, rarity, grade")
-    .eq("user_id", userId)
-    .eq("grade", 10);
-  if (error || !gradings) return [];
-  return (gradings as Array<{ id: string; card_id: string; rarity: string; grade: number }>).map(
-    (g) => ({
+  const [gradingsRes, userRes] = await Promise.all([
+    supabase
+      .from("psa_gradings")
+      .select("id, card_id, rarity, grade")
+      .eq("user_id", userId)
+      .eq("grade", 10),
+    supabase
+      .from("users")
+      .select("main_card_ids, main_cards_by_type")
+      .eq("id", userId)
+      .single(),
+  ]);
+  if (gradingsRes.error || !gradingsRes.data) return [];
+
+  const userRow = userRes.data as
+    | {
+        main_card_ids?: string[] | null;
+        main_cards_by_type?: Record<string, string[]> | null;
+      }
+    | null;
+  const registered = new Set<string>();
+  for (const id of userRow?.main_card_ids ?? []) registered.add(id);
+  for (const arr of Object.values(userRow?.main_cards_by_type ?? {})) {
+    for (const id of arr) registered.add(id);
+  }
+
+  return (
+    gradingsRes.data as Array<{
+      id: string;
+      card_id: string;
+      rarity: string;
+      grade: number;
+    }>
+  )
+    .filter((g) => g.rarity === "MUR" || g.rarity === "UR" || registered.has(g.id))
+    .map((g) => ({
       grading_id: g.id,
       card_id: g.card_id,
       rarity: g.rarity,
       grade: g.grade,
-    })
-  );
+    }));
 }
