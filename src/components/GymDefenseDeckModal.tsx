@@ -219,6 +219,14 @@ export default function GymDefenseDeckModal({
     [pets, gym.type]
   );
 
+  // 덱 구성 가능한 unique 카드 수 — 같은 card_id 5장 보유여도 1장으로 카운트
+  // (서버 distinct card_id 검증과 일관). 부족 판정 / 헤더 카운트 모두 이 값.
+  const matchingUniqueCount = useMemo(() => {
+    const ids = new Set<string>();
+    for (const p of matchingPets) ids.add(p.card_id);
+    return ids.size;
+  }, [matchingPets]);
+
   // 이미 다른 슬롯에 선택된 card_id 들 — 같은 카드 종류 중복 등록 차단.
   // 방어덱 한 세트 안에서는 동일 card_id 가 1번만 등장해야 함 (서버 검증
   // set_gym_defense_deck 와 일관). 슬랩 자체 (grading_id) 가 다르더라도
@@ -233,16 +241,24 @@ export default function GymDefenseDeckModal({
     return set;
   }, [order, pets]);
 
-  // 풀 — 매칭 + 미선택 + 이미 선택된 card_id 와 다른 카드.
-  const poolPets = useMemo(
-    () =>
-      matchingPets.filter(
-        (p) => !order.includes(p.grading_id) && !selectedCardIds.has(p.card_id)
-      ),
-    [matchingPets, order, selectedCardIds]
-  );
+  // 풀 — 매칭 + 미선택 + 이미 선택된 card_id 와 다른 카드 + card_id dedup.
+  // 같은 card_id 슬랩이 여러 장이어도 풀에는 1장만 보임 — 서버 검증
+  // (20260709 distinct card_id) 와 일관. 사용자가 같은 카드 여러 장
+  // 보유해도 어차피 1장만 등록 가능하므로 혼동 방지차 dedup.
+  const poolPets = useMemo(() => {
+    const seen = new Set<string>();
+    const out: MyPet[] = [];
+    for (const p of matchingPets) {
+      if (order.includes(p.grading_id)) continue;
+      if (selectedCardIds.has(p.card_id)) continue;
+      if (seen.has(p.card_id)) continue;
+      seen.add(p.card_id);
+      out.push(p);
+    }
+    return out;
+  }, [matchingPets, order, selectedCardIds]);
 
-  const insufficient = !loading && matchingPets.length < 3;
+  const insufficient = !loading && matchingUniqueCount < 3;
 
   const orderedPets = useMemo(() => {
     const map = new Map(pets.map((p) => [p.grading_id, p]));
@@ -336,7 +352,7 @@ export default function GymDefenseDeckModal({
               펫 3마리 모두 <b>{gym.type}</b> 속성이어야 합니다.
               {!loading && (
                 <span className="ml-1 text-amber-200/85">
-                  (보유 {gym.type} 펫 {matchingPets.length}/3+)
+                  (보유 {gym.type} 펫 {matchingUniqueCount}/3+ 종류)
                 </span>
               )}
             </div>
@@ -434,8 +450,8 @@ export default function GymDefenseDeckModal({
                 <p className="text-[11px] text-zinc-500 py-3 text-center">로딩 중...</p>
               ) : insufficient ? (
                 <p className="text-[11px] text-rose-300 py-3 text-center leading-snug">
-                  등록된 {gym.type} 속성 PCL10 펫이 부족해요 ({matchingPets.length}/3).<br/>
-                  프로필에서 {gym.type} 속성 펫을 더 등록한 뒤 다시 시도하세요.
+                  등록된 {gym.type} 속성 PCL10 펫이 부족해요 ({matchingUniqueCount}/3 종류).<br/>
+                  같은 카드 종류는 1장만 카운트돼요. 프로필에서 다른 카드를 더 등록하세요.
                 </p>
               ) : poolPets.length === 0 ? (
                 <p className="text-[11px] text-zinc-400 py-3 text-center leading-snug">
