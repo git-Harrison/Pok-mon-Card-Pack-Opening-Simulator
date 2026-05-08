@@ -191,60 +191,37 @@ export interface RawPetGrading {
   wild_type_2: string | null;
 }
 
-/** 체육관 풀용 — 정책 (20260733):
- *   • MUR / UR PCL10 슬랩 — 보유 전부 (펫 등록 여부 무관).
- *   • 그 외 희귀도 PCL10 — main_card_ids ∪ main_cards_by_type 안에 있는
- *     슬랩만.
- *  서버 (resolve_gym_battle / set_gym_defense_deck) 의 검증과 일관.
- *  카드 이름/이미지는 클라 카탈로그 (getCard) 로 머지하고, 속성은 서버
- *  card_types 를 먼저 read (클라 name-to-type 룩업이 누락 / 어긋난 경우
- *  클라 필터가 보유 카드를 풀에서 잘못 제외하던 사고 방지).
+/** 체육관 풀용 — 정책 (20260740):
+ *   본인 소유 PCL10 + 속성 일치 슬랩 모두 가능 (rarity / 등록 무관).
+ *   서버 (resolve_gym_battle / set_gym_defense_deck) 도 동일 검증.
+ *   속성 필터는 UI 가 wild_type / wild_type_2 (서버 card_types) 로 함.
  *
- *  쿼리는 두 개로 분리: (1) MUR/UR rarity 필터 (2) 펫 등록 id IN 필터.
- *  단일 쿼리 + 클라 필터로 했더니 Supabase 의 PostgREST 기본 max_rows
- *  (1000) 에 cap 되어, PCL10 슬랩이 1000장 넘는 계정에서 MUR/UR 가
- *  뒤로 밀려 응답에서 잘려 나가는 사고가 있었음. 두 쿼리로 분리하면
- *  각 결과셋이 충분히 작아 cap 안 걸림. */
+ *  쿼리는 rarity 별로 분리해 PostgREST 기본 max_rows (1000) cap 회피.
+ *  모든 PCL10 슬랩을 한 번에 가져오던 옛 구현이, PCL10 1000장 넘는
+ *  계정에서 응답 cut-off 로 일부 슬랩이 사라지던 사고가 있었음.
+ *  희귀도별로 쿼리하면 결과셋이 충분히 작음. */
 export async function fetchMyPets(userId: string): Promise<RawPetGrading[]> {
-  const userRes = await supabase
-    .from("users")
-    .select("main_card_ids, main_cards_by_type")
-    .eq("id", userId)
-    .single();
-
-  const userRow = userRes.data as
-    | {
-        main_card_ids?: string[] | null;
-        main_cards_by_type?: Record<string, string[]> | null;
-      }
-    | null;
-  const registeredIds: string[] = [];
-  for (const id of userRow?.main_card_ids ?? []) registeredIds.push(id);
-  for (const arr of Object.values(userRow?.main_cards_by_type ?? {})) {
-    for (const id of arr) registeredIds.push(id);
-  }
-
-  const [murUrRes, regRes] = await Promise.all([
+  type Row = { id: string; card_id: string; rarity: string; grade: number };
+  // 희귀도 그룹별 쿼리 — MUR/UR 은 묶음, 그 외는 SAR/SR/MA/AR/RR/R/U/C
+  // 묶음 (각 그룹이 ~수백 슬랩 수준이라 안전).
+  const [highRes, lowRes] = await Promise.all([
     supabase
       .from("psa_gradings")
       .select("id, card_id, rarity, grade")
       .eq("user_id", userId)
       .eq("grade", 10)
       .in("rarity", ["MUR", "UR"]),
-    registeredIds.length > 0
-      ? supabase
-          .from("psa_gradings")
-          .select("id, card_id, rarity, grade")
-          .eq("user_id", userId)
-          .eq("grade", 10)
-          .in("id", registeredIds)
-      : Promise.resolve({ data: [] as Array<{ id: string; card_id: string; rarity: string; grade: number }>, error: null }),
+    supabase
+      .from("psa_gradings")
+      .select("id, card_id, rarity, grade")
+      .eq("user_id", userId)
+      .eq("grade", 10)
+      .in("rarity", ["SAR", "SR", "MA", "AR", "RR", "R", "U", "C"]),
   ]);
 
-  type Row = { id: string; card_id: string; rarity: string; grade: number };
   const merged = new Map<string, Row>();
-  for (const r of (murUrRes.data ?? []) as Row[]) merged.set(r.id, r);
-  for (const r of (regRes.data ?? []) as Row[]) merged.set(r.id, r);
+  for (const r of (highRes.data ?? []) as Row[]) merged.set(r.id, r);
+  for (const r of (lowRes.data ?? []) as Row[]) merged.set(r.id, r);
 
   // 서버 card_types 에서 (wild_type, wild_type_2) 일괄 fetch — 풀 필터/
   // 표시 모두 서버 진실 기준으로 동작시키기 위함.

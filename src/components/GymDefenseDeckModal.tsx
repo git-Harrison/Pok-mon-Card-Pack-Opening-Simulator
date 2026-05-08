@@ -420,14 +420,14 @@ export default function GymDefenseDeckModal({
             {/* 펫 풀 — 체육관 속성과 일치하는 펫만 */}
             <section className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
               <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-1.5">
-                {gym.type} 속성 펫 (PCL10 · MUR/UR 또는 등록)
+                {gym.type} 속성 PCL10 슬랩
               </p>
               {loading ? (
                 <p className="text-[11px] text-zinc-500 py-3 text-center">로딩 중...</p>
               ) : insufficient ? (
                 <p className="text-[11px] text-rose-300 py-3 text-center leading-snug">
-                  등록된 {gym.type} 속성 PCL10 슬랩이 부족해요 ({matchingPets.length}/3).<br/>
-                  보유 MUR/UR 또는 펫 등록된 슬랩만 출전 가능해요.
+                  보유 {gym.type} 속성 PCL10 슬랩이 부족해요 ({matchingPets.length}/3).<br/>
+                  카드지갑에서 {gym.type} 속성 카드를 더 모아주세요.
                 </p>
               ) : poolPets.length === 0 ? (
                 <p className="text-[11px] text-zinc-400 py-3 text-center leading-snug">
