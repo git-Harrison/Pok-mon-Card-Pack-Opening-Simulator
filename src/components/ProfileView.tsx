@@ -245,13 +245,16 @@ export default function ProfileView() {
         return;
       }
       // 같은 type 에 이미 등록된 ID 들에서, 해당 슬롯 자리에 새 ID 삽입.
+      // 정책 변경 (20260739): 같은 슬랩이 다른 슬롯에 들어가도 OK — Set
+      // dedup 제거. (compute_user_pet_score 의 UNION+flatten distinct 가
+      // 점수 dedup 자동 처리.)
       const current = (profile.main_cards_by_type[type] ?? []).map((c) => c.id);
-      const filtered = current.filter((id) => id !== gradingId);
+      const filtered = [...current];
       while (filtered.length <= slot) filtered.push("");
       filtered[slot] = gradingId;
-      const cleaned = Array.from(
-        new Set(filtered.filter((id) => id !== ""))
-      ).slice(0, PETS_PER_TYPE);
+      const cleaned = filtered
+        .filter((id) => id !== "")
+        .slice(0, PETS_PER_TYPE);
       setError(null);
       const res = await setPetForType(user.id, type, cleaned);
       if (!res.ok) {
@@ -1299,17 +1302,23 @@ function SlabPicker({
               <>
                 <ul className="grid grid-cols-3 gap-2">
                   {visibleGroups.map((group) => {
-                    // 사용 가능 슬랩만 — 전시/방어덱/이미 펫 등록된 인스턴스
-                    // 제외. 0 이면 카드 자체를 리스트에서 숨김.
+                    // 정책 변경 (20260739): 같은 카드 등록 가능 — 이미 등록된
+                    // 슬랩 (disabledIds) 도 그대로 노출. 클릭 시 같은 슬롯에
+                    // 재등록 또는 다른 슬롯에 추가 등록 가능. 단 전시/방어덱
+                    // 슬랩은 여전히 제외 (다른 시스템에서 잠겨있음).
                     const usableInGroup = group.all.filter(
                       (s) =>
-                        !disabledIds.has(s.id) &&
                         !displayedIds.has(s.id) &&
                         !defenseIds.has(s.id)
                     );
                     const usableCount = usableInGroup.length;
                     if (usableCount === 0) return null;
-                    const g = usableInGroup[0]!;
+                    // 등록된 슬랩 우선 → 다른 슬롯에 같은 슬랩이 들어가더라도
+                    // disabledIds 에 들어 있던 슬랩이 rep 으로 그대로 사용됨.
+                    // 이미 등록된 인스턴스가 없으면 첫 free 슬랩.
+                    const g =
+                      usableInGroup.find((s) => !disabledIds.has(s.id)) ??
+                      usableInGroup[0]!;
                     const card = getCard(g.card_id);
                     if (!card) return null;
                     return (

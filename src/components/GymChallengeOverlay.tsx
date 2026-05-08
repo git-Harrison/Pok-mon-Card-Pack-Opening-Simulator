@@ -522,41 +522,16 @@ function PickerPhase({
     [pets, gym.type]
   );
 
-  // 한 덱 안에서 동일 card_id 는 1번만 등록 가능 — 같은 카드 슬랩 여러
-  // 장 보유여도 unique 종류 기준으로 카운트/풀 구성.
-  const matchingUniqueCount = useMemo(() => {
-    const ids = new Set<string>();
-    for (const p of matchingPets) ids.add(p.card_id);
-    return ids.size;
-  }, [matchingPets]);
+  // 풀 — 매칭 + 미선택. 같은 card_id 슬랩 여러 장 보유 시 모두 개별 노출
+  // (정책 변경 20260739: 같은 카드 종류로 덱 구성 가능, 단 PHYSICAL 슬랩은
+  // 서로 달라야 하므로 grading_id 기준 미선택 슬랩만).
+  const poolPets = useMemo(
+    () => matchingPets.filter((p) => !order.includes(p.grading_id)),
+    [matchingPets, order]
+  );
 
-  // 이미 선택된 슬롯의 card_id — 풀에서 같은 카드 종류 추가 차단.
-  const selectedCardIds = useMemo(() => {
-    const map = new Map(pets.map((p) => [p.grading_id, p]));
-    const set = new Set<string>();
-    for (const id of order) {
-      const p = map.get(id);
-      if (p) set.add(p.card_id);
-    }
-    return set;
-  }, [order, pets]);
-
-  // 풀 — 매칭 + 미선택 + 이미 선택된 card_id 와 다른 카드 + card_id dedup.
-  // 같은 card_id 슬랩이 여러 장이어도 풀에는 1장만 보임 (혼동 방지).
-  const poolPets = useMemo(() => {
-    const seen = new Set<string>();
-    const out: MyPet[] = [];
-    for (const p of matchingPets) {
-      if (order.includes(p.grading_id)) continue;
-      if (selectedCardIds.has(p.card_id)) continue;
-      if (seen.has(p.card_id)) continue;
-      seen.add(p.card_id);
-      out.push(p);
-    }
-    return out;
-  }, [matchingPets, order, selectedCardIds]);
-
-  const insufficient = !loading && matchingUniqueCount < 3;
+  // 부족 판정 — distinct grading_id (서로 다른 PHYSICAL 슬랩) 3장 가능?
+  const insufficient = !loading && matchingPets.length < 3;
 
   return (
     <div className="p-3 md:p-4 space-y-3">
@@ -565,7 +540,7 @@ function PickerPhase({
         3마리 모두 <b>{gym.type}</b> 속성이어야 합니다.
         {!loading && (
           <span className="ml-1 text-amber-200/85">
-            (보유 {gym.type} 속성 펫 {matchingUniqueCount}/3+ 종류)
+            (보유 {gym.type} 속성 PCL10 슬랩 {matchingPets.length}/3+)
           </span>
         )}
       </div>
@@ -729,14 +704,14 @@ function PickerPhase({
       {/* 펫 풀 — 체육관 속성과 일치하는 펫만 */}
       <section className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
         <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-1.5">
-          {gym.type} 속성 펫 (PCL10 · 펫 등록 슬랩만)
+          {gym.type} 속성 펫 (PCL10 · MUR/UR 또는 등록 슬랩)
         </p>
         {loading ? (
           <p className="text-[11px] text-zinc-500 py-3 text-center">로딩 중...</p>
         ) : insufficient ? (
           <p className="text-[11px] text-rose-300 py-3 text-center leading-snug">
-            등록된 {gym.type} 속성 PCL10 펫이 부족해요 ({matchingUniqueCount}/3 종류).<br/>
-            같은 카드 종류는 1장만 카운트돼요. 프로필에서 다른 카드를 더 등록하세요.
+            {gym.type} 속성 PCL10 슬랩이 부족해요 ({matchingPets.length}/3).<br/>
+            보유 MUR/UR 또는 펫 등록된 슬랩만 출전 가능해요.
           </p>
         ) : poolPets.length === 0 ? (
           <p className="text-[11px] text-zinc-400 py-3 text-center leading-snug">
@@ -1464,38 +1439,15 @@ function DefenseSetupPhase({
     [pets, gym.type]
   );
 
-  // 한 덱 안에서 동일 card_id 는 1번만 등록 가능 (서버 set_gym_defense_deck
-  // distinct card_id 검증과 일관). 카운트/풀 모두 unique 종류 기준.
-  const matchingUniqueCount = useMemo(() => {
-    const ids = new Set<string>();
-    for (const p of matchingPets) ids.add(p.card_id);
-    return ids.size;
-  }, [matchingPets]);
+  // 풀 — 매칭 + 미선택. 같은 card_id 슬랩 여러 장 보유 시 모두 개별 노출
+  // (정책 변경 20260739: 같은 카드 종류로 덱 구성 가능, distinct grading_id
+  // 만 강제).
+  const poolPets = useMemo(
+    () => matchingPets.filter((p) => !order.includes(p.grading_id)),
+    [matchingPets, order]
+  );
 
-  const selectedCardIds = useMemo(() => {
-    const map = new Map(pets.map((p) => [p.grading_id, p]));
-    const set = new Set<string>();
-    for (const id of order) {
-      const p = map.get(id);
-      if (p) set.add(p.card_id);
-    }
-    return set;
-  }, [order, pets]);
-
-  const poolPets = useMemo(() => {
-    const seen = new Set<string>();
-    const out: MyPet[] = [];
-    for (const p of matchingPets) {
-      if (order.includes(p.grading_id)) continue;
-      if (selectedCardIds.has(p.card_id)) continue;
-      if (seen.has(p.card_id)) continue;
-      seen.add(p.card_id);
-      out.push(p);
-    }
-    return out;
-  }, [matchingPets, order, selectedCardIds]);
-
-  const insufficient = !loading && matchingUniqueCount < 3;
+  const insufficient = !loading && matchingPets.length < 3;
 
   return (
     <div className="p-3 md:p-4 space-y-3">
@@ -1584,15 +1536,15 @@ function DefenseSetupPhase({
       {/* 매칭 펫 풀 */}
       <section className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
         <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-1.5">
-          {gym.type} 속성 펫 (PCL10 · 펫 등록 슬랩만)
+          {gym.type} 속성 펫 (PCL10 · MUR/UR 또는 등록 슬랩)
         </p>
         {loading ? (
           <p className="text-[11px] text-zinc-500 py-3 text-center">로딩 중...</p>
         ) : insufficient ? (
           <p className="text-[11px] text-rose-300 py-3 text-center leading-snug">
-            등록 가능한 {gym.type} 속성 PCL10 펫이 부족해요 ({matchingUniqueCount}/3 종류).<br/>
-            같은 카드 종류는 1장만 카운트돼요. 지금 닫아도 됩니다 —<br/>
-            펫을 더 등록한 뒤 체육관에 다시 들러서 방어 덱을 셋업할 수 있어요.
+            등록 가능한 {gym.type} 속성 PCL10 슬랩이 부족해요 ({matchingPets.length}/3).<br/>
+            지금 닫아도 됩니다 — 펫을 더 등록한 뒤 체육관에<br/>
+            다시 들러서 방어 덱을 셋업할 수 있어요.
           </p>
         ) : poolPets.length === 0 ? (
           <p className="text-[11px] text-zinc-400 py-3 text-center leading-snug">
