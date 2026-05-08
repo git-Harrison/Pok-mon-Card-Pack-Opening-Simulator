@@ -1303,11 +1303,17 @@ function GymDetailModal({
   return (
     <Portal>
       <motion.div
-        className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-sm flex items-end md:items-center justify-center px-2 md:px-4"
+        className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-sm flex items-center justify-center overflow-hidden"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
+        style={{
+          paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+          paddingLeft: "12px",
+          paddingRight: "12px",
+        }}
       >
         <motion.div
           className="relative w-full max-w-md bg-zinc-950 border border-white/10 rounded-2xl flex flex-col overflow-hidden"
@@ -1370,7 +1376,10 @@ function GymDetailModal({
           </div>
 
           {/* Body — 스크롤 가능 */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
+          <div
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-4"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
             <div className="flex items-center gap-1.5 flex-wrap">
               <span
                 className={clsx("px-1.5 py-0.5 rounded text-[10px] font-black", typeStyle.badge)}
