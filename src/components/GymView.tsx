@@ -1310,7 +1310,8 @@ function GymDetailModal({
         onClick={onClose}
       >
         <motion.div
-          className="relative w-full max-w-md bg-zinc-950 border border-white/10 rounded-2xl flex flex-col overflow-hidden max-h-[90vh]"
+          className="relative w-full max-w-md bg-zinc-950 border border-white/10 rounded-2xl flex flex-col overflow-hidden"
+          style={{ maxHeight: "calc(100dvh - 24px)" }}
           onClick={(e) => e.stopPropagation()}
           initial={reduce ? false : { y: 24, opacity: 0, scale: 0.96 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -1320,7 +1321,7 @@ function GymDetailModal({
           {/* Header */}
           <div
             className={clsx(
-              "relative px-4 py-3 border-b border-white/10",
+              "relative shrink-0 px-4 py-3 border-b border-white/10",
               "bg-gradient-to-br from-zinc-900 to-zinc-950"
             )}
           >
@@ -1473,7 +1474,7 @@ function GymDetailModal({
           </div>
 
           {/* Footer — CTA */}
-          <div className="border-t border-white/10 p-3 bg-zinc-950/95 space-y-2">
+          <div className="shrink-0 border-t border-white/10 p-3 bg-zinc-950/95 space-y-2">
             {status === "owned_by_me" && (
               <DailyClaimButton
                 gym={gym}
