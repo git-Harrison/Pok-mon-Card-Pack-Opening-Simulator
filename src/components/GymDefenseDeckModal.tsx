@@ -19,7 +19,7 @@ import {
   getCardPrimaryOverride,
 } from "@/lib/wild/card-secondary";
 import { getCard } from "@/lib/sets";
-import { RARITY_STYLE } from "@/lib/rarity";
+import { RARITY_STYLE, compareRarity } from "@/lib/rarity";
 import { slabStats } from "@/lib/wild/stats";
 import Portal from "./Portal";
 import { lockBodyScroll } from "@/lib/useBodyScrollLock";
@@ -221,9 +221,14 @@ export default function GymDefenseDeckModal({
 
   // 체육관 속성 매칭 강제 — 두 속성 중 하나라도 일치하면 노출 (MUR 만
   // type2 보유, UR/SAR 는 null 이므로 단일 속성 동작 그대로).
+  // 추가로 SR 이상 등급 (MUR/UR/SAR/SR) 만 노출 — 사용자 정책.
   const matchingPets = useMemo(
     () =>
-      pets.filter((p) => p.type === gym.type || p.type2 === gym.type),
+      pets.filter(
+        (p) =>
+          (p.type === gym.type || p.type2 === gym.type) &&
+          compareRarity(p.rarity, "SR") <= 0
+      ),
     [pets, gym.type]
   );
 
@@ -426,8 +431,8 @@ export default function GymDefenseDeckModal({
                 <p className="text-[11px] text-zinc-500 py-3 text-center">로딩 중...</p>
               ) : insufficient ? (
                 <p className="text-[11px] text-rose-300 py-3 text-center leading-snug">
-                  보유 {gym.type} 속성 PCL10 슬랩이 부족해요 ({matchingPets.length}/3).<br/>
-                  카드지갑에서 {gym.type} 속성 카드를 더 모아주세요.
+                  보유 {gym.type} 속성 SR 이상 PCL10 슬랩이 부족해요 ({matchingPets.length}/3).<br/>
+                  카드지갑에서 {gym.type} 속성 SR 이상 카드를 더 모아주세요.
                 </p>
               ) : poolPets.length === 0 ? (
                 <p className="text-[11px] text-zinc-400 py-3 text-center leading-snug">
