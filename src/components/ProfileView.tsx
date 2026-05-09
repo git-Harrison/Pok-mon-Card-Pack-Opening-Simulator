@@ -60,10 +60,12 @@ export default function ProfileView() {
   const [savingChar, setSavingChar] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 신구조 picker state — { type, slot } 로 어느 타입의 어느 슬롯을
-  // 채우려는지 식별. 구조 변경 (spec 2-1) 후엔 이 상태만 사용.
+  // 신구조 picker state — { type, slot, replacingId } 로 어느 타입의 어느
+  // 시각 슬롯을 채울지 식별. slot 은 라벨 표시용 (rarity 정렬된 visual idx)
+  // 이고, 실제 storage 갱신은 replacingId 로 — 시각 idx 와 storage idx 가
+  // rarity 정렬 때문에 어긋나는 사고 방지.
   const [picker, setPicker] = useState<
-    { type: WildType; slot: number } | null
+    { type: WildType; slot: number; replacingId: string | null } | null
   >(null);
   const [nameOpen, setNameOpen] = useState(false);
   const [tauntOpen, setTauntOpen] = useState(false);
@@ -226,8 +228,18 @@ export default function ProfileView() {
   // 서버 set_pet_for_type 에 type 의 ids 배열 통째로 전달.
   // 등록 성공 후 picker 닫음 — 사용자가 다른 슬롯 누르면 새로 mount.
   // (이전 advance 자동 이동 시도가 사용자 입장에서 무반응처럼 보여 revert.)
+  //
+  // replacingId: 시각 슬롯에 보이던 기존 카드 grading_id (있으면 교체,
+  // null 이면 빈 슬롯 → append). slotsByType 이 rarity 정렬 + null 패딩
+  // 으로 만들어지므로 시각 idx ≠ storage idx — 시각 idx 로 storage 배열
+  // 을 인덱싱하면 다른 카드를 덮어쓰는 사고 발생. replacingId 로 storage
+  // 안의 정확한 occurrence 1개만 교체.
   const onSelectSlabForType = useCallback(
-    async (type: WildType, slot: number, gradingId: string) => {
+    async (
+      type: WildType,
+      replacingId: string | null,
+      gradingId: string
+    ) => {
       if (!user) {
         setError("로그인 후 다시 시도하세요.");
         return;
@@ -244,19 +256,25 @@ export default function ProfileView() {
         setError("방어 덱에 등록된 슬랩이에요. 방어 덱에서 제외 후 등록하세요.");
         return;
       }
-      // 같은 type 에 이미 등록된 ID 들에서, 해당 슬롯 자리에 새 ID 삽입.
-      // 정책 변경 (20260739): 같은 슬랩이 다른 슬롯에 들어가도 OK — Set
-      // dedup 제거. (compute_user_pet_score 의 UNION+flatten distinct 가
-      // 점수 dedup 자동 처리.)
+      // 정책 (20260739_gym_pet_relax_dedup): 같은 슬랩이 다른 슬롯/타입에
+      // 들어가도 OK — within-slot/cross-slot dedup 제거.
+      // (compute_user_pet_score 의 UNION+flatten distinct 가 점수 dedup
+      // 자동 처리.)
       const current = (profile.main_cards_by_type[type] ?? []).map((c) => c.id);
-      const filtered = [...current];
-      while (filtered.length <= slot) filtered.push("");
-      filtered[slot] = gradingId;
-      const cleaned = filtered
-        .filter((id) => id !== "")
-        .slice(0, PETS_PER_TYPE);
+      let next: string[];
+      if (replacingId == null) {
+        // 빈 시각 슬롯 클릭 → storage 끝에 append. PETS_PER_TYPE 캡.
+        next = [...current, gradingId].slice(0, PETS_PER_TYPE);
+      } else {
+        // 기존 카드 교체 — indexOf 로 첫 번째 occurrence 만. 동일 slab
+        // 이 여러 슬롯에 있어도 사용자가 클릭한 1개만 바뀜.
+        const idx = current.indexOf(replacingId);
+        next = [...current];
+        if (idx !== -1) next[idx] = gradingId;
+        else next = [...current, gradingId].slice(0, PETS_PER_TYPE);
+      }
       setError(null);
-      const res = await setPetForType(user.id, type, cleaned);
+      const res = await setPetForType(user.id, type, next);
       if (!res.ok) {
         setError(res.error ?? "펫을 등록하지 못했어요.");
         return;
@@ -415,7 +433,9 @@ export default function ProfileView() {
             slotsByType={slotsByType}
             allRegisteredPets={allRegisteredPets}
             eligibleSlabs={eligibleSlabs}
-            onPick={(type, slot) => setPicker({ type, slot })}
+            onPick={(type, slot, replacingId) =>
+              setPicker({ type, slot, replacingId })
+            }
             onRemove={onRemoveSlotForType}
           />
 
@@ -450,7 +470,9 @@ export default function ProfileView() {
               setError(null);
               setPicker(null);
             }}
-            onPick={(id) => onSelectSlabForType(picker.type, picker.slot, id)}
+            onPick={(id) =>
+              onSelectSlabForType(picker.type, picker.replacingId, id)
+            }
           />
         )}
         {nameOpen && user && (
@@ -710,7 +732,10 @@ function PetSlotsByTypeSection({
   slotsByType: Record<string, (ProfileMainCard | null)[]>;
   allRegisteredPets: ProfileMainCard[];
   eligibleSlabs: PclGradingWithDisplay[];
-  onPick: (type: WildType, slot: number) => void;
+  /** replacingId: 시각 슬롯에 보이던 기존 카드 grading_id (없으면 null).
+   *  storage 갱신은 visual idx 가 아닌 이 id 기준 — rarity 정렬 + null
+   *  패딩으로 어긋나는 idx 사고 방지. */
+  onPick: (type: WildType, slot: number, replacingId: string | null) => void;
   onRemove: (type: WildType, gradingId: string) => void;
 }) {
   // type 우선 순서 — 8 gym type 먼저, 나머지 10 type 뒤로.
@@ -861,7 +886,7 @@ function PetSlotsByTypeSection({
                         key={slot ? slot.id : `empty-${t}-${i}`}
                         index={i}
                         card={slot}
-                        onPick={() => onPick(t, i)}
+                        onPick={() => onPick(t, i, slot?.id ?? null)}
                         onRemove={
                           slot ? () => onRemove(t, slot.id) : () => undefined
                         }
