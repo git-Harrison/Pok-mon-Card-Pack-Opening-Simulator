@@ -19,7 +19,7 @@ import {
   getCardPrimaryOverride,
 } from "@/lib/wild/card-secondary";
 import { getCard } from "@/lib/sets";
-import { RARITY_STYLE } from "@/lib/rarity";
+import { RARITY_STYLE, compareRarity } from "@/lib/rarity";
 import { slabStats } from "@/lib/wild/stats";
 import Portal from "./Portal";
 import { lockBodyScroll } from "@/lib/useBodyScrollLock";
@@ -226,10 +226,13 @@ export default function GymDefenseDeckModal({
     [pets, gym.type]
   );
 
-  // 풀 — 매칭 + 미선택 슬랩 모두 노출. 정책 변경 (20260739): 같은 card_id
-  // 슬랩 여러 장으로 방어덱 구성 가능 (distinct grading_id 만 강제).
+  // 풀 — 매칭 + 미선택, 높은 등급 우선 정렬 (MUR > UR > SAR > … > C).
+  // 같은 card_id 슬랩 여러 장으로 방어덱 구성 가능 (정책 20260739).
   const poolPets = useMemo(
-    () => matchingPets.filter((p) => !order.includes(p.grading_id)),
+    () =>
+      matchingPets
+        .filter((p) => !order.includes(p.grading_id))
+        .sort((a, b) => compareRarity(a.rarity, b.rarity)),
     [matchingPets, order]
   );
 

@@ -29,7 +29,7 @@ import { lookupDex } from "@/lib/wild/name-to-dex";
 import { cardSpriteUrl } from "@/lib/wild/card-sprite";
 import { wildSpriteUrl } from "@/lib/wild/pool";
 import { getCard } from "@/lib/sets";
-import { RARITY_STYLE } from "@/lib/rarity";
+import { RARITY_STYLE, compareRarity } from "@/lib/rarity";
 import { slabStats } from "@/lib/wild/stats";
 import Portal from "./Portal";
 import NpcDialogModal from "./NpcDialogModal";
@@ -523,11 +523,13 @@ function PickerPhase({
     [pets, gym.type]
   );
 
-  // 풀 — 매칭 + 미선택. 같은 card_id 슬랩 여러 장 보유 시 모두 개별 노출
-  // (정책 변경 20260739: 같은 카드 종류로 덱 구성 가능, 단 PHYSICAL 슬랩은
-  // 서로 달라야 하므로 grading_id 기준 미선택 슬랩만).
+  // 풀 — 매칭 + 미선택, 높은 등급 우선 정렬 (MUR > UR > SAR > … > C).
+  // 같은 card_id 슬랩 여러 장 보유 시 모두 개별 노출 (정책 20260739).
   const poolPets = useMemo(
-    () => matchingPets.filter((p) => !order.includes(p.grading_id)),
+    () =>
+      matchingPets
+        .filter((p) => !order.includes(p.grading_id))
+        .sort((a, b) => compareRarity(a.rarity, b.rarity)),
     [matchingPets, order]
   );
 
@@ -1441,11 +1443,12 @@ function DefenseSetupPhase({
     [pets, gym.type]
   );
 
-  // 풀 — 매칭 + 미선택. 같은 card_id 슬랩 여러 장 보유 시 모두 개별 노출
-  // (정책 변경 20260739: 같은 카드 종류로 덱 구성 가능, distinct grading_id
-  // 만 강제).
+  // 풀 — 매칭 + 미선택, 높은 등급 우선 정렬 (MUR > UR > SAR > … > C).
   const poolPets = useMemo(
-    () => matchingPets.filter((p) => !order.includes(p.grading_id)),
+    () =>
+      matchingPets
+        .filter((p) => !order.includes(p.grading_id))
+        .sort((a, b) => compareRarity(a.rarity, b.rarity)),
     [matchingPets, order]
   );
 
