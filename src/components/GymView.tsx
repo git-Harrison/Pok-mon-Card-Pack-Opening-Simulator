@@ -2112,9 +2112,9 @@ function GymHelpModal({ onClose }: { onClose: () => void }) {
               보호가 끝나면 누구나 도전 가능. 1,000만P 로 1시간 추가 연장 가능.
             </Collapsible>
             <Collapsible icon="🐾" title="방어 덱">
-              점령 후 내 PCL 10 펫 3마리를 방어 덱으로 등록하면, 다른
-              트레이너가 도전할 때 관장 대신 내 펫 3마리가 막아요.
-              방어 덱에 등록된 카드는 펫 등록 슬롯에서 자동 빠집니다.
+              점령 후 내 속성 PCL 10 카드 3장 (RR 이상 또는 펫 등록 슬랩)
+              을 방어 덱으로 등록하면, 다른 트레이너가 도전할 때 관장 대신
+              내 카드 3장이 막아요.
               <br />· 패배 시 <b>방어 덱 슬랩은 영구 삭제</b> 됩니다.
             </Collapsible>
             <Collapsible icon="🏅" title="메달 — 영구 업적">

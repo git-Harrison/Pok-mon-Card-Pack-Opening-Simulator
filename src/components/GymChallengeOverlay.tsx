@@ -29,7 +29,7 @@ import { lookupDex } from "@/lib/wild/name-to-dex";
 import { cardSpriteUrl } from "@/lib/wild/card-sprite";
 import { wildSpriteUrl } from "@/lib/wild/pool";
 import { getCard } from "@/lib/sets";
-import { RARITY_STYLE, compareRarity } from "@/lib/rarity";
+import { RARITY_STYLE } from "@/lib/rarity";
 import { slabStats } from "@/lib/wild/stats";
 import Portal from "./Portal";
 import NpcDialogModal from "./NpcDialogModal";
@@ -161,7 +161,7 @@ export default function GymChallengeOverlay({
     return () => {
       alive = false;
     };
-  }, [userId]);
+  }, [userId, gym.type]);
 
   const doClose = useCallback(async () => {
     // won + 방어 덱 미등록 상태로 닫기 시도 → confirm 경고.
@@ -516,15 +516,10 @@ function PickerPhase({
   onStart: () => void;
   previewBonus: (slot: number, p: MyPet) => number;
 }) {
-  // 체육관 속성 매칭 강제 — 같은 속성 펫만 노출.
-  // 추가로 SR 이상 등급 (MUR/UR/SAR/SR) 만 노출 — 사용자 정책.
+  // 체육관 속성 매칭 — 서버 RPC get_gym_pool_slabs 가 이미 (RR+ 미전시 OR
+  // 펫 등록) + 속성 일치 로 필터링. 클라는 그대로 노출 + 풀에서 미선택만.
   const matchingPets = useMemo(
-    () =>
-      pets.filter(
-        (p) =>
-          (p.type === gym.type || p.type2 === gym.type) &&
-          compareRarity(p.rarity, "SR") <= 0
-      ),
+    () => pets.filter((p) => p.type === gym.type || p.type2 === gym.type),
     [pets, gym.type]
   );
 
@@ -543,10 +538,10 @@ function PickerPhase({
     <div className="p-3 md:p-4 space-y-3">
       <div className="rounded-xl border border-amber-400/40 bg-amber-400/[0.08] px-3 py-2 text-[11px] md:text-[12px] text-amber-100 leading-snug">
         ⚡ <b className="text-white">{gym.type}</b> 속성 체육관 — 도전 펫
-        3마리 모두 <b>{gym.type}</b> 속성·SR 이상이어야 합니다.
+        3마리 모두 <b>{gym.type}</b> 속성이어야 합니다.
         {!loading && (
           <span className="ml-1 text-amber-200/85">
-            (보유 {gym.type} 속성 SR+ PCL10 슬랩 {matchingPets.length}/3+)
+            (보유 {gym.type} 속성 PCL10 슬랩 {matchingPets.length}/3+)
           </span>
         )}
       </div>
@@ -707,17 +702,17 @@ function PickerPhase({
         </ul>
       </section>
 
-      {/* 펫 풀 — 체육관 속성과 일치하는 SR+ 펫만 */}
+      {/* 펫 풀 — 체육관 속성과 일치하는 PCL10 슬랩 (RR+ 또는 펫 등록). */}
       <section className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
         <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-1.5">
-          {gym.type} 속성 SR+ PCL10 슬랩
+          {gym.type} 속성 PCL10 슬랩
         </p>
         {loading ? (
           <p className="text-[11px] text-zinc-500 py-3 text-center">로딩 중...</p>
         ) : insufficient ? (
           <p className="text-[11px] text-rose-300 py-3 text-center leading-snug">
-            {gym.type} 속성 SR 이상 PCL10 슬랩이 부족해요 ({matchingPets.length}/3).<br/>
-            카드지갑에서 {gym.type} 속성 SR 이상 카드를 더 모아주세요.
+            출전 가능한 {gym.type} 속성 PCL10 슬랩이 부족해요 ({matchingPets.length}/3).<br/>
+            카드지갑에서 RR 이상 카드를 모으거나, 보유 카드를 펫에 등록하세요.
           </p>
         ) : poolPets.length === 0 ? (
           <p className="text-[11px] text-zinc-400 py-3 text-center leading-snug">
@@ -1440,14 +1435,9 @@ function DefenseSetupPhase({
   saving: boolean;
   error: string | null;
 }) {
-  // 체육관 속성 매칭 + SR 이상 등급 (MUR/UR/SAR/SR) 만 노출 — 사용자 정책.
+  // 체육관 속성 매칭 — 서버 RPC 가 이미 (RR+ 미전시 OR 펫 등록) 로 필터.
   const matchingPets = useMemo(
-    () =>
-      pets.filter(
-        (p) =>
-          (p.type === gym.type || p.type2 === gym.type) &&
-          compareRarity(p.rarity, "SR") <= 0
-      ),
+    () => pets.filter((p) => p.type === gym.type || p.type2 === gym.type),
     [pets, gym.type]
   );
 
@@ -1545,18 +1535,18 @@ function DefenseSetupPhase({
         </ul>
       </section>
 
-      {/* 매칭 펫 풀 — 속성 일치 + SR 이상 */}
+      {/* 매칭 펫 풀 — 속성 일치 PCL10 (RR+ 또는 펫 등록) */}
       <section className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
         <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-1.5">
-          {gym.type} 속성 SR+ PCL10 슬랩
+          {gym.type} 속성 PCL10 슬랩
         </p>
         {loading ? (
           <p className="text-[11px] text-zinc-500 py-3 text-center">로딩 중...</p>
         ) : insufficient ? (
           <p className="text-[11px] text-rose-300 py-3 text-center leading-snug">
-            {gym.type} 속성 SR 이상 PCL10 슬랩이 부족해요 ({matchingPets.length}/3).<br/>
-            지금 닫아도 됩니다 — 카드지갑에서 {gym.type} 속성 SR 이상<br/>
-            카드를 더 모은 뒤 체육관에 다시 들러서 방어 덱을 셋업할 수 있어요.
+            방어 가능한 {gym.type} 속성 PCL10 슬랩이 부족해요 ({matchingPets.length}/3).<br/>
+            지금 닫아도 됩니다 — RR 이상 카드를 모으거나 보유 카드를<br/>
+            펫에 등록한 뒤 다시 들러서 방어 덱을 셋업할 수 있어요.
           </p>
         ) : poolPets.length === 0 ? (
           <p className="text-[11px] text-zinc-400 py-3 text-center leading-snug">
