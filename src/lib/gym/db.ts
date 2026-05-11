@@ -191,73 +191,37 @@ export interface RawPetGrading {
   wild_type_2: string | null;
 }
 
-/** 체육관 풀용 — 정책 (20260740):
- *   본인 소유 PCL10 + 속성 일치 슬랩 모두 가능 (rarity / 등록 무관).
- *   서버 (resolve_gym_battle / set_gym_defense_deck) 도 동일 검증.
- *   속성 필터는 UI 가 wild_type / wild_type_2 (서버 card_types) 로 함.
- *
- *  쿼리는 rarity 별로 분리해 PostgREST 기본 max_rows (1000) cap 회피.
- *  모든 PCL10 슬랩을 한 번에 가져오던 옛 구현이, PCL10 1000장 넘는
- *  계정에서 응답 cut-off 로 일부 슬랩이 사라지던 사고가 있었음.
- *  희귀도별로 쿼리하면 결과셋이 충분히 작음. */
-export async function fetchMyPets(userId: string): Promise<RawPetGrading[]> {
-  type Row = { id: string; card_id: string; rarity: string; grade: number };
-  // 희귀도 그룹별 쿼리 — MUR/UR 은 묶음, 그 외는 SAR/SR/MA/AR/RR/R/U/C
-  // 묶음 (각 그룹이 ~수백 슬랩 수준이라 안전).
-  const [highRes, lowRes] = await Promise.all([
-    supabase
-      .from("psa_gradings")
-      .select("id, card_id, rarity, grade")
-      .eq("user_id", userId)
-      .eq("grade", 10)
-      .in("rarity", ["MUR", "UR"]),
-    supabase
-      .from("psa_gradings")
-      .select("id, card_id, rarity, grade")
-      .eq("user_id", userId)
-      .eq("grade", 10)
-      .in("rarity", ["SAR", "SR", "MA", "AR", "RR", "R", "U", "C"]),
-  ]);
-
-  const merged = new Map<string, Row>();
-  for (const r of (highRes.data ?? []) as Row[]) merged.set(r.id, r);
-  for (const r of (lowRes.data ?? []) as Row[]) merged.set(r.id, r);
-
-  // 서버 card_types 에서 (wild_type, wild_type_2) 일괄 fetch — 풀 필터/
-  // 표시 모두 서버 진실 기준으로 동작시키기 위함.
-  const cardIds = Array.from(
-    new Set(Array.from(merged.values()).map((r) => r.card_id))
-  );
-  const typeMap = new Map<
-    string,
-    { wild_type: string | null; wild_type_2: string | null }
-  >();
-  if (cardIds.length > 0) {
-    const typeRes = await supabase
-      .from("card_types")
-      .select("card_id, wild_type, wild_type_2")
-      .in("card_id", cardIds);
-    for (const row of (typeRes.data ?? []) as Array<{
+/** 체육관 풀용 — 정책 (20260743):
+ *   • 본인 PCL10 + 속성 일치 + (rarity ≥ RR + 전시 제외) OR 펫 등록.
+ *   서버 RPC get_gym_pool_slabs 에 일괄 위임 — PostgREST 1000-row cap
+ *   회피 + 서버 검증과 정확히 동일 풀.
+ *   카드 이름/이미지는 클라 카탈로그 (getCard) 로 머지. */
+export async function fetchMyPets(
+  userId: string,
+  gymType: string
+): Promise<RawPetGrading[]> {
+  const { data, error } = await supabase.rpc("get_gym_pool_slabs", {
+    p_user_id: userId,
+    p_gym_type: gymType,
+  });
+  if (error || !data) return [];
+  return (
+    data as Array<{
+      grading_id: string;
       card_id: string;
+      rarity: string;
+      grade: number;
       wild_type: string | null;
       wild_type_2: string | null;
-    }>) {
-      typeMap.set(row.card_id, {
-        wild_type: row.wild_type,
-        wild_type_2: row.wild_type_2,
-      });
-    }
-  }
-
-  return Array.from(merged.values()).map((g) => {
-    const t = typeMap.get(g.card_id);
+    }>
+  ).map((g) => {
     return {
-      grading_id: g.id,
+      grading_id: g.grading_id,
       card_id: g.card_id,
       rarity: g.rarity,
       grade: g.grade,
-      wild_type: t?.wild_type ?? null,
-      wild_type_2: t?.wild_type_2 ?? null,
+      wild_type: g.wild_type ?? null,
+      wild_type_2: g.wild_type_2 ?? null,
     };
   });
 }

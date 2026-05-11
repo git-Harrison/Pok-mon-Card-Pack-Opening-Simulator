@@ -149,7 +149,7 @@ export default function GymChallengeOverlay({
     let alive = true;
     (async () => {
       const [raw, cp] = await Promise.all([
-        fetchMyPets(userId),
+        fetchMyPets(userId, gym.type),
         computeUserCenterPower(userId),
       ]);
       if (!alive) return;
