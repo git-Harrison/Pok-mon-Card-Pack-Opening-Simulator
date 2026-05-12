@@ -35,7 +35,7 @@ export default function Ch4RaidReplay({ raid, boss, participants, onBack }: Prop
     [raid.replay_data]
   );
   const [idx, setIdx] = useState(0);
-  const [playing, setPlaying] = useState(false);
+  const [playing, setPlaying] = useState(true);  // 진입 시 자동 재생
   const [speed, setSpeed] = useState<1 | 2 | 4>(1);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 

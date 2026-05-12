@@ -159,12 +159,15 @@ export default function Ch4RaidLobby({ raidId }: { raidId: string }) {
     setStarting(true);
     setError(null);
     const r = await startCh4Raid(userId, raidId);
-    setStarting(false);
     if (!r.ok) {
+      setStarting(false);
       setError(r.error || "시작에 실패했어요.");
       return;
     }
-    // resolved 가 되면 realtime 으로 refresh + replay 화면 전환
+    // 결정론 시뮬레이션이라 응답 시점에 이미 resolved + replay_data 있음.
+    // Realtime 만 기다리지 말고 즉시 fetch 해서 재생 화면으로 전환.
+    await refresh();
+    setStarting(false);
   };
 
   const handleCopyCode = () => {
