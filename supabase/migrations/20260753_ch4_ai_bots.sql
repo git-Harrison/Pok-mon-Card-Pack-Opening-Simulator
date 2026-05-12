@@ -6,7 +6,7 @@
 --
 -- 추가:
 --   1) users.is_bot boolean default false (idempotent)
---   2) 12 봇 유저 시드 (다양한 species/LV 분포)
+--   2) 6 봇 유저 시드 (starter 화이트리스트 10종 중 미사용 6종)
 --   3) 각 봇에 user_starter + 18 type 메달 자동 시드 →
 --      ch4_user_stats() eligible=true 자동 통과
 --   4) add_bot_to_ch4_raid(host_user_id, raid_id) — 방장 only,
@@ -14,72 +14,63 @@
 --   5) get_ch4_raid 응답 participants 배열에 is_bot 필드 추가
 --      (UI 에서 봇 표시 가능)
 --
+-- 제약:
+--   user_starter.species 가 글로벌 UNIQUE (20260696) — 화이트리스트 10종 중
+--   기존 유저가 점유한 4종 (pikachu/charmander/bulbasaur/gastly) 제외하면
+--   사용 가능 6종 (pidgey/poliwag/chikorita/chimchar/geodude/caterpie).
+--   따라서 봇 풀은 최대 6 마리.
+--
 -- 봇 선택 규칙:
 --   - is_bot = true
+--   - has_starter 존재 (eligibility 통과)
 --   - 다른 대기 raid 에 이미 참가 중이 아님 (멀티 raid 동시 진행 가능)
 --   - random() 순서로 1개 picking
 --
--- 봇 풀 (12 마리):
---   bot01 pikachu    LV15 stage1   bot07 pidgey     LV12 stage1
---   bot02 charmander LV20 stage2   bot08 piplup     LV20 stage2
---   bot03 squirtle   LV18 stage1   bot09 mew        LV25 stage0
---   bot04 bulbasaur  LV15 stage1   bot10 mewtwo     LV28 stage0
---   bot05 gastly     LV20 stage2   bot11 charmander LV10 stage1
---   bot06 dratini    LV15 stage1   bot12 gastly     LV25 stage2
+-- 봇 풀 (6 마리):
+--   bot01 pidgey    LV12 stage1   bot04 chimchar  LV20 stage2
+--   bot02 poliwag   LV20 stage2   bot05 geodude   LV18 stage1
+--   bot03 chikorita LV15 stage1   bot06 caterpie  LV10 stage1
 -- ============================================================
 
 -- ── 1) is_bot 컬럼 ──
 alter table users add column if not exists is_bot boolean not null default false;
 create index if not exists users_is_bot_idx on users (is_bot);
 
--- ── 2) 봇 유저 시드 (idempotent — user_id unique 가정) ──
+-- ── 2) 이전 시도에서 만들어진 봇 정리 (cascade 로 의존 row 삭제) ──
+-- 첫 시도 (20260753 v1) 가 starter species unique 위배로 실패하면서
+-- bot01~12 user row 만 만들고 starter 없는 상태로 남았을 수 있음. 클린업.
+delete from users
+ where user_id in ('bot01','bot02','bot03','bot04','bot05','bot06',
+                   'bot07','bot08','bot09','bot10','bot11','bot12');
+
+-- ── 3) 봇 유저 시드 (6 마리 — starter 화이트리스트 미사용 6종) ──
 -- password_hash 는 bcrypt 형식이 아닌 sentinel → 어떤 패스워드도 매치 X
 insert into users (user_id, password_hash, age, display_name, is_bot, points,
                    pcl_10_wins, wild_wins, showcase_rank_pts, pokedex_count,
                    gym_daily_rank_pts, pet_score)
 values
-  ('bot01', 'BOT_NO_LOGIN', 99, '봇 피카츄',     true, 0, 0, 0, 0, 0, 0, 0),
-  ('bot02', 'BOT_NO_LOGIN', 99, '봇 리자몽',     true, 0, 0, 0, 0, 0, 0, 0),
-  ('bot03', 'BOT_NO_LOGIN', 99, '봇 어니부기',   true, 0, 0, 0, 0, 0, 0, 0),
-  ('bot04', 'BOT_NO_LOGIN', 99, '봇 이상해풀',   true, 0, 0, 0, 0, 0, 0, 0),
-  ('bot05', 'BOT_NO_LOGIN', 99, '봇 팬텀',       true, 0, 0, 0, 0, 0, 0, 0),
-  ('bot06', 'BOT_NO_LOGIN', 99, '봇 신뇽',       true, 0, 0, 0, 0, 0, 0, 0),
-  ('bot07', 'BOT_NO_LOGIN', 99, '봇 피죤',       true, 0, 0, 0, 0, 0, 0, 0),
-  ('bot08', 'BOT_NO_LOGIN', 99, '봇 엠페르트',   true, 0, 0, 0, 0, 0, 0, 0),
-  ('bot09', 'BOT_NO_LOGIN', 99, '봇 뮤',         true, 0, 0, 0, 0, 0, 0, 0),
-  ('bot10', 'BOT_NO_LOGIN', 99, '봇 뮤츠',       true, 0, 0, 0, 0, 0, 0, 0),
-  ('bot11', 'BOT_NO_LOGIN', 99, '봇 리자드',     true, 0, 0, 0, 0, 0, 0, 0),
-  ('bot12', 'BOT_NO_LOGIN', 99, '봇 강팬텀',     true, 0, 0, 0, 0, 0, 0, 0)
-on conflict (user_id) do update set
-  is_bot = excluded.is_bot,
-  display_name = excluded.display_name;
+  ('bot01', 'BOT_NO_LOGIN', 99, '봇 피죤',     true, 0, 0, 0, 0, 0, 0, 0),
+  ('bot02', 'BOT_NO_LOGIN', 99, '봇 강챙이',   true, 0, 0, 0, 0, 0, 0, 0),
+  ('bot03', 'BOT_NO_LOGIN', 99, '봇 베이리프', true, 0, 0, 0, 0, 0, 0, 0),
+  ('bot04', 'BOT_NO_LOGIN', 99, '봇 초염몽',   true, 0, 0, 0, 0, 0, 0, 0),
+  ('bot05', 'BOT_NO_LOGIN', 99, '봇 데구리',   true, 0, 0, 0, 0, 0, 0, 0),
+  ('bot06', 'BOT_NO_LOGIN', 99, '봇 단데기',   true, 0, 0, 0, 0, 0, 0, 0);
 
--- ── 3a) 봇 starter 시드 ──
+-- ── 3a) 봇 starter 시드 (각 봇 1종, species 글로벌 unique 충족) ──
 with bot_specs as (
   select * from (values
-    ('bot01', 'pikachu',    '봇피카츄',   15, 1),
-    ('bot02', 'charmander', '봇리자몽',   20, 2),
-    ('bot03', 'squirtle',   '봇어니부기', 18, 1),
-    ('bot04', 'bulbasaur',  '봇이상해풀', 15, 1),
-    ('bot05', 'gastly',     '봇팬텀',     20, 2),
-    ('bot06', 'dratini',    '봇신뇽',     15, 1),
-    ('bot07', 'pidgey',     '봇피죤',     12, 1),
-    ('bot08', 'piplup',     '봇엠페르트', 20, 2),
-    ('bot09', 'mew',        '봇뮤',       25, 0),
-    ('bot10', 'mewtwo',     '봇뮤츠',     28, 0),
-    ('bot11', 'charmander', '봇리자드',   10, 1),
-    ('bot12', 'gastly',     '봇강팬텀',   25, 2)
+    ('bot01', 'pidgey',    '봇피죤',     12, 1),
+    ('bot02', 'poliwag',   '봇강챙이',   20, 2),
+    ('bot03', 'chikorita', '봇베이리프', 15, 1),
+    ('bot04', 'chimchar',  '봇초염몽',   20, 2),
+    ('bot05', 'geodude',   '봇데구리',   18, 1),
+    ('bot06', 'caterpie',  '봇단데기',   10, 1)
   ) as t(user_login, species, nickname, level, stage)
 )
 insert into user_starter (user_id, species, nickname, level, evolution_stage, xp, caught_at)
 select u.id, bs.species, bs.nickname, bs.level, bs.stage, 0, now()
   from bot_specs bs
-  join users u on u.user_id = bs.user_login
-on conflict (user_id) do update set
-  species = excluded.species,
-  nickname = excluded.nickname,
-  level = excluded.level,
-  evolution_stage = excluded.evolution_stage;
+  join users u on u.user_id = bs.user_login;
 
 -- ── 3b) 봇 18 type 메달 시드 ──
 insert into user_gym_medals (user_id, gym_id, medal_id, earned_at, used_pets)
@@ -127,10 +118,11 @@ begin
     return json_build_object('ok', false, 'error', '방이 가득 찼어요.');
   end if;
 
-  -- 사용 가능한 봇: 다른 대기 raid 에 안 들어가 있음
+  -- 사용 가능한 봇: starter 있고, 다른 대기 raid 에 안 들어가 있음
   select u.id into v_bot_id
     from users u
    where u.is_bot = true
+     and exists (select 1 from user_starter where user_id = u.id)
      and not exists (
        select 1 from ch4_raid_participants p
        join ch4_raids r on r.id = p.raid_id

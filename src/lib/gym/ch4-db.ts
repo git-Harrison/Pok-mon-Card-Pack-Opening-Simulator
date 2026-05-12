@@ -356,31 +356,45 @@ export async function startCh4Raid(userId: string, raidId: string) {
 }
 
 // ── 종 → 한국어 이름 (UI 표시용) ──
+//   화이트리스트 10종 (20260696) + 레거시 5종 (Ch4 sig 시드용 잔존).
 export const SPECIES_NAME_KO: Record<string, string> = {
-  pikachu: "피카츄",
+  // 현재 화이트리스트 10종
+  pikachu:    "피카츄",
   charmander: "파이리",
-  squirtle: "꼬부기",
-  bulbasaur: "이상해씨",
-  gastly: "고오스",
-  dratini: "미뇽",
-  pidgey: "구구",
-  piplup: "팽도리",
-  mew: "뮤",
-  mewtwo: "뮤츠",
+  bulbasaur:  "이상해씨",
+  pidgey:     "구구",
+  poliwag:    "발챙이",
+  gastly:     "고오스",
+  chikorita:  "치코리타",
+  chimchar:   "불꽃숭이",
+  geodude:    "꼬마돌",
+  caterpie:   "캐터피",
+  // 레거시 (Ch4 sig 잔존 — 실제 유저 선택은 불가)
+  squirtle:   "꼬부기",
+  dratini:    "미뇽",
+  piplup:     "팽도리",
+  mew:        "뮤",
+  mewtwo:     "뮤츠",
 };
 
 // ── 진화 stage 별 dex 매핑 (PokeAPI gen5 sprite) ──
 //    SPECIES_EVOLUTION_DEX[species][stage] = dex 번호.
-//    src/lib/wild/dexsprite 와 동일 URL 패턴.
 export const SPECIES_EVOLUTION_DEX: Record<string, number[]> = {
-  pikachu:    [25, 26, 26],          // 피카츄 → 라이츄 (Lv 1차에서 끝)
+  // 현재 화이트리스트 10종
+  pikachu:    [25, 26, 26],          // 피카츄 → 라이츄 (LV1차에서 끝)
   charmander: [4,  5,  6],            // 파이리 → 리자드 → 리자몽
-  squirtle:   [7,  8,  9],            // 꼬부기 → 어니부기 → 거북왕
   bulbasaur:  [1,  2,  3],            // 이상해씨 → 이상해풀 → 이상해꽃
-  gastly:     [92, 93, 94],           // 고오스 → 고우스트 → 팬텀
-  dratini:    [147, 148, 149],        // 미뇽 → 신뇽 → 망나뇽
   pidgey:     [16, 17, 18],           // 구구 → 피죤 → 피죤투
-  piplup:     [393, 394, 395],        // 팽도리 → 팽태자 → 엠페르트
+  poliwag:    [60, 61, 62],           // 발챙이 → 슈륙챙이 → 강챙이
+  gastly:     [92, 93, 94],           // 고오스 → 고우스트 → 팬텀
+  chikorita:  [152, 153, 154],        // 치코리타 → 베이리프 → 메가니움
+  chimchar:   [390, 391, 392],        // 불꽃숭이 → 파이숭이 → 초염몽
+  geodude:    [74, 75, 76],           // 꼬마돌 → 데구리 → 딱구리
+  caterpie:   [10, 11, 12],           // 캐터피 → 단데기 → 버터플
+  // 레거시
+  squirtle:   [7,  8,  9],
+  dratini:    [147, 148, 149],
+  piplup:     [393, 394, 395],
   mew:        [151, 151, 151],
   mewtwo:     [150, 150, 150],
 };
