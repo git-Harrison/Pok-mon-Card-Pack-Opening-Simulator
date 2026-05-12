@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   bossSpriteUrl,
   speciesSpriteUrl,
@@ -20,417 +21,920 @@ interface Props {
   onBack: () => void;
 }
 
-interface EntityHp {
-  boss: number;
-  slots: [number, number, number];
+// 프레임별 재생 시간 (1x 기준 ms). 길수록 한 액션을 더 길게 봄.
+function frameDurationMs(f: Ch4Frame | undefined): number {
+  if (!f) return 600;
+  switch (f.type) {
+    case "battle_start":
+      return 900;
+    case "turn_start":
+      return 500;
+    case "turn_end":
+      return 150;
+    case "skill":
+    case "boss_skill":
+      return (f as { kind?: string }).kind === "aoe" ? 2300 : 1700;
+    case "counter_reflect":
+      return 900;
+    case "phase_transition":
+      return 1600;
+    case "skip":
+      return 350;
+    case "battle_end":
+      return 2500;
+    default:
+      return 600;
+  }
 }
 
-/**
- * Phase 2 baseline 재생기 — 프레임 시퀀스 step-through 로 HP 바 + 액션 로그만.
- * Phase 3 에서 fx 템플릿 (dash_strike / beam_ray / aoe_wave 등) 풀 도입.
- */
+interface LiveState {
+  bossHp: number;
+  bossMaxHp: number;
+  bossAlive: boolean;
+  bossPhase: number;
+  slots: Array<{ hp: number; maxHp: number; alive: boolean }>;
+}
+
+function buildInitial(frames: Ch4Frame[]): LiveState {
+  const start = frames.find((f) => f.type === "battle_start") as
+    | {
+        boss: { hp: number; max_hp: number };
+        participants: { slot: number; max_hp: number }[];
+      }
+    | undefined;
+  const slots: LiveState["slots"] = [0, 1, 2].map((i) => {
+    const p = start?.participants.find((x) => x.slot === i + 1);
+    return { hp: p?.max_hp ?? 0, maxHp: p?.max_hp ?? 0, alive: true };
+  }) as LiveState["slots"];
+  return {
+    bossHp: start?.boss.max_hp ?? 0,
+    bossMaxHp: start?.boss.max_hp ?? 0,
+    bossAlive: true,
+    bossPhase: 1,
+    slots,
+  };
+}
+
+function applyFrame(state: LiveState, f: Ch4Frame): LiveState {
+  const next: LiveState = {
+    bossHp: state.bossHp,
+    bossMaxHp: state.bossMaxHp,
+    bossAlive: state.bossAlive,
+    bossPhase: state.bossPhase,
+    slots: state.slots.map((s) => ({ ...s })),
+  };
+  const bossHp = (f as { boss_hp?: number }).boss_hp;
+  if (typeof bossHp === "number") {
+    next.bossHp = bossHp;
+    if (bossHp <= 0) next.bossAlive = false;
+  }
+  if (f.type === "phase_transition") {
+    next.bossPhase = (f as { phase: number }).phase;
+  }
+  const target = (f as { target?: string }).target;
+  const targetHp = (f as { target_hp?: number }).target_hp;
+  if (
+    (f.type === "skill" || f.type === "boss_skill") &&
+    typeof target === "string" &&
+    target.startsWith("slot") &&
+    typeof targetHp === "number"
+  ) {
+    const s = parseInt(target.slice(4), 10) - 1;
+    if (s >= 0 && s <= 2) {
+      next.slots[s].hp = targetHp;
+      if (targetHp <= 0) next.slots[s].alive = false;
+    }
+  }
+  if (f.type === "turn_end" || f.type === "battle_end") {
+    const hps = (f as { participants_hp?: number[] }).participants_hp ?? [];
+    for (let s = 0; s < 3; s++) {
+      if (typeof hps[s] === "number") {
+        next.slots[s].hp = hps[s];
+        if (hps[s] <= 0) next.slots[s].alive = false;
+      }
+    }
+  }
+  return next;
+}
+
+function findSlotByRole(
+  participants: Ch4Participant[],
+  role: "tank" | "dealer" | "supporter"
+): number | null {
+  return participants.find((p) => p.role === role)?.slot ?? null;
+}
+
+// ════════════════════════════════════════════
+// ░░ Main ░░
+// ════════════════════════════════════════════
+
 export default function Ch4RaidReplay({ raid, boss, participants, onBack }: Props) {
   const frames = useMemo<Ch4Frame[]>(
     () => (Array.isArray(raid.replay_data) ? raid.replay_data : []),
     [raid.replay_data]
   );
+
   const [idx, setIdx] = useState(0);
-  const [playing, setPlaying] = useState(true);  // 진입 시 자동 재생
+  const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState<1 | 2 | 4>(1);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 슬롯별 최대 HP (battle_start frame 의 참가자 max_hp 에서)
-  const maxHps = useMemo(() => {
-    const start = frames.find((f) => f.type === "battle_start") as
-      | { boss: { max_hp: number }; participants: { slot: number; max_hp: number }[] }
-      | undefined;
-    if (!start) {
-      return {
-        boss: boss.base_hp,
-        slots: [0, 0, 0] as [number, number, number],
-      };
-    }
-    const slots: [number, number, number] = [0, 0, 0];
-    for (const p of start.participants) {
-      if (p.slot >= 1 && p.slot <= 3) slots[p.slot - 1] = p.max_hp;
-    }
-    return { boss: start.boss.max_hp, slots };
-  }, [frames, boss.base_hp]);
-
-  // 현재 프레임까지의 HP 상태 누적 계산
-  const hpState = useMemo<EntityHp>(() => {
-    let bossHp = maxHps.boss;
-    const slots: [number, number, number] = [
-      maxHps.slots[0],
-      maxHps.slots[1],
-      maxHps.slots[2],
-    ];
+  const state = useMemo(() => {
+    let s = buildInitial(frames);
     for (let i = 0; i <= idx && i < frames.length; i++) {
-      const f = frames[i];
-      if ("boss_hp" in f && typeof f.boss_hp === "number") bossHp = f.boss_hp;
-      if (f.type === "skill" && f.target?.startsWith("slot") && typeof f.target_hp === "number") {
-        const s = parseInt(f.target.slice(4), 10);
-        if (s >= 1 && s <= 3) slots[s - 1] = f.target_hp;
-      }
-      if (
-        (f.type === "boss_skill" || f.type === "skill") &&
-        f.target?.startsWith("slot") &&
-        typeof f.target_hp === "number"
-      ) {
-        const s = parseInt(f.target.slice(4), 10);
-        if (s >= 1 && s <= 3) slots[s - 1] = f.target_hp;
-      }
-      if (f.type === "turn_end" && f.participants_hp) {
-        slots[0] = f.participants_hp[0] ?? slots[0];
-        slots[1] = f.participants_hp[1] ?? slots[1];
-        slots[2] = f.participants_hp[2] ?? slots[2];
-      }
-      if (f.type === "battle_end" && f.participants_hp) {
-        slots[0] = f.participants_hp[0] ?? slots[0];
-        slots[1] = f.participants_hp[1] ?? slots[1];
-        slots[2] = f.participants_hp[2] ?? slots[2];
-      }
+      s = applyFrame(s, frames[i]);
     }
-    return { boss: bossHp, slots };
-  }, [idx, frames, maxHps]);
+    return s;
+  }, [idx, frames]);
 
   const currentFrame = frames[idx];
   const currentRound = useMemo(() => {
     for (let i = idx; i >= 0; i--) {
       const f = frames[i];
-      if (f.type === "turn_start") return f.round;
-      if (f.type === "battle_end") return f.final_round;
+      if (f.type === "turn_start") return (f as { round: number }).round;
+      if (f.type === "battle_end") return (f as { final_round: number }).final_round;
     }
     return 1;
   }, [idx, frames]);
 
-  // 자동 재생
   useEffect(() => {
-    if (!playing || idx >= frames.length - 1) {
-      if (timer.current) clearTimeout(timer.current);
+    if (!playing) return;
+    if (idx >= frames.length - 1) {
+      setPlaying(false);
       return;
     }
-    const delay = 1500 / speed;
-    timer.current = setTimeout(() => {
-      setIdx((v) => Math.min(v + 1, frames.length - 1));
-    }, delay);
+    const dur = frameDurationMs(currentFrame) / speed;
+    timer.current = setTimeout(() => setIdx((v) => v + 1), dur);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [idx, playing, speed, frames.length]);
+  }, [idx, playing, speed, currentFrame, frames.length]);
 
-  useEffect(() => {
-    if (idx >= frames.length - 1) setPlaying(false);
-  }, [idx, frames.length]);
+  const handleRestart = useCallback(() => {
+    setIdx(0);
+    setPlaying(true);
+  }, []);
 
   if (raid.status === "resolving") {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center text-zinc-300">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black text-zinc-300">
         <div className="text-center">
           <div className="mb-2 text-xl font-bold text-purple-400">
             전투 시뮬레이션 중...
           </div>
-          <div className="text-sm text-zinc-500">
-            결과가 곧 표시됩니다
-          </div>
+          <div className="text-sm text-zinc-500">곧 시작됩니다</div>
         </div>
       </div>
     );
   }
 
   const ended = idx >= frames.length - 1;
-  const isWin = raid.result === "win";
+  const tankSlot = findSlotByRole(participants, "tank") ?? 1;
+  const dealerSlot = findSlotByRole(participants, "dealer") ?? 2;
+  const supporterSlot = findSlotByRole(participants, "supporter") ?? 3;
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-3 py-5">
-      {/* 상단: 보스 + 라운드 + 결과 */}
-      <div className="mb-3 flex items-center justify-between">
-        <div className="text-sm text-zinc-400">
-          STAGE {boss.stage_order} · {boss.name}
+    <div className="fixed inset-0 z-50 mx-auto h-[100dvh] w-full max-w-md overflow-hidden bg-gradient-to-b from-slate-950 via-purple-950/40 to-black font-sans text-white select-none">
+      {/* === Background scenery (옅은 그리드) === */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.06]"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
+        }}
+      />
+
+      {/* === Top HUD === */}
+      <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent px-3 pb-3 pt-3 backdrop-blur-sm">
+        <button
+          type="button"
+          onClick={onBack}
+          className="rounded-md bg-black/50 px-2 py-1 text-xs text-zinc-300 hover:bg-black/80"
+          aria-label="돌아가기"
+        >
+          ✕
+        </button>
+        <div className="text-center">
+          <div className="text-[10px] uppercase tracking-widest text-purple-300/80">
+            STAGE {boss.stage_order}
+          </div>
+          <div className="font-bold text-sm text-zinc-100">{boss.name}</div>
         </div>
-        <div className="font-mono text-sm text-zinc-300">
-          Round {currentRound} / {raid.total_turns ?? "?"}
+        <div className="rounded-md bg-black/50 px-2 py-1 font-mono text-xs text-zinc-200">
+          R{currentRound}
         </div>
       </div>
 
-      {/* 배틀 무대 (3 슬롯 좌측 + 보스 우측) */}
-      <div className="mb-4 grid grid-cols-12 gap-3 rounded-2xl border border-zinc-800 bg-gradient-to-b from-purple-950/30 via-zinc-950 to-zinc-950 p-4">
-        {/* 좌측: 3 슬롯 */}
-        <div className="col-span-5 space-y-3">
+      {/* === BOSS AREA === */}
+      <div className="absolute left-0 right-0 top-[8%] flex h-[44%] flex-col items-center justify-end">
+        <div className="relative">
+          <BossSprite boss={boss} state={state} frame={currentFrame} />
+          {/* 보스 발 그림자 */}
+          <div className="absolute -bottom-2 left-1/2 h-3 w-32 -translate-x-1/2 rounded-[50%] bg-black/60 blur-md" />
+        </div>
+        <div className="mt-3 w-[88%]">
+          <BossHpBar
+            hp={state.bossHp}
+            maxHp={state.bossMaxHp}
+            phase={state.bossPhase}
+          />
+        </div>
+      </div>
+
+      {/* === Ground line === */}
+      <div
+        className="absolute left-0 right-0 top-[55%] h-px"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent 0%, rgba(168,85,247,0.4) 50%, transparent 100%)",
+        }}
+      />
+      <div
+        className="absolute left-[10%] right-[10%] top-[55%] h-[14px] -translate-y-[6px]"
+        style={{
+          background:
+            "radial-gradient(ellipse at center, rgba(168,85,247,0.25) 0%, transparent 70%)",
+          filter: "blur(4px)",
+        }}
+      />
+
+      {/* === PARTY FORMATION === */}
+      <div className="absolute left-0 right-0 top-[56%] h-[28%]">
+        {/* 탱커 — 선두 (앞·중앙) */}
+        <div className="absolute left-1/2 top-[10%] -translate-x-1/2">
+          <PartyFighter
+            participants={participants}
+            state={state}
+            slot={tankSlot}
+            size={96}
+            currentFrame={currentFrame}
+          />
+        </div>
+        {/* 딜러 — 후위 좌측 */}
+        <div className="absolute left-[14%] bottom-[6%]">
+          <PartyFighter
+            participants={participants}
+            state={state}
+            slot={dealerSlot}
+            size={68}
+            currentFrame={currentFrame}
+          />
+        </div>
+        {/* 서포터 — 후위 우측 */}
+        <div className="absolute right-[14%] bottom-[6%]">
+          <PartyFighter
+            participants={participants}
+            state={state}
+            slot={supporterSlot}
+            size={68}
+            currentFrame={currentFrame}
+          />
+        </div>
+      </div>
+
+      {/* === Party HP rows + Controls === */}
+      <div className="absolute bottom-0 left-0 right-0 z-30 bg-black/60 backdrop-blur-sm">
+        <div className="grid grid-cols-3 gap-1 px-2 pt-2">
           {[1, 2, 3].map((s) => {
             const p = participants.find((x) => x.slot === s);
-            const max = maxHps.slots[s - 1];
-            const hp = hpState.slots[s - 1];
-            const pct = max > 0 ? Math.max(0, (hp / max) * 100) : 0;
-            const dead = hp <= 0;
+            const st = state.slots[s - 1];
+            const pct = st.maxHp > 0 ? (st.hp / st.maxHp) * 100 : 0;
+            const dead = !st.alive;
+            const color =
+              pct > 50
+                ? "bg-emerald-500"
+                : pct > 25
+                ? "bg-amber-400"
+                : "bg-red-500";
             return (
               <div
                 key={s}
-                className={`rounded-lg border p-2 transition ${
+                className={`rounded border px-1.5 py-1 ${
                   dead
-                    ? "border-zinc-900 bg-black/50 opacity-40"
-                    : "border-zinc-800 bg-zinc-950/70"
+                    ? "border-zinc-900 bg-zinc-950/40 opacity-50"
+                    : p?.is_bot
+                    ? "border-zinc-700 bg-zinc-900/30"
+                    : "border-zinc-800 bg-zinc-950/40"
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <div className="h-12 w-12 shrink-0" style={{ imageRendering: "pixelated" }}>
-                    {p ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={speciesSpriteUrl(p.starter.species, p.starter.evolution_stage)}
-                        alt={p.starter.species}
-                        className="h-full w-full object-contain"
-                        style={{ imageRendering: "pixelated" }}
-                      />
-                    ) : null}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1">
-                      {p && (
-                        <span className={`text-[10px] font-bold ${roleColor(p.role)}`}>
-                          {roleLabel(p.role)}
-                        </span>
-                      )}
-                      <span className="truncate text-xs text-zinc-300">
-                        {p?.starter.nickname ?? "—"}
-                      </span>
-                    </div>
-                    <div className="truncate text-[10px] text-zinc-500">
-                      {p && (SPECIES_NAME_KO[p.starter.species] ?? p.starter.species)}{" "}
-                      Lv.{p?.starter.level}
-                    </div>
-                  </div>
+                <div className="flex items-baseline justify-between gap-1">
+                  <span className={`text-[9px] font-bold ${p ? roleColor(p.role) : ""}`}>
+                    {p ? roleLabel(p.role) : "-"}
+                  </span>
+                  {p?.is_bot && (
+                    <span className="text-[8px] text-zinc-500">BOT</span>
+                  )}
                 </div>
-                <HpBar pct={pct} hp={hp} max={max} variant="ally" />
+                <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-zinc-900">
+                  <motion.div
+                    className={`h-full ${color}`}
+                    initial={false}
+                    animate={{ width: `${Math.max(0, pct)}%` }}
+                    transition={{ duration: 0.45 }}
+                  />
+                </div>
+                <div className="mt-0.5 text-right font-mono text-[8px] text-zinc-500">
+                  {Math.max(0, st.hp).toLocaleString()}
+                </div>
               </div>
             );
           })}
         </div>
 
-        {/* 우측: 보스 */}
-        <div className="col-span-7 flex flex-col items-center">
-          <div
-            className="relative h-44 w-44 md:h-56 md:w-56"
-            style={{ imageRendering: "pixelated" }}
+        {/* Controls */}
+        <div className="flex items-center gap-1.5 px-2 py-2">
+          <button
+            type="button"
+            onClick={handleRestart}
+            className="rounded-md bg-zinc-800 px-2 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700"
+            aria-label="처음부터"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={bossSpriteUrl(boss.sprite_key)}
-              alt={boss.name}
-              className={`h-full w-full object-contain transition ${
-                hpState.boss === 0 ? "opacity-30 grayscale" : ""
-              }`}
-              style={{ imageRendering: "pixelated" }}
-            />
-          </div>
-          <div className="mt-2 w-full max-w-sm">
-            <div className="mb-1 text-center text-xs font-bold text-purple-200">
-              {boss.name}
-            </div>
-            <HpBar
-              pct={maxHps.boss > 0 ? Math.max(0, (hpState.boss / maxHps.boss) * 100) : 0}
-              hp={hpState.boss}
-              max={maxHps.boss}
-              variant="boss"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 액션 로그 (현재 프레임) */}
-      <div className="mb-3 min-h-[56px] rounded-xl border border-zinc-800 bg-zinc-950/70 p-3 text-sm">
-        <FrameLabel frame={currentFrame} />
-      </div>
-
-      {/* 컨트롤 */}
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setIdx(0)}
-          className="rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-700"
-          aria-label="처음으로"
-        >
-          ⏮
-        </button>
-        <button
-          type="button"
-          onClick={() => setIdx((v) => Math.max(0, v - 1))}
-          className="rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-700"
-        >
-          ◀
-        </button>
-        <button
-          type="button"
-          onClick={() => setPlaying((v) => !v)}
-          disabled={ended}
-          className="flex-1 rounded-lg bg-purple-600 px-4 py-2 font-bold text-white shadow shadow-purple-900/30 hover:bg-purple-500 disabled:opacity-40"
-        >
-          {playing ? "❚❚ 일시정지" : ended ? "재생 완료" : "▶ 재생"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setIdx((v) => Math.min(frames.length - 1, v + 1))}
-          className="rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-700"
-        >
-          ▶
-        </button>
-        <button
-          type="button"
-          onClick={() => setSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}
-          className="rounded-lg bg-zinc-800 px-3 py-2 text-sm font-mono text-zinc-200 hover:bg-zinc-700"
-        >
-          ×{speed}
-        </button>
-      </div>
-
-      {/* 진행률 */}
-      <input
-        type="range"
-        min={0}
-        max={Math.max(0, frames.length - 1)}
-        value={idx}
-        onChange={(e) => setIdx(parseInt(e.target.value, 10))}
-        className="mt-3 w-full accent-purple-500"
-      />
-      <div className="mt-1 text-center font-mono text-[11px] text-zinc-500">
-        프레임 {idx + 1} / {frames.length}
-      </div>
-
-      {/* 결과 + 뒤로 */}
-      {ended && raid.result && (
-        <div
-          className={`mt-4 rounded-2xl border-2 p-5 text-center ${
-            isWin
-              ? "border-emerald-700 bg-emerald-950/30"
-              : "border-red-900 bg-red-950/30"
-          }`}
-        >
-          <div
-            className={`text-3xl font-extrabold ${
-              isWin ? "text-emerald-300" : "text-red-300"
+            ⏮
+          </button>
+          <button
+            type="button"
+            onClick={() => setPlaying((v) => !v)}
+            disabled={ended}
+            className={`flex-1 rounded-md px-3 py-1.5 text-xs font-bold ${
+              ended
+                ? "bg-zinc-800 text-zinc-500"
+                : "bg-purple-600 text-white hover:bg-purple-500"
             }`}
           >
-            {isWin ? "VICTORY" : "DEFEAT"}
-          </div>
-          <div className="mt-1 text-sm text-zinc-400">
-            {raid.total_turns} 라운드 · {boss.name}
-          </div>
+            {ended ? "완료" : playing ? "❚❚ 일시정지" : "▶ 재생"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}
+            className="rounded-md bg-zinc-800 px-2 py-1.5 font-mono text-xs text-zinc-200 hover:bg-zinc-700"
+          >
+            ×{speed}
+          </button>
         </div>
-      )}
+      </div>
 
-      <button
-        type="button"
-        onClick={onBack}
-        className="mt-4 w-full rounded-xl bg-zinc-800 py-3 font-bold text-zinc-200 hover:bg-zinc-700"
-      >
-        체육관으로 돌아가기
-      </button>
+      {/* === Overlays === */}
+      <SkillBannerOverlay frame={currentFrame} />
+      <DamageNumberOverlay frame={currentFrame} participants={participants} />
+      <RoundIndicatorOverlay frame={currentFrame} />
+      <PhaseTransitionOverlay frame={currentFrame} />
+      <ScreenFxOverlay frame={currentFrame} />
+
+      {ended && raid.result && (
+        <EndOverlay
+          result={raid.result}
+          totalTurns={raid.total_turns ?? 0}
+          bossName={boss.name}
+          onBack={onBack}
+          onReplay={handleRestart}
+        />
+      )}
     </div>
   );
 }
 
-function HpBar({
-  pct,
-  hp,
-  max,
-  variant,
+// ════════════════════════════════════════════
+// ░░ Sub-components ░░
+// ════════════════════════════════════════════
+
+function BossSprite({
+  boss,
+  state,
+  frame,
 }: {
-  pct: number;
-  hp: number;
-  max: number;
-  variant: "ally" | "boss";
+  boss: Ch4Boss;
+  state: LiveState;
+  frame: Ch4Frame | undefined;
 }) {
-  const color =
-    variant === "ally"
-      ? pct > 50
-        ? "bg-emerald-500"
-        : pct > 25
-        ? "bg-amber-400"
-        : "bg-red-500"
-      : "bg-rose-600";
+  const actor = (frame as { actor?: string } | undefined)?.actor;
+  const isAttacking =
+    actor === "boss" &&
+    (frame?.type === "skill" || frame?.type === "boss_skill");
+  const isHit =
+    !!frame &&
+    (frame.type === "skill" || frame.type === "counter_reflect") &&
+    (frame as { target?: string }).target === "boss" &&
+    typeof (frame as { damage?: number }).damage === "number";
+
   return (
-    <div className="mt-1">
-      <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-900">
-        <div
-          className={`h-full ${color} transition-all duration-300`}
-          style={{ width: `${pct}%` }}
+    <motion.div
+      animate={
+        isAttacking
+          ? { y: [0, 22, 22, 0], scale: [1, 1.06, 1.06, 1] }
+          : !state.bossAlive
+          ? { opacity: 0.25, y: 8 }
+          : { y: [0, -4, 0], scale: 1 }
+      }
+      transition={
+        isAttacking
+          ? { duration: 1.3, times: [0, 0.3, 0.7, 1], ease: "easeInOut" }
+          : !state.bossAlive
+          ? { duration: 0.8 }
+          : { duration: 2.4, repeat: Infinity, ease: "easeInOut" }
+      }
+    >
+      <motion.img
+        src={bossSpriteUrl(boss.sprite_key)}
+        alt={boss.name}
+        className="h-[180px] w-[180px] object-contain"
+        style={{ imageRendering: "pixelated" }}
+        animate={
+          isHit
+            ? {
+                x: [0, -7, 7, -5, 5, 0],
+                filter: [
+                  "brightness(1)",
+                  "brightness(2.5) sepia(1) saturate(5) hue-rotate(-40deg)",
+                  "brightness(1)",
+                ],
+              }
+            : !state.bossAlive
+            ? { filter: "grayscale(1) brightness(0.4)" }
+            : state.bossPhase === 2
+            ? {
+                filter: [
+                  "brightness(1) hue-rotate(0deg)",
+                  "brightness(1.2) hue-rotate(-30deg)",
+                  "brightness(1) hue-rotate(0deg)",
+                ],
+              }
+            : {}
+        }
+        transition={
+          isHit
+            ? { duration: 0.55 }
+            : !state.bossAlive
+            ? { duration: 0.6 }
+            : state.bossPhase === 2
+            ? { duration: 2, repeat: Infinity }
+            : { duration: 0.3 }
+        }
+      />
+    </motion.div>
+  );
+}
+
+function PartyFighter({
+  participants,
+  state,
+  slot,
+  size,
+  currentFrame,
+}: {
+  participants: Ch4Participant[];
+  state: LiveState;
+  slot: number;
+  size: number;
+  currentFrame: Ch4Frame | undefined;
+}) {
+  const p = participants.find((x) => x.slot === slot);
+  const st = state.slots[slot - 1];
+  if (!p) return null;
+
+  const actorTag = `slot${slot}`;
+  const isCasting =
+    !!currentFrame &&
+    (currentFrame.type === "skill" ||
+      currentFrame.type === "counter_reflect") &&
+    (currentFrame as { actor?: string }).actor === actorTag;
+  const isHit =
+    !!currentFrame &&
+    (currentFrame.type === "boss_skill" || currentFrame.type === "skill") &&
+    (currentFrame as { target?: string }).target === actorTag &&
+    typeof (currentFrame as { damage?: number }).damage === "number";
+  const isHealed =
+    !!currentFrame &&
+    currentFrame.type === "skill" &&
+    (currentFrame as { kind?: string }).kind === "heal" &&
+    (currentFrame as { target?: string }).target === actorTag;
+  const isBuffed =
+    !!currentFrame &&
+    currentFrame.type === "skill" &&
+    ((currentFrame as { kind?: string }).kind === "buff" ||
+      (currentFrame as { kind?: string }).kind === "counter") &&
+    ((currentFrame as { target?: string }).target === actorTag ||
+      (currentFrame as { target?: string }).target === "all_allies");
+
+  return (
+    <motion.div
+      className="relative"
+      animate={
+        isCasting
+          ? { y: [0, -28, -28, 0], scale: [1, 1.08, 1.08, 1] }
+          : !st.alive
+          ? { opacity: 0.25, y: 4 }
+          : { y: [0, -3, 0] }
+      }
+      transition={
+        isCasting
+          ? { duration: 1.3, times: [0, 0.3, 0.7, 1], ease: "easeInOut" }
+          : !st.alive
+          ? { duration: 0.5 }
+          : { duration: 3.0, repeat: Infinity, ease: "easeInOut" }
+      }
+      style={{ filter: !st.alive ? "grayscale(1)" : undefined }}
+    >
+      <motion.img
+        src={speciesSpriteUrl(p.starter.species, p.starter.evolution_stage)}
+        alt={p.starter.species}
+        style={{
+          height: size,
+          width: size,
+          imageRendering: "pixelated",
+        }}
+        className="object-contain"
+        animate={
+          isHit
+            ? {
+                x: [0, -6, 6, -4, 4, 0],
+                filter: [
+                  "brightness(1)",
+                  "brightness(2.5) sepia(1) saturate(5) hue-rotate(-30deg)",
+                  "brightness(1)",
+                ],
+              }
+            : isHealed
+            ? {
+                filter: [
+                  "drop-shadow(0 0 0 #34d399)",
+                  "drop-shadow(0 0 14px #34d399)",
+                  "drop-shadow(0 0 0 #34d399)",
+                ],
+              }
+            : isBuffed
+            ? {
+                filter: [
+                  "drop-shadow(0 0 0 #fbbf24)",
+                  "drop-shadow(0 0 10px #fbbf24)",
+                  "drop-shadow(0 0 0 #fbbf24)",
+                ],
+              }
+            : {}
+        }
+        transition={{ duration: 0.7 }}
+      />
+      {/* 발 그림자 */}
+      <div
+        className="absolute left-1/2 h-1.5 -translate-x-1/2 rounded-[50%] bg-black/60 blur-sm"
+        style={{ width: size * 0.7, bottom: -2 }}
+      />
+      {/* 닉네임 */}
+      <div className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-bold text-zinc-100 drop-shadow-lg" style={{ bottom: -16 }}>
+        {p.starter.nickname}
+      </div>
+    </motion.div>
+  );
+}
+
+function BossHpBar({
+  hp,
+  maxHp,
+  phase,
+}: {
+  hp: number;
+  maxHp: number;
+  phase: number;
+}) {
+  const pct = maxHp > 0 ? Math.max(0, (hp / maxHp) * 100) : 0;
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {phase >= 2 && (
+            <motion.span
+              className="rounded-sm bg-red-700/80 px-1.5 py-0.5 text-[9px] font-black tracking-wider text-red-100 ring-1 ring-red-500"
+              animate={{ opacity: [0.7, 1, 0.7] }}
+              transition={{ duration: 1.2, repeat: Infinity }}
+            >
+              광폭화
+            </motion.span>
+          )}
+        </div>
+        <span className="font-mono text-[10px] text-zinc-400">
+          {Math.max(0, hp).toLocaleString()} / {maxHp.toLocaleString()}
+        </span>
+      </div>
+      <div className="mt-1 h-3 w-full overflow-hidden rounded-full bg-zinc-900/80 ring-1 ring-rose-900/60 shadow-inner">
+        <motion.div
+          className="h-full bg-gradient-to-r from-rose-600 to-red-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"
+          initial={false}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.55, ease: "easeOut" }}
         />
       </div>
-      <div className="mt-0.5 text-right font-mono text-[10px] text-zinc-500">
-        {hp.toLocaleString()} / {max.toLocaleString()}
-      </div>
     </div>
   );
 }
 
-function FrameLabel({ frame }: { frame: Ch4Frame | undefined }) {
-  if (!frame) return <span className="text-zinc-500">—</span>;
+// 스킬 이름 배너 — 화면 중앙 (보스 영역과 파티 영역 사이 ground 위)
+function SkillBannerOverlay({ frame }: { frame: Ch4Frame | undefined }) {
+  if (!frame) return null;
+  const isSkill = frame.type === "skill" || frame.type === "boss_skill";
+  if (!isSkill) return null;
+  const f = frame as {
+    skill_name?: string;
+    actor?: string;
+    fx?: { color?: string | null };
+  };
+  const name = f.skill_name;
+  if (!name) return null;
+  const color = f.fx?.color ?? "#ffffff";
+  const isBoss = f.actor === "boss";
 
-  if (frame.type === "battle_start") {
-    return <span className="text-zinc-300">전투 시작!</span>;
+  return (
+    <AnimatePresence>
+      <motion.div
+        key={`skill-${frame.t}`}
+        className="pointer-events-none absolute left-0 right-0 top-[50%] z-40 flex -translate-y-1/2 justify-center"
+        initial={{ opacity: 0, scale: 0.4, y: -10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 1.15, y: 0 }}
+        transition={{ duration: 0.3, ease: "backOut" }}
+      >
+        <div
+          className="rounded-lg px-5 py-2 backdrop-blur-sm"
+          style={{
+            background: `${color}1a`,
+            border: `1px solid ${color}`,
+            boxShadow: `0 0 22px ${color}80, 0 4px 12px rgba(0,0,0,0.6)`,
+          }}
+        >
+          <div
+            className="text-center text-xl font-black tracking-wider"
+            style={{
+              color,
+              textShadow: `0 0 8px ${color}, 0 2px 4px rgba(0,0,0,0.9)`,
+            }}
+          >
+            {isBoss ? "⚔ " : "★ "}
+            {name}
+          </div>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// 데미지/회복 숫자 — 타겟 위치 위에 떠올라서 페이드
+function DamageNumberOverlay({
+  frame,
+  participants,
+}: {
+  frame: Ch4Frame | undefined;
+  participants: Ch4Participant[];
+}) {
+  if (!frame) return null;
+  const damage = (frame as { damage?: number }).damage;
+  const heal = (frame as { heal?: number }).heal;
+  const isCounter = frame.type === "counter_reflect";
+  const target = (frame as { target?: string }).target;
+
+  if (!damage && !heal) return null;
+
+  // 타겟 좌표 (퍼센트 기준 — 화면 분할에 맞춰)
+  let pos = { left: "50%", top: "30%" };
+  if (isCounter || target === "boss") {
+    pos = { left: "50%", top: "28%" };
+  } else if (target?.startsWith("slot")) {
+    const s = parseInt(target.slice(4), 10);
+    const role = participants.find((x) => x.slot === s)?.role;
+    if (role === "tank") pos = { left: "50%", top: "62%" };
+    else if (role === "dealer") pos = { left: "27%", top: "76%" };
+    else if (role === "supporter") pos = { left: "73%", top: "76%" };
   }
-  if (frame.type === "turn_start") {
-    return (
-      <span className="text-zinc-300">
-        Round {frame.round}
-        {frame.phase > 1 && (
-          <span className="ml-2 text-red-400">[광폭화]</span>
+
+  let label = "";
+  let color = "#ffffff";
+  const crit = (frame as { crit?: boolean }).crit;
+  const weak = (frame as { weakness?: boolean }).weakness;
+  const resist = (frame as { resist?: boolean }).resist;
+
+  if (heal) {
+    label = `+${heal.toLocaleString()}`;
+    color = "#34d399";
+  } else if (damage) {
+    label = `-${damage.toLocaleString()}`;
+    if (crit) color = "#f87171";
+    else if (weak) color = "#fbbf24";
+    else if (resist) color = "#94a3b8";
+    else color = "#fde68a";
+  }
+  if (isCounter && damage) {
+    label = `↩ -${damage.toLocaleString()}`;
+    color = "#fb923c";
+  }
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key={`dmg-${frame.t}`}
+        className="pointer-events-none absolute z-50 -translate-x-1/2"
+        style={{ left: pos.left, top: pos.top }}
+        initial={{ y: 12, opacity: 0, scale: 0.5 }}
+        animate={{
+          y: -70,
+          opacity: 1,
+          scale: crit ? 1.7 : weak ? 1.4 : 1.2,
+        }}
+        exit={{ opacity: 0, y: -90 }}
+        transition={{ duration: 1.1, ease: "easeOut" }}
+      >
+        <div
+          className="text-center text-3xl font-black tabular-nums"
+          style={{
+            color,
+            textShadow: `0 0 12px ${color}, 0 2px 6px rgba(0,0,0,0.95)`,
+            WebkitTextStroke: "1px rgba(0,0,0,0.6)",
+          }}
+        >
+          {label}
+        </div>
+        {crit && (
+          <div className="text-center text-[10px] font-black tracking-wider text-red-300">
+            CRITICAL!
+          </div>
         )}
-      </span>
-    );
-  }
-  if (frame.type === "turn_end") {
-    return <span className="text-zinc-500">Round {frame.round} 종료</span>;
-  }
-  if (frame.type === "battle_end") {
-    return (
-      <span className={frame.result === "win" ? "text-emerald-300" : "text-red-300"}>
-        전투 종료 · {frame.result === "win" ? "승리" : "패배"}
-      </span>
-    );
-  }
-  if (frame.type === "phase_transition") {
-    return (
-      <span className="font-bold text-red-300">
-        ⚠ 광폭화 페이즈 진입!
-      </span>
-    );
-  }
-  if (frame.type === "skip") {
-    return (
-      <span className="text-zinc-500">
-        {frame.actor.toUpperCase()} 행동 불가
-      </span>
-    );
-  }
-  if (frame.type === "counter_reflect") {
-    return (
-      <span className="text-amber-300">
-        🔄 카운터! {frame.actor.toUpperCase()} → 보스에게{" "}
-        {frame.damage.toLocaleString()} 반사 데미지
-      </span>
-    );
-  }
-  if (frame.type === "skill" || frame.type === "boss_skill") {
-    const actorLabel = frame.actor === "boss" ? "보스" : frame.actor.toUpperCase();
-    const dmg = frame.damage ? ` ${frame.damage.toLocaleString()} 데미지` : "";
-    const heal = frame.heal ? ` ${frame.heal.toLocaleString()} 회복` : "";
-    const weak = frame.weakness ? " · 약점!" : "";
-    const resist = frame.resist ? " · 저항" : "";
-    const crit = (frame as { crit?: boolean }).crit ? " · 크리티컬!" : "";
-    return (
-      <span>
-        <span className="font-bold text-purple-200">{actorLabel}</span>{" "}
-        <span className="text-zinc-300">{frame.skill_name}</span>
-        <span className="text-zinc-400">
-          {dmg}
-          {heal}
-          {weak && <span className="text-amber-400">{weak}</span>}
-          {resist && <span className="text-zinc-500">{resist}</span>}
-          {crit && <span className="text-rose-400">{crit}</span>}
-        </span>
-      </span>
-    );
-  }
-  return <span className="text-zinc-500">—</span>;
+        {weak && !crit && (
+          <div className="text-center text-[10px] font-black tracking-wider text-amber-300">
+            약점!
+          </div>
+        )}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// 라운드 시작 배너
+function RoundIndicatorOverlay({ frame }: { frame: Ch4Frame | undefined }) {
+  if (!frame || frame.type !== "turn_start") return null;
+  const round = (frame as { round: number }).round;
+  return (
+    <AnimatePresence>
+      <motion.div
+        key={`round-${frame.t}`}
+        className="pointer-events-none absolute left-0 right-0 top-[14%] z-30 flex justify-center"
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="rounded-full bg-black/70 px-4 py-1 text-[11px] font-bold tracking-[0.2em] text-purple-200 ring-1 ring-purple-700/50">
+          ROUND {round}
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// 페이즈 전환 컷신
+function PhaseTransitionOverlay({ frame }: { frame: Ch4Frame | undefined }) {
+  if (!frame || frame.type !== "phase_transition") return null;
+  return (
+    <AnimatePresence>
+      <motion.div
+        key={`phase-${frame.t}`}
+        className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <motion.div
+          className="absolute inset-0"
+          animate={{
+            background: [
+              "radial-gradient(circle, transparent 30%, rgba(220,38,38,0) 100%)",
+              "radial-gradient(circle, transparent 20%, rgba(220,38,38,0.5) 100%)",
+              "radial-gradient(circle, transparent 30%, rgba(220,38,38,0) 100%)",
+            ],
+          }}
+          transition={{ duration: 1.4 }}
+        />
+        <motion.div
+          className="relative text-center"
+          initial={{ scale: 0.4, y: 30 }}
+          animate={{ scale: [0.4, 1.2, 1], y: 0 }}
+          exit={{ scale: 1.4, opacity: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <div
+            className="text-4xl font-black text-red-400"
+            style={{
+              textShadow:
+                "0 0 20px #ef4444, 0 0 40px #7f1d1d, 0 4px 8px rgba(0,0,0,0.9)",
+            }}
+          >
+            광폭화
+          </div>
+          <div className="mt-1 text-xs tracking-[0.3em] text-red-200">
+            PHASE 2
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// AOE / 보스 스킬 화면 효과 (vignette + 색 플래시)
+function ScreenFxOverlay({ frame }: { frame: Ch4Frame | undefined }) {
+  if (!frame) return null;
+  const fx = (frame as {
+    fx?: {
+      shake?: string;
+      vignette?: string | null;
+      color?: string | null;
+    };
+    kind?: string;
+  }).fx;
+  if (!fx) return null;
+  const isAoe = (frame as { kind?: string }).kind === "aoe";
+  const isHeavy = fx.shake === "screen" || fx.shake === "large";
+  const vColor = isAoe ? fx.vignette ?? fx.color : isHeavy ? fx.color : null;
+  if (!vColor) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key={`fx-${frame.t}`}
+        className="pointer-events-none absolute inset-0 z-20"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, isAoe ? 0.7 : 0.4, 0] }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.9, times: [0, 0.3, 1] }}
+        style={{
+          background: `radial-gradient(circle, transparent ${isAoe ? 20 : 40}%, ${vColor} 110%)`,
+        }}
+      />
+    </AnimatePresence>
+  );
+}
+
+function EndOverlay({
+  result,
+  totalTurns,
+  bossName,
+  onBack,
+  onReplay,
+}: {
+  result: "win" | "loss";
+  totalTurns: number;
+  bossName: string;
+  onBack: () => void;
+  onReplay: () => void;
+}) {
+  const isWin = result === "win";
+  return (
+    <motion.div
+      className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      <motion.div
+        className={`mx-4 rounded-2xl border-4 px-8 py-7 text-center ${
+          isWin
+            ? "border-emerald-500 bg-emerald-950/50"
+            : "border-red-700 bg-red-950/50"
+        }`}
+        initial={{ scale: 0.5, y: 30 }}
+        animate={{ scale: 1, y: 0 }}
+        transition={{ duration: 0.45, delay: 0.15, ease: "backOut" }}
+      >
+        <motion.div
+          className={`text-5xl font-black tracking-wider ${
+            isWin ? "text-emerald-300" : "text-red-300"
+          }`}
+          style={{
+            textShadow: isWin
+              ? "0 0 20px #10b981, 0 4px 8px rgba(0,0,0,0.8)"
+              : "0 0 20px #dc2626, 0 4px 8px rgba(0,0,0,0.8)",
+          }}
+          animate={{ scale: [1, 1.05, 1] }}
+          transition={{ duration: 1.8, repeat: Infinity }}
+        >
+          {isWin ? "VICTORY" : "DEFEAT"}
+        </motion.div>
+        <div className="mt-3 text-sm text-zinc-300">
+          {bossName} · {totalTurns} 라운드
+        </div>
+        <div className="mt-5 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={onReplay}
+            className="rounded-lg bg-purple-600 px-6 py-2 font-bold text-white hover:bg-purple-500"
+          >
+            다시보기
+          </button>
+          <button
+            type="button"
+            onClick={onBack}
+            className="rounded-lg bg-zinc-800 px-6 py-2 font-bold text-zinc-100 hover:bg-zinc-700"
+          >
+            돌아가기
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
 }
