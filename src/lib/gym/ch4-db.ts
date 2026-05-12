@@ -374,19 +374,26 @@ export function speciesSpriteUrl(species: string, stage: number): string {
   return wildSpriteUrl(dex, true);
 }
 
-/** 보스 sprite_key → URL.
- *  Phase 2 baseline 은 임시로 dex 매핑된 sprite 사용 (Stage 4 = Mewtwo 150,
- *  Stage 3 = Dragonite 149, Stage 2 = Gengar 94, Stage 1 = Mismagius 429).
- *  Phase 3 에서 커스텀 보스 sprite 로 교체. */
+/** 보스 sprite_key → dex → PokeAPI gen5 BW 애니 sprite URL.
+ *  현재 4 보스는 모두 프로젝트 미사용 실존 전설 포켓몬:
+ *    Stage 1 마기라스 (Tyranitar 248)
+ *    Stage 2 칠색조   (Ho-Oh 250)
+ *    Stage 3 레쿠쟈   (Rayquaza 384)
+ *    Stage 4 기라티나 (Giratina 487) — Origin Forme 없이 Altered Forme 사용 */
 export function bossSpriteUrl(spriteKey: string): string {
   const dex = (
     {
-      "shadow-trainer":     94,   // Gengar
-      "forgotten-champion": 477,  // Dusknoir
-      "unknown-one":        149,  // Dragonite
-      "shadow-mewtwo":      150,  // Mewtwo
+      tyranitar: 248,
+      "ho-oh":   250,
+      rayquaza:  384,
+      giratina:  487,
+      // legacy placeholder keys (20260747 시드) — DB 갱신 전 fallback
+      "shadow-trainer":     248,
+      "forgotten-champion": 250,
+      "unknown-one":        384,
+      "shadow-mewtwo":      487,
     } as Record<string, number>
-  )[spriteKey] ?? 150;
+  )[spriteKey] ?? 487;
   return wildSpriteUrl(dex, true);
 }
 
