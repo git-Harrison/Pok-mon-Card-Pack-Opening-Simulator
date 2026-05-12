@@ -73,6 +73,7 @@ export interface Ch4Participant {
   user_id: string;
   user_name: string;
   display_name: string;
+  is_bot: boolean;
   role: Ch4Role;
   skill_loadout: string[];
   starter: {
@@ -320,6 +321,22 @@ export async function getMyCh4WaitingRaid(userId: string) {
     raid_id?: string;
     room_code?: string;
     is_host?: boolean;
+  };
+}
+
+export async function addBotToCh4Raid(hostUserId: string, raidId: string) {
+  const { data, error } = await supabase.rpc("add_bot_to_ch4_raid", {
+    p_host_user_id: hostUserId,
+    p_raid_id: raidId,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return data as {
+    ok: boolean;
+    error?: string;
+    slot?: number;
+    role?: Ch4Role;
+    bot_user_id?: string;
+    bot_name?: string;
   };
 }
 

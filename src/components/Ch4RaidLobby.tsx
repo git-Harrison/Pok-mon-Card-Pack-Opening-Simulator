@@ -8,6 +8,7 @@ import {
   getCh4Raid,
   leaveCh4Raid,
   startCh4Raid,
+  addBotToCh4Raid,
   bossSpriteUrl,
   speciesSpriteUrl,
   roleLabel,
@@ -136,6 +137,19 @@ export default function Ch4RaidLobby({ raidId }: { raidId: string }) {
     router.replace("/gym/ch4");
   };
 
+  const handleAddBot = async () => {
+    if (!userId) return;
+    setBusy(true);
+    setError(null);
+    const r = await addBotToCh4Raid(userId, raidId);
+    setBusy(false);
+    if (!r.ok) {
+      setError(r.error || "봇 추가에 실패했어요.");
+      return;
+    }
+    refresh();
+  };
+
   const handleStart = async () => {
     if (!userId || !isHost) return;
     if (participants.length !== 3) {
@@ -237,9 +251,21 @@ export default function Ch4RaidLobby({ raidId }: { raidId: string }) {
             return (
               <div
                 key={slot}
-                className="flex h-32 items-center justify-center rounded-xl border-2 border-dashed border-zinc-800 bg-zinc-950/30 text-sm text-zinc-600"
+                className="flex h-36 flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-800 bg-zinc-950/30 p-3"
               >
-                슬롯 {slot} 비어있음
+                <div className="mb-2 text-xs text-zinc-600">
+                  슬롯 {slot} 비어있음
+                </div>
+                {isHost && (
+                  <button
+                    type="button"
+                    onClick={handleAddBot}
+                    disabled={busy}
+                    className="rounded-lg border border-purple-700/50 bg-purple-950/30 px-3 py-1.5 text-xs font-bold text-purple-200 transition hover:bg-purple-900/50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    🤖 봇 추가
+                  </button>
+                )}
               </div>
             );
           }
@@ -248,7 +274,11 @@ export default function Ch4RaidLobby({ raidId }: { raidId: string }) {
             <div
               key={slot}
               className={`rounded-xl border-2 p-3 ${
-                isMe ? "border-purple-500/70 bg-purple-950/20" : "border-zinc-800 bg-zinc-950/70"
+                isMe
+                  ? "border-purple-500/70 bg-purple-950/20"
+                  : p.is_bot
+                  ? "border-zinc-700 bg-zinc-900/60"
+                  : "border-zinc-800 bg-zinc-950/70"
               }`}
             >
               <div className="flex items-center gap-2">
@@ -268,8 +298,15 @@ export default function Ch4RaidLobby({ raidId }: { raidId: string }) {
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className={`text-xs font-bold ${roleColor(p.role)}`}>
-                    {roleLabel(p.role)}
+                  <div className="flex items-center gap-1">
+                    <span className={`text-xs font-bold ${roleColor(p.role)}`}>
+                      {roleLabel(p.role)}
+                    </span>
+                    {p.is_bot && (
+                      <span className="rounded bg-zinc-800 px-1 py-0.5 text-[9px] font-bold text-zinc-400">
+                        BOT
+                      </span>
+                    )}
                   </div>
                   <div className="truncate text-sm font-bold text-zinc-100">
                     {p.starter.nickname}
@@ -281,7 +318,9 @@ export default function Ch4RaidLobby({ raidId }: { raidId: string }) {
                 </div>
               </div>
               <div className="mt-2 text-[11px] text-zinc-400">
-                @{p.user_name} · ⚔ {p.center_power.toLocaleString()}
+                {p.is_bot ? "🤖 " : "@"}
+                {p.is_bot ? p.display_name : p.user_name} · ⚔{" "}
+                {p.center_power.toLocaleString()}
               </div>
               <div className="mt-1 text-[10px] text-zinc-500">
                 HP×{p.hp_scale.toFixed(2)} · 스킬×{p.skill_mul.toFixed(2)}
