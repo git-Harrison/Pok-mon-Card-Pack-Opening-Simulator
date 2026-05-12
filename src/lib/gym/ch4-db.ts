@@ -225,29 +225,25 @@ export async function listCh4Skills(): Promise<Ch4Skill[]> {
   return (data ?? []) as Ch4Skill[];
 }
 
-export async function createCh4Raid(
-  userId: string,
-  bossId: string,
-  role: Ch4Role
-) {
+export async function createCh4Raid(userId: string, bossId: string) {
   const { data, error } = await supabase.rpc("create_ch4_raid", {
     p_user_id: userId,
     p_boss_id: bossId,
-    p_role: role,
   });
   if (error) return { ok: false as const, error: error.message };
-  return data as { ok: boolean; error?: string; raid_id?: string; room_code?: string };
+  return data as {
+    ok: boolean;
+    error?: string;
+    raid_id?: string;
+    room_code?: string;
+    role?: Ch4Role;
+  };
 }
 
-export async function joinCh4Raid(
-  userId: string,
-  roomCode: string,
-  role: Ch4Role
-) {
+export async function joinCh4Raid(userId: string, raidId: string) {
   const { data, error } = await supabase.rpc("join_ch4_raid", {
     p_user_id: userId,
-    p_room_code: roomCode,
-    p_role: role,
+    p_raid_id: raidId,
   });
   if (error) return { ok: false as const, error: error.message };
   return data as {
@@ -255,8 +251,30 @@ export async function joinCh4Raid(
     error?: string;
     raid_id?: string;
     slot?: number;
+    role?: Ch4Role;
     already?: boolean;
   };
+}
+
+export interface Ch4WaitingRaid {
+  raid_id: string;
+  room_code: string;
+  boss_id: string;
+  boss_stage: number;
+  boss_name: string;
+  boss_sprite_key: string;
+  boss_types: string[];
+  host_user_id: string;
+  host_user_name: string;
+  host_display_name: string;
+  created_at: string;
+  slot_count: number;
+}
+
+export async function listCh4WaitingRaids(): Promise<Ch4WaitingRaid[]> {
+  const { data, error } = await supabase.rpc("list_ch4_waiting_raids");
+  if (error) return [];
+  return (data ?? []) as Ch4WaitingRaid[];
 }
 
 export async function leaveCh4Raid(userId: string, raidId: string) {
@@ -266,20 +284,6 @@ export async function leaveCh4Raid(userId: string, raidId: string) {
   });
   if (error) return { ok: false as const, error: error.message };
   return data as { ok: boolean; error?: string; cancelled?: boolean };
-}
-
-export async function changeCh4Role(
-  userId: string,
-  raidId: string,
-  newRole: Ch4Role
-) {
-  const { data, error } = await supabase.rpc("change_ch4_role", {
-    p_user_id: userId,
-    p_raid_id: raidId,
-    p_new_role: newRole,
-  });
-  if (error) return { ok: false as const, error: error.message };
-  return data as { ok: boolean; error?: string; unchanged?: boolean };
 }
 
 export async function getCh4Raid(raidId: string): Promise<Ch4FullRaid | null> {

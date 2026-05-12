@@ -7,7 +7,6 @@ import { createClient } from "@/utils/supabase/client";
 import {
   getCh4Raid,
   leaveCh4Raid,
-  changeCh4Role,
   startCh4Raid,
   bossSpriteUrl,
   speciesSpriteUrl,
@@ -15,11 +14,8 @@ import {
   roleColor,
   SPECIES_NAME_KO,
   type Ch4FullRaid,
-  type Ch4Role,
 } from "@/lib/gym/ch4-db";
 import Ch4RaidReplay from "./Ch4RaidReplay";
-
-const ROLES: Ch4Role[] = ["tank", "dealer", "supporter"];
 
 export default function Ch4RaidLobby({ raidId }: { raidId: string }) {
   const { user } = useAuth();
@@ -138,19 +134,6 @@ export default function Ch4RaidLobby({ raidId }: { raidId: string }) {
     await leaveCh4Raid(userId, raidId);
     setBusy(false);
     router.replace("/gym/ch4");
-  };
-
-  const handleRoleChange = async (newRole: Ch4Role) => {
-    if (!userId || !me || me.role === newRole) return;
-    setBusy(true);
-    const r = await changeCh4Role(userId, raidId, newRole);
-    setBusy(false);
-    if (!r.ok) {
-      setError(r.error || "역할 변경에 실패했어요.");
-      return;
-    }
-    setError(null);
-    refresh();
   };
 
   const handleStart = async () => {
@@ -308,38 +291,17 @@ export default function Ch4RaidLobby({ raidId }: { raidId: string }) {
         })}
       </div>
 
-      {/* 내 역할 변경 */}
+      {/* 내 역할 표시 (서버 랜덤 배정 — 변경 불가) */}
       {me && (
-        <div className="mb-4 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
-          <div className="mb-2 text-xs text-zinc-400">내 역할 변경</div>
-          <div className="flex gap-2">
-            {ROLES.map((r) => {
-              const taken = participants.find(
-                (p) => p.role === r && p.user_id !== userId
-              );
-              return (
-                <button
-                  key={r}
-                  type="button"
-                  disabled={!!taken || busy}
-                  onClick={() => handleRoleChange(r)}
-                  className={`flex-1 rounded-lg border py-2 text-sm transition ${
-                    me.role === r
-                      ? "border-purple-500 bg-purple-950/50 text-purple-200"
-                      : taken
-                      ? "border-zinc-900 bg-zinc-900 text-zinc-600"
-                      : "border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-700"
-                  }`}
-                >
-                  {roleLabel(r)}
-                  {taken && (
-                    <div className="text-[9px] text-zinc-500">
-                      @{taken.user_name}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
+        <div className="mb-4 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3 text-center">
+          <div className="text-[11px] uppercase tracking-wider text-zinc-500">
+            내 역할
+          </div>
+          <div className={`text-xl font-bold ${roleColor(me.role)}`}>
+            {roleLabel(me.role)}
+          </div>
+          <div className="mt-0.5 text-[10px] text-zinc-500">
+            랜덤 배정 · 변경 불가
           </div>
         </div>
       )}

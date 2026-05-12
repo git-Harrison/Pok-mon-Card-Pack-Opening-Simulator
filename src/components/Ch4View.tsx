@@ -3,23 +3,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { createClient } from "@/utils/supabase/client";
 import {
   ch4UserStats,
   listCh4Bosses,
   listMyCh4Clears,
   createCh4Raid,
-  lookupCh4RaidByCode,
   joinCh4Raid,
+  listCh4WaitingRaids,
   getMyCh4WaitingRaid,
   bossSpriteUrl,
-  roleLabel,
   type Ch4Boss,
-  type Ch4Role,
   type Ch4UserStats,
+  type Ch4WaitingRaid,
 } from "@/lib/gym/ch4-db";
 import PageHeader from "./PageHeader";
-
-const ROLES: Ch4Role[] = ["tank", "dealer", "supporter"];
 
 export default function Ch4View() {
   const { user } = useAuth();
@@ -28,32 +26,34 @@ export default function Ch4View() {
   const [bosses, setBosses] = useState<Ch4Boss[]>([]);
   const [clears, setClears] = useState<Set<string>>(new Set());
   const [stats, setStats] = useState<Ch4UserStats | null>(null);
+  const [waitingRaids, setWaitingRaids] = useState<Ch4WaitingRaid[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [selectedBoss, setSelectedBoss] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<Ch4Role>("tank");
-
-  const [joinCode, setJoinCode] = useState("");
-  const [joinRole, setJoinRole] = useState<Ch4Role>("dealer");
 
   const userId = user?.id ?? null;
 
+  const refreshWaiting = useCallback(async () => {
+    const r = await listCh4WaitingRaids();
+    setWaitingRaids(r);
+  }, []);
+
   const refresh = useCallback(async () => {
     if (!userId) return;
-    const [b, c, s, w] = await Promise.all([
+    const [b, c, s, w, list] = await Promise.all([
       listCh4Bosses(),
       listMyCh4Clears(userId),
       ch4UserStats(userId),
       getMyCh4WaitingRaid(userId),
+      listCh4WaitingRaids(),
     ]);
     setBosses(b);
     setClears(new Set(c));
     setStats(s);
+    setWaitingRaids(list);
     setLoading(false);
 
-    // 이미 대기 중인 레이드 있으면 자동 이동
     if (w && w.has_raid && w.raid_id) {
       router.replace(`/gym/ch4/raid/${w.raid_id}`);
     }
@@ -62,6 +62,27 @@ export default function Ch4View() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // Realtime — 새 방 / 참가자 변동 시 목록 갱신
+  useEffect(() => {
+    const supabase = createClient();
+    const ch = supabase
+      .channel("ch4_waiting_list")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "ch4_raids" },
+        () => refreshWaiting()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "ch4_raid_participants" },
+        () => refreshWaiting()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [refreshWaiting]);
 
   const isUnlocked = useMemo(
     () => (b: Ch4Boss) =>
@@ -76,32 +97,20 @@ export default function Ch4View() {
     }
     setBusy(true);
     setError(null);
-    const r = await createCh4Raid(userId, selectedBoss, selectedRole);
+    const r = await createCh4Raid(userId, selectedBoss);
     setBusy(false);
     if (!r.ok || !r.raid_id) {
-      setError(r.error || "레이드 생성에 실패했어요.");
+      setError(r.error || "방 생성에 실패했어요.");
       return;
     }
     router.push(`/gym/ch4/raid/${r.raid_id}`);
   };
 
-  const handleJoin = async () => {
+  const handleJoin = async (raidId: string) => {
     if (!userId) return;
-    const code = joinCode.trim().toUpperCase();
-    if (code.length !== 6) {
-      setError("룸 코드는 6자리예요.");
-      return;
-    }
     setBusy(true);
     setError(null);
-    // 먼저 룸 코드 lookup → 자격 확인 등은 server-side
-    const look = await lookupCh4RaidByCode(code);
-    if (!look.ok || !look.raid_id) {
-      setBusy(false);
-      setError(look.error || "룸 코드를 찾을 수 없어요.");
-      return;
-    }
-    const r = await joinCh4Raid(userId, code, joinRole);
+    const r = await joinCh4Raid(userId, raidId);
     setBusy(false);
     if (!r.ok || !r.raid_id) {
       setError(r.error || "참가에 실패했어요.");
@@ -155,9 +164,39 @@ export default function Ch4View() {
         )}
       </div>
 
-      {/* 보스 4 단계 */}
-      <h2 className="mb-3 text-lg font-bold text-zinc-100">보스 단계 선택</h2>
-      <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2">
+      {/* 참가 가능한 방 목록 */}
+      <h2 className="mb-3 text-lg font-bold text-zinc-100">
+        참가 가능한 방
+        {waitingRaids.length > 0 && (
+          <span className="ml-2 text-sm text-zinc-500">
+            ({waitingRaids.length}개)
+          </span>
+        )}
+      </h2>
+      {waitingRaids.length === 0 ? (
+        <div className="mb-6 rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/40 p-6 text-center text-sm text-zinc-500">
+          현재 열린 방이 없어요. 직접 만들어보세요.
+        </div>
+      ) : (
+        <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2">
+          {waitingRaids.map((r) => (
+            <RoomCard
+              key={r.raid_id}
+              room={r}
+              onJoin={() => handleJoin(r.raid_id)}
+              disabled={!eligible || busy}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* 방 만들기 — 보스 선택 + 버튼 */}
+      <h2 className="mb-3 text-lg font-bold text-zinc-100">방 만들기</h2>
+      <div className="mb-3 text-xs text-zinc-500">
+        도전할 보스 단계를 선택하고 방을 만들면 다른 트레이너들이 참가할 수 있어요.
+        역할(탱커/딜러/서포터)은 참가 시 무작위로 배정돼요.
+      </div>
+      <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2">
         {bosses.map((b) => {
           const unlocked = isUnlocked(b);
           const cleared = clears.has(b.id);
@@ -179,7 +218,7 @@ export default function Ch4View() {
               <div className="flex items-start gap-3">
                 {unlocked ? (
                   <div
-                    className="relative h-20 w-20 shrink-0"
+                    className="h-20 w-20 shrink-0"
                     style={{ imageRendering: "pixelated" }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -233,79 +272,79 @@ export default function Ch4View() {
         })}
       </div>
 
-      {/* 룸 만들기 */}
-      <h2 className="mb-3 text-lg font-bold text-zinc-100">방 만들기</h2>
-      <div className="mb-3 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
-        <div className="mb-2 text-xs text-zinc-400">내 역할</div>
-        <div className="mb-4 flex gap-2">
-          {ROLES.map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => setSelectedRole(r)}
-              className={`flex-1 rounded-lg border py-2 text-sm transition ${
-                selectedRole === r
-                  ? "border-purple-500 bg-purple-950/50 text-purple-200"
-                  : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700"
-              }`}
-            >
-              {roleLabel(r)}
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          disabled={!eligible || !selectedBoss || busy}
-          onClick={handleCreate}
-          className="w-full rounded-xl bg-purple-600 py-3 font-bold text-white shadow-lg shadow-purple-900/30 transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          방 만들기
-        </button>
-      </div>
-
-      {/* 룸 코드로 참가 */}
-      <h2 className="mb-3 mt-6 text-lg font-bold text-zinc-100">방 코드로 참가</h2>
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
-        <input
-          type="text"
-          value={joinCode}
-          onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-          placeholder="6자리 코드 (예: A3F2KZ)"
-          maxLength={6}
-          className="mb-3 w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-3 text-center font-mono text-lg uppercase tracking-widest text-zinc-100 outline-none focus:border-purple-500"
-        />
-        <div className="mb-2 text-xs text-zinc-400">내 역할</div>
-        <div className="mb-3 flex gap-2">
-          {ROLES.map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => setJoinRole(r)}
-              className={`flex-1 rounded-lg border py-2 text-sm transition ${
-                joinRole === r
-                  ? "border-purple-500 bg-purple-950/50 text-purple-200"
-                  : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700"
-              }`}
-            >
-              {roleLabel(r)}
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          disabled={!eligible || joinCode.length !== 6 || busy}
-          onClick={handleJoin}
-          className="w-full rounded-xl bg-zinc-800 py-3 font-bold text-zinc-100 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          참가하기
-        </button>
-      </div>
+      <button
+        type="button"
+        disabled={!eligible || !selectedBoss || busy}
+        onClick={handleCreate}
+        className="w-full rounded-xl bg-purple-600 py-3 font-bold text-white shadow-lg shadow-purple-900/30 transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        방 만들기
+      </button>
 
       {error && (
         <div className="mt-4 rounded-lg bg-red-950/40 px-3 py-2 text-sm text-red-300">
           {error}
         </div>
       )}
+    </div>
+  );
+}
+
+function RoomCard({
+  room,
+  onJoin,
+  disabled,
+}: {
+  room: Ch4WaitingRaid;
+  onJoin: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border-2 border-zinc-800 bg-zinc-950/70 p-3">
+      <div className="flex items-start gap-3">
+        <div
+          className="h-16 w-16 shrink-0"
+          style={{ imageRendering: "pixelated" }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={bossSpriteUrl(room.boss_sprite_key)}
+            alt={room.boss_name}
+            className="h-full w-full object-contain"
+            style={{ imageRendering: "pixelated" }}
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-zinc-500">
+              STAGE {room.boss_stage}
+            </span>
+            <span className="font-mono text-[10px] text-purple-400">
+              {room.room_code}
+            </span>
+          </div>
+          <div className="truncate text-sm font-bold text-zinc-100">
+            {room.boss_name}
+          </div>
+          <div className="mt-0.5 truncate text-[11px] text-zinc-500">
+            방장: {room.host_display_name}
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          <div className="font-mono text-sm font-bold text-zinc-200">
+            {room.slot_count}/3
+          </div>
+          <div className="text-[10px] text-zinc-500">참가자</div>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onJoin}
+        disabled={disabled}
+        className="mt-3 w-full rounded-lg bg-zinc-800 py-2 text-sm font-bold text-zinc-100 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        참가하기
+      </button>
     </div>
   );
 }
