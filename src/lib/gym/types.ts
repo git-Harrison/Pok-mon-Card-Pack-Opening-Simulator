@@ -21,29 +21,6 @@ export interface GymMedal {
   description: string;
 }
 
-export interface DefenderPokemonInfo {
-  slot: number;
-  /** PCL 슬랩 uuid — 본인 소유자가 방어덱 편집 시 풀에 머지하기 위해.
-   *  stale 슬롯도 보존되어 클라가 graceful 표시 가능. */
-  grading_id?: string;
-  /** stale 슬롯 (psa_gradings row 가 사라진 경우) 은 null. 클라는
-   *  "데이터 손상" placeholder 로 표시하고, server resolve_gym_battle
-   *  은 명시적 에러로 도전 차단 (점령 + 방어덱 셋업이라는 사실 자체는
-   *  유지하되 default NPC 로 떨어지지 않게). */
-  card_id: string | null;
-  type: WildType;
-  /** MUR 보조 속성 (없으면 null). UI 두 배지 렌더링용 (20260703). */
-  wild_type_2: WildType | null;
-  rarity: string | null;
-  grade: number | null;
-  /** 표시용 HP/ATK — 서버 gym_defender_display_stats() 가 계산. 방어자
-   *  멀티플라이어 + MUR 보너스 + 속성 일치까지 모두 반영된 실제 전투
-   *  stat 과 동일. stale 슬롯 (g2 미존재) 은 null. 클라가 직접 산식을
-   *  복제하지 않도록 서버 단일 소스로 통일 (20260700). */
-  display_hp: number | null;
-  display_atk: number | null;
-}
-
 export interface GymOwnership {
   user_id: string;
   display_name: string;
@@ -51,10 +28,6 @@ export interface GymOwnership {
   character: string | null;
   captured_at: string;
   protection_until: string;
-  /** 점령자가 자기 펫 3마리로 방어 덱을 셋업했는지. */
-  has_defense_deck: boolean;
-  /** 방어 덱 셋업되어 있을 때 사용자 펫 3마리 정보. NPC 모드면 null. */
-  defender_pokemon: DefenderPokemonInfo[] | null;
   /** 본인 소유 체육관일 때 — 24h 안에 (누군가) 일일 보상 받았는지.
    *  null = 본인 소유 아님. 점령자 변경되어도 cooldown 유지. */
   daily_claimed_today: boolean | null;
@@ -112,10 +85,9 @@ export type GymStatus =
  *  현재 상태를 산출. 보호/쿨타임은 now 기준. centerPower 가 주어지면
  *  open/owned_open 인 체육관에 대해 underpowered 판정.
  *
- *  점령 판정 규칙: ownership.has_defense_deck === true 일 때만 점령 효력.
- *  방어 덱이 셋업되지 않은 ownership 은 비점령 (open) 으로 간주 →
- *  타 유저는 NPC 와 정상 도전 가능 (사용자 정책).
- *  단 본인은 항상 owned_by_me (자신의 체육관 인지). */
+ *  점령 판정: ownership 이 있으면 점령된 것 (20260755 부터 방어덱 등록
+ *  자체가 폐기됐고 점령 = 닉네임 노출 + 1h 보호만 의미). 본인은 항상
+ *  owned_by_me. 타인 점령이면 보호 시간 / 도전 가능 여부 판정. */
 export function deriveGymStatus(
   gym: Gym,
   myUserId: string | null,
@@ -128,21 +100,14 @@ export function deriveGymStatus(
     if (left > 0) return "user_cooldown";
   }
   if (gym.ownership) {
-    // 본인 소유 — 방어덱 셋업 여부 무관 항상 owned_by_me.
     if (gym.ownership.user_id === myUserId) return "owned_by_me";
-    // 타인이 점령했지만 방어 덱 미설정 → "점령 안 된 것으로" 처리.
-    // open 으로 fall-through 후 underpowered 검사.
-    if (gym.ownership.has_defense_deck) {
-      const protectedLeft =
-        new Date(gym.ownership.protection_until).getTime() - now;
-      if (protectedLeft > 0) return "protected";
-      // open 상태로 간주하되, 색깔 라벨은 owned_open 유지.
-      if (centerPower !== null && centerPower < gym.min_power) {
-        return "underpowered";
-      }
-      return "owned_open";
+    const protectedLeft =
+      new Date(gym.ownership.protection_until).getTime() - now;
+    if (protectedLeft > 0) return "protected";
+    if (centerPower !== null && centerPower < gym.min_power) {
+      return "underpowered";
     }
-    // 방어덱 미설정 — open 처리, underpowered 검사 진행.
+    return "owned_open";
   }
   if (centerPower !== null && centerPower < gym.min_power) {
     return "underpowered";

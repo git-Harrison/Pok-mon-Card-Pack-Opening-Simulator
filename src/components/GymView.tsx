@@ -23,16 +23,11 @@ import {
 } from "@/lib/gym/types";
 import { TYPE_STYLE, type WildType } from "@/lib/wild/types";
 import { wildSpriteUrl } from "@/lib/wild/pool";
-import { lookupDex } from "@/lib/wild/name-to-dex";
-import { cardSpriteUrl } from "@/lib/wild/card-sprite";
-import { getCard } from "@/lib/sets";
-import type { DefenderPokemonInfo } from "@/lib/gym/types";
 import { CenteredPokeLoader } from "./PokeLoader";
 import PageHeader from "./PageHeader";
 import Portal from "./Portal";
 import GymChallengeOverlay from "./GymChallengeOverlay";
 import GymMedalIcon from "./GymMedalIcon";
-import GymDefenseDeckModal from "./GymDefenseDeckModal";
 import NpcDialogModal from "./NpcDialogModal";
 
 // 폴링 주기 — Phase 1 에서는 단순 setInterval. Phase 4 에서 Supabase
@@ -136,7 +131,6 @@ export default function GymView() {
     gym: Gym;
     challengeId: string;
   } | null>(null);
-  const [defenseGym, setDefenseGym] = useState<Gym | null>(null);
   const [centerPower, setCenterPower] = useState<number | null>(null);
   // 챕터 carousel — 1 (기존 8) / 2 (신규 10) / 3 (예정).
   const [chapter, setChapter] = useState<number>(1);
@@ -268,22 +262,12 @@ export default function GymView() {
 
 
       <AnimatePresence>
-        {selectedGym && !activeChallenge && !defenseGym && (
+        {selectedGym && !activeChallenge && (
           <GymDetailModal
             gym={selectedGym}
             myUserId={userId}
             centerPower={centerPower}
             onClose={() => setSelectedId(null)}
-            onOpenDefense={() => {
-              // iOS Safari 가 backdrop-blur 깔린 detail modal 와 defense
-              // modal 이 AnimatePresence 로 동시에 마운트/언마운트되는
-              // 사이에 페이지 크래시("This page couldn't load") 를 던지는
-              // 케이스가 있어 — detail 을 먼저 닫고 exit 애니메이션이
-              // 끝난 뒤 defense 를 연다.
-              const next = selectedGym;
-              setSelectedId(null);
-              setTimeout(() => setDefenseGym(next), 240);
-            }}
             onStartChallenge={async () => {
               if (!userId) return;
               const res = await startGymChallenge(userId, selectedGym.id);
@@ -334,16 +318,6 @@ export default function GymView() {
             challengeId={activeChallenge.challengeId}
             onClose={() => setActiveChallenge(null)}
             onResolved={refresh}
-          />
-        )}
-        {defenseGym && (
-          <GymDefenseDeckModal
-            gym={defenseGym}
-            onClose={() => setDefenseGym(null)}
-            onSaved={() => {
-              setDefenseGym(null);
-              refresh();
-            }}
           />
         )}
       </AnimatePresence>
@@ -1240,7 +1214,6 @@ function GymDetailModal({
   onClose,
   onStartChallenge,
   onExtend,
-  onOpenDefense,
   onClaimDaily,
 }: {
   gym: Gym;
@@ -1249,7 +1222,6 @@ function GymDetailModal({
   onClose: () => void;
   onStartChallenge: () => void;
   onExtend: () => void;
-  onOpenDefense: () => void;
   onClaimDaily: () => void;
 }) {
   const reduce = useReducedMotion();
@@ -1419,46 +1391,21 @@ function GymDetailModal({
               cooldownLeftMs={cooldownLeftMs}
             />
 
-            {/* 관장/방어덱 표시 분기:
-                · 점령됨 + 방어덱 셋업    → 점령자 펫 3마리
-                · 점령됨 + 방어덱 미설정  → 안내 메시지 (NPC fallback 금지)
-                · 미점령                   → NPC 관장 포켓몬 */}
+            {/* 관장 포켓몬 — 점령 여부 무관 항상 default NPC 3마리. */}
             <section>
               <h3 className="text-[11px] uppercase tracking-wider text-zinc-400 mb-2">
-                {gym.ownership?.has_defense_deck
-                  ? `방어 덱 (${gym.ownership.display_name})`
-                  : gym.ownership?.user_id
-                  ? `방어 덱 미설정 (${gym.ownership.display_name})`
+                {gym.ownership?.user_id
+                  ? `관장 포켓몬 (${gym.ownership.display_name})`
                   : "관장 포켓몬"}
               </h3>
               <div className="grid grid-cols-3 gap-2">
-                {gym.ownership?.has_defense_deck && gym.ownership.defender_pokemon
-                  ? gym.ownership.defender_pokemon.map((p) => (
-                      <DefenderStatCard
-                        key={`def-${p.slot}`}
-                        defender={p}
-                        gymType={gym.type}
-                      />
-                    ))
-                  : gym.ownership?.user_id
-                  ? // 점령됐는데 방어덱 미설정 — NPC 표시 X, 안내 placeholder.
-                    Array.from({ length: 3 }).map((_, i) => (
-                      <div
-                        key={`empty-def-${i}`}
-                        className="rounded-lg border border-dashed border-amber-400/40 bg-amber-400/5 p-2 flex items-center justify-center text-center text-[10px] text-amber-200/80 leading-tight aspect-[5/7]"
-                      >
-                        방어 덱
-                        <br />
-                        미설정
-                      </div>
-                    ))
-                  : gym.pokemon.map((p) => (
-                      <PokemonStatCard
-                        key={p.id}
-                        pokemon={p}
-                        gymType={gym.type}
-                      />
-                    ))}
+                {gym.pokemon.map((p) => (
+                  <PokemonStatCard
+                    key={p.id}
+                    pokemon={p}
+                    gymType={gym.type}
+                  />
+                ))}
               </div>
             </section>
 
@@ -1501,19 +1448,6 @@ function GymDetailModal({
                 gym={gym}
                 onClaimDaily={onClaimDaily}
               />
-            )}
-            {status === "owned_by_me" && (
-              <button
-                type="button"
-                onClick={onOpenDefense}
-                style={{ touchAction: "manipulation" }}
-                className="w-full h-11 rounded-xl bg-gradient-to-r from-fuchsia-500 to-violet-500 text-white font-black text-sm active:scale-[0.98]"
-              >
-                🛡️ 방어 덱 설정 (관장 포켓몬 = 내 펫 3마리)
-                {gym.ownership?.has_defense_deck && (
-                  <span className="ml-1.5 text-[10px] font-bold opacity-90">· 설정 중</span>
-                )}
-              </button>
             )}
             {canExtend && (
               <button
@@ -1859,130 +1793,6 @@ function PokemonStatCard({
 }
 
 
-/** 방어 덱 펫 카드 — 점령자가 셋업한 펫 카드 정보. PokemonStatCard 와
- *  비슷하지만 dex 가 카드 이름→lookup 으로 결정되고 HP/ATK 는 클라
- *  카드 카탈로그(slabStats) 로 미리보기. */
-function DefenderStatCard({
-  defender,
-  gymType,
-}: {
-  defender: DefenderPokemonInfo;
-  gymType: string;
-}) {
-  const t = defender.type as keyof typeof TYPE_STYLE;
-  const style = TYPE_STYLE[t];
-  // MUR 두 속성 중 하나라도 체육관 속성과 일치 → ★
-  const sameAsGym =
-    defender.type === gymType || defender.wild_type_2 === gymType;
-  // stale 슬롯 — psa_gradings row 가 사라진 경우 server 가 card_id/
-  // rarity/grade null 로 반환. "데이터 손상" placeholder 표시해
-  // 점령은 그대로 인지하되 default NPC 로 떨어지지 않게.
-  const isStale = defender.card_id == null;
-  const card = defender.card_id ? getCard(defender.card_id) : null;
-  const cardName = card?.name ?? defender.card_id ?? "?";
-  const dex = !isStale ? lookupDex(cardName) : null;
-  const megaSprite = !isStale ? cardSpriteUrl(cardName) : null;
-  // 표시 stat — 서버 gym_defender_display_stats() 결과 그대로 사용.
-  // 방어자 멀티플라이어 / MUR 보너스 / 속성 일치까지 반영된 실제 전투
-  // 스탯과 동일. 클라 slabStats 는 base 표가 서버와 달라 폐기.
-  const displayStats = !isStale
-    ? {
-        hp: defender.display_hp ?? 0,
-        atk: defender.display_atk ?? 0,
-      }
-    : { hp: 0, atk: 0 };
-  const [broken, setBroken] = useState(false);
-  const [megaBroken, setMegaBroken] = useState(false);
-  if (isStale) {
-    return (
-      <div className="relative rounded-lg border border-rose-400/40 bg-rose-500/[0.06] p-2 flex flex-col items-center gap-1 aspect-[5/7]">
-        <div className="w-14 h-14 flex items-center justify-center text-2xl">⚠️</div>
-        <p className="text-[10px] font-bold text-rose-200 truncate max-w-full">데이터 손상</p>
-        <span className={clsx("px-1 py-0.5 rounded text-[8px] font-black", style.badge)}>
-          {defender.type}
-        </span>
-        <p className="text-[8px] text-rose-300/85 text-center leading-tight">
-          점령자 재셋업 필요
-        </p>
-      </div>
-    );
-  }
-  return (
-    <div className="relative rounded-lg border bg-zinc-900/60 p-2 flex flex-col items-center gap-1 border-fuchsia-400/30">
-      <div className="relative w-14 h-14 shrink-0 overflow-hidden flex items-center justify-center">
-        {/* 캐릭터화 chain — GymChallengeOverlay 와 동일 정책:
-            (1) Pokemon Showdown ani (메가/특수폼)
-            (2) PokeAPI gen5 BW animated (lookupDex base 매칭)
-            (3) type-색 silhouette 👾 — 카드 art 직노출 / 텍스트-only 모두 회피. */}
-        {!megaBroken && megaSprite ? (
-          <img
-            src={megaSprite}
-            alt=""
-            draggable={false}
-            decoding="async"
-            referrerPolicy="no-referrer"
-            onError={() => setMegaBroken(true)}
-            className="max-w-full max-h-full object-contain"
-            style={{ imageRendering: "pixelated" }}
-          />
-        ) : !broken && dex ? (
-          <img
-            src={wildSpriteUrl(dex, true)}
-            alt=""
-            draggable={false}
-            decoding="async"
-            referrerPolicy="no-referrer"
-            onError={() => setBroken(true)}
-            className="max-w-full max-h-full object-contain"
-            style={{ imageRendering: "pixelated" }}
-          />
-        ) : (
-          <div
-            className={clsx(
-              "w-full h-full flex items-center justify-center rounded ring-1 ring-white/10",
-              style.badge
-            )}
-            title={cardName}
-          >
-            <span aria-hidden className="text-2xl leading-none select-none">
-              👾
-            </span>
-          </div>
-        )}
-      </div>
-      <p className="text-[10px] font-bold text-white truncate max-w-full">
-        {cardName}
-      </p>
-      <div className="flex items-center gap-1 flex-wrap justify-center">
-        <span className={clsx("px-1 py-0.5 rounded text-[8px] font-black", style.badge)}>
-          {defender.type}
-        </span>
-        {/* MUR 보조 속성 — 두 번째 배지 (UR/SAR 는 항상 null) */}
-        {defender.wild_type_2 && (
-          <span
-            className={clsx(
-              "px-1 py-0.5 rounded text-[8px] font-black",
-              (TYPE_STYLE[defender.wild_type_2 as keyof typeof TYPE_STYLE] ?? style).badge
-            )}
-          >
-            {defender.wild_type_2}
-          </span>
-        )}
-        {sameAsGym && (
-          <span className="text-[8px] text-amber-300 font-bold">★</span>
-        )}
-      </div>
-      <ul className="text-[9px] text-zinc-300 grid grid-cols-2 gap-x-1 gap-y-0 w-full leading-tight tabular-nums">
-        <li>HP {displayStats.hp}</li>
-        <li>ATK {displayStats.atk}</li>
-        <li className="col-span-2 text-fuchsia-300/85 font-bold text-[8px]">
-          PCL {defender.grade} · {defender.rarity}
-        </li>
-      </ul>
-    </div>
-  );
-}
-
 /** 일일 보상 버튼 — 24h cooldown 지속, 1초마다 카운트다운 갱신. */
 function DailyClaimButton({
   gym,
@@ -2122,12 +1932,8 @@ function GymHelpModal({ onClose }: { onClose: () => void }) {
             <Collapsible icon="🛡️" title="점령 후 보호 시간">
               점령 직후 <b>1시간</b> 동안 다른 트레이너의 도전을 받지 않아요.
               보호가 끝나면 누구나 도전 가능. 1,000만P 로 1시간 추가 연장 가능.
-            </Collapsible>
-            <Collapsible icon="🐾" title="방어 덱">
-              점령 후 내 속성 PCL 10 카드 3장 (RR 이상 또는 펫 등록 슬랩)
-              을 방어 덱으로 등록하면, 다른 트레이너가 도전할 때 관장 대신
-              내 카드 3장이 막아요.
-              <br />· 패배 시 <b>방어 덱 슬랩은 영구 삭제</b> 됩니다.
+              <br />· 점령자 닉네임은 관장으로 노출되지만, 방어 포켓몬은
+              항상 체육관 기본 3마리입니다.
             </Collapsible>
             <Collapsible icon="🏅" title="메달 — 영구 업적">
               체육관 점령 시 해당 속성 메달이 계정에 영구 등록 (점령 잃어도

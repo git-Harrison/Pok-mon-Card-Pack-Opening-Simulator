@@ -111,26 +111,6 @@ export async function claimGymDaily(userId: string, gymId: string) {
   };
 }
 
-export async function setGymDefenseDeck(
-  userId: string,
-  gymId: string,
-  petGradingIds: string[],
-  petTypes: string[]
-) {
-  const { data, error } = await supabase.rpc("set_gym_defense_deck", {
-    p_user_id: userId,
-    p_gym_id: gymId,
-    p_pet_grading_ids: petGradingIds,
-    p_pet_types: petTypes,
-  });
-  if (error) return { ok: false as const, error: error.message };
-  return data as {
-    ok: boolean;
-    error?: string;
-    gym_id?: string;
-  };
-}
-
 export async function fetchUserGymMedals(userId: string): Promise<UserGymMedal[]> {
   const { data, error } = await supabase.rpc("get_user_gym_medals", {
     p_user_id: userId,
