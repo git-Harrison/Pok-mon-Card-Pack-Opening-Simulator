@@ -27,18 +27,23 @@ function frameDurationMs(f: Ch4Frame | undefined): number {
     case "battle_start":
       return 1400;
     case "turn_start":
-      return 700;
-    case "turn_end":
-      return 200;
-    case "skill":
-    case "boss_skill":
-      return (f as { kind?: string }).kind === "aoe" ? 3200 : 2500;
-    case "counter_reflect":
-      return 1100;
-    case "phase_transition":
-      return 2200;
-    case "skip":
       return 400;
+    case "turn_end":
+      return 150;
+    case "skill":
+    case "boss_skill": {
+      const k = (f as { kind?: string }).kind;
+      if (k === "aoe" || k === "heal_all") return 2600;
+      if (k === "ultimate") return 3000;
+      if (k === "multi_hit") return 2300;
+      return 2200;
+    }
+    case "counter_reflect":
+      return 1000;
+    case "phase_transition":
+      return 2000;
+    case "skip":
+      return 250;
     case "battle_end":
       return 3000;
     default:
@@ -74,6 +79,16 @@ function buildInitial(frames: Ch4Frame[]): LiveState {
   };
 }
 
+type FrameTarget = {
+  target?: string;
+  target_hp?: number;
+  damage?: number;
+  heal?: number;
+  hit_index?: number;
+  resist?: boolean;
+  crit?: boolean;
+};
+
 function applyFrame(state: LiveState, f: Ch4Frame): LiveState {
   const next: LiveState = {
     bossHp: state.bossHp,
@@ -102,6 +117,26 @@ function applyFrame(state: LiveState, f: Ch4Frame): LiveState {
     if (s >= 0 && s <= 2) {
       next.slots[s].hp = targetHp;
       if (targetHp <= 0) next.slots[s].alive = false;
+    }
+  }
+  // ★ targets[] 배열 일괄 적용 (AOE / multi_hit / heal_all 등)
+  const targets = (f as { targets?: FrameTarget[] }).targets;
+  if (Array.isArray(targets)) {
+    for (const t of targets) {
+      if (t.target === "boss" && typeof t.target_hp === "number") {
+        next.bossHp = t.target_hp;
+        if (t.target_hp <= 0) next.bossAlive = false;
+      } else if (
+        typeof t.target === "string" &&
+        t.target.startsWith("slot") &&
+        typeof t.target_hp === "number"
+      ) {
+        const s = parseInt(t.target.slice(4), 10) - 1;
+        if (s >= 0 && s <= 2) {
+          next.slots[s].hp = t.target_hp;
+          if (t.target_hp <= 0) next.slots[s].alive = false;
+        }
+      }
     }
   }
   if (f.type === "turn_end" || f.type === "battle_end") {
@@ -166,14 +201,6 @@ export default function Ch4RaidReplay({ raid, boss, participants, onBack }: Prop
   }, [idx, frames]);
 
   const currentFrame = frames[idx];
-  const currentRound = useMemo(() => {
-    for (let i = idx; i >= 0; i--) {
-      const f = frames[i];
-      if (f.type === "turn_start") return (f as { round: number }).round;
-      if (f.type === "battle_end") return (f as { final_round: number }).final_round;
-    }
-    return 1;
-  }, [idx, frames]);
 
   useEffect(() => {
     if (!playing) return;
@@ -244,9 +271,7 @@ export default function Ch4RaidReplay({ raid, boss, participants, onBack }: Prop
           </div>
           <div className="font-bold text-sm text-zinc-100">{boss.name}</div>
         </div>
-        <div className="rounded-md bg-black/50 px-2 py-1 font-mono text-xs text-zinc-200">
-          R{currentRound}
-        </div>
+        <div className="w-7" aria-hidden />
       </div>
 
       {/* 보스 영역 */}
@@ -389,9 +414,6 @@ export default function Ch4RaidReplay({ raid, boss, participants, onBack }: Prop
       {/* 데미지/회복 숫자 */}
       <DamageNumberOverlay frame={currentFrame} participants={participants} />
 
-      {/* 라운드 인디케이터 */}
-      <RoundIndicatorOverlay frame={currentFrame} />
-
       {/* 페이즈 전환 */}
       <PhaseTransitionOverlay frame={currentFrame} />
 
@@ -408,6 +430,68 @@ export default function Ch4RaidReplay({ raid, boss, participants, onBack }: Prop
         />
       )}
     </div>
+  );
+}
+
+// ════════════════════════════════════════════
+// ░░ 포지션 문양 (Tank=방패 / Dealer=검 / Supporter=별 / Boss=왕관) ░░
+// ════════════════════════════════════════════
+
+function RoleSigil({
+  role,
+  size = 16,
+  color = "#ffffff",
+}: {
+  role: "tank" | "dealer" | "supporter" | "boss";
+  size?: number;
+  color?: string;
+}) {
+  const stroke = color;
+  const fill = `${color}55`;
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      style={{
+        filter: `drop-shadow(0 0 6px ${color})`,
+        flexShrink: 0,
+      }}
+      aria-hidden
+    >
+      {role === "tank" && (
+        // 방패
+        <path
+          d="M12 2 L21 5 V12 C21 17 17 21 12 22 C7 21 3 17 3 12 V5 Z"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+          fill={fill}
+        />
+      )}
+      {role === "dealer" && (
+        // 검 (사선)
+        <g stroke={stroke} strokeWidth="1.6" strokeLinecap="round" fill="none">
+          <line x1="4" y1="20" x2="18" y2="6" />
+          <path d="M18 6 L21 3 L17 7 Z" fill={fill} />
+          <line x1="5" y1="17" x2="9" y2="21" />
+          <circle cx="4" cy="20" r="1.6" fill={fill} />
+        </g>
+      )}
+      {role === "supporter" && (
+        // 4 점 별 + 십자
+        <g stroke={stroke} strokeWidth="1.4" strokeLinejoin="round" fill={fill}>
+          <polygon points="12,3 14,10 21,12 14,14 12,21 10,14 3,12 10,10" />
+        </g>
+      )}
+      {role === "boss" && (
+        // 왕관/뿔
+        <g stroke={stroke} strokeWidth="1.6" strokeLinejoin="round" fill={fill}>
+          <path d="M3 18 L5 7 L9 13 L12 5 L15 13 L19 7 L21 18 Z" />
+          <line x1="3" y1="21" x2="21" y2="21" stroke={stroke} />
+        </g>
+      )}
+    </svg>
   );
 }
 
@@ -821,11 +905,14 @@ function SkillEffectsLayer({
     actor?: string;
     target?: string;
     kind?: string;
+    targets?: FrameTarget[];
     fx?: {
       template?: string;
       color?: string | null;
       color_2?: string | null;
       intensity?: number;
+      fullscreen?: boolean;
+      role?: string;
     };
   };
   const tmpl = f.fx?.template ?? "dash_strike";
@@ -833,33 +920,77 @@ function SkillEffectsLayer({
   const color2 = f.fx?.color_2 ?? color;
   const actorPos = posOf(f.actor ?? "boss", participants);
   const targetIsBoss = f.target === "boss";
-  const targetIsAoe = f.kind === "aoe" || f.target === "all_allies";
-  const targetPos =
-    targetIsAoe || !f.target
-      ? POS.boss
-      : f.target === "boss"
-      ? POS.boss
-      : posOf(f.target, participants);
 
-  switch (tmpl) {
-    case "beam_ray":
-      return <BeamRayFx key={frame.t} from={actorPos} to={targetPos} color={color} color2={color2} />;
-    case "summon_above":
-      return <SummonAboveFx key={frame.t} target={targetPos} color={color} color2={color2} />;
-    case "aoe_wave":
-      return <AoeWaveFx key={frame.t} origin={actorPos} color={color} color2={color2} />;
-    case "floor_eruption":
-      return <FloorEruptionFx key={frame.t} target={targetPos} color={color} />;
-    case "aura_buff":
-      return <AuraBuffFx key={frame.t} actor={actorPos} color={color} />;
-    case "sparkle_heal":
-      return <SparkleHealFx key={frame.t} target={targetPos} color={color} />;
-    case "shadow_swipe":
-      return <ShadowSwipeFx key={frame.t} target={targetIsBoss ? POS.boss : targetPos} color={color} />;
-    case "dash_strike":
-    default:
-      return <DashStrikeFx key={frame.t} target={targetIsBoss ? POS.boss : targetPos} color={color} />;
+  // ★ targets[] 가 여러 개 → 동시 임팩트 (AOE / heal_all)
+  const targetPositions: { left: string; top: string }[] = [];
+  if (Array.isArray(f.targets) && f.targets.length > 1) {
+    for (const t of f.targets) {
+      if (!t.target) continue;
+      if (t.target === "boss") targetPositions.push(POS.boss);
+      else if (t.target.startsWith("slot")) targetPositions.push(posOf(t.target, participants));
+    }
   }
+
+  // 단일 타겟 (기본)
+  const targetPos =
+    targetIsBoss
+      ? POS.boss
+      : f.target === "all_allies" && targetPositions.length === 0
+      ? POS.boss
+      : f.target
+      ? posOf(f.target, participants)
+      : POS.boss;
+
+  // Ultimate fullscreen burst — 위에 따로 깐다
+  const ultimateOverlay = f.fx?.fullscreen ? (
+    <UltimateBurstFx
+      key={`ult-${frame.t}`}
+      actor={actorPos}
+      color={color}
+      color2={color2}
+      role={(f.fx?.role as never) ?? "boss"}
+    />
+  ) : null;
+
+  // 메인 이펙트 — 타겟 여러 개면 각자 동시 렌더
+  const renderOne = (tp: { left: string; top: string }, suffix: string) => {
+    const k = `${frame.t}-${suffix}`;
+    switch (tmpl) {
+      case "beam_ray":
+        return <BeamRayFx key={k} from={actorPos} to={tp} color={color} color2={color2} />;
+      case "summon_above":
+        return <SummonAboveFx key={k} target={tp} color={color} color2={color2} />;
+      case "aoe_wave":
+        return <AoeWaveFx key={k} origin={actorPos} color={color} color2={color2} />;
+      case "floor_eruption":
+        return <FloorEruptionFx key={k} target={tp} color={color} />;
+      case "aura_buff":
+        return <AuraBuffFx key={k} actor={actorPos} color={color} />;
+      case "sparkle_heal":
+        return <SparkleHealFx key={k} target={tp} color={color} />;
+      case "shadow_swipe":
+        return <ShadowSwipeFx key={k} target={tp} color={color} />;
+      case "slash_v":
+        return <SlashVFx key={k} actor={actorPos} target={tp} color={color} color2={color2} />;
+      case "multi_strike":
+        return <MultiStrikeFx key={k} actor={actorPos} target={tp} color={color} color2={color2} />;
+      case "ultimate_burst":
+        // ult 자체는 위 overlay 에서 처리 — base hit 은 slash_v 로 표현
+        return <SlashVFx key={k} actor={actorPos} target={tp} color={color} color2={color2} big />;
+      case "dash_strike":
+      default:
+        return <DashStrikeFx key={k} target={tp} color={color} />;
+    }
+  };
+
+  return (
+    <>
+      {ultimateOverlay}
+      {targetPositions.length > 1
+        ? targetPositions.map((tp, i) => renderOne(tp, `t${i}`))
+        : renderOne(targetPos, "0")}
+    </>
+  );
 }
 
 // — 광선 (beam) —
@@ -1657,6 +1788,361 @@ function ShadowSwipeFx({ target, color }: { target: { left: string; top: string 
   );
 }
 
+// — V-자 슬래시 (SVG path) — 비원형, 검 휘둘림 같은 곡선 —
+function SlashVFx({
+  actor,
+  target,
+  color,
+  color2,
+  big = false,
+}: {
+  actor: { left: string; top: string };
+  target: { left: string; top: string };
+  color: string;
+  color2: string;
+  big?: boolean;
+}) {
+  // SVG 좌표 계산: actor와 target의 percent을 SVG 비례로 변환
+  // 컨테이너 100% 기준 → viewBox 100×100
+  const ax = parseFloat(actor.left);
+  const ay = parseFloat(actor.top);
+  const tx = parseFloat(target.left);
+  const ty = parseFloat(target.top);
+  // V 슬래시 path: actor 위→ target 우상→ target 좌하→ actor 위 (curved)
+  // 단순화: 두 개 곡선 (\\ 와 //)
+  const r = big ? 20 : 12;
+  const cx = tx;
+  const cy = ty;
+  const path1 = `M ${cx - r} ${cy - r} Q ${cx} ${cy - r * 1.4} ${cx + r} ${cy - r * 0.4} Q ${cx + r * 0.3} ${cy + r * 0.2} ${cx + r * 0.4} ${cy + r}`;
+  const path2 = `M ${cx + r} ${cy - r} Q ${cx} ${cy - r * 1.4} ${cx - r} ${cy - r * 0.4} Q ${cx - r * 0.3} ${cy + r * 0.2} ${cx - r * 0.4} ${cy + r}`;
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20">
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        className="absolute inset-0 h-full w-full"
+      >
+        <defs>
+          <filter id={`slashGlow-${color.replace("#", "")}-${big}`}>
+            <feGaussianBlur stdDeviation={big ? "1.2" : "0.6"} />
+          </filter>
+        </defs>
+        {/* 외곽 글로우 */}
+        <motion.path
+          d={path1}
+          fill="none"
+          stroke={color}
+          strokeWidth={big ? 3.5 : 2.2}
+          strokeLinecap="round"
+          filter={`url(#slashGlow-${color.replace("#", "")}-${big})`}
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: [0, 1, 1], opacity: [0, 1, 0] }}
+          transition={{ duration: 0.6, times: [0, 0.4, 1], ease: "easeOut" }}
+        />
+        <motion.path
+          d={path2}
+          fill="none"
+          stroke={color}
+          strokeWidth={big ? 3.5 : 2.2}
+          strokeLinecap="round"
+          filter={`url(#slashGlow-${color.replace("#", "")}-${big})`}
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: [0, 1, 1], opacity: [0, 1, 0] }}
+          transition={{ duration: 0.6, delay: 0.15, times: [0, 0.4, 1], ease: "easeOut" }}
+        />
+        {/* 코어 (하얀 중심) */}
+        <motion.path
+          d={path1}
+          fill="none"
+          stroke={color2}
+          strokeWidth={big ? 1.4 : 0.9}
+          strokeLinecap="round"
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: [0, 1, 1], opacity: [0, 1, 0] }}
+          transition={{ duration: 0.6, times: [0, 0.4, 1] }}
+        />
+        <motion.path
+          d={path2}
+          fill="none"
+          stroke={color2}
+          strokeWidth={big ? 1.4 : 0.9}
+          strokeLinecap="round"
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: [0, 1, 1], opacity: [0, 1, 0] }}
+          transition={{ duration: 0.6, delay: 0.15, times: [0, 0.4, 1] }}
+        />
+        {/* 시전자 → 타겟 잔상 streak */}
+        <motion.line
+          x1={ax}
+          y1={ay}
+          x2={tx}
+          y2={ty}
+          stroke={color}
+          strokeOpacity="0.7"
+          strokeWidth={big ? 1.4 : 0.8}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.7, 0] }}
+          transition={{ duration: 0.35 }}
+        />
+      </svg>
+      {/* 임팩트 — 작은 비원형 빛 폭발 (4-point 별 모양) */}
+      <motion.div
+        className="absolute -translate-x-1/2 -translate-y-1/2"
+        style={{ left: target.left, top: target.top }}
+        initial={{ opacity: 0, scale: 0.3, rotate: 0 }}
+        animate={{ opacity: [0, 1, 0], scale: [0.3, big ? 2.2 : 1.4, big ? 2.6 : 1.6], rotate: 45 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+      >
+        <svg width={big ? 200 : 120} height={big ? 200 : 120} viewBox="-50 -50 100 100">
+          <polygon
+            points="0,-50 12,-12 50,0 12,12 0,50 -12,12 -50,0 -12,-12"
+            fill={color2}
+            opacity="0.95"
+            style={{ filter: `drop-shadow(0 0 16px ${color})` }}
+          />
+          <polygon
+            points="0,-30 8,-8 30,0 8,8 0,30 -8,8 -30,0 -8,-8"
+            fill="#ffffff"
+          />
+        </svg>
+      </motion.div>
+    </div>
+  );
+}
+
+// — 연타 (multi_strike) — 빠른 가로 슬래시 4-5번 staggered —
+function MultiStrikeFx({
+  actor,
+  target,
+  color,
+  color2,
+}: {
+  actor: { left: string; top: string };
+  target: { left: string; top: string };
+  color: string;
+  color2: string;
+}) {
+  const hits = 5;
+  const ax = parseFloat(actor.left);
+  const ay = parseFloat(actor.top);
+  const tx = parseFloat(target.left);
+  const ty = parseFloat(target.top);
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
+        <defs>
+          <filter id="multiGlow">
+            <feGaussianBlur stdDeviation="0.7" />
+          </filter>
+        </defs>
+        {/* 시전자 streak (한 번) */}
+        <motion.line
+          x1={ax}
+          y1={ay}
+          x2={tx}
+          y2={ty}
+          stroke={color}
+          strokeOpacity="0.5"
+          strokeWidth="1.2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.5, 0] }}
+          transition={{ duration: 0.3 }}
+        />
+        {/* N개 chevron 슬래시 — 각자 다른 각도 */}
+        {Array.from({ length: hits }).map((_, i) => {
+          const angle = -30 + i * 15;
+          const len = 14;
+          const ox = Math.cos((angle * Math.PI) / 180) * len;
+          const oy = Math.sin((angle * Math.PI) / 180) * len;
+          const dy = (i - hits / 2) * 1.5;
+          return (
+            <motion.line
+              key={i}
+              x1={tx - ox}
+              y1={ty - oy + dy}
+              x2={tx + ox}
+              y2={ty + oy + dy}
+              stroke={color2}
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              filter="url(#multiGlow)"
+              initial={{ opacity: 0, pathLength: 0 }}
+              animate={{ opacity: [0, 1, 0], pathLength: [0, 1, 1] }}
+              transition={{ duration: 0.3, delay: i * 0.11 }}
+            />
+          );
+        })}
+      </svg>
+      {/* N개 임팩트 sparks */}
+      {Array.from({ length: hits }).map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute -translate-x-1/2 -translate-y-1/2"
+          style={{
+            left: target.left,
+            top: `calc(${target.top} + ${(i - hits / 2) * 8}px)`,
+          }}
+          initial={{ opacity: 0, scale: 0.3 }}
+          animate={{ opacity: [0, 1, 0], scale: [0.3, 1.2, 0.6] }}
+          transition={{ duration: 0.4, delay: i * 0.11 }}
+        >
+          <svg width="50" height="50" viewBox="-25 -25 50 50">
+            <polygon
+              points="0,-22 5,-5 22,0 5,5 0,22 -5,5 -22,0 -5,-5"
+              fill={color}
+              style={{ filter: `drop-shadow(0 0 8px ${color2})` }}
+            />
+            <circle cx="0" cy="0" r="5" fill="#ffffff" />
+          </svg>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+// — 필살기 fullscreen burst — 화면 전체 dramatic 연출 —
+function UltimateBurstFx({
+  actor,
+  color,
+  color2,
+  role,
+}: {
+  actor: { left: string; top: string };
+  color: string;
+  color2: string;
+  role: "tank" | "dealer" | "supporter" | "boss";
+}) {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-30">
+      {/* 화면 전체 진동/플래시 */}
+      <motion.div
+        className="absolute inset-0"
+        style={{
+          background: `radial-gradient(circle at ${actor.left} ${actor.top}, ${color2}cc 0%, ${color}66 30%, ${color}33 60%, #000000ee 100%)`,
+        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0.95, 0.6, 0] }}
+        transition={{ duration: 2.0, times: [0, 0.2, 0.6, 1] }}
+      />
+      {/* 흰색 강력 플래시 */}
+      <motion.div
+        className="absolute inset-0 bg-white"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0.8, 0] }}
+        transition={{ duration: 0.45, delay: 0.15 }}
+      />
+      {/* 시전자 위 거대 sigil */}
+      <motion.div
+        className="absolute -translate-x-1/2 -translate-y-1/2"
+        style={{ left: actor.left, top: actor.top }}
+        initial={{ opacity: 0, scale: 0.4, rotate: -180 }}
+        animate={{ opacity: [0, 1, 0.7, 0], scale: [0.4, 1.6, 2.0, 2.4], rotate: 360 }}
+        transition={{ duration: 1.6, times: [0, 0.3, 0.7, 1] }}
+      >
+        <div style={{ filter: `drop-shadow(0 0 30px ${color}) drop-shadow(0 0 60px ${color})` }}>
+          <RoleSigil role={role} size={160} color={color} />
+        </div>
+      </motion.div>
+      {/* 동심 ring storm */}
+      {[0, 0.18, 0.36, 0.54].map((delay, i) => (
+        <motion.div
+          key={i}
+          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{
+            left: actor.left,
+            top: actor.top,
+            borderWidth: 6,
+            borderStyle: "solid",
+            borderColor: i % 2 === 0 ? color : color2,
+            boxShadow: `0 0 60px ${color}, inset 0 0 40px ${color2}`,
+          }}
+          initial={{ width: 40, height: 40, opacity: 0 }}
+          animate={{
+            width: [40, 1400],
+            height: [40, 1400],
+            opacity: [0, 1, 0],
+          }}
+          transition={{ duration: 2.0, delay, ease: "easeOut" }}
+        />
+      ))}
+      {/* 회전 광선 spokes */}
+      <motion.div
+        className="absolute -translate-x-1/2 -translate-y-1/2"
+        style={{ left: actor.left, top: actor.top }}
+        initial={{ rotate: 0 }}
+        animate={{ rotate: 720 }}
+        transition={{ duration: 2.0, ease: "linear" }}
+      >
+        {Array.from({ length: 12 }).map((_, i) => {
+          const deg = (i * 360) / 12;
+          return (
+            <motion.div
+              key={i}
+              className="absolute -translate-x-1/2 -translate-y-1/2"
+              style={{
+                width: 6,
+                height: 240,
+                background: `linear-gradient(to top, transparent, ${color}, ${color2}, ${color}, transparent)`,
+                boxShadow: `0 0 18px ${color}, 0 0 30px ${color2}`,
+                transform: `rotate(${deg}deg)`,
+                transformOrigin: "center",
+              }}
+              initial={{ opacity: 0, scaleY: 0 }}
+              animate={{ opacity: [0, 1, 0.7, 0], scaleY: [0, 1.5, 2.2, 2.8] }}
+              transition={{ duration: 1.8, delay: 0.2 }}
+            />
+          );
+        })}
+      </motion.div>
+      {/* 파티클 storm — 화면 전체 */}
+      {Array.from({ length: 24 }).map((_, i) => {
+        const deg = (i * 360) / 24;
+        const dist = 180 + ((i * 41) % 240);
+        return (
+          <motion.div
+            key={i}
+            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{
+              left: actor.left,
+              top: actor.top,
+              width: 18,
+              height: 18,
+              background: `radial-gradient(circle, #ffffff, ${color2}, ${color})`,
+              boxShadow: `0 0 16px ${color2}`,
+            }}
+            initial={{ x: 0, y: 0, opacity: 0, scale: 0.3 }}
+            animate={{
+              x: Math.cos((deg * Math.PI) / 180) * dist,
+              y: Math.sin((deg * Math.PI) / 180) * dist,
+              opacity: [0, 1, 0],
+              scale: [0.3, 2.0, 0.2],
+            }}
+            transition={{ duration: 1.8, delay: 0.3 + (i % 6) * 0.04, ease: "easeOut" }}
+          />
+        );
+      })}
+      {/* ULTIMATE 텍스트 */}
+      <motion.div
+        className="absolute left-1/2 top-[22%] -translate-x-1/2"
+        initial={{ opacity: 0, scale: 0.5, y: 20 }}
+        animate={{ opacity: [0, 1, 1, 0], scale: [0.5, 1.3, 1.1, 1.4], y: [20, 0, -10, -30] }}
+        transition={{ duration: 1.6, delay: 0.25 }}
+      >
+        <div
+          className="text-3xl font-black tracking-[0.3em]"
+          style={{
+            color,
+            WebkitTextStroke: `2px ${color2}`,
+            textShadow: `0 0 30px ${color}, 0 0 60px ${color}, 0 4px 8px rgba(0,0,0,0.95)`,
+          }}
+        >
+          ULTIMATE
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ════════════════════════════════════════════
 // ░░ 스킬명 인라인 배너 (보스 HP 아래, 작음) ░░
 // ════════════════════════════════════════════
@@ -1673,43 +2159,78 @@ function SkillBannerInline({
   const f = frame as {
     actor?: string;
     skill_name?: string;
+    kind?: string;
     fx?: { color?: string | null };
   };
   const name = f.skill_name;
   if (!name) return null;
   const color = f.fx?.color ?? "#ffffff";
   const isBoss = f.actor === "boss";
+  const isUltimate = f.kind === "ultimate";
 
-  // 시전자 이름
+  // 시전자 이름 + 시전자 위치 (banner 위치 결정)
   let casterLabel = "보스";
+  const pos = posOf(f.actor ?? "boss", participants);
+  let role: "tank" | "dealer" | "supporter" | "boss" = "boss";
   if (!isBoss && f.actor?.startsWith("slot")) {
     const slot = parseInt(f.actor.slice(4), 10);
     const p = participants.find((x) => x.slot === slot);
-    if (p) casterLabel = p.starter.nickname;
+    if (p) {
+      casterLabel = p.starter.nickname;
+      role = p.role;
+    }
   }
+
+  // 캐릭터 머리 위 배너 (sprite 위쪽 약 56-70px)
+  const offsetY = isBoss ? -110 : role === "tank" ? -74 : -58;
 
   return (
     <AnimatePresence>
       <motion.div
         key={`skill-${frame.t}`}
-        className="pointer-events-none absolute left-0 right-0 top-[50%] z-30 flex justify-center px-3"
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.25 }}
+        className="pointer-events-none absolute z-30 -translate-x-1/2"
+        style={{ left: pos.left, top: pos.top }}
+        initial={{ opacity: 0, y: offsetY + 8, scale: 0.85 }}
+        animate={{ opacity: 1, y: offsetY, scale: 1 }}
+        exit={{ opacity: 0, y: offsetY - 6 }}
+        transition={{ duration: 0.28, ease: "easeOut" }}
       >
         <div
-          className="flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold backdrop-blur-md"
+          className={`relative flex items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-bold backdrop-blur-md ${
+            isUltimate ? "ring-2" : "ring-1"
+          }`}
           style={{
-            background: `${color}20`,
-            border: `1px solid ${color}aa`,
-            boxShadow: `0 2px 10px ${color}55`,
+            background: `linear-gradient(135deg, ${color}26, #00000080)`,
+            borderColor: color,
+            boxShadow: `0 0 12px ${color}aa, 0 0 24px ${color}55`,
+            ["--tw-ring-color" as never]: color,
           }}
         >
-          <span className="text-[10px] text-zinc-300">{casterLabel}</span>
-          <span style={{ color, textShadow: `0 0 6px ${color}` }}>
-            {isBoss ? "⚔" : "★"} {name}
+          {/* 시전 화살표 (꼬리) */}
+          <div
+            className="absolute left-1/2 -translate-x-1/2 -bottom-1 h-2 w-2 rotate-45"
+            style={{
+              background: `${color}40`,
+              borderRight: `1px solid ${color}`,
+              borderBottom: `1px solid ${color}`,
+            }}
+          />
+          <RoleSigil role={isBoss ? "boss" : role} size={14} color={color} />
+          {isUltimate && (
+            <span
+              className="rounded-sm px-1 text-[9px] font-black tracking-wider"
+              style={{ background: color, color: "#000" }}
+            >
+              ULT
+            </span>
+          )}
+          <span
+            className="text-[11px]"
+            style={{ color, textShadow: `0 0 6px ${color}, 0 1px 2px rgba(0,0,0,0.9)` }}
+          >
+            {name}
           </span>
+          <span className="text-[9px] text-zinc-400">{casterLabel}</span>
         </div>
       </motion.div>
     </AnimatePresence>
@@ -1728,30 +2249,95 @@ function DamageNumberOverlay({
   participants: Ch4Participant[];
 }) {
   if (!frame) return null;
+  const isCounter = frame.type === "counter_reflect";
+  const targets = (frame as { targets?: FrameTarget[] }).targets;
+  const hits = (frame as { hits?: number }).hits;
+
+  // ★ targets[] 가 있으면 각 타겟마다 데미지/회복 표시 (AOE / multi_hit / heal_all)
+  if (Array.isArray(targets) && targets.length > 0) {
+    return (
+      <AnimatePresence>
+        {targets.map((t, idx) => {
+          if (!t.target) return null;
+          let pos: { left: string; top: string } = POS.boss;
+          if (t.target === "boss") pos = POS.boss;
+          else if (t.target.startsWith("slot")) pos = posOf(t.target, participants);
+          const dmg = t.damage;
+          const heal = t.heal;
+          if (!dmg && !heal) return null;
+          let label = "";
+          let color = "#ffffff";
+          if (heal) {
+            label = `+${heal.toLocaleString()}`;
+            color = "#34d399";
+          } else if (dmg) {
+            label = `-${dmg.toLocaleString()}`;
+            if (t.crit) color = "#f87171";
+            else if (t.resist) color = "#94a3b8";
+            else color = "#fde68a";
+          }
+          // multi_hit 의 경우 hit_index 로 staggered delay
+          const delay = typeof t.hit_index === "number" ? (t.hit_index - 1) * 0.12 : idx * 0.04;
+          return (
+            <motion.div
+              key={`dmg-${frame.t}-${idx}`}
+              className="pointer-events-none absolute z-40 -translate-x-1/2"
+              style={{ left: pos.left, top: pos.top }}
+              initial={{ y: 12, opacity: 0, scale: 0.5 }}
+              animate={{ y: -70, opacity: 1, scale: t.crit ? 1.6 : 1.15 }}
+              exit={{ opacity: 0, y: -100 }}
+              transition={{ duration: 1.2, delay, ease: "easeOut" }}
+            >
+              <div
+                className="text-center text-2xl font-black tabular-nums"
+                style={{
+                  color,
+                  textShadow: `0 0 12px ${color}, 0 2px 6px rgba(0,0,0,0.95)`,
+                  WebkitTextStroke: "1.2px rgba(0,0,0,0.7)",
+                }}
+              >
+                {label}
+              </div>
+            </motion.div>
+          );
+        })}
+        {/* multi_hit 카운터 (×N) */}
+        {hits && hits > 1 && (
+          <motion.div
+            key={`hits-${frame.t}`}
+            className="pointer-events-none absolute left-1/2 top-[40%] z-40 -translate-x-1/2"
+            initial={{ opacity: 0, scale: 0.4 }}
+            animate={{ opacity: [0, 1, 1, 0], scale: [0.4, 1.4, 1.2, 1.6] }}
+            transition={{ duration: 1.4 }}
+          >
+            <div
+              className="text-3xl font-black tracking-wider text-amber-300"
+              style={{
+                textShadow: "0 0 14px #fbbf24, 0 0 28px #f59e0b, 0 2px 6px rgba(0,0,0,0.95)",
+              }}
+            >
+              × {hits} HIT
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  }
+
+  // 단일 타겟 (legacy)
   const damage = (frame as { damage?: number }).damage;
   const heal = (frame as { heal?: number }).heal;
-  const isCounter = frame.type === "counter_reflect";
   const target = (frame as { target?: string }).target;
-
   if (!damage && !heal) return null;
-
   let pos: { left: string; top: string } = { left: "50%", top: "30%" };
-  if (isCounter || target === "boss") {
-    pos = POS.boss;
-  } else if (target?.startsWith("slot")) {
-    const s = parseInt(target.slice(4), 10);
-    const role = participants.find((x) => x.slot === s)?.role;
-    if (role === "tank") pos = POS.tank;
-    else if (role === "dealer") pos = POS.dealer;
-    else if (role === "supporter") pos = POS.supporter;
-  }
+  if (isCounter || target === "boss") pos = POS.boss;
+  else if (target?.startsWith("slot")) pos = posOf(target, participants);
 
   let label = "";
   let color = "#ffffff";
   const crit = (frame as { crit?: boolean }).crit;
   const weak = (frame as { weakness?: boolean }).weakness;
   const resist = (frame as { resist?: boolean }).resist;
-
   if (heal) {
     label = `+${heal.toLocaleString()}`;
     color = "#34d399";
@@ -1774,11 +2360,7 @@ function DamageNumberOverlay({
         className="pointer-events-none absolute z-40 -translate-x-1/2"
         style={{ left: pos.left, top: pos.top }}
         initial={{ y: 12, opacity: 0, scale: 0.5 }}
-        animate={{
-          y: -90,
-          opacity: 1,
-          scale: crit ? 1.8 : weak ? 1.5 : 1.25,
-        }}
+        animate={{ y: -90, opacity: 1, scale: crit ? 1.8 : weak ? 1.5 : 1.25 }}
         exit={{ opacity: 0, y: -110 }}
         transition={{ duration: 1.4, ease: "easeOut" }}
       >
@@ -1802,31 +2384,6 @@ function DamageNumberOverlay({
             약점!
           </div>
         )}
-      </motion.div>
-    </AnimatePresence>
-  );
-}
-
-// ════════════════════════════════════════════
-// ░░ 라운드 시작 배너 ░░
-// ════════════════════════════════════════════
-
-function RoundIndicatorOverlay({ frame }: { frame: Ch4Frame | undefined }) {
-  if (!frame || frame.type !== "turn_start") return null;
-  const round = (frame as { round: number }).round;
-  return (
-    <AnimatePresence>
-      <motion.div
-        key={`round-${frame.t}`}
-        className="pointer-events-none absolute left-0 right-0 top-[14%] z-30 flex justify-center"
-        initial={{ opacity: 0, y: -16 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        <div className="rounded-full bg-black/70 px-5 py-1.5 text-xs font-bold tracking-[0.2em] text-purple-200 ring-1 ring-purple-700/50">
-          ROUND {round}
-        </div>
       </motion.div>
     </AnimatePresence>
   );
