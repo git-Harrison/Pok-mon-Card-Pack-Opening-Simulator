@@ -20,34 +20,34 @@ interface Props {
   onBack: () => void;
 }
 
-// 1× 기준 프레임 재생 시간 (속도 조절 가능)
+// 1× 기준 프레임 재생 시간 (전체적으로 ~30% 단축 — 기본 배속 빠르게)
 function frameDurationMs(f: Ch4Frame | undefined): number {
-  if (!f) return 800;
+  if (!f) return 600;
   switch (f.type) {
     case "battle_start":
-      return 1400;
+      return 1000;
     case "turn_start":
-      return 400;
+      return 260;
     case "turn_end":
-      return 150;
+      return 100;
     case "skill":
     case "boss_skill": {
       const k = (f as { kind?: string }).kind;
-      if (k === "aoe" || k === "heal_all") return 2600;
-      if (k === "ultimate") return 3000;
-      if (k === "multi_hit") return 2300;
-      return 2200;
+      if (k === "aoe" || k === "heal_all") return 1900;
+      if (k === "ultimate") return 2300;
+      if (k === "multi_hit") return 1700;
+      return 1600;
     }
     case "counter_reflect":
-      return 1000;
+      return 750;
     case "phase_transition":
-      return 2000;
+      return 1500;
     case "skip":
-      return 250;
+      return 160;
     case "battle_end":
-      return 3000;
+      return 2200;
     default:
-      return 800;
+      return 600;
   }
 }
 
@@ -353,7 +353,7 @@ export default function Ch4RaidReplay({ raid, boss, participants, onBack }: Prop
           participants={participants}
           state={state}
           slot={tankSlot}
-          size={92}
+          size={78}
           currentFrame={currentFrame}
         />
       </div>
@@ -761,7 +761,43 @@ function PartyFighter({
       >
         {p.starter.nickname}
       </div>
+      {/* ── 캐릭터 밑 HP 바 (가시성) ── */}
+      <FighterMiniHp st={st} width={Math.max(60, size * 0.95)} />
     </motion.div>
+  );
+}
+
+// — 캐릭터 발 밑 mini HP 바 —
+function FighterMiniHp({
+  st,
+  width,
+}: {
+  st: LiveState["slots"][number];
+  width: number;
+}) {
+  const pct = st.maxHp > 0 ? Math.max(0, (st.hp / st.maxHp) * 100) : 0;
+  const color = pct > 50 ? "#34d399" : pct > 25 ? "#fbbf24" : "#f87171";
+  return (
+    <div
+      className="absolute left-1/2 z-30 -translate-x-1/2"
+      style={{ bottom: -40, width }}
+    >
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-950/90 ring-1 ring-zinc-700/80">
+        <motion.div
+          className="h-full"
+          initial={false}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.4 }}
+          style={{ background: color, boxShadow: `0 0 4px ${color}aa` }}
+        />
+      </div>
+      <div
+        className="mt-0.5 text-center font-mono text-[8px] text-zinc-200"
+        style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}
+      >
+        {Math.max(0, st.hp).toLocaleString()}
+      </div>
+    </div>
   );
 }
 
@@ -2137,8 +2173,8 @@ function SkillBannerInline({
     }
   }
 
-  // 캐릭터 머리 위 배너 (sprite 위쪽 약 56-70px)
-  const offsetY = isBoss ? -110 : role === "tank" ? -74 : -58;
+  // 캐릭터 머리 위 배너 (sprite 위쪽)
+  const offsetY = isBoss ? -110 : role === "tank" ? -60 : -54;
 
   return (
     <AnimatePresence>
@@ -2232,17 +2268,21 @@ function DamageNumberOverlay({
             else if (t.resist) color = "#94a3b8";
             else color = "#fde68a";
           }
-          // multi_hit 의 경우 hit_index 로 staggered delay
-          const delay = typeof t.hit_index === "number" ? (t.hit_index - 1) * 0.12 : idx * 0.04;
+          // multi_hit: hit_index 로 staggered delay + 가로/세로 offset 으로 겹침 방지
+          const isMulti = typeof t.hit_index === "number";
+          const delay = isMulti ? (t.hit_index! - 1) * 0.14 : idx * 0.04;
+          // 멀티힛: hit_index 에 따라 좌우/위아래 분산 (지그재그)
+          const hitX = isMulti ? ((t.hit_index! - 1) % 2 === 0 ? -1 : 1) * (18 + ((t.hit_index! - 1) >> 1) * 14) : 0;
+          const hitY = isMulti ? -((t.hit_index! - 1) * 10) : 0;
           return (
             <motion.div
               key={`dmg-${frame.t}-${idx}`}
               className="pointer-events-none absolute z-40 -translate-x-1/2"
-              style={{ left: pos.left, top: pos.top }}
+              style={{ left: `calc(${pos.left} + ${hitX}px)`, top: `calc(${pos.top} + ${hitY}px)` }}
               initial={{ y: 12, opacity: 0, scale: 0.5 }}
               animate={{ y: -70, opacity: 1, scale: t.crit ? 1.6 : 1.15 }}
               exit={{ opacity: 0, y: -100 }}
-              transition={{ duration: 1.2, delay, ease: "easeOut" }}
+              transition={{ duration: 1.0, delay, ease: "easeOut" }}
             >
               <div
                 className="text-center text-2xl font-black tabular-nums"
