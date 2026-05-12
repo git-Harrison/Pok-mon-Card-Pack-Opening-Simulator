@@ -158,12 +158,13 @@ function findSlotByRole(
   return participants.find((p) => p.role === role)?.slot ?? null;
 }
 
-// 캐릭터 위치 (퍼센트, 컨테이너 기준)
+// 캐릭터 sprite 중심 좌표 (viewport % 기준).
+// 레이아웃이 -translate-x/y-1/2 로 anchor 되어있어 POS 값 = 실제 sprite 중심.
 const POS = {
-  boss: { left: "50%", top: "26%" },
-  tank: { left: "50%", top: "55%" },
-  dealer: { left: "26%", top: "67%" },
-  supporter: { left: "74%", top: "67%" },
+  boss:      { left: "50%", top: "26%" },
+  tank:      { left: "50%", top: "58%" },
+  dealer:    { left: "22%", top: "68%" },
+  supporter: { left: "78%", top: "68%" },
 } as const;
 
 function posOf(actor: string, participants: Ch4Participant[]) {
@@ -192,11 +193,35 @@ export default function Ch4RaidReplay({ raid, boss, participants, onBack }: Prop
   const [speed, setSpeed] = useState<1 | 2 | 4>(1);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ★ 누적 state 캐시 — forward 재생 시 매 프레임 0부터 다시 돌지 않게 O(1)
+  const cumulative = useRef<{
+    idx: number;
+    state: LiveState;
+    framesId: Ch4Frame[] | null;
+  }>({ idx: -1, state: { bossHp: 0, bossMaxHp: 0, bossAlive: true, bossPhase: 1, slots: [] }, framesId: null });
+
   const state = useMemo(() => {
-    let s = buildInitial(frames);
-    for (let i = 0; i <= idx && i < frames.length; i++) {
+    let prev = cumulative.current;
+    if (prev.framesId !== frames) {
+      prev = { idx: -1, state: buildInitial(frames), framesId: frames };
+    }
+    if (idx === prev.idx) {
+      cumulative.current = prev;
+      return prev.state;
+    }
+    if (idx < prev.idx) {
+      // rewind — 처음부터 재구축
+      let s = buildInitial(frames);
+      for (let i = 0; i <= idx && i < frames.length; i++) s = applyFrame(s, frames[i]);
+      cumulative.current = { idx, state: s, framesId: frames };
+      return s;
+    }
+    // forward — 새 프레임만 적용
+    let s = prev.state;
+    for (let i = prev.idx + 1; i <= idx && i < frames.length; i++) {
       s = applyFrame(s, frames[i]);
     }
+    cumulative.current = { idx, state: s, framesId: frames };
     return s;
   }, [idx, frames]);
 
@@ -274,24 +299,29 @@ export default function Ch4RaidReplay({ raid, boss, participants, onBack }: Prop
         <div className="w-7" aria-hidden />
       </div>
 
-      {/* 보스 영역 */}
-      <div className="absolute left-0 right-0 top-[6%] flex h-[38%] flex-col items-center justify-end">
+      {/* ── 보스 sprite (중심 = POS.boss) ── */}
+      <div
+        className="absolute z-[5] -translate-x-1/2 -translate-y-1/2"
+        style={{ left: POS.boss.left, top: POS.boss.top }}
+      >
         <CasterHighlight isActive={actor === "boss" && isSkillFrame} color="#fb7185" />
         <div className="relative">
           <BossSprite boss={boss} state={state} frame={currentFrame} />
           <div className="absolute -bottom-2 left-1/2 h-3 w-32 -translate-x-1/2 rounded-[50%] bg-black/60 blur-md" />
         </div>
-        <div className="mt-3 w-[88%]">
-          <BossHpBar
-            hp={state.bossHp}
-            maxHp={state.bossMaxHp}
-            phase={state.bossPhase}
-            damageFlash={isSkillFrame && target === "boss"}
-          />
-        </div>
       </div>
 
-      {/* 스킬명 배너 — 보스 HP 바 아래 (중앙 X) */}
+      {/* 보스 HP 바 — sprite 아래 */}
+      <div className="absolute left-1/2 top-[40%] z-[6] w-[88%] -translate-x-1/2">
+        <BossHpBar
+          hp={state.bossHp}
+          maxHp={state.bossMaxHp}
+          phase={state.bossPhase}
+          damageFlash={isSkillFrame && target === "boss"}
+        />
+      </div>
+
+      {/* 스킬명 배너 — 시전자 옆 */}
       <SkillBannerInline frame={currentFrame} participants={participants} />
 
       {/* Ground line */}
@@ -303,58 +333,63 @@ export default function Ch4RaidReplay({ raid, boss, participants, onBack }: Prop
         }}
       />
       <div
-        className="absolute left-[10%] right-[10%] top-[48%] h-[14px] -translate-y-[6px]"
+        className="absolute left-[10%] right-[10%] top-[48%] h-[14px] -translate-y-[6px] rounded-full"
         style={{
           background:
-            "radial-gradient(ellipse at center, rgba(168,85,247,0.25) 0%, transparent 70%)",
-          filter: "blur(4px)",
+            "radial-gradient(ellipse at center, rgba(168,85,247,0.22) 0%, transparent 70%)",
         }}
       />
 
-      {/* 파티 포메이션 */}
-      <div className="absolute left-0 right-0 top-[50%] h-[26%]">
-        {/* 탱커 선두 (중앙) */}
-        <div className="absolute left-1/2 top-[8%] -translate-x-1/2">
-          <CasterHighlight
-            isActive={actor === `slot${tankSlot}` && isSkillFrame}
-            color="#60a5fa"
-          />
-          <PartyFighter
-            participants={participants}
-            state={state}
-            slot={tankSlot}
-            size={92}
-            currentFrame={currentFrame}
-          />
-        </div>
-        {/* 딜러 후위 좌 */}
-        <div className="absolute left-[12%] bottom-[20%]">
-          <CasterHighlight
-            isActive={actor === `slot${dealerSlot}` && isSkillFrame}
-            color="#fb7185"
-          />
-          <PartyFighter
-            participants={participants}
-            state={state}
-            slot={dealerSlot}
-            size={66}
-            currentFrame={currentFrame}
-          />
-        </div>
-        {/* 서포터 후위 우 */}
-        <div className="absolute right-[12%] bottom-[20%]">
-          <CasterHighlight
-            isActive={actor === `slot${supporterSlot}` && isSkillFrame}
-            color="#34d399"
-          />
-          <PartyFighter
-            participants={participants}
-            state={state}
-            slot={supporterSlot}
-            size={66}
-            currentFrame={currentFrame}
-          />
-        </div>
+      {/* ── 탱커 (중심 = POS.tank) ── */}
+      <div
+        className="absolute z-[5] -translate-x-1/2 -translate-y-1/2"
+        style={{ left: POS.tank.left, top: POS.tank.top }}
+      >
+        <CasterHighlight
+          isActive={actor === `slot${tankSlot}` && isSkillFrame}
+          color="#60a5fa"
+        />
+        <PartyFighter
+          participants={participants}
+          state={state}
+          slot={tankSlot}
+          size={92}
+          currentFrame={currentFrame}
+        />
+      </div>
+      {/* ── 딜러 (중심 = POS.dealer) ── */}
+      <div
+        className="absolute z-[5] -translate-x-1/2 -translate-y-1/2"
+        style={{ left: POS.dealer.left, top: POS.dealer.top }}
+      >
+        <CasterHighlight
+          isActive={actor === `slot${dealerSlot}` && isSkillFrame}
+          color="#fb7185"
+        />
+        <PartyFighter
+          participants={participants}
+          state={state}
+          slot={dealerSlot}
+          size={66}
+          currentFrame={currentFrame}
+        />
+      </div>
+      {/* ── 서포터 (중심 = POS.supporter) ── */}
+      <div
+        className="absolute z-[5] -translate-x-1/2 -translate-y-1/2"
+        style={{ left: POS.supporter.left, top: POS.supporter.top }}
+      >
+        <CasterHighlight
+          isActive={actor === `slot${supporterSlot}` && isSkillFrame}
+          color="#34d399"
+        />
+        <PartyFighter
+          participants={participants}
+          state={state}
+          slot={supporterSlot}
+          size={66}
+          currentFrame={currentFrame}
+        />
       </div>
 
       {/* 파티 HP 바 (하단, 큼지막) */}
@@ -587,38 +622,26 @@ function BossSprite({
         src={bossSpriteUrl(boss.sprite_key)}
         alt={boss.name}
         className="h-[180px] w-[180px] object-contain"
-        style={{ imageRendering: "pixelated" }}
+        style={{
+          imageRendering: "pixelated",
+          willChange: "transform, opacity",
+          // 광폭화 시 정적 빨강 글로우 (애니메이션 X — GPU 절약)
+          filter:
+            !state.bossAlive
+              ? "grayscale(1) brightness(0.4)"
+              : state.bossPhase === 2
+              ? "drop-shadow(0 0 18px #ef4444) drop-shadow(0 0 36px #b91c1c)"
+              : undefined,
+        }}
         animate={
           isHit
             ? {
                 x: [0, -8, 8, -6, 6, 0],
-                filter: [
-                  "brightness(1)",
-                  "brightness(2.8) sepia(1) saturate(5) hue-rotate(-40deg)",
-                  "brightness(1)",
-                ],
-              }
-            : !state.bossAlive
-            ? { filter: "grayscale(1) brightness(0.4)" }
-            : state.bossPhase === 2
-            ? {
-                filter: [
-                  "brightness(1) hue-rotate(0deg)",
-                  "brightness(1.3) hue-rotate(-30deg)",
-                  "brightness(1) hue-rotate(0deg)",
-                ],
+                opacity: [1, 0.6, 1, 0.7, 1],
               }
             : {}
         }
-        transition={
-          isHit
-            ? { duration: 0.55 }
-            : !state.bossAlive
-            ? { duration: 0.6 }
-            : state.bossPhase === 2
-            ? { duration: 2, repeat: Infinity }
-            : { duration: 0.3 }
-        }
+        transition={isHit ? { duration: 0.5 } : { duration: 0.3 }}
       />
     </motion.div>
   );
@@ -1028,28 +1051,10 @@ function BeamRayFx({
       <svg className="absolute inset-0 h-full w-full">
         <defs>
           <filter id="beamGlow">
-            <feGaussianBlur stdDeviation="6" />
-          </filter>
-          <filter id="beamGlowSoft">
-            <feGaussianBlur stdDeviation="12" />
+            <feGaussianBlur stdDeviation="3" />
           </filter>
         </defs>
-        {/* 외곽 글로우 (가장 흐림) */}
-        <motion.line
-          x1={from.left}
-          y1={from.top}
-          x2={to.left}
-          y2={to.top}
-          stroke={color}
-          strokeOpacity="0.6"
-          strokeWidth="32"
-          strokeLinecap="round"
-          filter="url(#beamGlowSoft)"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 0.7, 0.7, 0] }}
-          transition={{ duration: 1.4, times: [0, 0.25, 0.7, 1] }}
-        />
-        {/* 중간 빔 */}
+        {/* 중간 빔 (외곽 글로우 layer 제거 — blur 비싸서) */}
         <motion.line
           x1={from.left}
           y1={from.top}
@@ -1103,8 +1108,8 @@ function BeamRayFx({
         animate={{ width: [30, 340], height: [30, 340], opacity: [0, 1, 0] }}
         transition={{ duration: 1.0, delay: 0.35, times: [0, 0.4, 1] }}
       />
-      {/* 임팩트 스파크 (8 방향) */}
-      {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+      {/* 임팩트 스파크 (6 방향) */}
+      {[0, 60, 120, 180, 240, 300].map((deg) => (
         <motion.div
           key={deg}
           className="absolute -translate-x-1/2 -translate-y-1/2"
@@ -1117,6 +1122,7 @@ function BeamRayFx({
             transform: `rotate(${deg}deg)`,
             transformOrigin: "top center",
             boxShadow: `0 0 8px ${color2}`,
+            willChange: "transform, opacity",
           }}
           initial={{ opacity: 0, scaleY: 0 }}
           animate={{ opacity: [0, 1, 0], scaleY: [0, 1.5, 0.5] }}
@@ -1240,55 +1246,54 @@ function SummonAboveFx({
         animate={{ y: [-400, 0, 0], scale: [0.4, 1.4, 1.1], opacity: [0, 1, 1, 0] }}
         transition={{ duration: 1.4, times: [0, 0.55, 0.7, 1] }}
       />
-      {/* 꼬리 streak */}
+      {/* 꼬리 streak (blur 제거) */}
       <motion.div
         className="absolute -translate-x-1/2"
         style={{
           left: target.left,
           top: `calc(${target.top} - 200px)`,
-          width: 30,
+          width: 22,
           height: 220,
-          background: `linear-gradient(to bottom, transparent 0%, ${color}88 60%, ${color2} 100%)`,
-          filter: "blur(8px)",
+          background: `linear-gradient(to bottom, transparent 0%, ${color}aa 50%, ${color2} 100%)`,
           borderRadius: 999,
+          willChange: "transform, opacity",
         }}
         initial={{ y: -300, opacity: 0, scaleY: 0.3 }}
         animate={{ y: [-300, 0, 0], opacity: [0, 1, 0], scaleY: [0.3, 1.2, 0.5] }}
-        transition={{ duration: 1.2, times: [0, 0.55, 0.9] }}
+        transition={{ duration: 1.1, times: [0, 0.55, 0.9] }}
       />
-      {/* 임팩트 폭발 (3중) */}
+      {/* 임팩트 폭발 */}
       <motion.div
         className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           left: target.left,
           top: target.top,
           background: `radial-gradient(circle, #ffffff 0%, ${color2} 25%, ${color}aa 55%, transparent 80%)`,
-          boxShadow: `0 0 80px ${color}, 0 0 160px ${color}`,
+          boxShadow: `0 0 60px ${color}`,
+          willChange: "transform, opacity",
         }}
         initial={{ width: 0, height: 0, opacity: 0 }}
-        animate={{ width: [0, 320, 240], height: [0, 320, 240], opacity: [0, 1, 0] }}
+        animate={{ width: [0, 280, 220], height: [0, 280, 220], opacity: [0, 1, 0] }}
+        transition={{ duration: 1.0, delay: 0.55 }}
+      />
+      {/* 충격파 ring */}
+      <motion.div
+        className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-[6px]"
+        style={{
+          left: target.left,
+          top: target.top,
+          borderColor: color,
+          boxShadow: `0 0 30px ${color}`,
+          willChange: "transform, opacity",
+        }}
+        initial={{ width: 40, height: 40, opacity: 0 }}
+        animate={{ width: [40, 380], height: [40, 380], opacity: [0, 1, 0] }}
         transition={{ duration: 1.1, delay: 0.55 }}
       />
-      {/* 충격파 ring 2개 */}
-      {[0, 0.15].map((delay, i) => (
-        <motion.div
-          key={i}
-          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-[6px]"
-          style={{
-            left: target.left,
-            top: target.top,
-            borderColor: i === 0 ? color2 : color,
-            boxShadow: `0 0 40px ${color}`,
-          }}
-          initial={{ width: 40, height: 40, opacity: 0 }}
-          animate={{ width: [40, 420], height: [40, 420], opacity: [0, 1, 0] }}
-          transition={{ duration: 1.2, delay: 0.55 + delay }}
-        />
-      ))}
-      {/* 폭발 파편 (12 방향) */}
-      {Array.from({ length: 12 }).map((_, i) => {
-        const deg = (i * 360) / 12;
-        const dist = 80 + Math.random() * 40;
+      {/* 폭발 파편 (6 방향) */}
+      {Array.from({ length: 6 }).map((_, i) => {
+        const deg = (i * 360) / 6;
+        const dist = 90;
         return (
           <motion.div
             key={i}
@@ -1296,19 +1301,20 @@ function SummonAboveFx({
             style={{
               left: target.left,
               top: target.top,
-              width: 14,
-              height: 14,
-              background: `radial-gradient(circle, #ffffff, ${color})`,
-              boxShadow: `0 0 14px ${color2}`,
+              width: 12,
+              height: 12,
+              background: color2,
+              boxShadow: `0 0 10px ${color}`,
+              willChange: "transform, opacity",
             }}
             initial={{ x: 0, y: 0, opacity: 0, scale: 0.4 }}
             animate={{
               x: Math.cos((deg * Math.PI) / 180) * dist,
               y: Math.sin((deg * Math.PI) / 180) * dist,
               opacity: [0, 1, 0],
-              scale: [0.4, 1.6, 0.2],
+              scale: [0.4, 1.4, 0.2],
             }}
-            transition={{ duration: 1.0, delay: 0.6, ease: "easeOut" }}
+            transition={{ duration: 0.9, delay: 0.6, ease: "easeOut" }}
           />
         );
       })}
@@ -1316,7 +1322,7 @@ function SummonAboveFx({
   );
 }
 
-// — 광역 토네이도/충격파 —
+// — 광역 토네이도/충격파 (경량화: ripple 3 + 코어 + 8 파편) —
 function AoeWaveFx({
   origin,
   color,
@@ -1328,18 +1334,19 @@ function AoeWaveFx({
 }) {
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
-      {/* 화면 전체 vignette flash */}
+      {/* 화면 vignette */}
       <motion.div
         className="absolute inset-0"
         style={{
           background: `radial-gradient(circle at ${origin.left} ${origin.top}, transparent 10%, ${color}33 60%, ${color}88 100%)`,
+          willChange: "opacity",
         }}
         initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 0.9, 0] }}
-        transition={{ duration: 1.6 }}
+        animate={{ opacity: [0, 0.85, 0] }}
+        transition={{ duration: 1.4 }}
       />
-      {/* 다중 ripple (5개) */}
-      {[0, 0.12, 0.24, 0.36, 0.5].map((delay, i) => (
+      {/* 다중 ripple (3개) */}
+      {[0, 0.18, 0.36].map((delay, i) => (
         <motion.div
           key={i}
           className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
@@ -1349,54 +1356,32 @@ function AoeWaveFx({
             borderWidth: 8,
             borderStyle: "solid",
             borderColor: i % 2 === 0 ? color : color2,
-            boxShadow: `0 0 50px ${color}, inset 0 0 50px ${color2}`,
-            filter: "blur(1px)",
+            boxShadow: `0 0 36px ${color}`,
+            willChange: "transform, opacity",
           }}
           initial={{ width: 40, height: 40, opacity: 0 }}
-          animate={{ width: [40, 900], height: [40, 900], opacity: [0, 1, 0] }}
-          transition={{ duration: 1.8, delay, times: [0, 0.3, 1], ease: "easeOut" }}
+          animate={{ width: [40, 800], height: [40, 800], opacity: [0, 1, 0] }}
+          transition={{ duration: 1.4, delay, times: [0, 0.3, 1], ease: "easeOut" }}
         />
       ))}
-      {/* 회전 토네이도 (큼지막) */}
-      <motion.div
-        className="absolute -translate-x-1/2 -translate-y-1/2"
-        style={{ left: origin.left, top: origin.top }}
-        animate={{ rotate: 720 }}
-        transition={{ duration: 1.6, ease: "linear" }}
-      >
-        <motion.div
-          className="rounded-full"
-          style={{
-            width: 220,
-            height: 220,
-            background: `conic-gradient(${color}, transparent, ${color2}, transparent, ${color}, transparent, ${color2}, transparent, ${color})`,
-            filter: "blur(8px)",
-          }}
-          initial={{ opacity: 0, scale: 0.2 }}
-          animate={{ opacity: [0, 1, 0.7, 0], scale: [0.2, 1.6, 2.2, 2.6] }}
-          transition={{ duration: 1.6 }}
-        />
-      </motion.div>
-      {/* 코어 폭발 (백색) */}
+      {/* 코어 폭발 */}
       <motion.div
         className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           left: origin.left,
           top: origin.top,
           background: `radial-gradient(circle, #ffffff 0%, ${color2}aa 30%, ${color}aa 60%, transparent 90%)`,
-          boxShadow: `0 0 80px ${color}, 0 0 160px ${color}`,
+          boxShadow: `0 0 60px ${color}`,
+          willChange: "transform, opacity",
         }}
         initial={{ width: 0, height: 0, opacity: 0 }}
-        animate={{
-          width: [0, 280, 320],
-          height: [0, 280, 320],
-          opacity: [0, 1, 0],
-        }}
-        transition={{ duration: 0.9 }}
+        animate={{ width: [0, 260, 300], height: [0, 260, 300], opacity: [0, 1, 0] }}
+        transition={{ duration: 0.85 }}
       />
-      {/* 외곽 파편 (16 방향) */}
-      {Array.from({ length: 16 }).map((_, i) => {
-        const deg = (i * 360) / 16;
+      {/* 외곽 파편 (8 방향) */}
+      {Array.from({ length: 8 }).map((_, i) => {
+        const deg = (i * 360) / 8;
+        const dist = 200;
         return (
           <motion.div
             key={i}
@@ -1406,17 +1391,18 @@ function AoeWaveFx({
               top: origin.top,
               width: 12,
               height: 12,
-              background: `radial-gradient(circle, #ffffff, ${color2})`,
-              boxShadow: `0 0 14px ${color}`,
+              background: color2,
+              boxShadow: `0 0 12px ${color}`,
+              willChange: "transform, opacity",
             }}
             initial={{ x: 0, y: 0, opacity: 0 }}
             animate={{
-              x: Math.cos((deg * Math.PI) / 180) * (180 + (i % 3) * 30),
-              y: Math.sin((deg * Math.PI) / 180) * (180 + (i % 3) * 30),
+              x: Math.cos((deg * Math.PI) / 180) * dist,
+              y: Math.sin((deg * Math.PI) / 180) * dist,
               opacity: [0, 1, 0],
-              scale: [0.4, 1.4, 0.2],
+              scale: [0.4, 1.2, 0.2],
             }}
-            transition={{ duration: 1.4, delay: 0.2, ease: "easeOut" }}
+            transition={{ duration: 1.2, delay: 0.15, ease: "easeOut" }}
           />
         );
       })}
@@ -1582,10 +1568,9 @@ function AuraBuffFx({ actor, color }: { actor: { left: string; top: string }; co
   );
 }
 
-// — 회복 반짝이 (sparkle) —
+// — 회복 반짝이 (sparkle, 경량화 8개) —
 function SparkleHealFx({ target, color }: { target: { left: string; top: string }; color: string }) {
-  // 16개 sparkle 무작위 위치
-  const sparkleCount = 16;
+  const sparkleCount = 8;
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
       {Array.from({ length: sparkleCount }).map((_, i) => {
@@ -1758,9 +1743,9 @@ function ShadowSwipeFx({ target, color }: { target: { left: string; top: string 
         animate={{ width: [0, 260, 200], height: [0, 260, 200], opacity: [0, 1, 0] }}
         transition={{ duration: 1.2 }}
       />
-      {/* 검은 안개 입자 */}
-      {Array.from({ length: 10 }).map((_, i) => {
-        const deg = (i * 360) / 10;
+      {/* 검은 안개 입자 (6개, blur 제거) */}
+      {Array.from({ length: 6 }).map((_, i) => {
+        const deg = (i * 360) / 6;
         return (
           <motion.div
             key={i}
@@ -1768,19 +1753,19 @@ function ShadowSwipeFx({ target, color }: { target: { left: string; top: string 
             style={{
               left: target.left,
               top: target.top,
-              width: 24,
-              height: 24,
+              width: 22,
+              height: 22,
               background: `radial-gradient(circle, ${color}cc 0%, #000000 70%)`,
-              filter: "blur(6px)",
+              willChange: "transform, opacity",
             }}
             initial={{ x: 0, y: 0, opacity: 0, scale: 0.5 }}
             animate={{
               x: Math.cos((deg * Math.PI) / 180) * 110,
               y: Math.sin((deg * Math.PI) / 180) * 110,
-              opacity: [0, 1, 0],
-              scale: [0.5, 1.6, 0.3],
+              opacity: [0, 0.9, 0],
+              scale: [0.5, 1.4, 0.3],
             }}
-            transition={{ duration: 1.3, delay: 0.35, ease: "easeOut" }}
+            transition={{ duration: 1.2, delay: 0.35, ease: "easeOut" }}
           />
         );
       })}
@@ -2000,7 +1985,7 @@ function MultiStrikeFx({
   );
 }
 
-// — 필살기 fullscreen burst — 화면 전체 dramatic 연출 —
+// — 필살기 fullscreen burst — 화면 전체 dramatic 연출 (경량화) —
 function UltimateBurstFx({
   actor,
   color,
@@ -2012,128 +1997,99 @@ function UltimateBurstFx({
   color2: string;
   role: "tank" | "dealer" | "supporter" | "boss";
 }) {
+  // 8 spoke 정적 회전 (회전은 transform 1개로 처리, 각 spoke 는 정적)
+  const SPOKES = 8;
   return (
     <div className="pointer-events-none absolute inset-0 z-30">
-      {/* 화면 전체 진동/플래시 */}
+      {/* 화면 전체 vignette */}
       <motion.div
         className="absolute inset-0"
         style={{
-          background: `radial-gradient(circle at ${actor.left} ${actor.top}, ${color2}cc 0%, ${color}66 30%, ${color}33 60%, #000000ee 100%)`,
+          background: `radial-gradient(circle at ${actor.left} ${actor.top}, ${color2}cc 0%, ${color}55 35%, transparent 70%)`,
+          willChange: "opacity",
         }}
         initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 0.95, 0.6, 0] }}
-        transition={{ duration: 2.0, times: [0, 0.2, 0.6, 1] }}
+        animate={{ opacity: [0, 0.9, 0.5, 0] }}
+        transition={{ duration: 1.6, times: [0, 0.2, 0.6, 1] }}
       />
-      {/* 흰색 강력 플래시 */}
+      {/* 흰 플래시 */}
       <motion.div
         className="absolute inset-0 bg-white"
+        style={{ willChange: "opacity" }}
         initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 0.8, 0] }}
-        transition={{ duration: 0.45, delay: 0.15 }}
+        animate={{ opacity: [0, 0.7, 0] }}
+        transition={{ duration: 0.4, delay: 0.1 }}
       />
-      {/* 시전자 위 거대 sigil */}
+      {/* 시전자 위 거대 sigil (transform-only animation) */}
       <motion.div
         className="absolute -translate-x-1/2 -translate-y-1/2"
-        style={{ left: actor.left, top: actor.top }}
-        initial={{ opacity: 0, scale: 0.4, rotate: -180 }}
-        animate={{ opacity: [0, 1, 0.7, 0], scale: [0.4, 1.6, 2.0, 2.4], rotate: 360 }}
-        transition={{ duration: 1.6, times: [0, 0.3, 0.7, 1] }}
+        style={{ left: actor.left, top: actor.top, willChange: "transform, opacity" }}
+        initial={{ opacity: 0, scale: 0.4, rotate: -90 }}
+        animate={{ opacity: [0, 1, 0.7, 0], scale: [0.4, 1.6, 2.0, 2.4], rotate: 180 }}
+        transition={{ duration: 1.4, times: [0, 0.3, 0.7, 1] }}
       >
-        <div style={{ filter: `drop-shadow(0 0 30px ${color}) drop-shadow(0 0 60px ${color})` }}>
+        <div style={{ filter: `drop-shadow(0 0 24px ${color})` }}>
           <RoleSigil role={role} size={160} color={color} />
         </div>
       </motion.div>
-      {/* 동심 ring storm */}
-      {[0, 0.18, 0.36, 0.54].map((delay, i) => (
+      {/* ring 3개 */}
+      {[0, 0.2, 0.4].map((delay, i) => (
         <motion.div
           key={i}
           className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
           style={{
             left: actor.left,
             top: actor.top,
-            borderWidth: 6,
+            borderWidth: 5,
             borderStyle: "solid",
             borderColor: i % 2 === 0 ? color : color2,
-            boxShadow: `0 0 60px ${color}, inset 0 0 40px ${color2}`,
+            boxShadow: `0 0 40px ${color}`,
+            willChange: "transform, opacity",
           }}
           initial={{ width: 40, height: 40, opacity: 0 }}
-          animate={{
-            width: [40, 1400],
-            height: [40, 1400],
-            opacity: [0, 1, 0],
-          }}
-          transition={{ duration: 2.0, delay, ease: "easeOut" }}
+          animate={{ width: [40, 1200], height: [40, 1200], opacity: [0, 1, 0] }}
+          transition={{ duration: 1.6, delay, ease: "easeOut" }}
         />
       ))}
-      {/* 회전 광선 spokes */}
+      {/* 광선 spokes — wrapper 1개만 회전, 안쪽 spoke 는 static */}
       <motion.div
         className="absolute -translate-x-1/2 -translate-y-1/2"
-        style={{ left: actor.left, top: actor.top }}
-        initial={{ rotate: 0 }}
-        animate={{ rotate: 720 }}
-        transition={{ duration: 2.0, ease: "linear" }}
+        style={{ left: actor.left, top: actor.top, willChange: "transform" }}
+        initial={{ rotate: 0, opacity: 0 }}
+        animate={{ rotate: 360, opacity: [0, 1, 0.6, 0] }}
+        transition={{ duration: 1.6, times: [0, 0.2, 0.7, 1], ease: "linear" }}
       >
-        {Array.from({ length: 12 }).map((_, i) => {
-          const deg = (i * 360) / 12;
+        {Array.from({ length: SPOKES }).map((_, i) => {
+          const deg = (i * 360) / SPOKES;
           return (
-            <motion.div
+            <div
               key={i}
               className="absolute -translate-x-1/2 -translate-y-1/2"
               style={{
-                width: 6,
-                height: 240,
-                background: `linear-gradient(to top, transparent, ${color}, ${color2}, ${color}, transparent)`,
-                boxShadow: `0 0 18px ${color}, 0 0 30px ${color2}`,
+                width: 4,
+                height: 220,
+                background: `linear-gradient(to top, transparent, ${color}, ${color2}, transparent)`,
+                boxShadow: `0 0 12px ${color}`,
                 transform: `rotate(${deg}deg)`,
-                transformOrigin: "center",
               }}
-              initial={{ opacity: 0, scaleY: 0 }}
-              animate={{ opacity: [0, 1, 0.7, 0], scaleY: [0, 1.5, 2.2, 2.8] }}
-              transition={{ duration: 1.8, delay: 0.2 }}
             />
           );
         })}
       </motion.div>
-      {/* 파티클 storm — 화면 전체 */}
-      {Array.from({ length: 24 }).map((_, i) => {
-        const deg = (i * 360) / 24;
-        const dist = 180 + ((i * 41) % 240);
-        return (
-          <motion.div
-            key={i}
-            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
-            style={{
-              left: actor.left,
-              top: actor.top,
-              width: 18,
-              height: 18,
-              background: `radial-gradient(circle, #ffffff, ${color2}, ${color})`,
-              boxShadow: `0 0 16px ${color2}`,
-            }}
-            initial={{ x: 0, y: 0, opacity: 0, scale: 0.3 }}
-            animate={{
-              x: Math.cos((deg * Math.PI) / 180) * dist,
-              y: Math.sin((deg * Math.PI) / 180) * dist,
-              opacity: [0, 1, 0],
-              scale: [0.3, 2.0, 0.2],
-            }}
-            transition={{ duration: 1.8, delay: 0.3 + (i % 6) * 0.04, ease: "easeOut" }}
-          />
-        );
-      })}
       {/* ULTIMATE 텍스트 */}
       <motion.div
         className="absolute left-1/2 top-[22%] -translate-x-1/2"
+        style={{ willChange: "transform, opacity" }}
         initial={{ opacity: 0, scale: 0.5, y: 20 }}
         animate={{ opacity: [0, 1, 1, 0], scale: [0.5, 1.3, 1.1, 1.4], y: [20, 0, -10, -30] }}
-        transition={{ duration: 1.6, delay: 0.25 }}
+        transition={{ duration: 1.5, delay: 0.2 }}
       >
         <div
           className="text-3xl font-black tracking-[0.3em]"
           style={{
             color,
             WebkitTextStroke: `2px ${color2}`,
-            textShadow: `0 0 30px ${color}, 0 0 60px ${color}, 0 4px 8px rgba(0,0,0,0.95)`,
+            textShadow: `0 0 24px ${color}, 0 4px 8px rgba(0,0,0,0.95)`,
           }}
         >
           ULTIMATE
