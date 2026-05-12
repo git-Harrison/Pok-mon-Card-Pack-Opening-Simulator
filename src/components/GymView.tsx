@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
@@ -993,8 +994,9 @@ function PixelTownBackgroundCh4() {
 }
 
 /** 미지의 영역 안내 overlay — 자물쇠 이모티콘 X, 웅장한 dark text +
- *  점멸 룬 + 핏빛 강조. */
+ *  점멸 룬 + 핏빛 강조. 하단 "도전" 버튼으로 /gym/ch4 진입. */
 function UnknownRealmOverlay() {
+  const router = useRouter();
   return (
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
       <style>{`
@@ -1069,6 +1071,16 @@ function UnknownRealmOverlay() {
           <span>Φ</span>
           <span>Ψ</span>
         </div>
+        <button
+          type="button"
+          onClick={() => router.push("/gym/ch4")}
+          className="pointer-events-auto mt-4 rounded-lg border border-purple-600/60 bg-purple-950/70 px-5 py-2 text-xs font-black tracking-[0.25em] text-purple-200 transition hover:bg-purple-900 hover:text-purple-100"
+          style={{
+            boxShadow: "0 0 18px -4px rgba(124,58,237,0.55)",
+          }}
+        >
+          진입하기
+        </button>
       </div>
     </div>
   );
