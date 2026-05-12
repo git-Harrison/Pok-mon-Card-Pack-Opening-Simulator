@@ -125,10 +125,10 @@ function findSlotByRole(
 
 // 캐릭터 위치 (퍼센트, 컨테이너 기준)
 const POS = {
-  boss: { left: "50%", top: "28%" },
-  tank: { left: "50%", top: "62%" },
-  dealer: { left: "27%", top: "76%" },
-  supporter: { left: "73%", top: "76%" },
+  boss: { left: "50%", top: "26%" },
+  tank: { left: "50%", top: "55%" },
+  dealer: { left: "26%", top: "67%" },
+  supporter: { left: "74%", top: "67%" },
 } as const;
 
 function posOf(actor: string, participants: Ch4Participant[]) {
@@ -250,13 +250,13 @@ export default function Ch4RaidReplay({ raid, boss, participants, onBack }: Prop
       </div>
 
       {/* 보스 영역 */}
-      <div className="absolute left-0 right-0 top-[8%] flex h-[40%] flex-col items-center justify-end">
+      <div className="absolute left-0 right-0 top-[6%] flex h-[38%] flex-col items-center justify-end">
         <CasterHighlight isActive={actor === "boss" && isSkillFrame} color="#fb7185" />
         <div className="relative">
           <BossSprite boss={boss} state={state} frame={currentFrame} />
           <div className="absolute -bottom-2 left-1/2 h-3 w-32 -translate-x-1/2 rounded-[50%] bg-black/60 blur-md" />
         </div>
-        <div className="mt-4 w-[88%]">
+        <div className="mt-3 w-[88%]">
           <BossHpBar
             hp={state.bossHp}
             maxHp={state.bossMaxHp}
@@ -271,14 +271,14 @@ export default function Ch4RaidReplay({ raid, boss, participants, onBack }: Prop
 
       {/* Ground line */}
       <div
-        className="absolute left-0 right-0 top-[55%] h-px"
+        className="absolute left-0 right-0 top-[48%] h-px"
         style={{
           background:
             "linear-gradient(90deg, transparent 0%, rgba(168,85,247,0.4) 50%, transparent 100%)",
         }}
       />
       <div
-        className="absolute left-[10%] right-[10%] top-[55%] h-[14px] -translate-y-[6px]"
+        className="absolute left-[10%] right-[10%] top-[48%] h-[14px] -translate-y-[6px]"
         style={{
           background:
             "radial-gradient(ellipse at center, rgba(168,85,247,0.25) 0%, transparent 70%)",
@@ -287,7 +287,7 @@ export default function Ch4RaidReplay({ raid, boss, participants, onBack }: Prop
       />
 
       {/* 파티 포메이션 */}
-      <div className="absolute left-0 right-0 top-[58%] h-[28%]">
+      <div className="absolute left-0 right-0 top-[50%] h-[26%]">
         {/* 탱커 선두 (중앙) */}
         <div className="absolute left-1/2 top-[8%] -translate-x-1/2">
           <CasterHighlight
@@ -303,7 +303,7 @@ export default function Ch4RaidReplay({ raid, boss, participants, onBack }: Prop
           />
         </div>
         {/* 딜러 후위 좌 */}
-        <div className="absolute left-[14%] bottom-[8%]">
+        <div className="absolute left-[12%] bottom-[20%]">
           <CasterHighlight
             isActive={actor === `slot${dealerSlot}` && isSkillFrame}
             color="#fb7185"
@@ -317,7 +317,7 @@ export default function Ch4RaidReplay({ raid, boss, participants, onBack }: Prop
           />
         </div>
         {/* 서포터 후위 우 */}
-        <div className="absolute right-[14%] bottom-[8%]">
+        <div className="absolute right-[12%] bottom-[20%]">
           <CasterHighlight
             isActive={actor === `slot${supporterSlot}` && isSkillFrame}
             color="#34d399"
@@ -649,8 +649,8 @@ function PartyFighter({
         style={{ width: size * 0.7, bottom: -2 }}
       />
       <div
-        className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-bold text-zinc-100 drop-shadow-lg"
-        style={{ bottom: -16 }}
+        className="absolute left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/80 px-2 py-0.5 text-[11px] font-bold text-zinc-50 ring-1 ring-zinc-700/70 drop-shadow-lg"
+        style={{ bottom: -22 }}
       >
         {p.starter.nickname}
       </div>
@@ -876,114 +876,208 @@ function BeamRayFx({
 }) {
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
+      {/* 시전자 차징 (출발점 발광) */}
+      <motion.div
+        className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
+        style={{
+          left: from.left,
+          top: from.top,
+          background: `radial-gradient(circle, #ffffff 0%, ${color2} 35%, transparent 70%)`,
+          boxShadow: `0 0 60px ${color2}, 0 0 120px ${color}`,
+        }}
+        initial={{ width: 0, height: 0, opacity: 0 }}
+        animate={{
+          width: [0, 100, 60, 0],
+          height: [0, 100, 60, 0],
+          opacity: [0, 1, 1, 0],
+        }}
+        transition={{ duration: 1.6, times: [0, 0.2, 0.4, 1] }}
+      />
       {/* 광선 본체: from 에서 to 까지 SVG line */}
       <svg className="absolute inset-0 h-full w-full">
         <defs>
-          <linearGradient id="beamGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor={color} stopOpacity="0.1" />
-            <stop offset="50%" stopColor={color2} stopOpacity="1" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.1" />
-          </linearGradient>
           <filter id="beamGlow">
-            <feGaussianBlur stdDeviation="3" />
+            <feGaussianBlur stdDeviation="6" />
+          </filter>
+          <filter id="beamGlowSoft">
+            <feGaussianBlur stdDeviation="12" />
           </filter>
         </defs>
+        {/* 외곽 글로우 (가장 흐림) */}
         <motion.line
           x1={from.left}
           y1={from.top}
           x2={to.left}
           y2={to.top}
           stroke={color}
-          strokeWidth="6"
+          strokeOpacity="0.6"
+          strokeWidth="32"
+          strokeLinecap="round"
+          filter="url(#beamGlowSoft)"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.7, 0.7, 0] }}
+          transition={{ duration: 1.4, times: [0, 0.25, 0.7, 1] }}
+        />
+        {/* 중간 빔 */}
+        <motion.line
+          x1={from.left}
+          y1={from.top}
+          x2={to.left}
+          y2={to.top}
+          stroke={color2}
+          strokeWidth="14"
           strokeLinecap="round"
           filter="url(#beamGlow)"
-          initial={{ opacity: 0, strokeWidth: 1 }}
-          animate={{ opacity: [0, 1, 1, 0], strokeWidth: [1, 10, 8, 2] }}
-          transition={{ duration: 1.2, times: [0, 0.2, 0.7, 1] }}
+          initial={{ opacity: 0, strokeWidth: 2 }}
+          animate={{ opacity: [0, 1, 1, 0], strokeWidth: [2, 20, 16, 4] }}
+          transition={{ duration: 1.4, times: [0, 0.2, 0.7, 1] }}
         />
+        {/* 코어 (하얀 중심선) */}
         <motion.line
           x1={from.left}
           y1={from.top}
           x2={to.left}
           y2={to.top}
           stroke="#ffffff"
-          strokeWidth="2"
+          strokeWidth="5"
           strokeLinecap="round"
           initial={{ opacity: 0 }}
           animate={{ opacity: [0, 1, 1, 0] }}
-          transition={{ duration: 1.2, times: [0, 0.2, 0.7, 1] }}
+          transition={{ duration: 1.4, times: [0, 0.2, 0.7, 1] }}
         />
       </svg>
-      {/* 타겟 임팩트 폭발 */}
+      {/* 타겟 임팩트 폭발 (3중 레이어) */}
       <motion.div
         className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           left: to.left,
           top: to.top,
-          background: `radial-gradient(circle, ${color2} 0%, ${color}88 40%, transparent 70%)`,
-          boxShadow: `0 0 40px ${color}`,
+          background: `radial-gradient(circle, #ffffff 0%, ${color2} 35%, ${color}aa 60%, transparent 80%)`,
+          boxShadow: `0 0 80px ${color}, 0 0 160px ${color}`,
         }}
         initial={{ width: 0, height: 0, opacity: 0 }}
-        animate={{ width: [0, 120, 80], height: [0, 120, 80], opacity: [0, 1, 0] }}
-        transition={{ duration: 1.2, times: [0, 0.4, 1] }}
+        animate={{ width: [0, 240, 180], height: [0, 240, 180], opacity: [0, 1, 0] }}
+        transition={{ duration: 1.4, times: [0, 0.4, 1] }}
       />
+      {/* 임팩트 후속 충격파 */}
+      <motion.div
+        className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-4"
+        style={{
+          left: to.left,
+          top: to.top,
+          borderColor: color2,
+          boxShadow: `0 0 30px ${color2}`,
+        }}
+        initial={{ width: 30, height: 30, opacity: 0 }}
+        animate={{ width: [30, 340], height: [30, 340], opacity: [0, 1, 0] }}
+        transition={{ duration: 1.0, delay: 0.35, times: [0, 0.4, 1] }}
+      />
+      {/* 임팩트 스파크 (8 방향) */}
+      {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+        <motion.div
+          key={deg}
+          className="absolute -translate-x-1/2 -translate-y-1/2"
+          style={{
+            left: to.left,
+            top: to.top,
+            width: 4,
+            height: 60,
+            background: `linear-gradient(to bottom, ${color2}, transparent)`,
+            transform: `rotate(${deg}deg)`,
+            transformOrigin: "top center",
+            boxShadow: `0 0 8px ${color2}`,
+          }}
+          initial={{ opacity: 0, scaleY: 0 }}
+          animate={{ opacity: [0, 1, 0], scaleY: [0, 1.5, 0.5] }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+        />
+      ))}
     </div>
   );
 }
 
 // — 돌진 슬래시 —
 function DashStrikeFx({ target, color }: { target: { left: string; top: string }; color: string }) {
+  // 3 슬래시 각도
+  const slashAngles = [-35, 35, -10];
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
-      {/* 슬래시 X 효과 */}
+      {/* 슬래시 모음 */}
       <motion.div
         className="absolute -translate-x-1/2 -translate-y-1/2"
         style={{ left: target.left, top: target.top }}
         initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 1, 0] }}
-        transition={{ duration: 0.7, times: [0, 0.3, 1] }}
+        animate={{ opacity: [0, 1, 1, 0] }}
+        transition={{ duration: 1.0, times: [0, 0.2, 0.7, 1] }}
       >
-        {/* 슬래시 1 (↗) */}
-        <motion.div
-          className="absolute -translate-x-1/2 -translate-y-1/2"
-          style={{
-            width: 120,
-            height: 8,
-            background: `linear-gradient(90deg, transparent, ${color}, #ffffff, ${color}, transparent)`,
-            boxShadow: `0 0 20px ${color}, 0 0 40px ${color}`,
-            transform: "rotate(-30deg)",
-          }}
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ duration: 0.25, delay: 0.1 }}
-        />
-        {/* 슬래시 2 (↘) */}
-        <motion.div
-          className="absolute -translate-x-1/2 -translate-y-1/2"
-          style={{
-            width: 120,
-            height: 8,
-            background: `linear-gradient(90deg, transparent, ${color}, #ffffff, ${color}, transparent)`,
-            boxShadow: `0 0 20px ${color}, 0 0 40px ${color}`,
-            transform: "rotate(30deg)",
-          }}
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ duration: 0.25, delay: 0.25 }}
-        />
+        {slashAngles.map((deg, i) => (
+          <motion.div
+            key={i}
+            className="absolute -translate-x-1/2 -translate-y-1/2"
+            style={{
+              width: 220,
+              height: 16,
+              background: `linear-gradient(90deg, transparent 0%, ${color}aa 20%, #ffffff 50%, ${color}aa 80%, transparent 100%)`,
+              boxShadow: `0 0 30px ${color}, 0 0 60px ${color}, 0 0 90px ${color}`,
+              transform: `rotate(${deg}deg)`,
+              filter: "blur(0.5px)",
+              borderRadius: 999,
+            }}
+            initial={{ scaleX: 0, opacity: 0 }}
+            animate={{ scaleX: [0, 1.1, 1], opacity: [0, 1, 0.9] }}
+            transition={{ duration: 0.35, delay: 0.08 + i * 0.13, ease: "easeOut" }}
+          />
+        ))}
       </motion.div>
-      {/* 임팩트 플래시 */}
+      {/* 임팩트 플래시 (큼지막) */}
       <motion.div
         className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           left: target.left,
           top: target.top,
-          background: `radial-gradient(circle, #ffffff 0%, ${color} 50%, transparent 80%)`,
+          background: `radial-gradient(circle, #ffffff 0%, ${color} 40%, ${color}66 70%, transparent 100%)`,
+          boxShadow: `0 0 50px ${color}, 0 0 100px ${color}`,
         }}
         initial={{ width: 0, height: 0, opacity: 0 }}
-        animate={{ width: [0, 80, 0], height: [0, 80, 0], opacity: [0, 0.8, 0] }}
-        transition={{ duration: 0.5, delay: 0.3 }}
+        animate={{ width: [0, 180, 100], height: [0, 180, 100], opacity: [0, 1, 0] }}
+        transition={{ duration: 0.85, delay: 0.3 }}
       />
+      {/* 충격파 ring */}
+      <motion.div
+        className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-[6px]"
+        style={{
+          left: target.left,
+          top: target.top,
+          borderColor: color,
+          boxShadow: `0 0 25px ${color}`,
+        }}
+        initial={{ width: 20, height: 20, opacity: 0 }}
+        animate={{ width: [20, 260], height: [20, 260], opacity: [0, 1, 0] }}
+        transition={{ duration: 0.9, delay: 0.35 }}
+      />
+      {/* 파편 입자 */}
+      {[0, 60, 120, 180, 240, 300].map((deg) => (
+        <motion.div
+          key={deg}
+          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{
+            left: target.left,
+            top: target.top,
+            width: 10,
+            height: 10,
+            background: `radial-gradient(circle, #ffffff, ${color})`,
+            boxShadow: `0 0 12px ${color}`,
+          }}
+          initial={{ x: 0, y: 0, opacity: 0 }}
+          animate={{
+            x: Math.cos((deg * Math.PI) / 180) * 90,
+            y: Math.sin((deg * Math.PI) / 180) * 90,
+            opacity: [0, 1, 0],
+            scale: [0.5, 1.5, 0.3],
+          }}
+          transition={{ duration: 0.9, delay: 0.4, ease: "easeOut" }}
+        />
+      ))}
     </div>
   );
 }
@@ -1000,33 +1094,93 @@ function SummonAboveFx({
 }) {
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
-      {/* 떨어지는 오브 */}
+      {/* 떨어지는 오브 (꼬리 효과) */}
       <motion.div
         className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           left: target.left,
           top: target.top,
-          width: 60,
-          height: 60,
-          background: `radial-gradient(circle, ${color2} 0%, ${color} 60%, transparent 100%)`,
-          boxShadow: `0 0 40px ${color}, inset 0 0 20px ${color2}`,
+          width: 110,
+          height: 110,
+          background: `radial-gradient(circle, #ffffff 0%, ${color2} 30%, ${color} 60%, transparent 100%)`,
+          boxShadow: `0 0 70px ${color}, 0 0 140px ${color}, inset 0 0 40px ${color2}`,
         }}
-        initial={{ y: -300, scale: 0.5, opacity: 0 }}
-        animate={{ y: [-300, 0, 0], scale: [0.5, 1.2, 1], opacity: [0, 1, 1, 0] }}
-        transition={{ duration: 1.2, times: [0, 0.6, 0.7, 1] }}
+        initial={{ y: -400, scale: 0.4, opacity: 0 }}
+        animate={{ y: [-400, 0, 0], scale: [0.4, 1.4, 1.1], opacity: [0, 1, 1, 0] }}
+        transition={{ duration: 1.4, times: [0, 0.55, 0.7, 1] }}
       />
-      {/* 임팩트 폭발 */}
+      {/* 꼬리 streak */}
+      <motion.div
+        className="absolute -translate-x-1/2"
+        style={{
+          left: target.left,
+          top: `calc(${target.top} - 200px)`,
+          width: 30,
+          height: 220,
+          background: `linear-gradient(to bottom, transparent 0%, ${color}88 60%, ${color2} 100%)`,
+          filter: "blur(8px)",
+          borderRadius: 999,
+        }}
+        initial={{ y: -300, opacity: 0, scaleY: 0.3 }}
+        animate={{ y: [-300, 0, 0], opacity: [0, 1, 0], scaleY: [0.3, 1.2, 0.5] }}
+        transition={{ duration: 1.2, times: [0, 0.55, 0.9] }}
+      />
+      {/* 임팩트 폭발 (3중) */}
       <motion.div
         className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           left: target.left,
           top: target.top,
-          background: `radial-gradient(circle, #ffffff 0%, ${color} 40%, transparent 70%)`,
+          background: `radial-gradient(circle, #ffffff 0%, ${color2} 25%, ${color}aa 55%, transparent 80%)`,
+          boxShadow: `0 0 80px ${color}, 0 0 160px ${color}`,
         }}
         initial={{ width: 0, height: 0, opacity: 0 }}
-        animate={{ width: [0, 160], height: [0, 160], opacity: [0, 1, 0] }}
-        transition={{ duration: 0.8, delay: 0.5 }}
+        animate={{ width: [0, 320, 240], height: [0, 320, 240], opacity: [0, 1, 0] }}
+        transition={{ duration: 1.1, delay: 0.55 }}
       />
+      {/* 충격파 ring 2개 */}
+      {[0, 0.15].map((delay, i) => (
+        <motion.div
+          key={i}
+          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-[6px]"
+          style={{
+            left: target.left,
+            top: target.top,
+            borderColor: i === 0 ? color2 : color,
+            boxShadow: `0 0 40px ${color}`,
+          }}
+          initial={{ width: 40, height: 40, opacity: 0 }}
+          animate={{ width: [40, 420], height: [40, 420], opacity: [0, 1, 0] }}
+          transition={{ duration: 1.2, delay: 0.55 + delay }}
+        />
+      ))}
+      {/* 폭발 파편 (12 방향) */}
+      {Array.from({ length: 12 }).map((_, i) => {
+        const deg = (i * 360) / 12;
+        const dist = 80 + Math.random() * 40;
+        return (
+          <motion.div
+            key={i}
+            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{
+              left: target.left,
+              top: target.top,
+              width: 14,
+              height: 14,
+              background: `radial-gradient(circle, #ffffff, ${color})`,
+              boxShadow: `0 0 14px ${color2}`,
+            }}
+            initial={{ x: 0, y: 0, opacity: 0, scale: 0.4 }}
+            animate={{
+              x: Math.cos((deg * Math.PI) / 180) * dist,
+              y: Math.sin((deg * Math.PI) / 180) * dist,
+              opacity: [0, 1, 0],
+              scale: [0.4, 1.6, 0.2],
+            }}
+            transition={{ duration: 1.0, delay: 0.6, ease: "easeOut" }}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -1043,64 +1197,166 @@ function AoeWaveFx({
 }) {
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
-      {/* 다중 ripple */}
-      {[0, 0.2, 0.4].map((delay, i) => (
+      {/* 화면 전체 vignette flash */}
+      <motion.div
+        className="absolute inset-0"
+        style={{
+          background: `radial-gradient(circle at ${origin.left} ${origin.top}, transparent 10%, ${color}33 60%, ${color}88 100%)`,
+        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0.9, 0] }}
+        transition={{ duration: 1.6 }}
+      />
+      {/* 다중 ripple (5개) */}
+      {[0, 0.12, 0.24, 0.36, 0.5].map((delay, i) => (
         <motion.div
           key={i}
-          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-4"
+          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
           style={{
             left: origin.left,
             top: origin.top,
+            borderWidth: 8,
+            borderStyle: "solid",
             borderColor: i % 2 === 0 ? color : color2,
-            boxShadow: `0 0 30px ${color}, inset 0 0 30px ${color2}`,
+            boxShadow: `0 0 50px ${color}, inset 0 0 50px ${color2}`,
+            filter: "blur(1px)",
           }}
           initial={{ width: 40, height: 40, opacity: 0 }}
-          animate={{ width: [40, 600], height: [40, 600], opacity: [0, 0.8, 0] }}
-          transition={{ duration: 1.6, delay, times: [0, 0.3, 1] }}
+          animate={{ width: [40, 900], height: [40, 900], opacity: [0, 1, 0] }}
+          transition={{ duration: 1.8, delay, times: [0, 0.3, 1], ease: "easeOut" }}
         />
       ))}
-      {/* 회전 토네이도 (중앙 cone) */}
+      {/* 회전 토네이도 (큼지막) */}
       <motion.div
         className="absolute -translate-x-1/2 -translate-y-1/2"
         style={{ left: origin.left, top: origin.top }}
-        animate={{ rotate: 360 }}
-        transition={{ duration: 1.2, ease: "linear" }}
+        animate={{ rotate: 720 }}
+        transition={{ duration: 1.6, ease: "linear" }}
       >
         <motion.div
           className="rounded-full"
           style={{
-            width: 100,
-            height: 100,
-            background: `conic-gradient(${color}aa, transparent, ${color2}aa, transparent, ${color}aa)`,
-            filter: "blur(4px)",
+            width: 220,
+            height: 220,
+            background: `conic-gradient(${color}, transparent, ${color2}, transparent, ${color}, transparent, ${color2}, transparent, ${color})`,
+            filter: "blur(8px)",
           }}
-          initial={{ opacity: 0, scale: 0.3 }}
-          animate={{ opacity: [0, 0.9, 0], scale: [0.3, 1.5, 2] }}
-          transition={{ duration: 1.4 }}
+          initial={{ opacity: 0, scale: 0.2 }}
+          animate={{ opacity: [0, 1, 0.7, 0], scale: [0.2, 1.6, 2.2, 2.6] }}
+          transition={{ duration: 1.6 }}
         />
       </motion.div>
+      {/* 코어 폭발 (백색) */}
+      <motion.div
+        className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
+        style={{
+          left: origin.left,
+          top: origin.top,
+          background: `radial-gradient(circle, #ffffff 0%, ${color2}aa 30%, ${color}aa 60%, transparent 90%)`,
+          boxShadow: `0 0 80px ${color}, 0 0 160px ${color}`,
+        }}
+        initial={{ width: 0, height: 0, opacity: 0 }}
+        animate={{
+          width: [0, 280, 320],
+          height: [0, 280, 320],
+          opacity: [0, 1, 0],
+        }}
+        transition={{ duration: 0.9 }}
+      />
+      {/* 외곽 파편 (16 방향) */}
+      {Array.from({ length: 16 }).map((_, i) => {
+        const deg = (i * 360) / 16;
+        return (
+          <motion.div
+            key={i}
+            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{
+              left: origin.left,
+              top: origin.top,
+              width: 12,
+              height: 12,
+              background: `radial-gradient(circle, #ffffff, ${color2})`,
+              boxShadow: `0 0 14px ${color}`,
+            }}
+            initial={{ x: 0, y: 0, opacity: 0 }}
+            animate={{
+              x: Math.cos((deg * Math.PI) / 180) * (180 + (i % 3) * 30),
+              y: Math.sin((deg * Math.PI) / 180) * (180 + (i % 3) * 30),
+              opacity: [0, 1, 0],
+              scale: [0.4, 1.4, 0.2],
+            }}
+            transition={{ duration: 1.4, delay: 0.2, ease: "easeOut" }}
+          />
+        );
+      })}
     </div>
   );
 }
 
 // — 바닥에서 솟구치는 기둥 —
 function FloorEruptionFx({ target, color }: { target: { left: string; top: string }; color: string }) {
+  // 3 개 기둥 (중앙 큰 거 + 좌우 작은 거)
+  const columns = [
+    { offset: 0, w: 130, h: 320, delay: 0 },
+    { offset: -80, w: 70, h: 220, delay: 0.1 },
+    { offset: 80, w: 70, h: 220, delay: 0.15 },
+  ];
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
+      {/* 메인 + 보조 기둥 */}
+      {columns.map((c, i) => (
+        <motion.div
+          key={i}
+          className="absolute -translate-x-1/2 -translate-y-full"
+          style={{
+            left: `calc(${target.left} + ${c.offset}px)`,
+            top: `calc(${target.top} + 50px)`,
+            width: c.w,
+            background: `linear-gradient(to top, #ffffff 0%, ${color} 30%, ${color}aa 70%, transparent 100%)`,
+            boxShadow: `0 0 50px ${color}, 0 0 100px ${color}`,
+            borderRadius: 999,
+            filter: "blur(0.5px)",
+          }}
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: [0, c.h, c.h, 0], opacity: [0, 1, 0.9, 0] }}
+          transition={{ duration: 1.3, delay: c.delay, times: [0, 0.25, 0.7, 1] }}
+        />
+      ))}
+      {/* 바닥 균열 ring */}
       <motion.div
-        className="absolute -translate-x-1/2 -translate-y-full"
+        className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           left: target.left,
-          top: `calc(${target.top} + 40px)`,
-          width: 80,
-          background: `linear-gradient(to top, ${color} 0%, ${color}88 50%, transparent 100%)`,
-          boxShadow: `0 0 30px ${color}`,
-          borderRadius: 999,
+          top: `calc(${target.top} + 30px)`,
+          background: `radial-gradient(ellipse, ${color}aa 0%, ${color}66 40%, transparent 70%)`,
+          boxShadow: `0 0 50px ${color}`,
         }}
-        initial={{ height: 0, opacity: 0 }}
-        animate={{ height: [0, 200, 200, 0], opacity: [0, 1, 0.8, 0] }}
-        transition={{ duration: 1.1, times: [0, 0.3, 0.7, 1] }}
+        initial={{ width: 0, height: 0, opacity: 0 }}
+        animate={{ width: [0, 240], height: [0, 60], opacity: [0, 1, 0] }}
+        transition={{ duration: 1.0 }}
       />
+      {/* 위로 튀는 입자 */}
+      {Array.from({ length: 10 }).map((_, i) => {
+        const x = (Math.random() - 0.5) * 160;
+        const y = -120 - Math.random() * 100;
+        return (
+          <motion.div
+            key={i}
+            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{
+              left: target.left,
+              top: `calc(${target.top} + 30px)`,
+              width: 8,
+              height: 8,
+              background: `radial-gradient(circle, #ffffff, ${color})`,
+              boxShadow: `0 0 10px ${color}`,
+            }}
+            initial={{ x: 0, y: 0, opacity: 0 }}
+            animate={{ x, y, opacity: [0, 1, 0], scale: [0.5, 1.2, 0.4] }}
+            transition={{ duration: 1.2, delay: 0.15 + i * 0.04, ease: "easeOut" }}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -1112,51 +1368,84 @@ function AuraBuffFx({ actor, color }: { actor: { left: string; top: string }; co
       <motion.div
         className="absolute -translate-x-1/2 -translate-y-1/2"
         style={{ left: actor.left, top: actor.top }}
-        animate={{ rotate: 360 }}
-        transition={{ duration: 1.4, ease: "linear" }}
+        animate={{ rotate: 540 }}
+        transition={{ duration: 1.6, ease: "linear" }}
       >
-        {/* 회전 ring 1 */}
+        {/* 회전 ring 1 (안쪽, 두꺼운 dashed) */}
         <motion.div
-          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-dashed"
+          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-[6px] border-dashed"
           style={{
-            width: 100,
-            height: 100,
+            width: 160,
+            height: 160,
             borderColor: color,
-            boxShadow: `0 0 20px ${color}, inset 0 0 20px ${color}`,
+            boxShadow: `0 0 40px ${color}, inset 0 0 40px ${color}`,
           }}
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: [0, 1, 1, 0], scale: [0.5, 1, 1.2, 1.4] }}
-          transition={{ duration: 1.4, times: [0, 0.2, 0.7, 1] }}
+          initial={{ opacity: 0, scale: 0.3 }}
+          animate={{ opacity: [0, 1, 1, 0], scale: [0.3, 1, 1.3, 1.5] }}
+          transition={{ duration: 1.6, times: [0, 0.2, 0.7, 1] }}
         />
-        {/* 회전 ring 2 (역회전) */}
+        {/* 회전 ring 2 (역회전, 큼) */}
         <motion.div
-          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2"
+          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-[4px]"
           style={{
-            width: 130,
-            height: 130,
+            width: 220,
+            height: 220,
             borderColor: color,
-            boxShadow: `0 0 15px ${color}`,
+            boxShadow: `0 0 30px ${color}`,
           }}
-          animate={{ rotate: -720 }}
-          transition={{ duration: 1.4, ease: "linear" }}
+          animate={{ rotate: -900 }}
+          transition={{ duration: 1.6, ease: "linear" }}
+          initial={{ opacity: 0 }}
+        />
+        {/* 회전 ring 3 (가장 바깥) */}
+        <motion.div
+          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-[2px] border-dotted"
+          style={{
+            width: 290,
+            height: 290,
+            borderColor: color,
+            boxShadow: `0 0 20px ${color}`,
+          }}
+          animate={{ rotate: 1080 }}
+          transition={{ duration: 1.6, ease: "linear" }}
           initial={{ opacity: 0 }}
         />
       </motion.div>
+      {/* 위로 떠오르는 빛 줄기 (6 개) */}
+      {[-60, -36, -12, 12, 36, 60].map((offset, i) => (
+        <motion.div
+          key={i}
+          className="absolute -translate-x-1/2"
+          style={{
+            left: `calc(${actor.left} + ${offset}px)`,
+            top: actor.top,
+            width: 6,
+            height: 80,
+            background: `linear-gradient(to top, ${color}, transparent)`,
+            boxShadow: `0 0 14px ${color}`,
+            borderRadius: 999,
+          }}
+          initial={{ y: 40, opacity: 0, scaleY: 0.3 }}
+          animate={{ y: -80, opacity: [0, 1, 0], scaleY: [0.3, 1.2, 0.8] }}
+          transition={{ duration: 1.2, delay: i * 0.06, ease: "easeOut" }}
+        />
+      ))}
       {/* 중앙 글로우 */}
       <motion.div
         className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           left: actor.left,
           top: actor.top,
-          background: `radial-gradient(circle, ${color}66 0%, transparent 70%)`,
+          background: `radial-gradient(circle, ${color}cc 0%, ${color}55 40%, transparent 80%)`,
+          boxShadow: `0 0 60px ${color}`,
         }}
         initial={{ width: 40, height: 40, opacity: 0 }}
         animate={{
-          width: [40, 120, 80],
-          height: [40, 120, 80],
-          opacity: [0, 0.8, 0],
+          width: [40, 220, 160],
+          height: [40, 220, 160],
+          opacity: [0, 0.9, 0],
         }}
-        transition={{ duration: 1.4 }}
+        transition={{ duration: 1.6 }}
       />
     </div>
   );
@@ -1164,86 +1453,206 @@ function AuraBuffFx({ actor, color }: { actor: { left: string; top: string }; co
 
 // — 회복 반짝이 (sparkle) —
 function SparkleHealFx({ target, color }: { target: { left: string; top: string }; color: string }) {
-  // 8개 sparkle 무작위 위치
-  const sparkles = [-3, -2, -1, 0, 1, 2, 3, 4];
+  // 16개 sparkle 무작위 위치
+  const sparkleCount = 16;
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
-      {sparkles.map((i) => {
-        const offsetX = (Math.cos((i * Math.PI) / 4) * 50);
-        const delay = (i * 0.05);
+      {Array.from({ length: sparkleCount }).map((_, i) => {
+        const angle = (i * 360) / sparkleCount;
+        const radius = 30 + ((i * 17) % 50);
+        const offsetX = Math.cos((angle * Math.PI) / 180) * radius;
+        const offsetY = Math.sin((angle * Math.PI) / 180) * radius * 0.6;
+        const delay = (i * 0.04);
         return (
           <motion.div
             key={i}
             className="absolute -translate-x-1/2 -translate-y-1/2"
             style={{
               left: `calc(${target.left} + ${offsetX}px)`,
-              top: target.top,
+              top: `calc(${target.top} + ${offsetY}px)`,
             }}
-            initial={{ y: 30, opacity: 0, scale: 0 }}
-            animate={{ y: -60, opacity: [0, 1, 0], scale: [0, 1.2, 0.6] }}
-            transition={{ duration: 1.1, delay, ease: "easeOut" }}
+            initial={{ y: 40, opacity: 0, scale: 0, rotate: 0 }}
+            animate={{ y: -80, opacity: [0, 1, 0], scale: [0, 1.6, 0.4], rotate: 180 }}
+            transition={{ duration: 1.3, delay, ease: "easeOut" }}
           >
-            <div
-              style={{
-                width: 14,
-                height: 14,
-                background: color,
-                borderRadius: "50%",
-                boxShadow: `0 0 12px ${color}, 0 0 20px ${color}`,
-              }}
-            />
+            {/* 4-point star shape via crossed rects */}
+            <div className="relative" style={{ width: 22, height: 22 }}>
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: `radial-gradient(circle, #ffffff, ${color})`,
+                  borderRadius: "50%",
+                  boxShadow: `0 0 18px ${color}, 0 0 32px ${color}`,
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
+                  width: 36,
+                  height: 3,
+                  background: `linear-gradient(90deg, transparent, ${color}, #ffffff, ${color}, transparent)`,
+                  transform: "translate(-50%, -50%)",
+                  boxShadow: `0 0 8px ${color}`,
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
+                  width: 3,
+                  height: 36,
+                  background: `linear-gradient(180deg, transparent, ${color}, #ffffff, ${color}, transparent)`,
+                  transform: "translate(-50%, -50%)",
+                  boxShadow: `0 0 8px ${color}`,
+                }}
+              />
+            </div>
           </motion.div>
         );
       })}
-      {/* 중앙 회복 글로우 */}
+      {/* 회복 ring (위로 상승) */}
+      {[0, 0.2, 0.4].map((delay, i) => (
+        <motion.div
+          key={i}
+          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px]"
+          style={{
+            left: target.left,
+            top: target.top,
+            borderColor: color,
+            boxShadow: `0 0 22px ${color}, inset 0 0 16px ${color}`,
+          }}
+          initial={{ width: 30, height: 30, y: 30, opacity: 0 }}
+          animate={{
+            width: [30, 180],
+            height: [30, 180],
+            y: [30, -40],
+            opacity: [0, 0.9, 0],
+          }}
+          transition={{ duration: 1.4, delay, ease: "easeOut" }}
+        />
+      ))}
+      {/* 중앙 회복 글로우 (큼지막) */}
       <motion.div
         className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           left: target.left,
           top: target.top,
-          background: `radial-gradient(circle, ${color}aa 0%, transparent 60%)`,
+          background: `radial-gradient(circle, #ffffff 0%, ${color}aa 35%, transparent 70%)`,
+          boxShadow: `0 0 80px ${color}`,
         }}
         initial={{ width: 0, height: 0, opacity: 0 }}
-        animate={{ width: [0, 100, 60], height: [0, 100, 60], opacity: [0, 0.7, 0] }}
-        transition={{ duration: 1.0 }}
+        animate={{ width: [0, 200, 140], height: [0, 200, 140], opacity: [0, 0.9, 0] }}
+        transition={{ duration: 1.2 }}
       />
+      {/* "+" 십자 회복 표식 */}
+      <motion.div
+        className="absolute -translate-x-1/2 -translate-y-1/2"
+        style={{
+          left: target.left,
+          top: `calc(${target.top} - 40px)`,
+        }}
+        initial={{ opacity: 0, scale: 0.3, y: 20 }}
+        animate={{ opacity: [0, 1, 0], scale: [0.3, 1.5, 1.2], y: [20, -30, -60] }}
+        transition={{ duration: 1.4 }}
+      >
+        <div
+          className="text-4xl font-black"
+          style={{
+            color,
+            textShadow: `0 0 18px ${color}, 0 0 32px ${color}, 0 2px 4px rgba(0,0,0,0.8)`,
+          }}
+        >
+          +
+        </div>
+      </motion.div>
     </div>
   );
 }
 
 // — 어둠 슬래시 (shadow_swipe) —
 function ShadowSwipeFx({ target, color }: { target: { left: string; top: string }; color: string }) {
+  // 3 슬래시 (-30°, 15°, -5°)
+  const slashes = [
+    { deg: -30, w: 320, delay: 0.05 },
+    { deg: 20, w: 280, delay: 0.18 },
+    { deg: -5, w: 340, delay: 0.32 },
+  ];
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
-      {/* 대각선 슬래시 */}
+      {/* 어둠 vignette */}
       <motion.div
-        className="absolute -translate-x-1/2 -translate-y-1/2"
+        className="absolute inset-0"
         style={{
-          left: target.left,
-          top: target.top,
-          width: 200,
-          height: 12,
-          background: `linear-gradient(90deg, transparent, ${color}, #000000, ${color}, transparent)`,
-          boxShadow: `0 0 25px ${color}, 0 0 50px ${color}`,
-          transform: "rotate(-25deg)",
-          filter: "blur(2px)",
+          background: `radial-gradient(circle at ${target.left} ${target.top}, transparent 15%, ${color}33 40%, #000000aa 100%)`,
         }}
-        initial={{ scaleX: 0, opacity: 0 }}
-        animate={{ scaleX: [0, 1.2, 1], opacity: [0, 1, 0] }}
-        transition={{ duration: 0.7, times: [0, 0.3, 1] }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0.9, 0] }}
+        transition={{ duration: 1.2 }}
       />
-      {/* 어둠 잔영 */}
+      {/* 다중 대각선 슬래시 */}
+      {slashes.map((s, i) => (
+        <motion.div
+          key={i}
+          className="absolute -translate-x-1/2 -translate-y-1/2"
+          style={{
+            left: target.left,
+            top: target.top,
+            width: s.w,
+            height: 22,
+            background: `linear-gradient(90deg, transparent 0%, ${color}aa 15%, #000000 35%, #ffffff 50%, #000000 65%, ${color}aa 85%, transparent 100%)`,
+            boxShadow: `0 0 40px ${color}, 0 0 80px ${color}, 0 0 120px #000000`,
+            transform: `rotate(${s.deg}deg)`,
+            filter: "blur(1.5px)",
+            borderRadius: 999,
+          }}
+          initial={{ scaleX: 0, opacity: 0 }}
+          animate={{ scaleX: [0, 1.3, 1], opacity: [0, 1, 0] }}
+          transition={{ duration: 0.85, delay: s.delay, times: [0, 0.3, 1] }}
+        />
+      ))}
+      {/* 어둠 잔영 (큼지막) */}
       <motion.div
         className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           left: target.left,
           top: target.top,
-          background: `radial-gradient(circle, ${color}66 0%, #000000aa 50%, transparent 80%)`,
+          background: `radial-gradient(circle, ${color}aa 0%, ${color}44 30%, #000000cc 60%, transparent 100%)`,
+          boxShadow: `0 0 60px ${color}, 0 0 120px #000000`,
         }}
         initial={{ width: 0, height: 0, opacity: 0 }}
-        animate={{ width: [0, 140, 100], height: [0, 140, 100], opacity: [0, 0.9, 0] }}
-        transition={{ duration: 1.0 }}
+        animate={{ width: [0, 260, 200], height: [0, 260, 200], opacity: [0, 1, 0] }}
+        transition={{ duration: 1.2 }}
       />
+      {/* 검은 안개 입자 */}
+      {Array.from({ length: 10 }).map((_, i) => {
+        const deg = (i * 360) / 10;
+        return (
+          <motion.div
+            key={i}
+            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{
+              left: target.left,
+              top: target.top,
+              width: 24,
+              height: 24,
+              background: `radial-gradient(circle, ${color}cc 0%, #000000 70%)`,
+              filter: "blur(6px)",
+            }}
+            initial={{ x: 0, y: 0, opacity: 0, scale: 0.5 }}
+            animate={{
+              x: Math.cos((deg * Math.PI) / 180) * 110,
+              y: Math.sin((deg * Math.PI) / 180) * 110,
+              opacity: [0, 1, 0],
+              scale: [0.5, 1.6, 0.3],
+            }}
+            transition={{ duration: 1.3, delay: 0.35, ease: "easeOut" }}
+          />
+        );
+      })}
     </div>
   );
 }
