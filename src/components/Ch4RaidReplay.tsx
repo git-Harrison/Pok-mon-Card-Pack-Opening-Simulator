@@ -672,6 +672,18 @@ function PartyFighter({
   const actor = (currentFrame as { actor?: string } | undefined)?.actor;
   const target = (currentFrame as { target?: string } | undefined)?.target;
   const kind = (currentFrame as { kind?: string } | undefined)?.kind;
+  // ★ AOE / multi_hit / heal_all 의 targets[] 를 확인해 본인이 맞은/회복받은 슬롯인지 검사
+  const targetsArr = (currentFrame as { targets?: FrameTarget[] } | undefined)?.targets;
+  const aoeHit =
+    Array.isArray(targetsArr) &&
+    targetsArr.some(
+      (t) => t.target === actorTag && typeof t.damage === "number" && t.damage > 0
+    );
+  const aoeHealed =
+    Array.isArray(targetsArr) &&
+    targetsArr.some(
+      (t) => t.target === actorTag && typeof t.heal === "number" && t.heal > 0
+    );
 
   const isCasting =
     !!currentFrame &&
@@ -680,18 +692,19 @@ function PartyFighter({
   const isHit =
     !!currentFrame &&
     (currentFrame.type === "boss_skill" || currentFrame.type === "skill") &&
-    target === actorTag &&
-    typeof (currentFrame as { damage?: number }).damage === "number";
+    ((target === actorTag && typeof (currentFrame as { damage?: number }).damage === "number") ||
+      aoeHit);
   const isHealed =
     !!currentFrame &&
     currentFrame.type === "skill" &&
-    kind === "heal" &&
-    target === actorTag;
+    ((kind === "heal" && target === actorTag) || aoeHealed);
   const isBuffed =
     !!currentFrame &&
     currentFrame.type === "skill" &&
     (kind === "buff" || kind === "counter") &&
-    (target === actorTag || target === "all_allies");
+    (target === actorTag ||
+      target === "all_allies" ||
+      (Array.isArray(targetsArr) && targetsArr.some((t) => t.target === actorTag)));
 
   return (
     <motion.div
